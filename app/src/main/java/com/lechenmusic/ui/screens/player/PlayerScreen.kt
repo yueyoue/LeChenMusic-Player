@@ -1,0 +1,1117 @@
+package com.lechenmusic.ui.screens.player
+
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import android.widget.Toast
+import com.lechenmusic.data.model.Playlist
+import com.lechenmusic.data.model.Song
+import com.lechenmusic.player.MusicPlayerManager
+import com.lechenmusic.player.RepeatMode
+import com.lechenmusic.ui.MainViewModel
+import com.lechenmusic.ui.components.CoverImage
+
+enum class PlayerView { COVER, LYRICS, SIMILAR }
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+fun PlayerScreen(
+    playerManager: MusicPlayerManager,
+    viewModel: MainViewModel,
+    serverUrl: String,
+    username: String,
+    password: String,
+    onBack: () -> Unit,
+    onShowPlaylist: () -> Unit,
+    onShowMore: () -> Unit,
+    onNavigateToArtist: (String) -> Unit = {},
+    onNavigateToAlbum: (String) -> Unit = {}
+) {
+    val currentSong by playerManager.currentSong.collectAsState()
+    val isPlaying by playerManager.isPlaying.collectAsState()
+    val progress by playerManager.progress.collectAsState()
+    val currentPosition by playerManager.currentPosition.collectAsState()
+    val duration by playerManager.duration.collectAsState()
+    val shuffleMode by playerManager.shuffleMode.collectAsState()
+    val repeatMode by playerManager.repeatMode.collectAsState()
+    val isStarred by playerManager.isStarred.collectAsState()
+    val playlist by playerManager.playlist.collectAsState()
+    val currentIndex by playerManager.currentIndex.collectAsState()
+    val currentLyrics by viewModel.currentLyrics.collectAsState()
+    val playlists by viewModel.playlists.collectAsState()
+
+    var currentView by remember { mutableStateOf(PlayerView.COVER) }
+    var showTimerDialog by remember { mutableStateOf(false) }
+    var showPlaylistSheet by remember { mutableStateOf(false) }
+    var showMoreSheet by remember { mutableStateOf(false) }
+    var showPlaylistSelectionDialog by remember { mutableStateOf(false) }
+    val timerRemainingSeconds by viewModel.timerRemainingSeconds.collectAsState()
+    val toastMessage by viewModel.toastMessage.collectAsState()
+    val context = LocalContext.current
+
+    // Show toast messages
+    LaunchedEffect(toastMessage) {
+        toastMessage?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            viewModel.clearToast()
+        }
+    }
+
+    val song = currentSong ?: return
+
+    // Load lyrics when song changes
+    LaunchedEffect(song.id) {
+        viewModel.loadLyrics(song)
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                        MaterialTheme.colorScheme.background
+                    )
+                )
+            )
+    ) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Header
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.Default.KeyboardArrowDown, contentDescription = "返回")
+                }
+                Text("正在播放", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                IconButton(onClick = { showMoreSheet = true }) {
+                    Icon(Icons.Default.MoreVert, contentDescription = "更多")
+                }
+            }
+
+            // View Tabs
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center
+            ) {
+                PlayerView.values().forEach { view ->
+                    val label = when (view) {
+                        PlayerView.COVER -> "封面"
+                        PlayerView.LYRICS -> "歌词"
+                        PlayerView.SIMILAR -> "推荐"
+                    }
+                    Text(
+                        text = label,
+                        fontSize = 12.sp,
+                        color = if (currentView == view) MaterialTheme.colorScheme.onBackground
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = if (currentView == view) FontWeight.SemiBold else FontWeight.Normal,
+                        modifier = Modifier
+                            .clickable { currentView = view }
+                            .padding(horizontal = 14.dp, vertical = 4.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(
+                                if (currentView == view) MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f)
+                                else Color.Transparent
+                            )
+                            .padding(horizontal = 14.dp, vertical = 4.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Content area with swipe
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .pointerInput(Unit) {
+                        detectHorizontalDragGestures { _, dragAmount ->
+                            if (dragAmount < -50) {
+                                currentView = when (currentView) {
+                                    PlayerView.COVER -> PlayerView.LYRICS
+                                    PlayerView.LYRICS -> PlayerView.SIMILAR
+                                    PlayerView.SIMILAR -> PlayerView.SIMILAR
+                                }
+                            } else if (dragAmount > 50) {
+                                currentView = when (currentView) {
+                                    PlayerView.SIMILAR -> PlayerView.LYRICS
+                                    PlayerView.LYRICS -> PlayerView.COVER
+                                    PlayerView.COVER -> PlayerView.COVER
+                                }
+                            }
+                        }
+                    }
+            ) {
+                when (currentView) {
+                    PlayerView.COVER -> CoverView(song, serverUrl, username, password)
+                    PlayerView.LYRICS -> LyricsView(song, currentLyrics, currentPosition, duration)
+                    PlayerView.SIMILAR -> SimilarView(playlist, currentIndex, serverUrl, username, password) {
+                        playerManager.playSong(it, playlist)
+                    }
+                }
+            }
+
+            // Song Info
+            Column(
+                modifier = Modifier.padding(horizontal = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        song.title,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    // Quality badge
+                    val qualityText = getQualityBadge(song)
+                    if (qualityText.isNotEmpty()) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = getQualityBadgeColor(song).copy(alpha = 0.15f)
+                        ) {
+                            Text(
+                                text = qualityText,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = getQualityBadgeColor(song),
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                }
+                Text(
+                    "${song.artist} · ${song.album}",
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+
+            // Progress Bar (自定义pointerInput手势，绕过Slider框架开销)
+            var isDragging by remember { mutableStateOf(false) }
+            var sliderPosition by remember { mutableStateOf(0f) }
+            var barWidthPx by remember { mutableFloatStateOf(1f) }
+
+            // 防回跳核心：拖动中不从外部同步
+            LaunchedEffect(currentPosition, duration) {
+                if (!isDragging && duration > 0) {
+                    sliderPosition = (currentPosition.toFloat() / duration).coerceIn(0f, 1f)
+                }
+            }
+
+            val displayPosition = if (isDragging) (sliderPosition * duration).toLong() else currentPosition
+
+            Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
+                PlayerProgressBar(
+                    dragProgress = sliderPosition,
+                    duration = duration,
+                    barWidthPx = barWidthPx,
+                    activeColor = MaterialTheme.colorScheme.primary,
+                    inactiveColor = MaterialTheme.colorScheme.surfaceVariant,
+                    onProgressChanged = { newProgress ->
+                        isDragging = true
+                        sliderPosition = newProgress
+                    },
+                    onSeek = { positionMs ->
+                        playerManager.seekTo(positionMs)
+                    },
+                    onDragEnd = {
+                        isDragging = false
+                    },
+                    onWidthMeasured = { w ->
+                        barWidthPx = w.coerceAtLeast(1f)
+                    }
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(formatTime(displayPosition), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(formatTime(duration), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+
+            // Controls
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = { playerManager.toggleShuffle() }) {
+                    Icon(
+                        Icons.Default.Shuffle,
+                        contentDescription = "随机",
+                        tint = if (shuffleMode) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+                IconButton(onClick = { playerManager.skipPrevious() }) {
+                    Icon(Icons.Default.SkipPrevious, contentDescription = "上一曲", modifier = Modifier.size(32.dp))
+                }
+                Surface(
+                    modifier = Modifier.size(64.dp),
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primary,
+                    shadowElevation = 8.dp
+                ) {
+                    IconButton(onClick = { playerManager.togglePlayPause() }) {
+                        Icon(
+                            if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            contentDescription = if (isPlaying) "暂停" else "播放",
+                            tint = Color.White,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+                }
+                IconButton(onClick = { playerManager.skipNext() }) {
+                    Icon(Icons.Default.SkipNext, contentDescription = "下一曲", modifier = Modifier.size(32.dp))
+                }
+                IconButton(onClick = { playerManager.toggleRepeat() }) {
+                    Icon(
+                        when (repeatMode) {
+                            RepeatMode.OFF -> Icons.Default.Repeat
+                            RepeatMode.ALL -> Icons.Default.Repeat
+                            RepeatMode.ONE -> Icons.Default.RepeatOne
+                        },
+                        contentDescription = "循环",
+                        tint = if (repeatMode != RepeatMode.OFF) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
+
+            // Action Bar: 收藏, 添加到歌单, 定时, 队列
+            val isRadioStation = song.id.startsWith("radio_")
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 16.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.clickable(enabled = !isRadioStation) { playerManager.toggleStar() }) {
+                    Icon(
+                        if (isStarred) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        contentDescription = "收藏",
+                        tint = if (isStarred) Color.Red
+                        else if (isRadioStation) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Text("收藏", fontSize = 10.sp,
+                        color = if (isRadioStation) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                        else MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.clickable { showPlaylistSelectionDialog = true }) {
+                    Icon(Icons.Default.PlaylistAdd, contentDescription = "添加到歌单", modifier = Modifier.size(24.dp))
+                    Text("添加到", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.clickable { showTimerDialog = true }) {
+                    Icon(
+                        Icons.Default.Timer,
+                        contentDescription = "定时",
+                        tint = if (timerRemainingSeconds > 0) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Text(
+                        if (timerRemainingSeconds > 0) {
+                            val min = timerRemainingSeconds / 60
+                            val sec = timerRemainingSeconds % 60
+                            "%d:%02d".format(min, sec)
+                        } else "定时",
+                        fontSize = 10.sp,
+                        color = if (timerRemainingSeconds > 0) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.clickable { showPlaylistSheet = true }) {
+                    Icon(Icons.Default.QueueMusic, contentDescription = "队列", modifier = Modifier.size(24.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("队列", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+    }
+
+    // Timer Dialog
+    if (showTimerDialog) {
+        var customMinutes by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { showTimerDialog = false },
+            title = {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        Icons.Default.Timer,
+                        contentDescription = null,
+                        modifier = Modifier.size(36.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("定时关闭", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                }
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    // Countdown display
+                    if (timerRemainingSeconds > 0) {
+                        val remainHour = timerRemainingSeconds / 3600
+                        val remainMin = (timerRemainingSeconds % 3600) / 60
+                        val remainSec = timerRemainingSeconds % 60
+                        Text(
+                            "剩余 %02d:%02d:%02d".format(remainHour, remainMin, remainSec),
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                    }
+
+                    // Preset time buttons
+                    val presets = listOf("15分钟" to 15, "30分钟" to 30, "45分钟" to 45, "60分钟" to 60, "90分钟" to 90)
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        maxItemsInEachRow = 3
+                    ) {
+                        presets.forEach { (label, min) ->
+                            Surface(
+                                shape = RoundedCornerShape(20.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                modifier = Modifier
+                                    .padding(horizontal = 4.dp)
+                                    .clickable {
+                                        viewModel.setTimerWithCountdown(min)
+                                        showTimerDialog = false
+                                    }
+                            ) {
+                                Text(
+                                    label,
+                                    fontSize = 13.sp,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                    HorizontalDivider()
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Custom time input
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = customMinutes,
+                            onValueChange = { customMinutes = it.filter { c -> c.isDigit() } },
+                            placeholder = { Text("自定义时间", fontSize = 14.sp) },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.weight(1f),
+                            textStyle = LocalTextStyle.current.copy(fontSize = 14.sp)
+                        )
+                        Button(
+                            onClick = {
+                                val min = customMinutes.toIntOrNull()
+                                if (min != null && min > 0) {
+                                    viewModel.setTimerWithCountdown(min)
+                                    showTimerDialog = false
+                                } else {
+                                    Toast.makeText(context, "请输入有效时间", Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                        ) {
+                            Text("设置", fontSize = 14.sp)
+                        }
+                    }
+
+                    // Cancel timer button
+                    if (timerRemainingSeconds > 0) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(
+                            onClick = {
+                                viewModel.cancelTimerWithCountdown()
+                                showTimerDialog = false
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF6B6B))
+                        ) {
+                            Text("取消定时", fontSize = 15.sp, color = Color.White)
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showTimerDialog = false }) { Text("关闭") }
+            }
+        )
+    }
+
+    // Playlist Selection Dialog (for adding song to a playlist)
+    if (showPlaylistSelectionDialog) {
+        var showCreatePlaylist by remember { mutableStateOf(false) }
+        var newPlaylistName by remember { mutableStateOf("") }
+        var newPlaylistPublic by remember { mutableStateOf(false) }
+        val currentUser by viewModel.username.collectAsState()
+
+        AlertDialog(
+            onDismissRequest = { showPlaylistSelectionDialog = false },
+            title = { Text("添加到歌单") },
+            text = {
+                Column {
+                    // Create new playlist option
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showCreatePlaylist = true }
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Surface(
+                            modifier = Modifier.size(40.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(Icons.Default.Add, contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(24.dp))
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text("新建歌单", fontSize = 15.sp, fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.primary)
+                    }
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+                    if (playlists.isEmpty()) {
+                        Text("暂无歌单", color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(vertical = 8.dp))
+                    } else {
+                        playlists.forEach { pl ->
+                            val isShared = pl.owner.isNotBlank() && pl.owner != currentUser
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        if (isShared) {
+                                            Toast.makeText(context, "不能添加歌曲到别人的歌单", Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            viewModel.addToPlaylist(pl.id, song.id, pl.owner)
+                                            showPlaylistSelectionDialog = false
+                                        }
+                                    }
+                                    .padding(vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.PlaylistPlay, contentDescription = null,
+                                    modifier = Modifier.size(24.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(pl.name, fontSize = 15.sp)
+                                        if (isShared) {
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Surface(
+                                                shape = RoundedCornerShape(4.dp),
+                                                color = Color(0xFFFFA502).copy(alpha = 0.15f)
+                                            ) {
+                                                Text(
+                                                    "共享",
+                                                    fontSize = 10.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = Color(0xFFFFA502),
+                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                    Text(
+                                        "${pl.songCount}首${if (isShared) " · ${pl.owner}" else ""}",
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                if (isShared) {
+                                    Icon(Icons.Default.Lock, contentDescription = "不可添加",
+                                        modifier = Modifier.size(16.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showPlaylistSelectionDialog = false }) { Text("取消") }
+            }
+        )
+
+        // Create playlist sub-dialog
+        if (showCreatePlaylist) {
+            AlertDialog(
+                onDismissRequest = { showCreatePlaylist = false },
+                title = { Text("新建歌单") },
+                text = {
+                    Column {
+                        OutlinedTextField(
+                            value = newPlaylistName,
+                            onValueChange = { newPlaylistName = it },
+                            placeholder = { Text("输入歌单名称") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("公开歌单", fontSize = 14.sp)
+                            Switch(
+                                checked = newPlaylistPublic,
+                                onCheckedChange = { newPlaylistPublic = it }
+                            )
+                        }
+                        Text(
+                            if (newPlaylistPublic) "其他用户可以看到此歌单" else "仅自己可见",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        if (newPlaylistName.isNotBlank()) {
+                            viewModel.createPlaylistAndAddSong(newPlaylistName, song.id, newPlaylistPublic)
+                            newPlaylistName = ""
+                            newPlaylistPublic = false
+                            showCreatePlaylist = false
+                            showPlaylistSelectionDialog = false
+                        }
+                    }) { Text("创建", color = MaterialTheme.colorScheme.primary) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showCreatePlaylist = false; newPlaylistName = ""; newPlaylistPublic = false }) { Text("取消") }
+                }
+            )
+        }
+    }
+
+    // Playlist Sheet
+    if (showPlaylistSheet) {
+        ModalBottomSheet(onDismissRequest = { showPlaylistSheet = false }) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("播放列表", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        "共 ${playlist.size} 首",
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                LazyColumn(
+                    modifier = Modifier.heightIn(max = 400.dp),
+                    contentPadding = PaddingValues(bottom = 16.dp)
+                ) {
+                    itemsIndexed(playlist) { index, s ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    playerManager.playSong(s, playlist)
+                                    showPlaylistSheet = false
+                                }
+                                .padding(vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "${index + 1}",
+                                fontSize = 13.sp,
+                                color = if (index == currentIndex) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.width(30.dp),
+                                textAlign = TextAlign.Center
+                            )
+                            Column(modifier = Modifier.weight(1f).padding(start = 12.dp)) {
+                                Text(
+                                    s.title,
+                                    fontSize = 14.sp,
+                                    color = if (index == currentIndex) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurface,
+                                    fontWeight = if (index == currentIndex) FontWeight.SemiBold else FontWeight.Normal
+                                )
+                                Text(s.artist, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // More Sheet
+    if (showMoreSheet) {
+        ModalBottomSheet(onDismissRequest = { showMoreSheet = false }) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                Text("更多操作", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(16.dp))
+                MoreItem(Icons.Default.PlaylistAdd, "添加到歌单") {
+                    showMoreSheet = false
+                    showPlaylistSelectionDialog = true
+                }
+                MoreItem(Icons.Default.Timer, "定时停止播放") {
+                    showMoreSheet = false
+                    showTimerDialog = true
+                }
+                MoreItem(Icons.Default.Person, "查看歌手") {
+                    showMoreSheet = false
+                    if (song.artistId.isNotBlank()) {
+                        onNavigateToArtist(song.artistId)
+                    }
+                }
+                MoreItem(Icons.Default.Album, "查看专辑") {
+                    showMoreSheet = false
+                    if (song.albumId.isNotBlank()) {
+                        onNavigateToAlbum(song.albumId)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CoverView(song: Song, serverUrl: String, username: String, password: String) {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        CoverImage(
+            coverArtId = song.coverArt ?: song.albumId,
+            serverUrl = serverUrl,
+            username = username,
+            password = password,
+            modifier = Modifier
+                .size(280.dp)
+                .clip(RoundedCornerShape(20.dp))
+        )
+    }
+}
+
+private data class LyricLine(val timeMs: Long, val text: String)
+
+/**
+ * Parse LRC format lyrics: [mm:ss.xx]text
+ * Returns list of (timeMs, text) pairs sorted by time.
+ * If not LRC format, returns null.
+ */
+private fun parseLrc(lrcText: String): List<LyricLine>? {
+    val regex = Regex("\\[(\\d{1,2}):(\\d{2})(?:\\.(\\d{1,3}))?\\](.*)")
+    val lines = mutableListOf<LyricLine>()
+    for (line in lrcText.split("\n")) {
+        val trimmed = line.trim()
+        if (trimmed.isBlank()) continue
+        val match = regex.matchEntire(trimmed) ?: continue
+        val min = match.groupValues[1].toLongOrNull() ?: continue
+        val sec = match.groupValues[2].toLongOrNull() ?: continue
+        val msStr = match.groupValues[3]
+        val ms = when (msStr.length) {
+            1 -> msStr.toLong() * 100
+            2 -> msStr.toLong() * 10
+            3 -> msStr.toLong()
+            else -> 0L
+        }
+        val timeMs = min * 60_000 + sec * 1000 + ms
+        val text = match.groupValues[4].trim()
+        if (text.isNotBlank()) {
+            lines.add(LyricLine(timeMs, text))
+        }
+    }
+    return if (lines.size >= 2) lines.sortedBy { it.timeMs } else null
+}
+
+/**
+ * Find the active lyric line index based on current playback position.
+ * Uses binary search for efficiency.
+ */
+private fun findActiveLyricLine(lines: List<LyricLine>, positionMs: Long): Int {
+    if (lines.isEmpty()) return 0
+    // Binary search: find the last line whose timeMs <= positionMs
+    var lo = 0
+    var hi = lines.size - 1
+    var result = 0
+    while (lo <= hi) {
+        val mid = (lo + hi) / 2
+        if (lines[mid].timeMs <= positionMs) {
+            result = mid
+            lo = mid + 1
+        } else {
+            hi = mid - 1
+        }
+    }
+    return result
+}
+
+@Composable
+private fun LyricsView(
+    song: Song,
+    lyrics: String? = null,
+    currentPosition: Long = 0L,
+    duration: Long = 0L
+) {
+    // Try to parse as LRC first
+    val lrcLines = remember(lyrics) { lyrics?.let { parseLrc(it) } }
+    // Fallback: plain text lines
+    val plainLines = remember(lyrics) {
+        if (lrcLines == null) lyrics?.split("\n")?.filter { it.isNotBlank() } ?: emptyList()
+        else emptyList()
+    }
+
+    // Calculate active line index
+    val activeLineIndex = if (lrcLines != null) {
+        remember(currentPosition, lrcLines.size) {
+            findActiveLyricLine(lrcLines, currentPosition)
+        }
+    } else {
+        // Fallback: linear distribution (inaccurate but better than nothing)
+        remember(currentPosition, duration, plainLines.size) {
+            if (plainLines.isEmpty() || duration <= 0L) 0
+            else {
+                val progress = currentPosition.toFloat() / duration.toFloat()
+                (progress * plainLines.size).toInt().coerceIn(0, plainLines.lastIndex)
+            }
+        }
+    }
+
+    val listState = rememberLazyListState()
+
+    // Auto-scroll to active line
+    LaunchedEffect(activeLineIndex) {
+        val totalLines = lrcLines?.size ?: plainLines.size
+        if (totalLines > 0 && activeLineIndex in 0 until totalLines) {
+            listState.animateScrollToItem(activeLineIndex)
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        val hasLyrics = lrcLines != null || plainLines.isNotEmpty()
+        if (hasLyrics) {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(vertical = 40.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                if (lrcLines != null) {
+                    itemsIndexed(lrcLines) { index, line ->
+                        Text(
+                            text = line.text,
+                            fontSize = if (index == activeLineIndex) 18.sp else 16.sp,
+                            fontWeight = if (index == activeLineIndex) FontWeight.Bold else FontWeight.Normal,
+                            color = if (index == activeLineIndex)
+                                MaterialTheme.colorScheme.onBackground
+                            else
+                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
+                    }
+                } else {
+                    itemsIndexed(plainLines) { index, line ->
+                        Text(
+                            text = line.trim(),
+                            fontSize = if (index == activeLineIndex) 18.sp else 16.sp,
+                            fontWeight = if (index == activeLineIndex) FontWeight.Bold else FontWeight.Normal,
+                            color = if (index == activeLineIndex)
+                                MaterialTheme.colorScheme.onBackground
+                            else
+                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
+                    }
+                }
+            }
+        } else {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(
+                    Icons.Default.MusicNote,
+                    contentDescription = null,
+                    modifier = Modifier.size(48.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    "暂无歌词",
+                    fontSize = 16.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    "${song.artist} · ${song.album}",
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SimilarView(
+    playlist: List<Song>,
+    currentIndex: Int,
+    serverUrl: String,
+    username: String,
+    password: String,
+    onSongClick: (Song) -> Unit
+) {
+    LazyColumn(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+        item {
+            Text(
+                "推荐歌曲",
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 12.dp),
+                textAlign = TextAlign.Center
+            )
+        }
+        val similar = playlist.filterIndexed { i, _ -> i != currentIndex }.take(10)
+        items(similar) { song ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onSongClick(song) }
+                    .padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                CoverImage(
+                    coverArtId = song.coverArt ?: song.albumId,
+                    serverUrl = serverUrl,
+                    username = username,
+                    password = password,
+                    modifier = Modifier.size(48.dp).clip(RoundedCornerShape(8.dp))
+                )
+                Column(modifier = Modifier.weight(1f).padding(start = 12.dp)) {
+                    Text(song.title, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                    Text(song.artist, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MoreItem(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(24.dp))
+        Spacer(modifier = Modifier.width(16.dp))
+        Text(text, fontSize = 15.sp)
+    }
+}
+
+private fun formatTime(ms: Long): String {
+    val totalSeconds = ms / 1000
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+    return "%d:%02d".format(minutes, seconds)
+}
+
+/**
+ * 自定义进度条 —— pointerInput 底层手势，绕过 Slider 框架开销
+ * 手指接触第 1 帧即锁定，极致跟手，绝不回跳
+ */
+@Composable
+private fun PlayerProgressBar(
+    dragProgress: Float,
+    duration: Long,
+    barWidthPx: Float,
+    activeColor: Color,
+    inactiveColor: Color,
+    onProgressChanged: (Float) -> Unit,
+    onSeek: (Long) -> Unit,
+    onDragEnd: () -> Unit,
+    onWidthMeasured: (Float) -> Unit
+) {
+    val currentProgress by rememberUpdatedState(dragProgress)
+    val currentBarWidth by rememberUpdatedState(barWidthPx)
+    val currentDuration by rememberUpdatedState(duration)
+    val currentOnProgressChanged by rememberUpdatedState(onProgressChanged)
+    val currentOnSeek by rememberUpdatedState(onSeek)
+    val currentOnDragEnd by rememberUpdatedState(onDragEnd)
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(40.dp)
+            .onGloballyPositioned { coordinates ->
+                onWidthMeasured(coordinates.size.width.toFloat())
+            }
+            .pointerInput(Unit) {
+                detectDragGestures(
+                    onDragStart = { offset ->
+                        currentOnProgressChanged((offset.x / currentBarWidth).coerceIn(0f, 1f))
+                    },
+                    onDragEnd = {
+                        currentOnSeek((currentProgress * currentDuration).toLong())
+                        currentOnDragEnd()
+                    },
+                    onDragCancel = {
+                        currentOnDragEnd()
+                    }
+                ) { change, dragAmount ->
+                    change.consume()
+                    val newOffset = (currentProgress * currentBarWidth) + dragAmount.x
+                    currentOnProgressChanged((newOffset / currentBarWidth).coerceIn(0f, 1f))
+                }
+            }
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onPress = { offset ->
+                        currentOnProgressChanged((offset.x / currentBarWidth).coerceIn(0f, 1f))
+                        val success = tryAwaitRelease()
+                        if (success) {
+                            currentOnSeek((currentProgress * currentDuration).toLong())
+                            currentOnDragEnd()
+                        } else {
+                            currentOnDragEnd()
+                        }
+                    }
+                )
+            },
+        contentAlignment = Alignment.CenterStart
+    ) {
+        // 背景轨道
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(4.dp)
+                .clip(RoundedCornerShape(2.dp))
+                .background(inactiveColor)
+        )
+        // 激活轨道
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(fraction = dragProgress)
+                .height(4.dp)
+                .clip(RoundedCornerShape(2.dp))
+                .background(activeColor)
+        )
+        // 拖动圆点
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(fraction = dragProgress)
+                .wrapContentWidth(Alignment.End)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(12.dp)
+                    .clip(CircleShape)
+                    .background(activeColor)
+            )
+        }
+    }
+}
+
+private fun getQualityBadge(song: Song): String {
+    val suffix = song.suffix.uppercase()
+    val bitRate = song.bitRate
+    return when {
+        suffix == "FLAC" -> if (bitRate > 0) "FLAC ${bitRate}K" else "FLAC"
+        suffix == "DSD" -> "DSD"
+        suffix == "WAV" || suffix == "AIFF" -> suffix
+        suffix == "MP3" && bitRate >= 320 -> "MP3 320K"
+        suffix == "AAC" && bitRate >= 256 -> "AAC ${bitRate}K"
+        suffix.isNotEmpty() && bitRate > 0 -> "$suffix ${bitRate}K"
+        suffix.isNotEmpty() -> suffix
+        else -> ""
+    }
+}
+
+private fun getQualityBadgeColor(song: Song): Color {
+    val suffix = song.suffix.uppercase()
+    return when {
+        suffix == "FLAC" || suffix == "DSD" || suffix == "WAV" || suffix == "AIFF" -> Color(0xFFFF6B81)
+        song.bitRate >= 320 -> Color(0xFF5352ED)
+        else -> Color(0xFF2ED573)
+    }
+}
