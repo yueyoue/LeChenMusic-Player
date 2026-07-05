@@ -1,32 +1,32 @@
 package com.lechenmusic.ui.theme
-
 import androidx.compose.ui.graphics.Color
 
-// Dark Theme
-val DarkPrimary = Color(0xFFFF4757)
-val DarkPrimaryDark = Color(0xFFE8414F)
-val DarkBackground = Color(0xFF0E0E0E)
-val DarkSurface = Color(0xFF1A1A1A)
-val DarkSurfaceVariant = Color(0xFF222222)
-val DarkOnBackground = Color(0xFFFFFFFF)
-val DarkOnSurface = Color(0xFFFFFFFF)
-val DarkOnSurfaceVariant = Color(0xFF999999)
-val DarkBorder = Color(0xFF2A2A2A)
-
-// Light Theme
-val LightPrimary = Color(0xFFFF4757)
-val LightPrimaryDark = Color(0xFFE8414F)
-val LightBackground = Color(0xFFF5F5F7)
+// Light Theme (Default)
+val LightPrimary = Color(0xFF6C5CE7)
+val LightPrimaryDark = Color(0xFF5A4BD1)
+val LightBackground = Color(0xFFF5F5FA)
 val LightSurface = Color(0xFFFFFFFF)
-val LightSurfaceVariant = Color(0xFFEFEFEF)
-val LightOnBackground = Color(0xFF1A1A1A)
-val LightOnSurface = Color(0xFF1A1A1A)
-val LightOnSurfaceVariant = Color(0xFF666666)
-val LightBorder = Color(0xFFE0E0E0)
+val LightSurfaceVariant = Color(0xFFF0F0F8)
+val LightOnBackground = Color(0xFF1A1A2E)
+val LightOnSurface = Color(0xFF1A1A2E)
+val LightOnSurfaceVariant = Color(0xFF666680)
+val LightBorder = Color(0xFFE0E0EA)
 
-// Accent Colors
-val AccentGreen = Color(0xFF2ED573)
-val AccentBlue = Color(0xFF5352ED)
-val AccentOrange = Color(0xFFFFA502)
-val AccentPurple = Color(0xFFA55EEA)
-val AccentPink = Color(0xFFFF6B81)
+// Dark Theme
+val DarkPrimary = Color(0xFF7C5CFC)
+val DarkPrimaryDark = Color(0xFF6C5CE7)
+val DarkBackground = Color(0xFF0A0A14)
+val DarkSurface = Color(0xFF16162A)
+val DarkSurfaceVariant = Color(0xFF1E1E38)
+val DarkOnBackground = Color(0xFFEEEEF5)
+val DarkOnSurface = Color(0xFFEEEEF5)
+val DarkOnSurfaceVariant = Color(0xFF9898B8)
+val DarkBorder = Color(0xFF282850)
+
+// Accent
+val AccentGreen = Color(0xFF34D399)
+val AccentBlue = Color(0xFF60A5FA)
+val AccentOrange = Color(0xFFFBBF24)
+val AccentPurple = Color(0xFFA78BFA)
+val AccentPink = Color(0xFFF472B6)
+val AccentRed = Color(0xFFFF4D6A)
