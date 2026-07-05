@@ -22,9 +22,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lechenmusic.data.model.Album
+import com.lechenmusic.data.model.Audiobook
 import com.lechenmusic.data.model.Song
 import com.lechenmusic.ui.MainViewModel
 import com.lechenmusic.ui.components.*
+import com.lechenmusic.ui.screens.audiobook.AudiobookCard
 
 @Composable
 fun HomeScreen(
@@ -41,7 +43,9 @@ fun HomeScreen(
     onNavigateToSearch: () -> Unit = {},
     onNavigateToArtists: () -> Unit = {},
     onNavigateToAllPlaylists: () -> Unit = {},
-    onNavigateToCachedMusic: () -> Unit = {}
+    onNavigateToCachedMusic: () -> Unit = {},
+    onNavigateToAudiobook: () -> Unit = {},
+    onNavigateToAudiobookDetail: (String) -> Unit = {}
 ) {
     val newestAlbums by viewModel.newestAlbums.collectAsState()
     val randomAlbums by viewModel.randomAlbums.collectAsState()
@@ -49,6 +53,8 @@ fun HomeScreen(
     val playlists by viewModel.playlists.collectAsState()
     val recentPlayedSongs by viewModel.recentPlayedSongs.collectAsState()
     val radioStations by viewModel.radioStations.collectAsState()
+    val homeMode by viewModel.homeMode.collectAsState()
+    val audiobooks by viewModel.audiobooks.collectAsState()
     val serverUrl by viewModel.serverUrl.collectAsState()
     val username by viewModel.username.collectAsState()
     val password by viewModel.password.collectAsState()
@@ -83,7 +89,7 @@ fun HomeScreen(
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        "搜索歌曲、专辑、歌手...",
+                        if (homeMode == "music") "搜索歌曲、专辑、歌手..." else "搜索有声书...",
                         fontSize = 14.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                     )
@@ -91,48 +97,132 @@ fun HomeScreen(
             }
         }
 
-        // 快捷入口:歌手、专辑、歌单、电台、缓存
+        // 模式切换 (音乐 / 有声书)
         item {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 20.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly
+                horizontalArrangement = Arrangement.Center
             ) {
-                QuickAccessButton(
-                    icon = Icons.Default.Person,
-                    label = "歌手",
-                    color = Color(0xFFA55EEA),
-                    onClick = onNavigateToArtists
-                )
-                QuickAccessButton(
-                    icon = Icons.Default.Album,
-                    label = "专辑",
-                    color = Color(0xFF5352ED),
-                    onClick = onNavigateToAlbums
-                )
-                QuickAccessButton(
-                    icon = Icons.Default.LibraryMusic,
-                    label = "歌单",
-                    color = Color(0xFF2ED573),
-                    onClick = onNavigateToAllPlaylists
-                )
-                QuickAccessButton(
-                    icon = Icons.Default.Headphones,
-                    label = "电台",
-                    color = Color(0xFFFF4757),
-                    onClick = onNavigateToRadio
-                )
-                QuickAccessButton(
-                    icon = Icons.Default.Download,
-                    label = "缓存",
-                    color = Color(0xFFFFA502),
-                    onClick = onNavigateToCachedMusic
-                )
+                Surface(
+                    shape = RoundedCornerShape(24.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(modifier = Modifier.padding(4.dp)) {
+                        Surface(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { viewModel.setHomeMode("music") },
+                            shape = RoundedCornerShape(20.dp),
+                            color = if (homeMode == "music") MaterialTheme.colorScheme.primary else Color.Transparent
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(vertical = 10.dp),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.MusicNote,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                    tint = if (homeMode == "music") MaterialTheme.colorScheme.onPrimary
+                                           else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    "音乐",
+                                    fontSize = 14.sp,
+                                    fontWeight = if (homeMode == "music") FontWeight.Bold else FontWeight.Normal,
+                                    color = if (homeMode == "music") MaterialTheme.colorScheme.onPrimary
+                                            else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        Surface(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable {
+                                    viewModel.setHomeMode("audiobook")
+                                    viewModel.loadAudiobooks()
+                                },
+                            shape = RoundedCornerShape(20.dp),
+                            color = if (homeMode == "audiobook") MaterialTheme.colorScheme.primary else Color.Transparent
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(vertical = 10.dp),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.MenuBook,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                    tint = if (homeMode == "audiobook") MaterialTheme.colorScheme.onPrimary
+                                           else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    "有声书",
+                                    fontSize = 14.sp,
+                                    fontWeight = if (homeMode == "audiobook") FontWeight.Bold else FontWeight.Normal,
+                                    color = if (homeMode == "audiobook") MaterialTheme.colorScheme.onPrimary
+                                            else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
 
-        // 最新专辑
+        // 快捷入口 (音乐模式)
+        if (homeMode == "music") {
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    QuickAccessButton(
+                        icon = Icons.Default.Person,
+                        label = "歌手",
+                        color = Color(0xFFA55EEA),
+                        onClick = onNavigateToArtists
+                    )
+                    QuickAccessButton(
+                        icon = Icons.Default.Album,
+                        label = "专辑",
+                        color = Color(0xFF5352ED),
+                        onClick = onNavigateToAlbums
+                    )
+                    QuickAccessButton(
+                        icon = Icons.Default.LibraryMusic,
+                        label = "歌单",
+                        color = Color(0xFF2ED573),
+                        onClick = onNavigateToAllPlaylists
+                    )
+                    QuickAccessButton(
+                        icon = Icons.Default.Headphones,
+                        label = "电台",
+                        color = Color(0xFFFF4757),
+                        onClick = onNavigateToRadio
+                    )
+                    QuickAccessButton(
+                        icon = Icons.Default.Download,
+                        label = "缓存",
+                        color = Color(0xFFFFA502),
+                        onClick = onNavigateToCachedMusic
+                    )
+                }
+            }
+        }
+
+                // ===== Music Content =====
+        if (homeMode == "music") {
+// 最新专辑
         if (newestAlbums.isNotEmpty()) {
             item {
                 Spacer(modifier = Modifier.height(20.dp))
@@ -300,7 +390,64 @@ fun HomeScreen(
                     fontSize = 13.sp
                 )
             }
+
         }
+
+        // ===== Audiobook Content =====
+        if (homeMode == "audiobook") {
+            if (audiobooks.isEmpty()) {
+                item {
+                    Spacer(modifier = Modifier.height(40.dp))
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                Icons.Default.MenuBook,
+                                contentDescription = null,
+                                modifier = Modifier.size(64.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                "暂无有声书",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 14.sp
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                "请在媒体库中添加有声书目录并扫描",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
+                }
+            } else {
+                item {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "📖 全部有声书",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(horizontal = 20.dp)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+                items(audiobooks) { book ->
+                    Box(modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)) {
+                        AudiobookCard(
+                            book = book,
+                            serverUrl = serverUrl,
+                            username = username,
+                            password = password,
+                            onClick = { onNavigateToAudiobookDetail(book.id) }
+                        )
+                    }
+                }
+            }
+        }        }
     }
 }
 
