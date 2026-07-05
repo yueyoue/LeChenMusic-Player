@@ -891,3 +891,84 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 }
+
+    // ===== Audiobook State =====
+    private val _homeMode = MutableStateFlow("music")
+    val homeMode: StateFlow<String> = _homeMode.asStateFlow()
+    fun setHomeMode(mode: String) { _homeMode.value = mode }
+
+    private val _audiobooks = MutableStateFlow<List<com.lechenmusic.data.model.Audiobook>>(emptyList())
+    val audiobooks: StateFlow<List<com.lechenmusic.data.model.Audiobook>> = _audiobooks.asStateFlow()
+
+    private val _audiobookDetail = MutableStateFlow<com.lechenmusic.data.model.AudiobookDetail?>(null)
+    val audiobookDetail: StateFlow<com.lechenmusic.data.model.AudiobookDetail?> = _audiobookDetail.asStateFlow()
+
+    private val _currentAudiobook = MutableStateFlow<com.lechenmusic.data.model.Audiobook?>(null)
+    val currentAudiobook: StateFlow<com.lechenmusic.data.model.Audiobook?> = _currentAudiobook.asStateFlow()
+
+    private val _currentAudiobookChapters = MutableStateFlow<List<com.lechenmusic.data.model.AudiobookChapter>>(emptyList())
+    val currentAudiobookChapters: StateFlow<List<com.lechenmusic.data.model.AudiobookChapter>> = _currentAudiobookChapters.asStateFlow()
+
+    private val _currentChapterIndex = MutableStateFlow(0)
+    val currentChapterIndex: StateFlow<Int> = _currentChapterIndex.asStateFlow()
+
+    private val _audiobookIsPlaying = MutableStateFlow(false)
+    val audiobookIsPlaying: StateFlow<Boolean> = _audiobookIsPlaying.asStateFlow()
+
+    private val _audiobookPosition = MutableStateFlow(0L)
+    val audiobookPosition: StateFlow<Long> = _audiobookPosition.asStateFlow()
+
+    private val _audiobookDuration = MutableStateFlow(0L)
+    val audiobookDuration: StateFlow<Long> = _audiobookDuration.asStateFlow()
+
+    fun loadAudiobooks() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val result = repository.getAudiobooks()
+                if (result.isSuccess) _audiobooks.value = result.getOrNull() ?: emptyList()
+            } catch (_: Exception) {}
+        }
+    }
+
+    fun loadAudiobookDetail(id: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val result = repository.getAudiobookDetail(id)
+                if (result.isSuccess) _audiobookDetail.value = result.getOrNull()
+            } catch (_: Exception) {}
+        }
+    }
+
+    fun playAudiobookChapter(book: com.lechenmusic.data.model.Audiobook, chapter: com.lechenmusic.data.model.AudiobookChapter, chapters: List<com.lechenmusic.data.model.AudiobookChapter>) {
+        _currentAudiobook.value = book
+        _currentAudiobookChapters.value = chapters
+        _currentChapterIndex.value = chapters.indexOfFirst { it.id == chapter.id }.coerceAtLeast(0)
+        val url = repository.getAudiobookChapterStreamUrl(book.id, chapter.id)
+        playerManager.playUrl(url, chapter.title, book.title, "audiobook_${book.id}_${chapter.id}")
+        _audiobookIsPlaying.value = true
+    }
+
+    fun audiobookPreviousChapter() {
+        val idx = _currentChapterIndex.value
+        if (idx > 0) {
+            val book = _currentAudiobook.value ?: return
+            val chapters = _currentAudiobookChapters.value
+            playAudiobookChapter(book, chapters[idx - 1], chapters)
+        }
+    }
+
+    fun audiobookNextChapter() {
+        val idx = _currentChapterIndex.value
+        val chapters = _currentAudiobookChapters.value
+        if (idx < chapters.size - 1) {
+            val book = _currentAudiobook.value ?: return
+            playAudiobookChapter(book, chapters[idx + 1], chapters)
+        }
+    }
+
+    fun audiobookSeekTo(positionMs: Long) { playerManager.seekTo(positionMs) }
+    fun audiobookSkipForward15s() { playerManager.seekTo(playerManager.currentPosition.value + 15000) }
+    fun audiobookSkipBackward15s() { playerManager.seekTo((playerManager.currentPosition.value - 15000).coerceAtLeast(0)) }
+    fun audiobookTogglePlayPause() { playerManager.togglePlayPause() }
+
+}
