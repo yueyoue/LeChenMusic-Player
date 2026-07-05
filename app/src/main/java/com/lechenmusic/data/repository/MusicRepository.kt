@@ -388,20 +388,6 @@ class MusicRepository {
             Result.failure(e)
         }
     }
-}
-
-data class StarredData(
-    val songs: List<Song> = emptyList(),
-    val albums: List<Album> = emptyList(),
-    val artists: List<Artist> = emptyList()
-)
-
-data class ServerStats(
-    val songCount: Int = 0,
-    val albumCount: Int = 0,
-    val playlistCount: Int = 0,
-    val artistCount: Int = 0
-)
 
     // ===== Audiobook Methods =====
 
@@ -441,7 +427,8 @@ data class ServerStats(
                     progress = data?.progress
                 ))
             } else {
-                Result.failure(Exception("HTTP ${response.code()}"))
+                val code = response.code()
+                Result.failure(Exception("HTTP $code"))
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -450,8 +437,9 @@ data class ServerStats(
 
     fun getAudiobookChapterStreamUrl(bookId: String, chapterId: String): String {
         val normalizedUrl = serverUrl.trimEnd('/')
-        val encodedPass = if (password.startsWith("enc:")) password else "enc:${password.toByteArray().joinToString("") { "%02x".format(it) }}"
-        return "$normalizedUrl/api/audiobook/$bookId/chapters/$chapterId/stream?u=$username&p=$encodedPass"
+        val passBytes = password.toByteArray()
+        val encodedPass = if (password.startsWith("enc:")) password else "enc:" + passBytes.joinToString("") { "%02x".format(it) }
+        return normalizedUrl + "/api/audiobook/" + bookId + "/chapters/" + chapterId + "/stream?u=" + username + "&p=" + encodedPass
     }
 
 }
