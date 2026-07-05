@@ -42,17 +42,25 @@ fun AudiobookPlayerScreen(
     onSkipBackward15s: () -> Unit,
     onPreviousChapter: () -> Unit,
     onNextChapter: () -> Unit,
-    onChapterSelect: (Int) -> Unit
+    onChapterSelect: (Int) -> Unit,
+    onSaveProgress: () -> Unit = {}
 ) {
     val currentChapter = chapters.getOrNull(currentChapterIndex)
     val progress = if (durationMs > 0) currentPositionMs.toFloat() / durationMs.toFloat() else 0f
+
+    // Save progress when leaving the screen
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        onDispose {
+            onSaveProgress()
+        }
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("正在播放") },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = { onSaveProgress(); onBack() }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "返回")
                     }
                 }
