@@ -970,4 +970,71 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun audiobookSkipForward15s() { playerManager.seekTo(playerManager.currentPosition.value + 15000) }
     fun audiobookSkipBackward15s() { playerManager.seekTo((playerManager.currentPosition.value - 15000).coerceAtLeast(0)) }
     fun audiobookTogglePlayPause() { playerManager.togglePlayPause() }
+
+    // ===== Audiobook Progress =====
+    private val _audiobookProgressMap = MutableStateFlow<Map<String, com.lechenmusic.data.model.AudiobookProgress>>(emptyMap())
+    val audiobookProgressMap: StateFlow<Map<String, com.lechenmusic.data.model.AudiobookProgress>> = _audiobookProgressMap.asStateFlow()
+
+    fun loadAudiobookProgress(bookId: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val result = repository.getAudiobookProgress(bookId)
+                if (result.isSuccess) {
+                    val progress = result.getOrNull()
+                    if (progress != null) {
+                        _audiobookProgressMap.value = _audiobookProgressMap.value + (bookId to progress)
+                    }
+                }
+            } catch (_: Exception) {}
+        }
+    }
+
+    fun saveAudiobookProgress() {
+        val book = _currentAudiobook.value ?: return
+        val chapters = _currentAudiobookChapters.value
+        val idx = _currentChapterIndex.value
+        val chapter = chapters.getOrNull(idx) ?: return
+        val positionMs = playerManager.currentPosition.value
+        val positionSeconds = (positionMs / 1000).toInt()
+
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                repository.saveAudiobookProgress(book.id, chapter.id, chapter.chapterNumber, positionSeconds)
+            } catch (_: Exception) {}
+        }
+    }
+
+    fun resumeAudiobook(book: com.lechenmusic.data.model.Audiobook) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val detailResult = repository.getAudiobookDetail(book.id)
+                if (detailResult.isSuccess) {
+                    val detail = detailResult.getOrNull() ?: return@launch
+                    val progress = detail.progress
+
+                    if (progress != null && progress.chapterId.isNotEmpty()) {
+                        val chapter = detail.chapters.find { it.id == progress.chapterId }
+                        if (chapter != null) {
+                            _currentAudiobook.value = book
+                            _currentAudiobookChapters.value = detail.chapters
+                            _currentChapterIndex.value = detail.chapters.indexOfFirst { it.id == chapter.id }.coerceAtLeast(0)
+
+                            val url = repository.getAudiobookChapterStreamUrl(book.id, chapter.id)
+                            playerManager.playUrl(url, chapter.title, book.title, "audiobook_${'$'}{book.id}_${'$'}{chapter.id}")
+
+                            kotlinx.coroutines.delay(500)
+                            playerManager.seekTo(progress.position * 1000L)
+                            _audiobookIsPlaying.value = true
+                            return@launch
+                        }
+                    }
+
+                    if (detail.chapters.isNotEmpty()) {
+                        playAudiobookChapter(book, detail.chapters[0], detail.chapters)
+                    }
+                }
+            } catch (_: Exception) {}
+        }
+    }
+
 }
