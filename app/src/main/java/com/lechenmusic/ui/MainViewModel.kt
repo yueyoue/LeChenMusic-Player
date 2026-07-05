@@ -19,6 +19,7 @@ import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val app = application as LeChenApp
