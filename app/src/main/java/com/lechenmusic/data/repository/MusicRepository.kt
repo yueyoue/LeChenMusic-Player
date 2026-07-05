@@ -442,20 +442,43 @@ class MusicRepository {
         return normalizedUrl + "/api/audiobook/" + bookId + "/chapters/" + chapterId + "/stream?u=" + username + "&p=" + encodedPass
     }
 
+
+    suspend fun saveAudiobookProgress(bookId: String, chapterId: String, chapterNumber: Int, positionSeconds: Int): Result<Unit> {
+        return try {
+            val body = okhttp3.RequestBody.create(
+                okhttp3.MediaType.parse("application/json"),
+                com.google.gson.Gson().toJson(mapOf(
+                    "chapterId" to chapterId,
+                    "chapterNumber" to chapterNumber,
+                    "position" to positionSeconds
+                ))
+            )
+            val response = api!!.saveAudiobookProgress(username, password, bookId, body)
+            if (response.isSuccessful) Result.success(Unit)
+            else Result.failure(Exception("HTTP ${'$'}{response.code()}"))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getAudiobookProgress(bookId: String): Result<com.lechenmusic.data.model.AudiobookProgress?> {
+        return try {
+            val response = api!!.getAudiobookProgress(username, password, bookId)
+            if (response.isSuccessful && response.body() != null) {
+                val gson = com.google.gson.Gson()
+                val jsonObj = response.body().asJsonObject
+                val dataObj = jsonObj.getAsJsonObject("data")
+                if (dataObj != null && !dataObj.isJsonNull) {
+                    Result.success(gson.fromJson(dataObj, com.lechenmusic.data.model.AudiobookProgress::class.java))
+                } else {
+                    Result.success(null)
+                }
+            } else {
+                Result.success(null)
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
 }
-
-// Data classes used by MusicRepository
-data class StarredData(
-    val songs: List<com.lechenmusic.data.model.Song> = emptyList(),
-    val albums: List<com.lechenmusic.data.model.Album> = emptyList(),
-    val artists: List<com.lechenmusic.data.model.Artist> = emptyList()
-)
-
-data class ServerStats(
-    val songCount: Int = 0,
-    val albumCount: Int = 0,
-    val artistCount: Int = 0,
-    val playlistCount: Int = 0,
-    val totalSize: Long = 0,
-    val totalDuration: Long = 0
-)
