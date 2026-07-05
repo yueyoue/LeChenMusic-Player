@@ -3,6 +3,8 @@ package com.lechenmusic.data.repository
 import com.lechenmusic.data.api.ApiClient
 import com.lechenmusic.data.api.SubsonicApi
 import com.lechenmusic.data.model.*
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody
 
 class MusicRepository {
     private var api: SubsonicApi? = null
