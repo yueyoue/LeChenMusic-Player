@@ -23,4 +23,10 @@ sealed class Screen(val route: String) {
     object Radio : Screen("radio")
     object AllPlaylists : Screen("all_playlists")
     object CachedMusic : Screen("cached_music")
+
+    object Audiobook : Screen("audiobook")
+    object AudiobookDetail : Screen("audiobook_detail/{audiobookId}") {
+        fun createRoute(audiobookId: String) = "audiobook_detail/$audiobookId"
+    }
+    object AudiobookPlayer : Screen("audiobook_player")
 }
