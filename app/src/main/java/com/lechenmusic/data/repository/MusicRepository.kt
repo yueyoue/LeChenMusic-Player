@@ -402,3 +402,56 @@ data class ServerStats(
     val playlistCount: Int = 0,
     val artistCount: Int = 0
 )
+
+    // ===== Audiobook Methods =====
+
+    data class AudiobookListResponse(val data: List<com.lechenmusic.data.model.Audiobook>? = null)
+    data class AudiobookDetailApiResponse(val data: AudiobookDetailData? = null)
+    data class AudiobookDetailData(
+        val book: com.lechenmusic.data.model.Audiobook? = null,
+        val chapters: List<com.lechenmusic.data.model.AudiobookChapter>? = null,
+        val progress: com.lechenmusic.data.model.AudiobookProgress? = null
+    )
+
+    suspend fun getAudiobooks(): Result<List<com.lechenmusic.data.model.Audiobook>> {
+        return try {
+            val response = api!!.getAudiobooks(username, password)
+            if (response.isSuccessful && response.body() != null) {
+                val gson = com.google.gson.Gson()
+                val parsed = gson.fromJson(response.body(), AudiobookListResponse::class.java)
+                Result.success(parsed?.data ?: emptyList())
+            } else {
+                Result.success(emptyList())
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getAudiobookDetail(id: String): Result<com.lechenmusic.data.model.AudiobookDetail> {
+        return try {
+            val response = api!!.getAudiobook(username, password, id)
+            if (response.isSuccessful && response.body() != null) {
+                val gson = com.google.gson.Gson()
+                val parsed = gson.fromJson(response.body(), AudiobookDetailApiResponse::class.java)
+                val data = parsed?.data
+                Result.success(com.lechenmusic.data.model.AudiobookDetail(
+                    book = data?.book ?: com.lechenmusic.data.model.Audiobook(),
+                    chapters = data?.chapters ?: emptyList(),
+                    progress = data?.progress
+                ))
+            } else {
+                Result.failure(Exception("HTTP ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    fun getAudiobookChapterStreamUrl(bookId: String, chapterId: String): String {
+        val normalizedUrl = serverUrl.trimEnd('/')
+        val encodedPass = if (password.startsWith("enc:")) password else "enc:${password.toByteArray().joinToString("") { "%02x".format(it) }}"
+        return "$normalizedUrl/api/audiobook/$bookId/chapters/$chapterId/stream?u=$username&p=$encodedPass"
+    }
+
+}
