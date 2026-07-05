@@ -87,12 +87,13 @@ fun AudiobookDetailScreen(
                             color = MaterialTheme.colorScheme.surfaceVariant
                         ) {
                             if (book.coverPath != null) {
-                                // CoverImage replaced
-                                    coverArtId = book.coverPath,
-                                    serverUrl = serverUrl,
-                                    username = username,
-                                    password = password,
-                                    modifier = Modifier.fillMaxSize()
+                            val coverUrl = getAudiobookCoverUrl(serverUrl, username, password, book.id)
+                            if (coverUrl != null) {
+                                AsyncImage(
+                                    model = coverUrl,
+                                    contentDescription = null,
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
                                 )
                             } else {
                                 Box(contentAlignment = Alignment.Center) {
