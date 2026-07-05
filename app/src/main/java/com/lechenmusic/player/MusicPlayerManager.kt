@@ -661,4 +661,25 @@ class MusicPlayerManager(private val context: Context) {
         _isStarred.value = false
         updateNotification()
     }
+
+    // ===== Audiobook playback =====
+    fun playUrl(url: String, title: String, artist: String, mediaId: String) {
+        player?.apply {
+            val mediaItem = MediaItem.Builder()
+                .setUri(url)
+                .setMediaId(mediaId)
+                .setMediaMetadata(
+                    Media3Metadata.Builder()
+                        .setTitle(title)
+                        .setArtist(artist)
+                        .setAlbumTitle("有声书")
+                        .build()
+                )
+                .build()
+            setMediaItem(mediaItem)
+            prepare()
+            play()
+        }
+    }
+
 }
