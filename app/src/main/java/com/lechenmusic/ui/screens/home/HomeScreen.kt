@@ -125,7 +125,7 @@ fun HomeScreen(
             }
             // Daily songs
             if (dailySongs.isNotEmpty()) {
-                item { SecHd("\🎯 每日推荐", "换一批 ↻") { viewModel.refreshDailySongs() } }
+                item { SecHd("🎯 每日推荐", "换一批 ↻") { viewModel.refreshDailySongs() } }
                 items(dailySongs.take(5)) { SongRow(it, serverUrl, username, password) { onSongClick(it, dailySongs) } }
             }
             // Playlists
@@ -143,7 +143,7 @@ fun HomeScreen(
             if (recentPlayedSongs.isNotEmpty()) { items(recentPlayedSongs.take(5)) { SongRow(it, serverUrl, username, password) { onSongClick(it, recentPlayedSongs) } } }
             else { item { Text("播放歌曲后将显示在此处", modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp) } }
             // Radio
-            item { SecHd("\uD83D\uDCFB 电台") {} }
+            item { SecHd("📻 电台", "") }
             if (radioStations.isNotEmpty()) { items(radioStations.take(4)) { RadioRow(it) { viewModel.playerManager.playRadioStation(it) } } }
         }
 
