@@ -890,7 +890,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
-}
 
     // ===== Audiobook State =====
     private val _homeMode = MutableStateFlow("music")
@@ -970,5 +969,4 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun audiobookSkipForward15s() { playerManager.seekTo(playerManager.currentPosition.value + 15000) }
     fun audiobookSkipBackward15s() { playerManager.seekTo((playerManager.currentPosition.value - 15000).coerceAtLeast(0)) }
     fun audiobookTogglePlayPause() { playerManager.togglePlayPause() }
-
 }
