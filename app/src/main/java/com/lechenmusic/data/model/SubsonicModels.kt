@@ -201,3 +201,52 @@ data class InternetRadioStation(
     val coverArt: String? = null,
     val homepageUrl: String? = null
 )
+
+// ===== Audiobook Models =====
+
+data class Audiobook(
+    val id: String = "",
+    val title: String = "",
+    val author: String = "",
+    val narrator: String = "",
+    val description: String = "",
+    val genre: String = "",
+    val year: Int = 0,
+    val coverPath: String? = null,
+    val totalDuration: Int = 0,
+    val chapterCount: Int = 0,
+    val libraryId: Int = 0,
+    val path: String = "",
+    val size: Long = 0,
+    val createdAt: String = "",
+    val updatedAt: String = ""
+)
+
+data class AudiobookChapter(
+    val id: String = "",
+    val audiobookId: String = "",
+    val title: String = "",
+    val chapterNumber: Int = 0,
+    val duration: Int = 0,
+    val format: String = "",
+    val fileSize: Long = 0,
+    val path: String = "",
+    val createdAt: String = ""
+)
+
+data class AudiobookProgress(
+    val id: String = "",
+    val userId: String = "",
+    val audiobookId: String = "",
+    val chapterId: String = "",
+    val chapterNumber: Int = 0,
+    val position: Int = 0,
+    val completed: Boolean = false,
+    val lastPlayedAt: String = ""
+)
+
+data class AudiobookDetail(
+    val book: Audiobook = Audiobook(),
+    val chapters: List<AudiobookChapter> = emptyList(),
+    val progress: AudiobookProgress? = null
+)
