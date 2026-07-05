@@ -86,7 +86,6 @@ fun AudiobookDetailScreen(
                             shape = RoundedCornerShape(10.dp),
                             color = MaterialTheme.colorScheme.surfaceVariant
                         ) {
-                            if (book.coverPath != null) {
                             val coverUrl = getAudiobookCoverUrl(serverUrl, username, password, book.id)
                             if (coverUrl != null) {
                                 AsyncImage(
