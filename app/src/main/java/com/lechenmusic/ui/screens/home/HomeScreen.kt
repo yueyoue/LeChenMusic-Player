@@ -193,8 +193,8 @@ fun HomeScreen(
     }
 }
 
-@Composable private fun ModeBtn(icon: String, label: String, active: Boolean, onClick: () -> Unit) {
-    Surface(modifier = Modifier.weight(1f).clickable(onClick = onClick), shape = RoundedCornerShape(14.dp), color = if (active) MaterialTheme.colorScheme.primary else Color.Transparent) {
+@Composable private fun ModeBtn(icon: String, label: String, active: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Surface(modifier = modifier.clickable(onClick = onClick), shape = RoundedCornerShape(14.dp), color = if (active) MaterialTheme.colorScheme.primary else Color.Transparent) {
         Row(modifier = Modifier.padding(vertical = 9.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
             Text(icon, fontSize = 14.sp); Spacer(modifier = Modifier.width(5.dp))
             Text(label, fontSize = 13.sp, fontWeight = if (active) FontWeight.Bold else FontWeight.Medium, color = if (active) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant)
