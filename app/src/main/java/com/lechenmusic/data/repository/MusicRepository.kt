@@ -446,7 +446,7 @@ class MusicRepository {
     suspend fun saveAudiobookProgress(bookId: String, chapterId: String, chapterNumber: Int, positionSeconds: Int): Result<Unit> {
         return try {
             val body = okhttp3.RequestBody.create(
-                okhttp3.MediaType.parse("application/json"),
+                "application/json".toMediaType(),
                 com.google.gson.Gson().toJson(mapOf(
                     "chapterId" to chapterId,
                     "chapterNumber" to chapterNumber,
@@ -466,8 +466,9 @@ class MusicRepository {
             val response = api!!.getAudiobookProgress(username, password, bookId)
             if (response.isSuccessful && response.body() != null) {
                 val gson = com.google.gson.Gson()
-                val jsonObj = response.body().asJsonObject
-                val dataObj = jsonObj.getAsJsonObject("data")
+                val body = response.body()
+                val jsonObj = body?.asJsonObject
+                val dataObj = jsonObj?.getAsJsonObject("data")
                 if (dataObj != null && !dataObj.isJsonNull) {
                     Result.success(gson.fromJson(dataObj, com.lechenmusic.data.model.AudiobookProgress::class.java))
                 } else {
@@ -482,3 +483,6 @@ class MusicRepository {
     }
 
 }
+
+data class StarredData(val songs: List<com.lechenmusic.data.model.Song> = emptyList(), val albums: List<com.lechenmusic.data.model.Album> = emptyList(), val artists: List<com.lechenmusic.data.model.Artist> = emptyList())
+data class ServerStats(val songCount: Int = 0, val albumCount: Int = 0, val playlistCount: Int = 0, val artistCount: Int = 0)
