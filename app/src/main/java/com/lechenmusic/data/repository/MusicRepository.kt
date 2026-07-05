@@ -452,10 +452,10 @@ data class StarredData(
 )
 
 data class ServerStats(
-    val totalSongs: Int = 0,
-    val totalAlbums: Int = 0,
-    val totalArtists: Int = 0,
-    val totalPlaylists: Int = 0,
+    val songCount: Int = 0,
+    val albumCount: Int = 0,
+    val artistCount: Int = 0,
+    val playlistCount: Int = 0,
     val totalSize: Long = 0,
     val totalDuration: Long = 0
 )
