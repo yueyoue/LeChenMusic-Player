@@ -40,6 +40,9 @@ import com.lechenmusic.ui.screens.settings.SettingsScreen
 import com.lechenmusic.ui.screens.songs.AllSongsScreen
 import com.lechenmusic.ui.screens.home.AllPlaylistsScreen
 import com.lechenmusic.ui.screens.home.CachedMusicScreen
+import com.lechenmusic.ui.screens.audiobook.AudiobookScreen
+import com.lechenmusic.ui.screens.audiobook.AudiobookDetailScreen
+import com.lechenmusic.ui.screens.audiobook.AudiobookPlayerScreen
 import com.lechenmusic.ui.theme.LeChenMusicTheme
 import com.lechenmusic.update.UpdateInfo
 
@@ -233,7 +236,9 @@ fun LeChenMusicApp(viewModel: MainViewModel) {
                             onNavigateToSearch = { navController.navigate(Screen.Search.route) },
                             onNavigateToArtists = { navController.navigate(Screen.Artists.route) },
                             onNavigateToAllPlaylists = { navController.navigate(Screen.AllPlaylists.route) },
-                            onNavigateToCachedMusic = { navController.navigate(Screen.CachedMusic.route) }
+                            onNavigateToCachedMusic = { navController.navigate(Screen.CachedMusic.route) },
+                            onNavigateToAudiobook = { navController.navigate(Screen.Audiobook.route) },
+                            onNavigateToAudiobookDetail = { id -> navController.navigate(Screen.AudiobookDetail.createRoute(id)) }
                         )
                     }
                     composable(Screen.Favorites.route) {
@@ -354,6 +359,58 @@ fun LeChenMusicApp(viewModel: MainViewModel) {
                             onBack = { navController.popBackStack() }
                         )
                     }
+                    composable(Screen.Audiobook.route) {
+                        AudiobookScreen(
+                            viewModel = viewModel,
+                            onBack = { navController.popBackStack() },
+                            onAudiobookClick = { id -> navController.navigate(Screen.AudiobookDetail.createRoute(id)) }
+                        )
+                    }
+                    composable(Screen.AudiobookDetail.route) { backStackEntry ->
+                        val audiobookId = backStackEntry.arguments?.getString("audiobookId") ?: ""
+                        AudiobookDetailScreen(
+                            viewModel = viewModel,
+                            audiobookId = audiobookId,
+                            onBack = { navController.popBackStack() },
+                            onPlayChapter = { book, chapter, chapters ->
+                                viewModel.playAudiobookChapter(book, chapter, chapters)
+                                navController.navigate(Screen.AudiobookPlayer.route)
+                            }
+                        )
+                    }
+                    composable(Screen.AudiobookPlayer.route) {
+                        val currentBook by viewModel.currentAudiobook.collectAsState()
+                        val chapters by viewModel.currentAudiobookChapters.collectAsState()
+                        val chapterIndex by viewModel.currentChapterIndex.collectAsState()
+                        val isPlaying by viewModel.audiobookIsPlaying.collectAsState()
+                        val position by viewModel.audiobookPosition.collectAsState()
+                        val duration by viewModel.audiobookDuration.collectAsState()
+                        val serverUrl by viewModel.serverUrl.collectAsState()
+                        val username by viewModel.username.collectAsState()
+                        val password by viewModel.password.collectAsState()
+                        if (currentBook != null) {
+                            AudiobookPlayerScreen(
+                                book = currentBook!!,
+                                chapters = chapters,
+                                currentChapterIndex = chapterIndex,
+                                isPlaying = isPlaying,
+                                currentPositionMs = position,
+                                durationMs = duration,
+                                serverUrl = serverUrl,
+                                username = username,
+                                password = password,
+                                onBack = { navController.popBackStack() },
+                                onPlayPause = { viewModel.audiobookTogglePlayPause() },
+                                onSeekTo = { viewModel.audiobookSeekTo(it) },
+                                onSkipForward15s = { viewModel.audiobookSkipForward15s() },
+                                onSkipBackward15s = { viewModel.audiobookSkipBackward15s() },
+                                onPreviousChapter = { viewModel.audiobookPreviousChapter() },
+                                onNextChapter = { viewModel.audiobookNextChapter() },
+                                onChapterSelect = { viewModel.playAudiobookChapter(currentBook!!, chapters[it], chapters) }
+                            )
+                        }
+                    }
+
                 }
             }
         }
