@@ -406,7 +406,8 @@ fun LeChenMusicApp(viewModel: MainViewModel) {
                                 onSkipBackward15s = { viewModel.audiobookSkipBackward15s() },
                                 onPreviousChapter = { viewModel.audiobookPreviousChapter() },
                                 onNextChapter = { viewModel.audiobookNextChapter() },
-                                onChapterSelect = { viewModel.playAudiobookChapter(currentBook!!, chapters[it], chapters) }
+                                onChapterSelect = { viewModel.playAudiobookChapter(currentBook!!, chapters[it], chapters) },
+                            onSaveProgress = { viewModel.saveAudiobookProgress() }
                             )
                         }
                     }
