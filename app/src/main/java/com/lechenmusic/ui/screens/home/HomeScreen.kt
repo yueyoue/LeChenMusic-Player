@@ -170,7 +170,7 @@ fun HomeScreen(
             // Continue listening
             if (audiobooks.isNotEmpty()) {
                 item { SecHd("⏱️ 继续收听", "全部 ›") {} }
-                items(audiobooks.take(2)) { ContCard(it, serverUrl, username, password) { onNavigateToAudiobookDetail(it.id) } }
+                items(audiobooks.take(2)) { ContCard(it, serverUrl, username, password) { viewModel.resumeAudiobook(it); onNavigateToAudiobookDetail(it.id) } }
             }
             // Categories
             item { SecHd("\uD83D\uDCC2 分类", "全部 ›", onNavigateToAudiobook) }
