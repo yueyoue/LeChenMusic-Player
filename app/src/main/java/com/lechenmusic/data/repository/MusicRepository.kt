@@ -443,3 +443,19 @@ class MusicRepository {
     }
 
 }
+
+// Data classes used by MusicRepository
+data class StarredData(
+    val songs: List<com.lechenmusic.data.model.Song> = emptyList(),
+    val albums: List<com.lechenmusic.data.model.Album> = emptyList(),
+    val artists: List<com.lechenmusic.data.model.Artist> = emptyList()
+)
+
+data class ServerStats(
+    val totalSongs: Int = 0,
+    val totalAlbums: Int = 0,
+    val totalArtists: Int = 0,
+    val totalPlaylists: Int = 0,
+    val totalSize: Long = 0,
+    val totalDuration: Long = 0
+)
