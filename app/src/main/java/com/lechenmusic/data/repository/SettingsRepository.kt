@@ -35,7 +35,7 @@ class SettingsRepository(private val context: Context) {
     val serverUrl: Flow<String> = context.dataStore.data.map { it[SERVER_URL] ?: "" }
     val username: Flow<String> = context.dataStore.data.map { it[USERNAME] ?: "" }
     val password: Flow<String> = context.dataStore.data.map { it[PASSWORD] ?: "" }
-    val themeMode: Flow<String> = context.dataStore.data.map { it[THEME_MODE] ?: "dark" }
+    val themeMode: Flow<String> = context.dataStore.data.map { it[THEME_MODE] ?: "light" }
     val cacheSize: Flow<Int> = context.dataStore.data.map { it[CACHE_SIZE] ?: 4 }
     val recentPlayIds: Flow<String> = context.dataStore.data.map { it[RECENT_PLAY_IDS] ?: "" }
 
