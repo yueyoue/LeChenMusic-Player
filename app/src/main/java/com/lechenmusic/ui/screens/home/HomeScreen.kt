@@ -40,8 +40,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
     viewModel: MainViewModel,
@@ -476,8 +475,6 @@ fun HomeScreen(
             }
         }
 
-        // Pull-to-refresh indicator
-        )
     }
 }
 
