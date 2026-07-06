@@ -71,6 +71,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // Starred
     private val _starredSongs = MutableStateFlow<List<Song>>(emptyList())
     val starredSongs: StateFlow<List<Song>> = _starredSongs.asStateFlow()
+    private val _starredAlbums = MutableStateFlow<List<Album>>(emptyList())
+    val starredAlbums: StateFlow<List<Album>> = _starredAlbums.asStateFlow()
+    private val _starredAudiobooks = MutableStateFlow<List<Audiobook>>(emptyList())
+    val starredAudiobooks: StateFlow<List<Audiobook>> = _starredAudiobooks.asStateFlow()
 
     // Server stats
     private val _serverStats = MutableStateFlow(ServerStats())
@@ -416,7 +420,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             // Load starred songs
-            repository.getStarred().onSuccess { _starredSongs.value = it.songs }
+            repository.getStarred().onSuccess { 
+                _starredSongs.value = it.songs
+                _starredAlbums.value = it.albums
+            }
+            loadStarredAudiobooks()
 
             // Load recent played songs from stored IDs
             loadRecentPlayedSongs()
@@ -850,7 +858,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
                 // Sync starred
                 _syncStatus.value = "同步收藏 (3/4)..."
-                repository.getStarred().onSuccess { _starredSongs.value = it.songs }
+                repository.getStarred().onSuccess { 
+                    _starredSongs.value = it.songs
+                    _starredAlbums.value = it.albums
+                }
+                loadStarredAudiobooks()
 
                 // Refresh home data (daily songs and random albums only refresh on user click "换一批")
                 _syncStatus.value = "同步歌曲和专辑 (4/4)..."
@@ -874,7 +886,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun syncPlaylists() {
         viewModelScope.launch {
             repository.getPlaylists().onSuccess { _playlists.value = it }
-            repository.getStarred().onSuccess { _starredSongs.value = it.songs }
+            repository.getStarred().onSuccess { 
+                _starredSongs.value = it.songs
+                _starredAlbums.value = it.albums
+            }
+            loadStarredAudiobooks()
         }
     }
 
@@ -927,6 +943,49 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val result = repository.getAudiobooks()
                 if (result.isSuccess) _audiobooks.value = result.getOrNull() ?: emptyList()
             } catch (_: Exception) {}
+        }
+    }
+
+    fun loadStarredAudiobooks() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val result = repository.getStarredAudiobooks()
+                if (result.isSuccess) _starredAudiobooks.value = result.getOrNull() ?: emptyList()
+            } catch (_: Exception) {}
+        }
+    }
+
+    fun star(id: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.star(id).onSuccess {
+                repository.getStarred().onSuccess {
+                    _starredSongs.value = it.songs
+                    _starredAlbums.value = it.albums
+                }
+            }
+        }
+    }
+
+    fun unstar(id: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.unstar(id).onSuccess {
+                repository.getStarred().onSuccess {
+                    _starredSongs.value = it.songs
+                    _starredAlbums.value = it.albums
+                }
+            }
+        }
+    }
+
+    fun starAudiobook(id: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.starAudiobook(id).onSuccess { loadStarredAudiobooks() }
+        }
+    }
+
+    fun unstarAudiobook(id: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.unstarAudiobook(id).onSuccess { loadStarredAudiobooks() }
         }
     }
 

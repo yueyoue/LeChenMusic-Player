@@ -59,8 +59,11 @@ data class Album(
     val playCount: Long = 0,
     val created: String = "",
     val year: Int? = null,
-    val genre: String? = null
-)
+    val genre: String? = null,
+    val starred: String? = null
+) {
+    val isStarred: Boolean get() = starred != null
+}
 
 data class SearchResult(
     val song: List<Song>? = null,
@@ -218,9 +221,12 @@ data class Audiobook(
     val libraryId: Int = 0,
     val path: String = "",
     val size: Long = 0,
+    val starred: String? = null,
     val createdAt: String = "",
     val updatedAt: String = ""
-)
+) {
+    val isStarred: Boolean get() = starred != null
+}
 
 data class AudiobookChapter(
     val id: String = "",

@@ -484,6 +484,58 @@ class MusicRepository {
         }
     }
 
+    suspend fun getStarredAudiobooks(): Result<List<com.lechenmusic.data.model.Audiobook>> {
+        return try {
+            val normalizedUrl = serverUrl.trimEnd('/')
+            val passBytes = password.toByteArray()
+            val encodedPass = if (password.startsWith("enc:")) password else "enc:" + passBytes.joinToString("") { "%02x".format(it) }
+            val url = "$normalizedUrl/api/audiobook/starred?u=$username&p=$encodedPass"
+            val request = okhttp3.Request.Builder().url(url).build()
+            val client = okhttp3.OkHttpClient()
+            val response = client.newCall(request).execute()
+            if (response.isSuccessful && response.body != null) {
+                val gson = com.google.gson.Gson()
+                val parsed = gson.fromJson(response.body?.string(), AudiobookListResponse::class.java)
+                Result.success(parsed?.data ?: emptyList())
+            } else {
+                Result.success(emptyList())
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun starAudiobook(id: String): Result<Unit> {
+        return try {
+            val normalizedUrl = serverUrl.trimEnd('/')
+            val passBytes = password.toByteArray()
+            val encodedPass = if (password.startsWith("enc:")) password else "enc:" + passBytes.joinToString("") { "%02x".format(it) }
+            val url = "$normalizedUrl/api/audiobook/$id/star?u=$username&p=$encodedPass"
+            val body = okhttp3.RequestBody.create(null, ByteArray(0))
+            val request = okhttp3.Request.Builder().url(url).post(body).build()
+            val client = okhttp3.OkHttpClient()
+            client.newCall(request).execute()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun unstarAudiobook(id: String): Result<Unit> {
+        return try {
+            val normalizedUrl = serverUrl.trimEnd('/')
+            val passBytes = password.toByteArray()
+            val encodedPass = if (password.startsWith("enc:")) password else "enc:" + passBytes.joinToString("") { "%02x".format(it) }
+            val url = "$normalizedUrl/api/audiobook/$id/star?u=$username&p=$encodedPass"
+            val request = okhttp3.Request.Builder().url(url).delete().build()
+            val client = okhttp3.OkHttpClient()
+            client.newCall(request).execute()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
 }
 
 data class StarredData(val songs: List<com.lechenmusic.data.model.Song> = emptyList(), val albums: List<com.lechenmusic.data.model.Album> = emptyList(), val artists: List<com.lechenmusic.data.model.Artist> = emptyList())

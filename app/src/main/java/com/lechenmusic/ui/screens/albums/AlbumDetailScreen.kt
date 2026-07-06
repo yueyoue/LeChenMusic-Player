@@ -7,8 +7,11 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
+import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,6 +41,7 @@ fun AlbumDetailScreen(
     }
 
     val currentAlbum = album ?: return
+    val isStarred = currentAlbum.isStarred
 
     LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 160.dp)) {
         // Header
@@ -52,6 +56,17 @@ fun AlbumDetailScreen(
                     Icon(Icons.Default.ArrowBack, contentDescription = "返回")
                 }
                 Text("专辑详情", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.weight(1f))
+                IconButton(onClick = {
+                    if (isStarred) viewModel.unstar(currentAlbum.id)
+                    else viewModel.star(currentAlbum.id)
+                }) {
+                    Icon(
+                        if (isStarred) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        contentDescription = if (isStarred) "取消收藏" else "收藏",
+                        tint = if (isStarred) Color(0xFFE94560) else MaterialTheme.colorScheme.onSurface
+                    )
+                }
             }
         }
 

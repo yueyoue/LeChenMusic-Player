@@ -244,7 +244,9 @@ fun LeChenMusicApp(viewModel: MainViewModel) {
                     composable(Screen.Favorites.route) {
                         FavoritesScreen(
                             viewModel = viewModel,
-                            onSongClick = { song, playlist -> viewModel.playSong(song, playlist) }
+                            onSongClick = { song, playlist -> viewModel.playSong(song, playlist) },
+                            onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) },
+                            onAudiobookClick = { navController.navigate(Screen.AudiobookDetail.createRoute(it)) }
                         )
                     }
                     composable(Screen.Search.route) {

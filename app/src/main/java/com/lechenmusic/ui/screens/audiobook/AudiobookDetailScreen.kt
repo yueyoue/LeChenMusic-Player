@@ -42,6 +42,8 @@ fun AudiobookDetailScreen(
     val book = audiobookDetail?.book
     val chapters = audiobookDetail?.chapters ?: emptyList()
 
+    val isStarred = book?.isStarred ?: false
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -49,6 +51,20 @@ fun AudiobookDetailScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "返回")
+                    }
+                },
+                actions = {
+                    if (book != null) {
+                        IconButton(onClick = {
+                            if (isStarred) viewModel.unstarAudiobook(book.id)
+                            else viewModel.starAudiobook(book.id)
+                        }) {
+                            Icon(
+                                if (isStarred) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                contentDescription = if (isStarred) "取消收藏" else "收藏",
+                                tint = if (isStarred) Color(0xFFE94560) else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
                     }
                 }
             )
