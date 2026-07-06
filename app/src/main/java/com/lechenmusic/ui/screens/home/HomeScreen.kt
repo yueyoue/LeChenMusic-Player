@@ -72,21 +72,11 @@ fun HomeScreen(
     val password by viewModel.password.collectAsState()
 
     // Pull-to-refresh state
-    // pull-to-refresh removed
 
-    if (pullToRefreshState.isRefreshing) {
-        LaunchedEffect(true) {
-            viewModel.loadHomeData()
-            if (homeMode == "audiobook") viewModel.loadAudiobooks()
-            delay(500)
-            pullToRefreshState.endRefresh()
-        }
-    }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .nestedScroll(pullToRefreshState.nestedScrollConnection)
     ) {
         Scaffold(
             modifier = Modifier.fillMaxSize(),
@@ -485,9 +475,7 @@ fun HomeScreen(
         }
 
         // Pull-to-refresh indicator
-// pull-to-refresh removed
             modifier = Modifier.align(Alignment.TopCenter),
-            state = pullToRefreshState,
         )
     }
 }
