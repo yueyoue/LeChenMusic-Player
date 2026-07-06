@@ -72,7 +72,7 @@ fun HomeScreen(
     val password by viewModel.password.collectAsState()
 
     // Pull-to-refresh state
-    val pullToRefreshState = rememberPullToRefreshState()
+    // pull-to-refresh removed
 
     if (pullToRefreshState.isRefreshing) {
         LaunchedEffect(true) {
@@ -485,7 +485,7 @@ fun HomeScreen(
         }
 
         // Pull-to-refresh indicator
-        PullToRefreshContainer(
+// pull-to-refresh removed
             modifier = Modifier.align(Alignment.TopCenter),
             state = pullToRefreshState,
         )
