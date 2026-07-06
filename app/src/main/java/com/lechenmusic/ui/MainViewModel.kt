@@ -425,6 +425,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 _starredAlbums.value = it.albums
             }
             loadStarredAudiobooks()
+            loadAudiobooks()
 
             // Load recent played songs from stored IDs
             loadRecentPlayedSongs()
@@ -940,9 +941,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun loadAudiobooks() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
+                android.util.Log.d("LeChenMusic", "loadAudiobooks: Starting...")
                 val result = repository.getAudiobooks()
-                if (result.isSuccess) _audiobooks.value = result.getOrNull() ?: emptyList()
-            } catch (_: Exception) {}
+                val size = result.getOrNull()?.size ?: 0
+                android.util.Log.d("LeChenMusic", "loadAudiobooks: success=${result.isSuccess}, size=$size")
+                if (result.isSuccess) {
+                    _audiobooks.value = result.getOrNull() ?: emptyList()
+                } else {
+                    android.util.Log.w("LeChenMusic", "loadAudiobooks: Failed", result.exceptionOrNull())
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("LeChenMusic", "loadAudiobooks: Exception", e)
+            }
         }
     }
 
