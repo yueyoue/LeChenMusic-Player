@@ -480,6 +480,7 @@ fun HomeScreen(
 
 // ==================== Task 1: Audiobook Carousel ====================
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun AudiobookCarousel(
     audiobooks: List<Audiobook>,
