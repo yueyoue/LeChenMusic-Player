@@ -254,6 +254,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }.collect { (url, user, pass) ->
                 if (url.isNotBlank() && user.isNotBlank() && pass.isNotBlank()) {
                     repository.configure(url, user, pass)
+                    // Authenticate with Navidrome native API for audiobook endpoints
+                    repository.authenticateNavidrome()
                     _isLoggedIn.value = true
                     loadHomeData()
                     // Auto-sync all songs in background
@@ -289,6 +291,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 repository.configure(serverUrl, username, password)
                 val result = repository.ping()
                 if (result.isSuccess) {
+                    // Authenticate with Navidrome native API for audiobook endpoints
+                    repository.authenticateNavidrome()
                     settings.saveLogin(serverUrl, username, password)
                     _isLoggedIn.value = true
                     loadHomeData()

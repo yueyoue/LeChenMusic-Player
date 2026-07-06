@@ -82,9 +82,18 @@ class SafeJsonConverterFactory(
     }
 }
 
+// Navidrome JWT token for native API authentication
+object NavidromeAuth {
+    private var _token: String? = null
+    val token: String? get() = _token
+    fun setToken(t: String?) { _token = t }
+    fun clear() { _token = null }
+}
+
 object ApiClient {
     private var retrofit: Retrofit? = null
     private var currentBaseUrl: String? = null
+    private var audiobookRetrofit: Retrofit? = null
 
     fun getApi(baseUrl: String): SubsonicApi {
         val normalizedUrl = normalizeUrl(baseUrl)
@@ -135,5 +144,79 @@ object ApiClient {
         val normalizedUrl = normalizeUrl(baseUrl)
         val encodedPass = if (password.startsWith("enc:")) password else "enc:${password.toByteArray().joinToString("") { "%02x".format(it) }}"
         return "${normalizedUrl}rest/stream?u=$username&p=$encodedPass&id=$songId&v=1.16.1&c=lechenmusic"
+    }
+
+    /**
+     * Get a Retrofit client configured with Navidrome JWT auth for audiobook API.
+     * The interceptor adds X-ND-Authorization header to all requests.
+     */
+    fun getAudiobookApi(baseUrl: String): SubsonicApi {
+        val normalizedUrl = normalizeUrl(baseUrl)
+        if (audiobookRetrofit == null || currentBaseUrl != normalizedUrl) {
+            val logging = HttpLoggingInterceptor().apply {
+                level = HttpLoggingInterceptor.Level.BASIC
+            }
+            val client = OkHttpClient.Builder()
+                .addInterceptor(logging)
+                .addInterceptor { chain ->
+                    val original = chain.request()
+                    val token = NavidromeAuth.token
+                    val builder = original.newBuilder()
+                    if (token != null) {
+                        builder.header("X-ND-Authorization", "Bearer $token")
+                    }
+                    chain.proceed(builder.build())
+                }
+                .connectTimeout(30, TimeUnit.SECONDS)
+                .readTimeout(60, TimeUnit.SECONDS)
+                .writeTimeout(60, TimeUnit.SECONDS)
+                .build()
+
+            val gson = com.google.gson.GsonBuilder()
+                .setLenient()
+                .create()
+
+            audiobookRetrofit = Retrofit.Builder()
+                .baseUrl(normalizedUrl)
+                .client(client)
+                .addConverterFactory(SafeJsonConverterFactory(GsonConverterFactory.create(gson)))
+                .build()
+        }
+        return audiobookRetrofit!!.create(SubsonicApi::class.java)
+    }
+
+    /**
+     * Authenticate with Navidrome native API and get JWT token.
+     * Called once on login; the token is stored in NavidromeAuth.
+     */
+    suspend fun authenticateNavidrome(baseUrl: String, username: String, password: String): String? {
+        return try {
+            val normalizedUrl = normalizeUrl(baseUrl)
+            val client = OkHttpClient.Builder()
+                .connectTimeout(15, TimeUnit.SECONDS)
+                .readTimeout(15, TimeUnit.SECONDS)
+                .build()
+            val body = okhttp3.FormBody.Builder()
+                .add("username", username)
+                .add("password", password)
+                .build()
+            val request = okhttp3.Request.Builder()
+                .url("${normalizedUrl}auth/login")
+                .post(body)
+                .build()
+            val response = client.newCall(request).execute()
+            if (response.isSuccessful) {
+                val json = com.google.gson.JsonParser.parseString(response.body?.string()).asJsonObject
+                val token = json.get("token")?.asString
+                if (token != null) {
+                    NavidromeAuth.setToken(token)
+                }
+                token
+            } else {
+                null
+            }
+        } catch (_: Exception) {
+            null
+        }
     }
 }
