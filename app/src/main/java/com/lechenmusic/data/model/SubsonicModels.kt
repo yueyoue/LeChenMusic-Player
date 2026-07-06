@@ -108,8 +108,11 @@ data class AlbumDetail(
     val created: String = "",
     val year: Int? = null,
     val genre: String? = null,
+    val starred: String? = null,
     val song: List<Song>? = null
-)
+) {
+    val isStarred: Boolean get() = starred != null
+}
 
 data class PlaylistsWrapper(
     val playlist: List<Playlist>? = null
