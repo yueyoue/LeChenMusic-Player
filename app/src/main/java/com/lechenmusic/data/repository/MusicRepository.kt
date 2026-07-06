@@ -403,15 +403,23 @@ class MusicRepository {
 
     suspend fun getAudiobooks(): Result<List<com.lechenmusic.data.model.Audiobook>> {
         return try {
+            android.util.Log.d("LeChenMusic", "getAudiobooks: Calling API...")
             val response = api!!.getAudiobooks(username, password)
+            android.util.Log.d("LeChenMusic", "getAudiobooks: code=${response.code()}, success=${response.isSuccessful}")
             if (response.isSuccessful && response.body() != null) {
+                val bodyStr = response.body().toString()
+                android.util.Log.d("LeChenMusic", "getAudiobooks: body=${bodyStr.take(300)}")
                 val gson = com.google.gson.Gson()
-                val parsed = gson.fromJson(response.body(), AudiobookListResponse::class.java)
+                val parsed = gson.fromJson(bodyStr, AudiobookListResponse::class.java)
+                val count = parsed?.data?.size ?: 0
+                android.util.Log.d("LeChenMusic", "getAudiobooks: parsed $count books")
                 Result.success(parsed?.data ?: emptyList())
             } else {
+                android.util.Log.w("LeChenMusic", "getAudiobooks: Failed code=${response.code()}")
                 Result.success(emptyList())
             }
         } catch (e: Exception) {
+            android.util.Log.e("LeChenMusic", "getAudiobooks: Exception", e)
             Result.failure(e)
         }
     }
