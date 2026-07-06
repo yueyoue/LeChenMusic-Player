@@ -16,3 +16,4 @@ LeChenMusic-v1.0.0-debug.apk
 APK/
 release-artifact.zip
 *.apk
+# trigger build
