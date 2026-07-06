@@ -14,6 +14,19 @@ class LeChenApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+
+        // Crash handler - log crashes to file
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            try {
+                val crashLog = java.io.File(getExternalFilesDir(null), "crash_log.txt")
+                val ts = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())
+                crashLog.appendText("\n[$ts] CRASH on ${thread.name}: ${throwable.message}\n")
+                throwable.stackTrace.take(20).forEach { crashLog.appendText("  at $it\n") }
+                android.util.Log.e("LeChenMusic", "CRASH: ${throwable.message}", throwable)
+            } catch (_: Exception) {}
+            android.os.Process.killProcess(android.os.Process.myPid())
+        }
+
         instance = this
         repository = MusicRepository()
         settingsRepository = SettingsRepository(this)
