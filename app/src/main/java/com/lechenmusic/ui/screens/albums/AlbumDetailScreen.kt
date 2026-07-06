@@ -41,7 +41,7 @@ fun AlbumDetailScreen(
     }
 
     val currentAlbum = album ?: return
-    val isStarred = currentAlbum.isStarred
+    val isStarred = currentAlbum.starred != null
 
     LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 160.dp)) {
         // Header
