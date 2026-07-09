@@ -38,5 +38,6 @@ class LeChenApp : Application() {
     companion object {
         lateinit var instance: LeChenApp
             private set
+        val appContext get() = instance.applicationContext
     }
 }
