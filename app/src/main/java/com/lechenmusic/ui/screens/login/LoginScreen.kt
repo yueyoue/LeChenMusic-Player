@@ -22,7 +22,8 @@ import com.lechenmusic.ui.MainViewModel
 
 @Composable
 fun LoginScreen(viewModel: MainViewModel, onLoginSuccess: () -> Unit) {
-    var serverUrl by remember { mutableStateOf("") }
+    // Default server address
+    var serverUrl by remember { mutableStateOf("http://j.tthsdd.top:3334") }
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
