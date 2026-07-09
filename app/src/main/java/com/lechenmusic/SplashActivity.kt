@@ -17,6 +17,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -55,13 +56,13 @@ fun SplashScreen(
     onFinished: () -> Unit
 ) {
     var splashImageUrl by remember { mutableStateOf<String?>(null) }
-    var splashDuration by remember { mutableIntStateOf(3) }
+    var splashDuration by remember { mutableStateOf(3) }
 
     // Fetch splash config from server
     LaunchedEffect(Unit) {
         try {
             val prefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(
-                androidx.compose.ui.platform.LocalContext.current
+                LocalContext.current
             )
             val serverUrl = prefs.getString("server_url", "http://j.tthsdd.top:3334") ?: "http://j.tthsdd.top:3334"
 
