@@ -404,19 +404,20 @@ fun HomeScreen(
                     // Narrators
                     item { SecHd("\uD83C\uDFA4 演播者", "全部 ›") {} }
                     item {
-                        LazyRow(
-                            contentPadding = PaddingValues(horizontal = 16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            items(
-                                listOf(
-                                    Triple("艾宝良", "38部", Color(0xFFE94560)),
-                                    Triple("张震", "12部", Color(0xFF3498DB)),
-                                    Triple("田连元", "8部", Color(0xFF2ECC71)),
-                                    Triple("单田芳", "15部", Color(0xFFF39C12)),
-                                    Triple("郭德纲", "6部", Color(0xFF8E44AD))
-                                )
-                            ) { NarrItem(it.first, it.second, it.third) }
+                        val narrators by viewModel.narrators.collectAsState()
+                        if (narrators.isNotEmpty()) {
+                            LazyRow(
+                                contentPadding = PaddingValues(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                items(narrators.take(8)) { narr ->
+                                    NarrItem(narr.name, "${'$'}{narr.count}部", getNarrColor(narr.name))
+                                }
+                            }
+                        } else {
+                            Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                                Text("暂无演播者", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
                         }
                     }
                     // Recently updated
