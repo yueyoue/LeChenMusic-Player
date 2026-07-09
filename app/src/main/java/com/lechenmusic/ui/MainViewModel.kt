@@ -430,6 +430,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
             loadStarredAudiobooks()
             loadAudiobooks()
+            loadNarrators()
 
             // Load recent played songs from stored IDs
             loadRecentPlayedSongs()
