@@ -37,6 +37,8 @@ object UpdateChecker {
     private const val TAG = "UpdateChecker"
     private const val GITHUB_API_URL = "https://api.github.com/repos/yueyoue/LeChenMusic/releases/latest"
     private const val CUSTOM_SERVER_URL = "https://yy.tthsdd.top/musicapp/update/version.json"
+    // Navidrome server APK endpoint
+    private const val NAVIDROME_APP_API = "/api/app/apk/info"
 
     // 普通请求用的 client（检查版本信息）
     private val client = OkHttpClient.Builder()
@@ -56,26 +58,39 @@ object UpdateChecker {
 
     suspend fun check(currentVersionCode: Int): UpdateInfo? {
         return withContext(Dispatchers.IO) {
-            // Try both custom server and GitHub, pick the newest version
-            val customInfo = try {
-                tryCustomServer(currentVersionCode)
-            } catch (e: Exception) {
-                Log.e(TAG, "Custom server check failed", e)
-                null
-            }
-            val githubInfo = try {
-                tryGitHubReleases(currentVersionCode)
-            } catch (e: Exception) {
-                Log.e(TAG, "GitHub check failed", e)
-                null
-            }
-            // Return whichever has higher versionCode
-            val candidates = listOfNotNull(customInfo, githubInfo)
+            // Try custom server, Navidrome server, and GitHub, pick the newest version
+            val customInfo = try { tryCustomServer(currentVersionCode) } catch (e: Exception) { null }
+            val navidromeInfo = try { tryNavidromeServer(currentVersionCode) } catch (e: Exception) { null }
+            val githubInfo = try { tryGitHubReleases(currentVersionCode) } catch (e: Exception) { null }
+            val candidates = listOfNotNull(customInfo, navidromeInfo, githubInfo)
             val best = candidates.maxByOrNull { it.versionCode }
             if (best != null) {
                 Log.d(TAG, "Found update: v${best.versionName} (${best.versionCode}) from ${best.source}")
             }
             best
+        }
+    }
+
+    private fun tryNavidromeServer(currentVersionCode: Int): UpdateInfo? {
+        return try {
+            // Try to get server URL from shared preferences
+            val prefs = com.lechenmusic.LeChenApp.appContext?.getSharedPreferences("settings", android.content.Context.MODE_PRIVATE)
+            val serverUrl = prefs?.getString("serverUrl", "http://j.tthsdd.top:3334") ?: "http://j.tthsdd.top:3334"
+            val url = "${serverUrl.trimEnd('/')}$NAVIDROME_APP_API"
+            val request = Request.Builder().url(url).cacheControl(CacheControl.FORCE_NETWORK).build()
+            val response = client.newCall(request).execute()
+            if (!response.isSuccessful) return null
+            val body = response.body?.string() ?: return null
+            val json = JSONObject(body).getJSONObject("data")
+            val versionName = json.getString("versionName")
+            val versionCode = json.getInt("versionCode")
+            if (versionCode <= currentVersionCode) return null
+            val downloadUrl = "${serverUrl.trimEnd('/')}/api/app/apk/download"
+            val updateLog = json.optString("updateLog", "版本 $versionName 已发布")
+            UpdateInfo(versionCode, versionName, downloadUrl, updateLog, source = "服务器")
+        } catch (e: Exception) {
+            Log.e(TAG, "Navidrome server check failed", e)
+            null
         }
     }
 
