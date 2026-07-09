@@ -554,6 +554,71 @@ class MusicRepository {
         }
     }
 
+    // ===== Narrator Methods =====
+
+    data class NarratorInfo(val name: String = "", val count: Int = 0)
+
+    suspend fun getNarrators(): Result<List<NarratorInfo>> {
+        return try {
+            val token = com.lechenmusic.data.api.NavidromeAuth.token ?: return Result.success(emptyList())
+            val response = audiobookApi!!.getNarrators("Bearer $token")
+            if (response.isSuccessful && response.body() != null) {
+                val gson = com.google.gson.Gson()
+                val jsonObj = response.body()?.asJsonObject
+                val dataArray = jsonObj?.getAsJsonArray("data")
+                val narrators = mutableListOf<NarratorInfo>()
+                dataArray?.forEach { item ->
+                    val obj = item.asJsonObject
+                    narrators.add(NarratorInfo(
+                        name = obj.get("name")?.asString ?: "",
+                        count = obj.get("count")?.asInt ?: 0
+                    ))
+                }
+                Result.success(narrators)
+            } else {
+                Result.success(emptyList())
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getNarratorDetail(name: String): Result<List<com.lechenmusic.data.model.Audiobook>> {
+        return try {
+            val token = com.lechenmusic.data.api.NavidromeAuth.token ?: return Result.success(emptyList())
+            val response = audiobookApi!!.getNarratorDetail(name, "Bearer $token")
+            if (response.isSuccessful && response.body() != null) {
+                val gson = com.google.gson.Gson()
+                val jsonObj = response.body()?.asJsonObject
+                val dataObj = jsonObj?.getAsJsonObject("data")
+                val worksArray = dataObj?.getAsJsonArray("works")
+                val type = object : com.google.gson.reflect.TypeToken<List<com.lechenmusic.data.model.Audiobook>>() {}.type
+                val works: List<com.lechenmusic.data.model.Audiobook> = gson.fromJson(worksArray ?: com.google.gson.JsonArray(), type)
+                Result.success(works)
+            } else {
+                Result.success(emptyList())
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun searchAudiobooks(query: String): Result<List<com.lechenmusic.data.model.Audiobook>> {
+        return try {
+            val token = com.lechenmusic.data.api.NavidromeAuth.token ?: return Result.success(emptyList())
+            val response = audiobookApi!!.searchAudiobooks(query, "Bearer $token")
+            if (response.isSuccessful && response.body() != null) {
+                val gson = com.google.gson.Gson()
+                val parsed = gson.fromJson(response.body(), AudiobookListResponse::class.java)
+                Result.success(parsed?.data ?: emptyList())
+            } else {
+                Result.success(emptyList())
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
 }
 
 data class StarredData(val songs: List<com.lechenmusic.data.model.Song> = emptyList(), val albums: List<com.lechenmusic.data.model.Album> = emptyList(), val artists: List<com.lechenmusic.data.model.Artist> = emptyList())
