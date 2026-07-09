@@ -1048,7 +1048,21 @@ private fun ContCard(
 }
 
 @Composable
-private fun CatGrid() {
+private fun getNarrColor(name: String): androidx.compose.ui.graphics.Color {
+    val colors = listOf(
+        androidx.compose.ui.graphics.Color(0xFFE94560),
+        androidx.compose.ui.graphics.Color(0xFF3498DB),
+        androidx.compose.ui.graphics.Color(0xFF2ECC71),
+        androidx.compose.ui.graphics.Color(0xFFF39C12),
+        androidx.compose.ui.graphics.Color(0xFF8E44AD),
+        androidx.compose.ui.graphics.Color(0xFF00B894)
+    )
+    val idx = name.hashCode().mod(colors.size).let { if (it < 0) it + colors.size else it }
+    return colors[idx]
+}
+
+@Composable
+private fun CatGrid(onGenreClick: (String) -> Unit = {}) {
     val cats = listOf(
         Triple("\uD83D\uDCD6", "有声书", Color(0xFFE94560)),
         Triple("\uD83C\uDFAD", "评书", Color(0xFFF39C12)),
@@ -1066,7 +1080,8 @@ private fun CatGrid() {
                         modifier = Modifier
                             .weight(1f)
                             .height(80.dp)
-                            .padding(bottom = 10.dp),
+                            .padding(bottom = 10.dp)
+                            .clickable { onGenreClick(name) },
                         shape = RoundedCornerShape(14.dp),
                         color = Color.Transparent
                     ) {
