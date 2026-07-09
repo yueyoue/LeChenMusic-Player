@@ -969,6 +969,47 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // ===== Narrator State =====
+    private val _narrators = MutableStateFlow<List<MusicRepository.NarratorInfo>>(emptyList())
+    val narrators: StateFlow<List<MusicRepository.NarratorInfo>> = _narrators.asStateFlow()
+
+    private val _narratorWorks = MutableStateFlow<List<com.lechenmusic.data.model.Audiobook>>(emptyList())
+    val narratorWorks: StateFlow<List<com.lechenmusic.data.model.Audiobook>> = _narratorWorks.asStateFlow()
+
+    private val _audiobookSearchResults = MutableStateFlow<List<com.lechenmusic.data.model.Audiobook>>(emptyList())
+    val audiobookSearchResults: StateFlow<List<com.lechenmusic.data.model.Audiobook>> = _audiobookSearchResults.asStateFlow()
+
+    fun loadNarrators() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val result = repository.getNarrators()
+                if (result.isSuccess) _narrators.value = result.getOrNull() ?: emptyList()
+            } catch (_: Exception) {}
+        }
+    }
+
+    fun loadNarratorDetail(name: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val result = repository.getNarratorDetail(name)
+                if (result.isSuccess) _narratorWorks.value = result.getOrNull() ?: emptyList()
+            } catch (_: Exception) {}
+        }
+    }
+
+    fun searchAudiobooks(query: String) {
+        if (query.isBlank()) {
+            _audiobookSearchResults.value = emptyList()
+            return
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val result = repository.searchAudiobooks(query)
+                if (result.isSuccess) _audiobookSearchResults.value = result.getOrNull() ?: emptyList()
+            } catch (_: Exception) {}
+        }
+    }
+
     fun star(id: String) {
         viewModelScope.launch(Dispatchers.IO) {
             repository.star(id).onSuccess {
