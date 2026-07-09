@@ -24,7 +24,7 @@
         tools:targetApi="34">
 
         <activity
-            android:name=".MainActivity"
+            android:name=".SplashActivity"
             android:exported="true"
             android:theme="@style/Theme.LeChenMusic"
             android:windowSoftInputMode="adjustResize">
@@ -33,6 +33,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="false"
+            android:theme="@style/Theme.LeChenMusic"
+            android:windowSoftInputMode="adjustResize" />
 
         <service
             android:name=".player.MusicPlaybackService"
