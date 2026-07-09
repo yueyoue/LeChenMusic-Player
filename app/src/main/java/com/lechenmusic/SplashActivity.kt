@@ -2,8 +2,6 @@ package com.lechenmusic
 
 import android.content.Intent
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.core.*
@@ -28,7 +26,6 @@ class SplashActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Check if user is already logged in
         val prefs = getSharedPreferences("settings", MODE_PRIVATE)
         val serverUrl = prefs.getString("serverUrl", "") ?: ""
         val username = prefs.getString("username", "") ?: ""
@@ -55,40 +52,36 @@ fun SplashScreen(
     isLoggedIn: Boolean,
     onFinished: () -> Unit
 ) {
+    val context = LocalContext.current
     var splashImageUrl by remember { mutableStateOf<String?>(null) }
     var splashDuration by remember { mutableStateOf(3) }
 
     // Fetch splash config from server
     LaunchedEffect(Unit) {
         try {
-            val prefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(
-                LocalContext.current
-            )
-            val serverUrl = prefs.getString("server_url", "http://j.tthsdd.top:3334") ?: "http://j.tthsdd.top:3334"
+            val prefs = context.getSharedPreferences("settings", android.content.Context.MODE_PRIVATE)
+            val serverUrl = prefs.getString("serverUrl", "http://j.tthsdd.top:3334") ?: "http://j.tthsdd.top:3334"
 
-            // Try to fetch splash config
             val client = okhttp3.OkHttpClient.Builder()
                 .connectTimeout(3, java.util.concurrent.TimeUnit.SECONDS)
                 .readTimeout(3, java.util.concurrent.TimeUnit.SECONDS)
                 .build()
             val request = okhttp3.Request.Builder()
-                .url("$serverUrl/api/app/config")
+                .url("${serverUrl.trimEnd('/')}/api/app/config")
                 .build()
-            try {
-                val response = client.newCall(request).execute()
-                if (response.isSuccessful) {
-                    val body = response.body?.string()
-                    if (body != null) {
-                        val json = com.google.gson.JsonParser.parseString(body).asJsonObject
-                        val data = json.getAsJsonObject("data")
-                        val imgUrl = data?.get("splashImageUrl")?.asString
-                        if (!imgUrl.isNullOrBlank()) {
-                            splashImageUrl = if (imgUrl.startsWith("http")) imgUrl else "$serverUrl$imgUrl"
-                        }
-                        data?.get("splashDuration")?.asInt?.let { splashDuration = it }
+            val response = client.newCall(request).execute()
+            if (response.isSuccessful) {
+                val body = response.body?.string()
+                if (body != null) {
+                    val json = com.google.gson.JsonParser.parseString(body).asJsonObject
+                    val data = json.getAsJsonObject("data")
+                    val imgUrl = data?.get("splashImageUrl")?.asString
+                    if (!imgUrl.isNullOrBlank()) {
+                        splashImageUrl = if (imgUrl.startsWith("http")) imgUrl else "${serverUrl.trimEnd('/')}$imgUrl"
                     }
+                    data?.get("splashDuration")?.asInt?.let { splashDuration = it }
                 }
-            } catch (_: Exception) {}
+            }
         } catch (_: Exception) {}
     }
 
@@ -109,44 +102,27 @@ fun SplashScreen(
             .fillMaxSize()
             .background(
                 Brush.verticalGradient(
-                    listOf(
-                        Color(0xFF1A1A2E),
-                        Color(0xFF16213E),
-                        Color(0xFF0F3460)
-                    )
+                    listOf(Color(0xFF1A1A2E), Color(0xFF16213E), Color(0xFF0F3460))
                 )
             ),
         contentAlignment = Alignment.Center
     ) {
-        // Background image (splash from server)
         if (splashImageUrl != null) {
             AsyncImage(
                 model = splashImageUrl,
                 contentDescription = null,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .alpha(alpha.value),
+                modifier = Modifier.fillMaxSize().alpha(alpha.value),
                 contentScale = ContentScale.Crop
             )
         }
 
-        // App info overlay
         Column(
             modifier = Modifier.alpha(alpha.value),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                "悦音",
-                fontSize = 48.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
-            )
+            Text("悦音", fontSize = 48.sp, fontWeight = FontWeight.Bold, color = Color.White)
             Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                "音乐 · 有声书",
-                fontSize = 16.sp,
-                color = Color.White.copy(alpha = 0.7f)
-            )
+            Text("音乐 · 有声书", fontSize = 16.sp, color = Color.White.copy(alpha = 0.7f))
             Spacer(modifier = Modifier.height(48.dp))
             CircularProgressIndicator(
                 color = Color.White.copy(alpha = 0.6f),
