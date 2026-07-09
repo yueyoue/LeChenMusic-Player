@@ -274,10 +274,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
 
-        // Update progress periodically
+        // Update progress periodically (faster interval for accurate lyrics sync)
         viewModelScope.launch {
             while (true) {
-                kotlinx.coroutines.delay(500)
+                kotlinx.coroutines.delay(200)
                 playerManager.updateProgress()
             }
         }

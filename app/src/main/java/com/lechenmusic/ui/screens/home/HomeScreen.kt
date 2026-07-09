@@ -68,6 +68,7 @@ fun HomeScreen(
     val radioStations by viewModel.radioStations.collectAsState()
     val homeMode by viewModel.homeMode.collectAsState()
     val audiobooks by viewModel.audiobooks.collectAsState()
+    val starredAudiobooks by viewModel.starredAudiobooks.collectAsState()
     val serverUrl by viewModel.serverUrl.collectAsState()
     val username by viewModel.username.collectAsState()
     val password by viewModel.password.collectAsState()
@@ -422,53 +423,125 @@ fun HomeScreen(
                     }
                     // Recently updated
                     item { SecHd("\uD83C\uDD95 最近更新", "更多 ›") {} }
-                    item {
-                        LazyRow(
-                            contentPadding = PaddingValues(horizontal = 16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            items(audiobooks.take(5)) {
-                                AbGridCard(
-                                    it,
-                                    serverUrl,
-                                    username,
-                                    password
-                                ) { onNavigateToAudiobookDetail(it.id) }
+                    if (audiobooks.isNotEmpty()) {
+                        item {
+                            LazyRow(
+                                contentPadding = PaddingValues(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                val recent = audiobooks.sortedByDescending { it.updatedAt }.take(5)
+                                items(recent) {
+                                    AbGridCard(
+                                        it,
+                                        serverUrl,
+                                        username,
+                                        password
+                                    ) { onNavigateToAudiobookDetail(it.id) }
+                                }
+                            }
+                        }
+                    } else {
+                        item {
+                            Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                                Text("暂无有声书，请先扫描媒体库", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }
-                    // Hot ranking
-                    item { SecHd("\uD83D\uDD25 热门榜单", "更多 ›") {} }
+                    // 有声小说
+                    item { SecHd("\uD83D\uDCD6 有声小说", "更多 ›") {} }
                     item {
-                        LazyRow(
-                            contentPadding = PaddingValues(horizontal = 16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            itemsIndexed(audiobooks.take(4)) { i, b ->
-                                RankCard(
-                                    b,
-                                    i + 1,
-                                    serverUrl,
-                                    username,
-                                    password
-                                ) { onNavigateToAudiobookDetail(b.id) }
+                        val novelBooks = audiobooks.filter { it.genre == "有声读物" || it.genre.isEmpty() }
+                        if (novelBooks.isNotEmpty()) {
+                            LazyRow(
+                                contentPadding = PaddingValues(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                itemsIndexed(novelBooks.take(4)) { i, b ->
+                                    RankCard(
+                                        b,
+                                        i + 1,
+                                        serverUrl,
+                                        username,
+                                        password
+                                    ) { onNavigateToAudiobookDetail(b.id) }
+                                }
+                            }
+                        } else {
+                            Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                                Text("暂无有声小说", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                    // 相声
+                    item { SecHd("\uD83C\uDFA4 相声", "更多 ›") {} }
+                    item {
+                        val xiangshengBooks = audiobooks.filter { it.genre == "相声" }
+                        if (xiangshengBooks.isNotEmpty()) {
+                            LazyRow(
+                                contentPadding = PaddingValues(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                items(xiangshengBooks.take(5)) {
+                                    AbGridCard(
+                                        it,
+                                        serverUrl,
+                                        username,
+                                        password
+                                    ) { onNavigateToAudiobookDetail(it.id) }
+                                }
+                            }
+                        } else {
+                            Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                                Text("暂无相声", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                    // 评书
+                    item { SecHd("\uD83C\uDFAD 评书", "更多 ›") {} }
+                    item {
+                        val pingshuBooks = audiobooks.filter { it.genre == "评书" }
+                        if (pingshuBooks.isNotEmpty()) {
+                            LazyRow(
+                                contentPadding = PaddingValues(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                items(pingshuBooks.take(5)) {
+                                    AbGridCard(
+                                        it,
+                                        serverUrl,
+                                        username,
+                                        password
+                                    ) { onNavigateToAudiobookDetail(it.id) }
+                                }
+                            }
+                        } else {
+                            Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                                Text("暂无评书", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }
                     // Favorites
                     item { SecHd("❤️ 我的收藏", "更多 ›") {} }
-                    item {
-                        LazyRow(
-                            contentPadding = PaddingValues(horizontal = 16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            items(audiobooks.take(3)) {
-                                AbGridCard(
-                                    it,
-                                    serverUrl,
-                                    username,
-                                    password
-                                ) { onNavigateToAudiobookDetail(it.id) }
+                    if (starredAudiobooks.isNotEmpty()) {
+                        item {
+                            LazyRow(
+                                contentPadding = PaddingValues(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                items(starredAudiobooks.take(5)) {
+                                    AbGridCard(
+                                        it,
+                                        serverUrl,
+                                        username,
+                                        password
+                                    ) { onNavigateToAudiobookDetail(it.id) }
+                                }
+                            }
+                        }
+                    } else {
+                        item {
+                            Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                                Text("暂无收藏的有声书", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }
@@ -1065,9 +1138,9 @@ private fun getNarrColor(name: String): androidx.compose.ui.graphics.Color {
 private fun CatGrid(onGenreClick: (String) -> Unit = {}) {
     val cats = listOf(
         Triple("\uD83D\uDCD6", "有声书", Color(0xFFE94560)),
-        Triple("\uD83C\uDFAD", "评书", Color(0xFFF39C12)),
+        Triple("\uD83D\uDCD6", "有声小说", Color(0xFF5352ED)),
         Triple("\uD83C\uDFA4", "相声", Color(0xFF8E44AD)),
-        Triple("\uD83D\uDC76", "儿童", Color(0xFF2ECC71))
+        Triple("\uD83C\uDFAD", "评书", Color(0xFFF39C12))
     )
     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
         for (row in cats.chunked(2)) {

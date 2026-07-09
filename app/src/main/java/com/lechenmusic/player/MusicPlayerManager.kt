@@ -609,6 +609,21 @@ class MusicPlayerManager(private val context: Context) {
         }
     }
 
+    /**
+     * Get current position directly from ExoPlayer (most accurate).
+     * Use this for lyrics sync and other time-critical displays.
+     */
+    fun getExactPosition(): Long {
+        return player?.currentPosition ?: _currentPosition.value
+    }
+
+    /**
+     * Get current duration directly from ExoPlayer.
+     */
+    fun getExactDuration(): Long {
+        return player?.duration?.coerceAtLeast(0) ?: _duration.value
+    }
+
     fun release() {
         alarmReceiver?.let {
             try { context.unregisterReceiver(it) } catch (_: Exception) { }

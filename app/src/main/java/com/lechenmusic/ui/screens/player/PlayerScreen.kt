@@ -835,18 +835,17 @@ private fun LyricsView(
         else emptyList()
     }
 
-    // Calculate active line index
-    val activeLineIndex = if (lrcLines != null) {
-        remember(currentPosition, lrcLines.size) {
-            findActiveLyricLine(lrcLines, currentPosition)
-        }
-    } else {
-        // Fallback: linear distribution (inaccurate but better than nothing)
-        remember(currentPosition, duration, plainLines.size) {
-            if (plainLines.isEmpty() || duration <= 0L) 0
-            else {
-                val progress = currentPosition.toFloat() / duration.toFloat()
-                (progress * plainLines.size).toInt().coerceIn(0, plainLines.lastIndex)
+    // Calculate active line index using derivedStateOf for efficient recomposition
+    val activeLineIndex by remember {
+        derivedStateOf {
+            if (lrcLines != null) {
+                findActiveLyricLine(lrcLines, currentPosition)
+            } else {
+                if (plainLines.isEmpty() || duration <= 0L) 0
+                else {
+                    val progress = currentPosition.toFloat() / duration.toFloat()
+                    (progress * plainLines.size).toInt().coerceIn(0, plainLines.lastIndex)
+                }
             }
         }
     }
