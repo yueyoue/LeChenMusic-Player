@@ -400,7 +400,7 @@ fun HomeScreen(
                     }
                     // Categories
                     item { SecHd("\uD83D\uDCC2 分类", "全部 ›", onNavigateToAudiobook) }
-                    item { CatGrid() }
+                    item { CatGrid { genre -> viewModel.loadAudiobooksByGenre(genre) } }
                     // Narrators
                     item { SecHd("\uD83C\uDFA4 演播者", "全部 ›") {} }
                     item {
