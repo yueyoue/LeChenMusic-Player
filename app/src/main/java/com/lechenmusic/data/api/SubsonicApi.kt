@@ -291,4 +291,24 @@ interface SubsonicApi {
         @Query("f") format: String = "json"
     ): retrofit2.Response<com.google.gson.JsonElement>
 
+    // Audiobook search
+    @GET("api/audiobook/search")
+    suspend fun searchAudiobooks(
+        @Query("q") query: String,
+        @retrofit2.http.Header("X-ND-Authorization") authHeader: String
+    ): retrofit2.Response<com.google.gson.JsonElement>
+
+    // Narrator list
+    @GET("api/audiobook/narrators")
+    suspend fun getNarrators(
+        @retrofit2.http.Header("X-ND-Authorization") authHeader: String
+    ): retrofit2.Response<com.google.gson.JsonElement>
+
+    // Narrator detail
+    @GET("api/audiobook/narrator/{name}")
+    suspend fun getNarratorDetail(
+        @retrofit2.http.Path("name") name: String,
+        @retrofit2.http.Header("X-ND-Authorization") authHeader: String
+    ): retrofit2.Response<com.google.gson.JsonElement>
+
 }
