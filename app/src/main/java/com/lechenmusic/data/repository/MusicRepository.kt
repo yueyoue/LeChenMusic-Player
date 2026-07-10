@@ -481,29 +481,53 @@ class MusicRepository {
                     return Result.failure(Exception("Not authenticated"))
                 }
             }
+            android.util.Log.d("LeChenMusic", "getAudiobookDetail: calling API for id=$id")
             val response = audiobookApi!!.getAudiobook(id, "Bearer $token")
+            android.util.Log.d("LeChenMusic", "getAudiobookDetail: HTTP ${response.code()} ok=${response.isSuccessful}")
             if (response.isSuccessful && response.body() != null) {
                 val gson = com.google.gson.Gson()
-                val parsed = gson.fromJson(response.body(), AudiobookDetailApiResponse::class.java)
-                val data = parsed?.data
-                Result.success(com.lechenmusic.data.model.AudiobookDetail(
-                    book = data?.book ?: com.lechenmusic.data.model.Audiobook(),
-                    chapters = data?.chapters ?: emptyList(),
-                    progress = data?.progress
-                ))
+                val bodyElement = response.body()!!
+                val jsonObj = bodyElement.asJsonObject
+                val dataObj = jsonObj.getAsJsonObject("data")
+                if (dataObj != null) {
+                    val bookObj = dataObj.getAsJsonObject("book")
+                    val chaptersArray = dataObj.getAsJsonArray("chapters")
+                    val book = if (bookObj != null) gson.fromJson(bookObj, com.lechenmusic.data.model.Audiobook::class.java) else com.lechenmusic.data.model.Audiobook()
+                    val chapters = if (chaptersArray != null) {
+                        gson.fromJson<List<com.lechenmusic.data.model.AudiobookChapter>>(
+                            chaptersArray,
+                            object : com.google.gson.reflect.TypeToken<List<com.lechenmusic.data.model.AudiobookChapter>>() {}.type
+                        )
+                    } else emptyList()
+                    android.util.Log.d("LeChenMusic", "getAudiobookDetail: parsed book=${book.title}, chapters=${chapters.size}")
+                    Result.success(com.lechenmusic.data.model.AudiobookDetail(book = book, chapters = chapters))
+                } else {
+                    android.util.Log.w("LeChenMusic", "getAudiobookDetail: no 'data' field in response")
+                    Result.failure(Exception("No data in response"))
+                }
             } else {
-                Result.failure(Exception("HTTP ${response.code()}"))
+                val errorBody = response.errorBody()?.string() ?: "unknown"
+                android.util.Log.e("LeChenMusic", "getAudiobookDetail: HTTP ${response.code()} error=$errorBody")
+                Result.failure(Exception("HTTP ${response.code()}: $errorBody"))
             }
         } catch (e: Exception) {
+            android.util.Log.e("LeChenMusic", "getAudiobookDetail: Exception: ${e.message}", e)
             Result.failure(e)
         }
     }
 
     fun getAudiobookChapterStreamUrl(bookId: String, chapterId: String): String {
         val normalizedUrl = serverUrl.trimEnd('/')
-        val passBytes = password.toByteArray()
-        val encodedPass = if (password.startsWith("enc:")) password else "enc:" + passBytes.joinToString("") { "%02x".format(it) }
-        return normalizedUrl + "/api/audiobook/" + bookId + "/chapters/" + chapterId + "/stream?u=" + username + "&p=" + encodedPass
+        // Use Subsonic API for streaming (supports audiobook chapters)
+        val token = com.lechenmusic.data.api.NavidromeAuth.token
+        return if (token != null) {
+            "$normalizedUrl/api/audiobook/$bookId/chapters/$chapterId/stream?token=$token"
+        } else {
+            // Fallback to basic auth
+            val passBytes = password.toByteArray()
+            val encodedPass = if (password.startsWith("enc:")) password else "enc:" + passBytes.joinToString("") { "%02x".format(it) }
+            "$normalizedUrl/api/audiobook/$bookId/chapters/$chapterId/stream?u=$username&p=$encodedPass"
+        }
     }
 
 
