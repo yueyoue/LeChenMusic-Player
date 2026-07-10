@@ -196,10 +196,13 @@ object ApiClient {
                 .connectTimeout(15, TimeUnit.SECONDS)
                 .readTimeout(15, TimeUnit.SECONDS)
                 .build()
-            val jsonStr = "{\"username\":\"$username\",\"password\":\"$password\"}"
+            val jsonBody = com.google.gson.Gson().toJson(mapOf(
+                "username" to username,
+                "password" to password
+            ))
             val body = okhttp3.RequestBody.create(
-                okhttp3.MediaType.parse("application/json; charset=utf-8"),
-                jsonStr
+                "application/json; charset=utf-8".toMediaType(),
+                jsonBody
             )
             val request = okhttp3.Request.Builder()
                 .url("${normalizedUrl}auth/login")
