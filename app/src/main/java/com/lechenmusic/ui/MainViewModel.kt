@@ -149,7 +149,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     @Suppress("DEPRECATION")
                     context.packageManager.getPackageInfo(context.packageName, 0).versionCode
                 }
-                val info = UpdateChecker.check(currentVersionCode)
+                val info = UpdateChecker.check(currentVersionCode, serverUrl.value)
                 if (info != null) {
                     // If silent auto-check, respect skipped version
                     if (silent) {

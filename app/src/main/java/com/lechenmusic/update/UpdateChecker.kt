@@ -56,13 +56,13 @@ object UpdateChecker {
         .followSslRedirects(true)
         .build()
 
-    suspend fun check(currentVersionCode: Int): UpdateInfo? {
+    suspend fun check(currentVersionCode: Int, serverUrl: String? = null): UpdateInfo? {
         return withContext(Dispatchers.IO) {
-            // Try custom server, Navidrome server, and GitHub, pick the newest version
+            // Try Navidrome server (with dynamic URL), custom server, and GitHub
+            val navidromeInfo = try { tryNavidromeServer(currentVersionCode, serverUrl) } catch (e: Exception) { null }
             val customInfo = try { tryCustomServer(currentVersionCode) } catch (e: Exception) { null }
-            val navidromeInfo = try { tryNavidromeServer(currentVersionCode) } catch (e: Exception) { null }
             val githubInfo = try { tryGitHubReleases(currentVersionCode) } catch (e: Exception) { null }
-            val candidates = listOfNotNull(customInfo, navidromeInfo, githubInfo)
+            val candidates = listOfNotNull(navidromeInfo, customInfo, githubInfo)
             val best = candidates.maxByOrNull { it.versionCode }
             if (best != null) {
                 Log.d(TAG, "Found update: v${best.versionName} (${best.versionCode}) from ${best.source}")
@@ -71,23 +71,41 @@ object UpdateChecker {
         }
     }
 
-    private fun tryNavidromeServer(currentVersionCode: Int): UpdateInfo? {
+    private fun tryNavidromeServer(currentVersionCode: Int, serverUrl: String? = null): UpdateInfo? {
         return try {
-            // Try to get server URL from shared preferences
-            val prefs = com.lechenmusic.LeChenApp.appContext?.getSharedPreferences("settings", android.content.Context.MODE_PRIVATE)
-            val serverUrl = prefs?.getString("serverUrl", "http://j.tthsdd.top:3334") ?: "http://j.tthsdd.top:3334"
-            val url = "${serverUrl.trimEnd('/')}$NAVIDROME_APP_API"
-            val request = Request.Builder().url(url).cacheControl(CacheControl.FORCE_NETWORK).build()
+            // Use provided serverUrl, or read from SharedPreferences
+            val url = serverUrl
+                ?: com.lechenmusic.LeChenApp.appContext?.getSharedPreferences("settings", android.content.Context.MODE_PRIVATE)?.getString("serverUrl", "")
+                ?: ""
+            if (url.isBlank()) return null
+
+            val checkUrl = "${url.trimEnd('/')}/api/version/check"
+            val request = Request.Builder().url(checkUrl).cacheControl(CacheControl.FORCE_NETWORK).build()
             val response = client.newCall(request).execute()
             if (!response.isSuccessful) return null
             val body = response.body?.string() ?: return null
             val json = JSONObject(body).getJSONObject("data")
-            val versionName = json.getString("versionName")
-            val versionCode = json.getInt("versionCode")
+
+            val hasUpdate = json.optBoolean("hasUpdate", false)
+            if (!hasUpdate) return null
+
+            val latestTag = json.optString("latestTag", "")
+            val latestDate = json.optString("latestDate", "")
+            val changelog = json.optString("changelog", "")
+            val updateCommand = json.optString("updateCommand", "")
+
+            // Parse version code from tag
+            val versionCode = parseVersionCodeFromTag(latestTag)
             if (versionCode <= currentVersionCode) return null
-            val downloadUrl = "${serverUrl.trimEnd('/')}/api/app/apk/download"
-            val updateLog = json.optString("updateLog", "版本 $versionName 已发布")
-            UpdateInfo(versionCode, versionName, downloadUrl, updateLog, source = "服务器")
+
+            val downloadUrl = "${url.trimEnd('/')}/api/app/apk/download"
+            UpdateInfo(
+                versionCode = versionCode,
+                versionName = latestTag,
+                apkUrl = downloadUrl,
+                updateLog = changelog.ifBlank { "版本 $latestTag 已发布" },
+                source = "服务器"
+            )
         } catch (e: Exception) {
             Log.e(TAG, "Navidrome server check failed", e)
             null

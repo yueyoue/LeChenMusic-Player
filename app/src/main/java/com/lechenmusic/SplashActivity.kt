@@ -108,12 +108,28 @@ fun SplashScreen(
         contentAlignment = Alignment.Center
     ) {
         if (splashImageUrl != null) {
-            AsyncImage(
-                model = splashImageUrl,
-                contentDescription = null,
-                modifier = Modifier.fillMaxSize().alpha(alpha.value),
-                contentScale = ContentScale.Crop
-            )
+            // Use Fit for tablet/car to avoid cropping important content
+            // Add gradient overlay at bottom for better text visibility
+            Box(modifier = Modifier.fillMaxSize()) {
+                AsyncImage(
+                    model = splashImageUrl,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize().alpha(alpha.value),
+                    contentScale = ContentScale.Fit
+                )
+                // Bottom gradient overlay for text readability
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .align(Alignment.BottomCenter)
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(Color.Transparent, Color(0xFF1A1A2E))
+                            )
+                        )
+                )
+            }
         }
 
         Column(
