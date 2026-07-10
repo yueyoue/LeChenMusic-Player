@@ -39,6 +39,13 @@ fun AudiobookDetailScreen(
         viewModel.loadAudiobookDetail(audiobookId)
     }
 
+    // Add timeout - if loading takes too long, show error
+    var loadingTimeout by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(15000) // 15 second timeout
+        if (audiobookDetail == null) loadingTimeout = true
+    }
+
     val book = audiobookDetail?.book
     val chapters = audiobookDetail?.chapters ?: emptyList()
 
@@ -77,7 +84,20 @@ fun AudiobookDetailScreen(
                     .padding(padding),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator()
+                if (loadingTimeout) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(Icons.Default.Error, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(48.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text("加载失败", fontSize = 16.sp, color = Color.Gray)
+                        Text("请检查网络连接后重试", fontSize = 14.sp, color = Color.Gray)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(onClick = { viewModel.loadAudiobookDetail(audiobookId); loadingTimeout = false }) {
+                            Text("重试")
+                        }
+                    }
+                } else {
+                    CircularProgressIndicator()
+                }
             }
         } else {
             LazyColumn(

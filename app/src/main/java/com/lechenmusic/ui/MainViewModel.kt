@@ -1048,9 +1048,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun loadAudiobookDetail(id: String) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
+                android.util.Log.d("LeChenMusic", "loadAudiobookDetail: Loading $id")
                 val result = repository.getAudiobookDetail(id)
-                if (result.isSuccess) _audiobookDetail.value = result.getOrNull()
-            } catch (_: Exception) {}
+                if (result.isSuccess) {
+                    _audiobookDetail.value = result.getOrNull()
+                    android.util.Log.d("LeChenMusic", "loadAudiobookDetail: Success, chapters=${_audiobookDetail.value?.chapters?.size}")
+                } else {
+                    android.util.Log.e("LeChenMusic", "loadAudiobookDetail: Failed: ${result.exceptionOrNull()?.message}")
+                    // Set to empty so UI doesn't spin forever
+                    _audiobookDetail.value = null
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("LeChenMusic", "loadAudiobookDetail: Exception: ${e.message}")
+                _audiobookDetail.value = null
+            }
         }
     }
 
