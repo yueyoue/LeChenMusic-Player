@@ -25,7 +25,13 @@ class MusicRepository {
 
     /** Authenticate with Navidrome and store JWT token for audiobook API */
     suspend fun authenticateNavidrome(): Boolean {
+        android.util.Log.d("LeChenMusic", "authenticateNavidrome: Starting for $serverUrl")
         val token = ApiClient.authenticateNavidrome(serverUrl, username, password)
+        if (token != null) {
+            android.util.Log.d("LeChenMusic", "authenticateNavidrome: Success, token length=${token.length}")
+        } else {
+            android.util.Log.e("LeChenMusic", "authenticateNavidrome: Failed! Token is null")
+        }
         return token != null
     }
 
@@ -411,35 +417,53 @@ class MusicRepository {
         val progress: com.lechenmusic.data.model.AudiobookProgress? = null
     )
 
+    private fun handleAudiobookResponse(response: retrofit2.Response<com.google.gson.JsonElement>): Result<List<com.lechenmusic.data.model.Audiobook>> {
+        android.util.Log.d("LeChenMusic", "getAudiobooks: HTTP ${response.code()} ok=${response.isSuccessful}")
+        if (response.isSuccessful && response.body() != null) {
+            val gson = com.google.gson.Gson()
+            val bodyElement = response.body()!!
+            val jsonObj = bodyElement.asJsonObject
+            val dataArray = jsonObj.getAsJsonArray("data")
+            if (dataArray != null) {
+                val books = gson.fromJson<List<com.lechenmusic.data.model.Audiobook>>(
+                    dataArray,
+                    object : com.google.gson.reflect.TypeToken<List<com.lechenmusic.data.model.Audiobook>>() {}.type
+                )
+                android.util.Log.d("LeChenMusic", "getAudiobooks: parsed ${books.size} books")
+                return Result.success(books)
+            } else {
+                android.util.Log.w("LeChenMusic", "getAudiobooks: no 'data' field")
+                return Result.success(emptyList())
+            }
+        } else {
+            android.util.Log.w("LeChenMusic", "getAudiobooks: failed HTTP ${response.code()}")
+            return Result.success(emptyList())
+        }
+    }
+
     suspend fun getAudiobooks(): Result<List<com.lechenmusic.data.model.Audiobook>> {
         return try {
             val token = com.lechenmusic.data.api.NavidromeAuth.token
             if (token == null) {
-                android.util.Log.w("LeChenMusic", "getAudiobooks: token is null!")
-                return Result.success(emptyList())
+                android.util.Log.w("LeChenMusic", "getAudiobooks: token is null! Trying to re-authenticate...")
+                // Try to re-authenticate
+                val authSuccess = authenticateNavidrome()
+                if (!authSuccess) {
+                    android.util.Log.e("LeChenMusic", "getAudiobooks: Re-authentication failed!")
+                    return Result.success(emptyList())
+                }
+                val newToken = com.lechenmusic.data.api.NavidromeAuth.token
+                if (newToken == null) {
+                    android.util.Log.e("LeChenMusic", "getAudiobooks: Still no token after re-auth!")
+                    return Result.success(emptyList())
+                }
+                android.util.Log.d("LeChenMusic", "getAudiobooks: Re-authenticated successfully")
+                // Continue with the new token
+                val response = audiobookApi!!.getAudiobooks("Bearer $newToken")
+                return handleAudiobookResponse(response)
             }
             val response = audiobookApi!!.getAudiobooks("Bearer $token")
-            android.util.Log.d("LeChenMusic", "getAudiobooks: HTTP ${response.code()} ok=${response.isSuccessful}")
-            if (response.isSuccessful && response.body() != null) {
-                val gson = com.google.gson.Gson()
-                val bodyElement = response.body()!!
-                val jsonObj = bodyElement.asJsonObject
-                val dataArray = jsonObj.getAsJsonArray("data")
-                if (dataArray != null) {
-                    val books = gson.fromJson<List<com.lechenmusic.data.model.Audiobook>>(
-                        dataArray,
-                        object : com.google.gson.reflect.TypeToken<List<com.lechenmusic.data.model.Audiobook>>() {}.type
-                    )
-                    android.util.Log.d("LeChenMusic", "getAudiobooks: parsed ${books.size} books")
-                    Result.success(books)
-                } else {
-                    android.util.Log.w("LeChenMusic", "getAudiobooks: no 'data' field")
-                    Result.success(emptyList())
-                }
-            } else {
-                android.util.Log.w("LeChenMusic", "getAudiobooks: failed HTTP ${response.code()}")
-                Result.success(emptyList())
-            }
+            handleAudiobookResponse(response)
         } catch (e: Exception) {
             android.util.Log.e("LeChenMusic", "getAudiobooks: Exception", e)
             Result.failure(e)
@@ -623,3 +647,4 @@ class MusicRepository {
 
 data class StarredData(val songs: List<com.lechenmusic.data.model.Song> = emptyList(), val albums: List<com.lechenmusic.data.model.Album> = emptyList(), val artists: List<com.lechenmusic.data.model.Artist> = emptyList())
 data class ServerStats(val songCount: Int = 0, val albumCount: Int = 0, val playlistCount: Int = 0, val artistCount: Int = 0)
+
