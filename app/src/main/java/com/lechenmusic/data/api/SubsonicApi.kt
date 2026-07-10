@@ -243,52 +243,49 @@ interface SubsonicApi {
 
     @GET("api/audiobook")
     suspend fun getAudiobooks(
-        @Query("u") username: String,
-        @Query("p") password: String,
-        @Query("v") version: String = "1.16.1",
-        @Query("c") client: String = "lechenmusic",
-        @Query("f") format: String = "json"
+        @retrofit2.http.Header("X-ND-Authorization") authHeader: String
     ): retrofit2.Response<com.google.gson.JsonElement>
 
     @GET("api/audiobook/{id}")
     suspend fun getAudiobook(
-        @Query("u") username: String,
-        @Query("p") password: String,
         @retrofit2.http.Path("id") id: String,
-        @Query("v") version: String = "1.16.1",
-        @Query("c") client: String = "lechenmusic",
-        @Query("f") format: String = "json"
+        @retrofit2.http.Header("X-ND-Authorization") authHeader: String
     ): retrofit2.Response<com.google.gson.JsonElement>
 
     @GET("api/audiobook/{id}/chapters")
     suspend fun getAudiobookChapters(
-        @Query("u") username: String,
-        @Query("p") password: String,
         @retrofit2.http.Path("id") id: String,
-        @Query("v") version: String = "1.16.1",
-        @Query("c") client: String = "lechenmusic",
-        @Query("f") format: String = "json"
+        @retrofit2.http.Header("X-ND-Authorization") authHeader: String
     ): retrofit2.Response<com.google.gson.JsonElement>
 
     @GET("api/audiobook/{id}/progress")
     suspend fun getAudiobookProgress(
-        @Query("u") username: String,
-        @Query("p") password: String,
         @retrofit2.http.Path("id") id: String,
-        @Query("v") version: String = "1.16.1",
-        @Query("c") client: String = "lechenmusic",
-        @Query("f") format: String = "json"
+        @retrofit2.http.Header("X-ND-Authorization") authHeader: String
     ): retrofit2.Response<com.google.gson.JsonElement>
 
     @retrofit2.http.POST("api/audiobook/{id}/progress")
     suspend fun saveAudiobookProgress(
-        @Query("u") username: String,
-        @Query("p") password: String,
         @retrofit2.http.Path("id") id: String,
         @retrofit2.http.Body body: okhttp3.RequestBody,
-        @Query("v") version: String = "1.16.1",
-        @Query("c") client: String = "lechenmusic",
-        @Query("f") format: String = "json"
+        @retrofit2.http.Header("X-ND-Authorization") authHeader: String
+    ): retrofit2.Response<com.google.gson.JsonElement>
+
+    @GET("api/audiobook/starred")
+    suspend fun getStarredAudiobooks(
+        @retrofit2.http.Header("X-ND-Authorization") authHeader: String
+    ): retrofit2.Response<com.google.gson.JsonElement>
+
+    @retrofit2.http.POST("api/audiobook/{id}/star")
+    suspend fun starAudiobook(
+        @retrofit2.http.Path("id") id: String,
+        @retrofit2.http.Header("X-ND-Authorization") authHeader: String
+    ): retrofit2.Response<com.google.gson.JsonElement>
+
+    @retrofit2.http.HTTP(method = "DELETE", path = "api/audiobook/{id}/star", hasBody = false)
+    suspend fun unstarAudiobook(
+        @retrofit2.http.Path("id") id: String,
+        @retrofit2.http.Header("X-ND-Authorization") authHeader: String
     ): retrofit2.Response<com.google.gson.JsonElement>
 
     // Audiobook search

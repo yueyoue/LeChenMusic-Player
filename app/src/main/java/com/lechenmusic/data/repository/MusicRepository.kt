@@ -413,30 +413,24 @@ class MusicRepository {
 
     suspend fun getAudiobooks(): Result<List<com.lechenmusic.data.model.Audiobook>> {
         return try {
-            android.util.Log.d("LeChenMusic", "getAudiobooks: Calling API...")
-            val response = audiobookApi!!.getAudiobooks(username, password)
-            android.util.Log.d("LeChenMusic", "getAudiobooks: code=${response.code()}, success=${response.isSuccessful}")
+            val token = com.lechenmusic.data.api.NavidromeAuth.token ?: return Result.success(emptyList())
+            val response = audiobookApi!!.getAudiobooks("Bearer $token")
             if (response.isSuccessful && response.body() != null) {
-                val bodyStr = response.body().toString()
-                android.util.Log.d("LeChenMusic", "getAudiobooks: body=${bodyStr.take(300)}")
                 val gson = com.google.gson.Gson()
-                val parsed = gson.fromJson(bodyStr, AudiobookListResponse::class.java)
-                val count = parsed?.data?.size ?: 0
-                android.util.Log.d("LeChenMusic", "getAudiobooks: parsed $count books")
+                val parsed = gson.fromJson(response.body(), AudiobookListResponse::class.java)
                 Result.success(parsed?.data ?: emptyList())
             } else {
-                android.util.Log.w("LeChenMusic", "getAudiobooks: Failed code=${response.code()}")
                 Result.success(emptyList())
             }
         } catch (e: Exception) {
-            android.util.Log.e("LeChenMusic", "getAudiobooks: Exception", e)
             Result.failure(e)
         }
     }
 
     suspend fun getAudiobookDetail(id: String): Result<com.lechenmusic.data.model.AudiobookDetail> {
         return try {
-            val response = audiobookApi!!.getAudiobook(username, password, id)
+            val token = com.lechenmusic.data.api.NavidromeAuth.token ?: return Result.failure(Exception("Not authenticated"))
+            val response = audiobookApi!!.getAudiobook(id, "Bearer $token")
             if (response.isSuccessful && response.body() != null) {
                 val gson = com.google.gson.Gson()
                 val parsed = gson.fromJson(response.body(), AudiobookDetailApiResponse::class.java)
@@ -447,8 +441,7 @@ class MusicRepository {
                     progress = data?.progress
                 ))
             } else {
-                val code = response.code()
-                Result.failure(Exception("HTTP $code"))
+                Result.failure(Exception("HTTP ${response.code()}"))
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -465,6 +458,7 @@ class MusicRepository {
 
     suspend fun saveAudiobookProgress(bookId: String, chapterId: String, chapterNumber: Int, positionSeconds: Int): Result<Unit> {
         return try {
+            val token = com.lechenmusic.data.api.NavidromeAuth.token ?: return Result.failure(Exception("Not authenticated"))
             val body = okhttp3.RequestBody.create(
                 "application/json".toMediaType(),
                 com.google.gson.Gson().toJson(mapOf(
@@ -473,9 +467,9 @@ class MusicRepository {
                     "position" to positionSeconds
                 ))
             )
-            val response = audiobookApi!!.saveAudiobookProgress(username, password, bookId, body)
+            val response = audiobookApi!!.saveAudiobookProgress(bookId, body, "Bearer $token")
             if (response.isSuccessful) Result.success(Unit)
-            else Result.failure(Exception("HTTP ${'$'}{response.code()}"))
+            else Result.failure(Exception("HTTP ${response.code()}"))
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -483,7 +477,8 @@ class MusicRepository {
 
     suspend fun getAudiobookProgress(bookId: String): Result<com.lechenmusic.data.model.AudiobookProgress?> {
         return try {
-            val response = audiobookApi!!.getAudiobookProgress(username, password, bookId)
+            val token = com.lechenmusic.data.api.NavidromeAuth.token ?: return Result.success(null)
+            val response = audiobookApi!!.getAudiobookProgress(bookId, "Bearer $token")
             if (response.isSuccessful && response.body() != null) {
                 val gson = com.google.gson.Gson()
                 val body = response.body()
@@ -504,16 +499,11 @@ class MusicRepository {
 
     suspend fun getStarredAudiobooks(): Result<List<com.lechenmusic.data.model.Audiobook>> {
         return try {
-            val normalizedUrl = serverUrl.trimEnd('/')
-            val url = "$normalizedUrl/api/audiobook/starred"
-            val builder = okhttp3.Request.Builder().url(url)
-            val token = com.lechenmusic.data.api.NavidromeAuth.token
-            if (token != null) builder.header("X-ND-Authorization", "Bearer $token")
-            val client = okhttp3.OkHttpClient()
-            val response = client.newCall(builder.build()).execute()
-            if (response.isSuccessful && response.body != null) {
+            val token = com.lechenmusic.data.api.NavidromeAuth.token ?: return Result.success(emptyList())
+            val response = audiobookApi!!.getStarredAudiobooks("Bearer $token")
+            if (response.isSuccessful && response.body() != null) {
                 val gson = com.google.gson.Gson()
-                val parsed = gson.fromJson(response.body?.string(), AudiobookListResponse::class.java)
+                val parsed = gson.fromJson(response.body(), AudiobookListResponse::class.java)
                 Result.success(parsed?.data ?: emptyList())
             } else {
                 Result.success(emptyList())
@@ -525,15 +515,10 @@ class MusicRepository {
 
     suspend fun starAudiobook(id: String): Result<Unit> {
         return try {
-            val normalizedUrl = serverUrl.trimEnd('/')
-            val url = "$normalizedUrl/api/audiobook/$id/star"
-            val body = okhttp3.RequestBody.create(null, ByteArray(0))
-            val builder = okhttp3.Request.Builder().url(url).post(body)
-            val token = com.lechenmusic.data.api.NavidromeAuth.token
-            if (token != null) builder.header("X-ND-Authorization", "Bearer $token")
-            val client = okhttp3.OkHttpClient()
-            client.newCall(builder.build()).execute()
-            Result.success(Unit)
+            val token = com.lechenmusic.data.api.NavidromeAuth.token ?: return Result.failure(Exception("Not authenticated"))
+            val response = audiobookApi!!.starAudiobook(id, "Bearer $token")
+            if (response.isSuccessful) Result.success(Unit)
+            else Result.failure(Exception("HTTP ${response.code()}"))
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -541,14 +526,10 @@ class MusicRepository {
 
     suspend fun unstarAudiobook(id: String): Result<Unit> {
         return try {
-            val normalizedUrl = serverUrl.trimEnd('/')
-            val url = "$normalizedUrl/api/audiobook/$id/star"
-            val builder = okhttp3.Request.Builder().url(url).delete()
-            val token = com.lechenmusic.data.api.NavidromeAuth.token
-            if (token != null) builder.header("X-ND-Authorization", "Bearer $token")
-            val client = okhttp3.OkHttpClient()
-            client.newCall(builder.build()).execute()
-            Result.success(Unit)
+            val token = com.lechenmusic.data.api.NavidromeAuth.token ?: return Result.failure(Exception("Not authenticated"))
+            val response = audiobookApi!!.unstarAudiobook(id, "Bearer $token")
+            if (response.isSuccessful) Result.success(Unit)
+            else Result.failure(Exception("HTTP ${response.code()}"))
         } catch (e: Exception) {
             Result.failure(e)
         }
