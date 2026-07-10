@@ -413,16 +413,35 @@ class MusicRepository {
 
     suspend fun getAudiobooks(): Result<List<com.lechenmusic.data.model.Audiobook>> {
         return try {
-            val token = com.lechenmusic.data.api.NavidromeAuth.token ?: return Result.success(emptyList())
+            val token = com.lechenmusic.data.api.NavidromeAuth.token
+            if (token == null) {
+                android.util.Log.w("LeChenMusic", "getAudiobooks: token is null!")
+                return Result.success(emptyList())
+            }
             val response = audiobookApi!!.getAudiobooks("Bearer $token")
+            android.util.Log.d("LeChenMusic", "getAudiobooks: HTTP ${response.code()} ok=${response.isSuccessful}")
             if (response.isSuccessful && response.body() != null) {
                 val gson = com.google.gson.Gson()
-                val parsed = gson.fromJson(response.body(), AudiobookListResponse::class.java)
-                Result.success(parsed?.data ?: emptyList())
+                val bodyElement = response.body()!!
+                val jsonObj = bodyElement.asJsonObject
+                val dataArray = jsonObj.getAsJsonArray("data")
+                if (dataArray != null) {
+                    val books = gson.fromJson<List<com.lechenmusic.data.model.Audiobook>>(
+                        dataArray,
+                        object : com.google.gson.reflect.TypeToken<List<com.lechenmusic.data.model.Audiobook>>() {}.type
+                    )
+                    android.util.Log.d("LeChenMusic", "getAudiobooks: parsed ${books.size} books")
+                    Result.success(books)
+                } else {
+                    android.util.Log.w("LeChenMusic", "getAudiobooks: no 'data' field")
+                    Result.success(emptyList())
+                }
             } else {
+                android.util.Log.w("LeChenMusic", "getAudiobooks: failed HTTP ${response.code()}")
                 Result.success(emptyList())
             }
         } catch (e: Exception) {
+            android.util.Log.e("LeChenMusic", "getAudiobooks: Exception", e)
             Result.failure(e)
         }
     }
