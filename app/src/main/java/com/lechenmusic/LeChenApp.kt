@@ -2,6 +2,8 @@ package com.lechenmusic
 
 import android.app.Application
 import okhttp3.*
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
 import com.lechenmusic.data.repository.LyricsCache
 import com.lechenmusic.data.repository.MusicRepository
 import com.lechenmusic.data.repository.SettingsRepository
@@ -73,10 +75,7 @@ class LeChenApp : Application() {
                     } catch (_: Exception) { "unknown" })
                 }
 
-                val body = okhttp3.RequestBody.create(
-                    "application/json; charset=utf-8".toMediaType(),
-                    jsonBody.toString()
-                )
+                val body = jsonBody.toString().toRequestBody("application/json; charset=utf-8".toMediaType())
                 val request = okhttp3.Request.Builder()
                     .url(url)
                     .post(body)
