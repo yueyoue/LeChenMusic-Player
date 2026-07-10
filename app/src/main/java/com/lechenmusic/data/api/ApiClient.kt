@@ -196,10 +196,11 @@ object ApiClient {
                 .connectTimeout(15, TimeUnit.SECONDS)
                 .readTimeout(15, TimeUnit.SECONDS)
                 .build()
-            val body = okhttp3.FormBody.Builder()
-                .add("username", username)
-                .add("password", password)
-                .build()
+            val jsonStr = "{\"username\":\"$username\",\"password\":\"$password\"}"
+            val body = okhttp3.RequestBody.create(
+                okhttp3.MediaType.parse("application/json; charset=utf-8"),
+                jsonStr
+            )
             val request = okhttp3.Request.Builder()
                 .url("${normalizedUrl}auth/login")
                 .post(body)
