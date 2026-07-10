@@ -24,7 +24,11 @@ sealed class Screen(val route: String) {
     object AllPlaylists : Screen("all_playlists")
     object CachedMusic : Screen("cached_music")
 
-    object Audiobook : Screen("audiobook")
+    object Audiobook : Screen("audiobook?genre={genre}") {
+        fun createRoute(genre: String? = null): String {
+            return if (genre != null) "audiobook?genre=$genre" else "audiobook"
+        }
+    }
     object AudiobookDetail : Screen("audiobook_detail/{audiobookId}") {
         fun createRoute(audiobookId: String) = "audiobook_detail/$audiobookId"
     }

@@ -472,7 +472,15 @@ class MusicRepository {
 
     suspend fun getAudiobookDetail(id: String): Result<com.lechenmusic.data.model.AudiobookDetail> {
         return try {
-            val token = com.lechenmusic.data.api.NavidromeAuth.token ?: return Result.failure(Exception("Not authenticated"))
+            var token = com.lechenmusic.data.api.NavidromeAuth.token
+            if (token == null) {
+                android.util.Log.w("LeChenMusic", "getAudiobookDetail: token is null! Re-authenticating...")
+                authenticateNavidrome()
+                token = com.lechenmusic.data.api.NavidromeAuth.token
+                if (token == null) {
+                    return Result.failure(Exception("Not authenticated"))
+                }
+            }
             val response = audiobookApi!!.getAudiobook(id, "Bearer $token")
             if (response.isSuccessful && response.body() != null) {
                 val gson = com.google.gson.Gson()

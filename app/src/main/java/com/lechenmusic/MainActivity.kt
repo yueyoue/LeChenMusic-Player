@@ -237,7 +237,7 @@ fun LeChenMusicApp(viewModel: MainViewModel) {
                             onNavigateToArtists = { navController.navigate(Screen.Artists.route) },
                             onNavigateToAllPlaylists = { navController.navigate(Screen.AllPlaylists.route) },
                             onNavigateToCachedMusic = { navController.navigate(Screen.CachedMusic.route) },
-                            onNavigateToAudiobook = { navController.navigate(Screen.Audiobook.route) },
+                            onNavigateToAudiobook = { genre -> navController.navigate(Screen.Audiobook.createRoute(genre)) },
                             onNavigateToAudiobookDetail = { id -> navController.navigate(Screen.AudiobookDetail.createRoute(id)) }
                         )
                     }
@@ -361,9 +361,11 @@ fun LeChenMusicApp(viewModel: MainViewModel) {
                             onBack = { navController.popBackStack() }
                         )
                     }
-                    composable(Screen.Audiobook.route) {
+                    composable(Screen.Audiobook.route) { backStackEntry ->
+                        val genre = backStackEntry.arguments?.getString("genre")
                         AudiobookScreen(
                             viewModel = viewModel,
+                            genreFilter = genre,
                             onBack = { navController.popBackStack() },
                             onAudiobookClick = { id -> navController.navigate(Screen.AudiobookDetail.createRoute(id)) }
                         )

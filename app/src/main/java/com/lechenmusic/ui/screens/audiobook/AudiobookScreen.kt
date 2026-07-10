@@ -27,22 +27,37 @@ import com.lechenmusic.ui.components.CoverImage
 @Composable
 fun AudiobookScreen(
     viewModel: MainViewModel,
+    genreFilter: String? = null,
     onBack: () -> Unit,
     onAudiobookClick: (String) -> Unit
 ) {
     val audiobooks by viewModel.audiobooks.collectAsState()
+    val starredAudiobooks by viewModel.starredAudiobooks.collectAsState()
     val serverUrl by viewModel.serverUrl.collectAsState()
     val username by viewModel.username.collectAsState()
     val password by viewModel.password.collectAsState()
 
     LaunchedEffect(Unit) {
         viewModel.loadAudiobooks()
+        viewModel.loadStarredAudiobooks()
+    }
+
+    val filteredBooks = when (genreFilter) {
+        "starred" -> starredAudiobooks
+        null -> audiobooks
+        else -> audiobooks.filter { it.genre == genreFilter }
+    }
+
+    val title = when (genreFilter) {
+        "starred" -> "⭐ 收藏的有声书"
+        null -> "📖 全部有声书"
+        else -> "📖 $genreFilter"
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("有声书") },
+                title = { Text(title) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "返回")
@@ -51,7 +66,7 @@ fun AudiobookScreen(
             )
         }
     ) { padding ->
-        if (audiobooks.isEmpty()) {
+        if (filteredBooks.isEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -67,7 +82,7 @@ fun AudiobookScreen(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        "暂无有声书",
+                        if (genreFilter != null) "暂无$genreFilter" else "暂无有声书",
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 14.sp
                     )
@@ -87,7 +102,7 @@ fun AudiobookScreen(
                 contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(audiobooks) { book ->
+                items(filteredBooks) { book ->
                     AudiobookCard(
                         book = book,
                         serverUrl = serverUrl,

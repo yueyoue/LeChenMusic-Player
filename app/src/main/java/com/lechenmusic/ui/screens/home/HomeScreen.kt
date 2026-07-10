@@ -57,7 +57,7 @@ fun HomeScreen(
     onNavigateToArtists: () -> Unit = {},
     onNavigateToAllPlaylists: () -> Unit = {},
     onNavigateToCachedMusic: () -> Unit = {},
-    onNavigateToAudiobook: () -> Unit = {},
+    onNavigateToAudiobook: (String?) -> Unit = {},
     onNavigateToAudiobookDetail: (String) -> Unit = {}
 ) {
     val newestAlbums by viewModel.newestAlbums.collectAsState()
@@ -401,9 +401,9 @@ fun HomeScreen(
                     }
                     // Categories
                     item { SecHd("\uD83D\uDCC2 分类", "全部 ›", onNavigateToAudiobook) }
-                    item { CatGrid { genre -> onNavigateToAudiobook() } }
+                    item { CatGrid { genre -> onNavigateToAudiobook(genre) } }
                     // Narrators
-                    item { SecHd("\uD83C\uDFA4 演播者", "全部 ›") {} }
+                    item { SecHd("\uD83C\uDFA4 演播者", "全部 ›") { onNavigateToAudiobook(null) } }
                     item {
                         val narrators by viewModel.narrators.collectAsState()
                         if (narrators.isNotEmpty()) {
@@ -422,7 +422,7 @@ fun HomeScreen(
                         }
                     }
                     // Recently updated
-                    item { SecHd("\uD83C\uDD95 最近更新", "更多 ›") {} }
+                    item { SecHd("\uD83C\uDD95 最近更新", "更多 ›") { onNavigateToAudiobook(null) } }
                     if (audiobooks.isNotEmpty()) {
                         item {
                             LazyRow(
@@ -448,7 +448,7 @@ fun HomeScreen(
                         }
                     }
                     // 有声小说
-                    item { SecHd("\uD83D\uDCD6 有声小说", "更多 ›") {} }
+                    item { SecHd("\uD83D\uDCD6 有声小说", "更多 ›") { onNavigateToAudiobook("有声读物") } }
                     item {
                         val novelBooks = audiobooks.filter { it.genre == "有声读物" || it.genre.isEmpty() }
                         if (novelBooks.isNotEmpty()) {
@@ -473,7 +473,7 @@ fun HomeScreen(
                         }
                     }
                     // 相声
-                    item { SecHd("\uD83C\uDFA4 相声", "更多 ›") {} }
+                    item { SecHd("\uD83C\uDFA4 相声", "更多 ›") { onNavigateToAudiobook("相声") } }
                     item {
                         val xiangshengBooks = audiobooks.filter { it.genre == "相声" }
                         if (xiangshengBooks.isNotEmpty()) {
@@ -497,7 +497,7 @@ fun HomeScreen(
                         }
                     }
                     // 评书
-                    item { SecHd("\uD83C\uDFAD 评书", "更多 ›") {} }
+                    item { SecHd("\uD83C\uDFAD 评书", "更多 ›") { onNavigateToAudiobook("评书") } }
                     item {
                         val pingshuBooks = audiobooks.filter { it.genre == "评书" }
                         if (pingshuBooks.isNotEmpty()) {
@@ -521,7 +521,7 @@ fun HomeScreen(
                         }
                     }
                     // Favorites
-                    item { SecHd("❤️ 我的收藏", "更多 ›") {} }
+                    item { SecHd("❤️ 我的收藏", "更多 ›") { onNavigateToAudiobook("starred") } }
                     if (starredAudiobooks.isNotEmpty()) {
                         item {
                             LazyRow(
