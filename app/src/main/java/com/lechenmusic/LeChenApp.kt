@@ -63,7 +63,7 @@ class LeChenApp : Application() {
                 val serverUrl = prefs.getString("serverUrl", "") ?: ""
                 if (serverUrl.isBlank()) return
 
-                val url = "${serverUrl.trimEnd('/')}/api/app/error-log"
+                val url = "${serverUrl.trimEnd('/')}/api/error-log"
                 val jsonBody = org.json.JSONObject().apply {
                     put("level", level)
                     put("message", message)
