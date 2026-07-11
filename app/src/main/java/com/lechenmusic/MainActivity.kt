@@ -174,18 +174,27 @@ fun LeChenMusicApp(viewModel: MainViewModel) {
             Scaffold(
                 bottomBar = {
                     AnimatedVisibility(
-                        visible = showBottomBar || (currentSong != null && currentRoute != Screen.Player.route),
+                        visible = showBottomBar || (currentSong != null && currentRoute != Screen.Player.route && currentRoute != Screen.AudiobookPlayer.route),
                         enter = slideInVertically(initialOffsetY = { it }),
                         exit = slideOutVertically(targetOffsetY = { it })
                     ) {
                         Column {
-                            if (currentSong != null && currentRoute != Screen.Player.route) {
+                            if (currentSong != null && currentRoute != Screen.Player.route && currentRoute != Screen.AudiobookPlayer.route) {
+                                val currentBook by viewModel.currentAudiobook.collectAsState()
+                                val audiobookCoverUrl by viewModel.playerManager.audiobookCoverUrl.collectAsState()
                                 MiniPlayer(
                                     playerManager = viewModel.playerManager,
                                     serverUrl = serverUrl,
                                     username = username,
                                     password = password,
-                                    onClick = { navController.navigate(Screen.Player.route) }
+                                    audiobookCoverUrl = if (currentBook != null) audiobookCoverUrl else null,
+                                    onClick = {
+                                        if (currentBook != null) {
+                                            navController.navigate(Screen.AudiobookPlayer.route)
+                                        } else {
+                                            navController.navigate(Screen.Player.route)
+                                        }
+                                    }
                                 )
                             }
                             if (showBottomBar) {
@@ -378,7 +387,7 @@ fun LeChenMusicApp(viewModel: MainViewModel) {
                             onBack = { navController.popBackStack() },
                             onPlayChapter = { book, chapter, chapters ->
                                 viewModel.playAudiobookChapter(book, chapter, chapters)
-                                navController.navigate(Screen.AudiobookPlayer.route)
+                                // Don't navigate - let mini player handle it
                             }
                         )
                     }

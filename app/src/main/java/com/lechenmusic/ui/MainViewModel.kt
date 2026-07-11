@@ -279,6 +279,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             while (true) {
                 kotlinx.coroutines.delay(200)
                 playerManager.updateProgress()
+                // Sync audiobook progress from ExoPlayer
+                if (_currentAudiobook.value != null) {
+                    _audiobookPosition.value = playerManager.currentPosition.value
+                    _audiobookDuration.value = playerManager.duration.value
+                }
             }
         }
     }
@@ -649,6 +654,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun playSong(song: Song, playlist: List<Song> = listOf(song)) {
+        // Clear audiobook state when playing music
+        _currentAudiobook.value = null
+        _currentAudiobookChapters.value = emptyList()
+        _audiobookIsPlaying.value = false
+        playerManager.clearAudiobookCoverUrl()
+
         playerManager.playSong(song, playlist)
         viewModelScope.launch {
             settings.addRecentPlay(song.id)
@@ -1034,19 +1045,39 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun starAudiobook(id: String) {
+        // Optimistic update: immediately reflect in UI
+        val currentDetail = _audiobookDetail.value
+        if (currentDetail != null && currentDetail.book.id == id) {
+            _audiobookDetail.value = currentDetail.copy(
+                book = currentDetail.book.copy(starred = java.time.Instant.now().toString())
+            )
+        }
         viewModelScope.launch(Dispatchers.IO) {
             repository.starAudiobook(id).onSuccess {
                 loadStarredAudiobooks()
                 loadAudiobookDetail(id)
+            }.onFailure {
+                // Revert on failure
+                if (currentDetail != null) _audiobookDetail.value = currentDetail
             }
         }
     }
 
     fun unstarAudiobook(id: String) {
+        // Optimistic update: immediately reflect in UI
+        val currentDetail = _audiobookDetail.value
+        if (currentDetail != null && currentDetail.book.id == id) {
+            _audiobookDetail.value = currentDetail.copy(
+                book = currentDetail.book.copy(starred = null)
+            )
+        }
         viewModelScope.launch(Dispatchers.IO) {
             repository.unstarAudiobook(id).onSuccess {
                 loadStarredAudiobooks()
                 loadAudiobookDetail(id)
+            }.onFailure {
+                // Revert on failure
+                if (currentDetail != null) _audiobookDetail.value = currentDetail
             }
         }
     }

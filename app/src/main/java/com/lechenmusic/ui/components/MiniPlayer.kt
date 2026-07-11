@@ -32,6 +32,7 @@ fun MiniPlayer(
     serverUrl: String,
     username: String,
     password: String,
+    audiobookCoverUrl: String? = null,
     onClick: () -> Unit
 ) {
     val currentSong by playerManager.currentSong.collectAsState()
@@ -52,15 +53,26 @@ fun MiniPlayer(
             modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            CoverImage(
-                coverArtId = song.coverArt ?: song.albumId,
-                serverUrl = serverUrl,
-                username = username,
-                password = password,
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(RoundedCornerShape(10.dp))
-            )
+            if (audiobookCoverUrl != null) {
+                coil.compose.AsyncImage(
+                    model = audiobookCoverUrl,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(RoundedCornerShape(10.dp)),
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                )
+            } else {
+                CoverImage(
+                    coverArtId = song.coverArt ?: song.albumId,
+                    serverUrl = serverUrl,
+                    username = username,
+                    password = password,
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                )
+            }
             Column(
                 modifier = Modifier
                     .weight(1f)
