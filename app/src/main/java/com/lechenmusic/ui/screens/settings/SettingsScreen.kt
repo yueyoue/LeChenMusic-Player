@@ -29,6 +29,7 @@ fun SettingsScreen(
 ) {
     val serverUrl by viewModel.serverUrl.collectAsState()
     val username by viewModel.username.collectAsState()
+    val audiobookError by viewModel.audiobookError.collectAsState()
     val themeMode by viewModel.themeMode.collectAsState()
     val cacheSize by viewModel.cacheSize.collectAsState()
     val serverStats by viewModel.serverStats.collectAsState()
@@ -94,6 +95,32 @@ fun SettingsScreen(
         }
 
         item {
+
+        // Debug section for audiobook issues
+        if (audiobookError != null) {
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text("🐛 有声书调试信息", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("错误: ${audiobookError}", fontSize = 12.sp, color = MaterialTheme.colorScheme.onErrorContainer)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text("服务器: $serverUrl", fontSize = 11.sp, color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.7f))
+                        Text("用户名: $username", fontSize = 11.sp, color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.7f))
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("排查步骤:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onErrorContainer)
+                        Text("1. 确认服务器地址格式: http://IP:端口", fontSize = 11.sp, color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.7f))
+                        Text("2. 确认用户名密码正确", fontSize = 11.sp, color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.7f))
+                        Text("3. 尝试在浏览器打开服务器地址确认能访问", fontSize = 11.sp, color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.7f))
+                    }
+                }
+            }
+        }
+
             SectionTitle("外观设置")
             Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp), shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
                 Column {

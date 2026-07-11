@@ -434,7 +434,21 @@ class MusicRepository {
 
     private fun handleAudiobookResponse(response: retrofit2.Response<com.google.gson.JsonElement>): Result<List<com.lechenmusic.data.model.Audiobook>> {
         android.util.Log.d("LeChenMusic", "getAudiobooks: HTTP ${response.code()} ok=${response.isSuccessful}")
-        if (response.isSuccessful && response.body() != null) {
+        if (!response.isSuccessful) {
+            val msg = when (response.code()) {
+                401 -> "认证失败(401)，请重新登录"
+                403 -> "无权限访问(403)"
+                404 -> "接口不存在(404)，请检查服务器版本"
+                500 -> "服务器内部错误(500)"
+                else -> "HTTP ${response.code()}"
+            }
+            android.util.Log.e("LeChenMusic", "getAudiobooks: $msg")
+            return Result.failure(Exception(msg))
+        }
+        if (response.body() == null) {
+            return Result.failure(Exception("服务器返回空数据"))
+        }
+        return try {
             val gson = com.google.gson.Gson()
             val bodyElement = response.body()!!
             val jsonObj = bodyElement.asJsonObject
@@ -445,14 +459,14 @@ class MusicRepository {
                     object : com.google.gson.reflect.TypeToken<List<com.lechenmusic.data.model.Audiobook>>() {}.type
                 )
                 android.util.Log.d("LeChenMusic", "getAudiobooks: parsed ${books.size} books")
-                return Result.success(books)
+                Result.success(books)
             } else {
-                android.util.Log.w("LeChenMusic", "getAudiobooks: no 'data' field")
-                return Result.success(emptyList())
+                android.util.Log.w("LeChenMusic", "getAudiobooks: no 'data' field in response")
+                Result.failure(Exception("服务器返回格式错误: 缺少data字段"))
             }
-        } else {
-            android.util.Log.w("LeChenMusic", "getAudiobooks: failed HTTP ${response.code()}")
-            return Result.success(emptyList())
+        } catch (e: Exception) {
+            android.util.Log.e("LeChenMusic", "getAudiobooks: parse error", e)
+            Result.failure(Exception("数据解析失败: ${e.message}"))
         }
     }
 
