@@ -246,11 +246,26 @@ class MusicRepository {
                 if (songAlbumOffset > 10000) break
             }
 
+            // Get audiobook count
+            var audiobookCount = 0
+            try {
+                val token = com.lechenmusic.data.api.NavidromeAuth.token
+                if (token != null) {
+                    val abResponse = audiobookApi!!.getAudiobooks("Bearer $token")
+                    if (abResponse.isSuccessful && abResponse.body() != null) {
+                        val jsonObj = abResponse.body()!!.asJsonObject
+                        val dataArray = jsonObj.getAsJsonArray("data")
+                        audiobookCount = dataArray?.size() ?: 0
+                    }
+                }
+            } catch (_: Exception) {}
+
             Result.success(ServerStats(
                 songCount = songCount,
                 albumCount = albumCount,
                 playlistCount = playlistCount,
-                artistCount = artistCount
+                artistCount = artistCount,
+                audiobookCount = audiobookCount
             ))
         } catch (e: Exception) {
             Result.failure(e)
@@ -516,6 +531,18 @@ class MusicRepository {
         }
     }
 
+    fun getAudiobookCoverUrl(bookId: String): String? {
+        val normalizedUrl = serverUrl.trimEnd('/')
+        val token = com.lechenmusic.data.api.NavidromeAuth.token
+        return if (token != null) {
+            "$normalizedUrl/api/audiobook/$bookId/cover?token=$token"
+        } else {
+            val passBytes = password.toByteArray()
+            val encodedPass = if (password.startsWith("enc:")) password else "enc:" + passBytes.joinToString("") { "%02x".format(it) }
+            "$normalizedUrl/api/audiobook/$bookId/cover?u=$username&p=$encodedPass"
+        }
+    }
+
     fun getAudiobookChapterStreamUrl(bookId: String, chapterId: String): String {
         val normalizedUrl = serverUrl.trimEnd('/')
         // Use Subsonic API for streaming (supports audiobook chapters)
@@ -678,5 +705,5 @@ class MusicRepository {
 }
 
 data class StarredData(val songs: List<com.lechenmusic.data.model.Song> = emptyList(), val albums: List<com.lechenmusic.data.model.Album> = emptyList(), val artists: List<com.lechenmusic.data.model.Artist> = emptyList())
-data class ServerStats(val songCount: Int = 0, val albumCount: Int = 0, val playlistCount: Int = 0, val artistCount: Int = 0)
+data class ServerStats(val songCount: Int = 0, val albumCount: Int = 0, val playlistCount: Int = 0, val artistCount: Int = 0, val audiobookCount: Int = 0)
 

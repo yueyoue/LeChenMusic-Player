@@ -1035,13 +1035,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun starAudiobook(id: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            repository.starAudiobook(id).onSuccess { loadStarredAudiobooks() }
+            repository.starAudiobook(id).onSuccess {
+                loadStarredAudiobooks()
+                loadAudiobookDetail(id)
+            }
         }
     }
 
     fun unstarAudiobook(id: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            repository.unstarAudiobook(id).onSuccess { loadStarredAudiobooks() }
+            repository.unstarAudiobook(id).onSuccess {
+                loadStarredAudiobooks()
+                loadAudiobookDetail(id)
+            }
         }
     }
 
@@ -1070,7 +1076,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _currentAudiobookChapters.value = chapters
         _currentChapterIndex.value = chapters.indexOfFirst { it.id == chapter.id }.coerceAtLeast(0)
         val url = repository.getAudiobookChapterStreamUrl(book.id, chapter.id)
-        playerManager.playUrl(url, chapter.title, book.title, "audiobook_${book.id}_${chapter.id}")
+        val coverUrl = repository.getAudiobookCoverUrl(book.id)
+        playerManager.playUrl(url, chapter.title, book.title, "audiobook_${book.id}_${chapter.id}", coverUrl)
         _audiobookIsPlaying.value = true
     }
 
@@ -1146,7 +1153,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             _currentChapterIndex.value = detail.chapters.indexOfFirst { it.id == chapter.id }.coerceAtLeast(0)
 
                             val url = repository.getAudiobookChapterStreamUrl(book.id, chapter.id)
-                            playerManager.playUrl(url, chapter.title, book.title, "audiobook_${'$'}{book.id}_${'$'}{chapter.id}")
+                            val coverUrl = repository.getAudiobookCoverUrl(book.id)
+                            playerManager.playUrl(url, chapter.title, book.title, "audiobook_${book.id}_${chapter.id}", coverUrl)
 
                             kotlinx.coroutines.delay(500)
                             playerManager.seekTo(progress.position * 1000L)

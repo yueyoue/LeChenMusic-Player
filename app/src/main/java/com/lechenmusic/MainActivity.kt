@@ -392,6 +392,7 @@ fun LeChenMusicApp(viewModel: MainViewModel) {
                         val serverUrl by viewModel.serverUrl.collectAsState()
                         val username by viewModel.username.collectAsState()
                         val password by viewModel.password.collectAsState()
+                        val audiobookCoverUrl by viewModel.playerManager.audiobookCoverUrl.collectAsState()
                         if (currentBook != null) {
                             AudiobookPlayerScreen(
                                 book = currentBook!!,
@@ -403,6 +404,7 @@ fun LeChenMusicApp(viewModel: MainViewModel) {
                                 serverUrl = serverUrl,
                                 username = username,
                                 password = password,
+                                coverUrl = audiobookCoverUrl,
                                 onBack = { navController.popBackStack() },
                                 onPlayPause = { viewModel.audiobookTogglePlayPause() },
                                 onSeekTo = { viewModel.audiobookSeekTo(it) },

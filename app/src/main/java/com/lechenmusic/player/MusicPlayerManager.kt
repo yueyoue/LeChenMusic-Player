@@ -678,7 +678,23 @@ class MusicPlayerManager(private val context: Context) {
     }
 
     // ===== Audiobook playback =====
-    fun playUrl(url: String, title: String, artist: String, mediaId: String) {
+    private val _audiobookCoverUrl = MutableStateFlow<String?>(null)
+    val audiobookCoverUrl: StateFlow<String?> = _audiobookCoverUrl.asStateFlow()
+
+    fun playUrl(url: String, title: String, artist: String, mediaId: String, coverUrl: String? = null) {
+        // Create a virtual Song for UI display
+        _currentSong.value = Song(
+            id = mediaId,
+            title = title,
+            artist = artist,
+            album = "有声书",
+            duration = 0
+        )
+        _audiobookCoverUrl.value = coverUrl
+        _playlist.value = emptyList()
+        _currentIndex.value = 0
+        _isStarred.value = false
+
         player?.apply {
             val mediaItem = MediaItem.Builder()
                 .setUri(url)
@@ -695,6 +711,11 @@ class MusicPlayerManager(private val context: Context) {
             prepare()
             play()
         }
+        updateNotification()
+    }
+
+    fun clearAudiobookCoverUrl() {
+        _audiobookCoverUrl.value = null
     }
 
 }

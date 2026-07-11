@@ -1000,7 +1000,7 @@ private fun formatTime(ms: Long): String {
  * 手指接触第 1 帧即锁定，极致跟手，绝不回跳
  */
 @Composable
-private fun PlayerProgressBar(
+fun PlayerProgressBar(
     dragProgress: Float,
     duration: Long,
     barWidthPx: Float,

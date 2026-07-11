@@ -17,13 +17,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.lechenmusic.data.api.ApiClient
 import com.lechenmusic.data.model.Audiobook
-import com.lechenmusic.data.model.AudiobookChapter
 import com.lechenmusic.ui.MainViewModel
-import com.lechenmusic.ui.components.CoverImage
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AudiobookScreen(
     viewModel: MainViewModel,
@@ -54,23 +50,23 @@ fun AudiobookScreen(
         else -> "📖 $genreFilter"
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(title) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "返回")
-                    }
-                }
-            )
+    Column(modifier = Modifier.fillMaxSize()) {
+        // Header - match AlbumDetailScreen style
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(Icons.Default.ArrowBack, contentDescription = "返回")
+            }
+            Text(title, fontSize = 18.sp, fontWeight = FontWeight.Bold)
         }
-    ) { padding ->
+
         if (filteredBooks.isEmpty()) {
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
+                modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -96,9 +92,7 @@ fun AudiobookScreen(
             }
         } else {
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
+                modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
@@ -135,7 +129,6 @@ fun AudiobookCard(
             modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.Top
         ) {
-            // Cover image
             Surface(
                 modifier = Modifier
                     .width(80.dp)
@@ -208,7 +201,7 @@ fun AudiobookCard(
 
 fun getAudiobookCoverUrl(serverUrl: String, username: String, password: String, bookId: String): String? {
     val normalizedUrl = serverUrl.trimEnd('/')
-    val encodedPass = if (password.startsWith("enc:")) password 
+    val encodedPass = if (password.startsWith("enc:")) password
                       else "enc:${password.toByteArray().joinToString("") { "%02x".format(it) }}"
     return "$normalizedUrl/api/audiobook/$bookId/cover?u=$username&p=$encodedPass"
 }
