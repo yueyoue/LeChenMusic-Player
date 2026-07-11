@@ -94,8 +94,6 @@ fun SettingsScreen(
             }
         }
 
-        item {
-
         // Debug section for audiobook issues
         if (audiobookError != null) {
             item {
@@ -107,7 +105,7 @@ fun SettingsScreen(
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text("🐛 有声书调试信息", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text("错误: ${audiobookError}", fontSize = 12.sp, color = MaterialTheme.colorScheme.onErrorContainer)
+                        Text("错误: $audiobookError", fontSize = 12.sp, color = MaterialTheme.colorScheme.onErrorContainer)
                         Spacer(modifier = Modifier.height(4.dp))
                         Text("服务器: $serverUrl", fontSize = 11.sp, color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.7f))
                         Text("用户名: $username", fontSize = 11.sp, color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.7f))
@@ -121,6 +119,7 @@ fun SettingsScreen(
             }
         }
 
+        item {
             SectionTitle("外观设置")
             Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp), shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
                 Column {
