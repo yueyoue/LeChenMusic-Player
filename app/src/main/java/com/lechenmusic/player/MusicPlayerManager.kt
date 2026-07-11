@@ -154,8 +154,6 @@ class MusicPlayerManager(private val context: Context) {
                         }
                     }
                     override fun onPlayerError(error: PlaybackException) {
-                        android.util.Log.e("LeChenMusic", "onPlayerError: ${error.errorCodeName} - ${error.message}", error)
-                        // Send error to WEB admin
                         try {
                             com.lechenmusic.LeChenApp.instance.sendErrorToServer(
                                 "error",
@@ -613,10 +611,6 @@ class MusicPlayerManager(private val context: Context) {
 
     fun updateProgress() {
         player?.let {
-            // Log player state periodically for debugging
-            if (it.playbackState == Player.STATE_IDLE || it.playbackState == Player.STATE_BUFFERING) {
-                android.util.Log.d("LeChenMusic", "updateProgress: state=${it.playbackState}, playWhenReady=${it.playWhenReady}, duration=${it.duration}, error=${it.playerError}")
-            }
             _currentPosition.value = it.currentPosition
             _duration.value = it.duration.coerceAtLeast(0)
             _progress.value = if (it.duration > 0) it.currentPosition.toFloat() / it.duration else 0f
@@ -696,15 +690,6 @@ class MusicPlayerManager(private val context: Context) {
     val audiobookCoverUrl: StateFlow<String?> = _audiobookCoverUrl.asStateFlow()
 
     fun playUrl(url: String, title: String, artist: String, mediaId: String, coverUrl: String? = null) {
-        android.util.Log.d("LeChenMusic", "playUrl called: url=${url.take(80)}..., title=$title, mediaId=$mediaId")
-        android.util.Log.d("LeChenMusic", "playUrl: player=${player != null}, urlLength=${url.length}")
-        if (player == null) {
-            android.util.Log.e("LeChenMusic", "playUrl: player is null!")
-            try {
-                com.lechenmusic.LeChenApp.instance.sendErrorToServer("error", "playUrl: ExoPlayer is null", "url=$url", "AudiobookPlayer")
-            } catch (_: Exception) {}
-            return
-        }
         // Create a virtual Song for UI display
         _currentSong.value = Song(
             id = mediaId,
@@ -730,13 +715,9 @@ class MusicPlayerManager(private val context: Context) {
                         .build()
                 )
                 .build()
-            android.util.Log.d("LeChenMusic", "playUrl: setting mediaItem, uri=${mediaItem.localUri}")
             setMediaItem(mediaItem)
-            android.util.Log.d("LeChenMusic", "playUrl: calling prepare()")
             prepare()
-            android.util.Log.d("LeChenMusic", "playUrl: calling play()")
             play()
-            android.util.Log.d("LeChenMusic", "playUrl: play() called, playbackState=$playbackState, playWhenReady=$playWhenReady")
         }
         updateNotification()
     }
