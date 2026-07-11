@@ -696,9 +696,16 @@ class MusicPlayerManager(private val context: Context) {
         _isStarred.value = false
 
         player?.apply {
+            // Build request headers with JWT auth
+            val headers = mutableMapOf<String, String>()
+            val token = com.lechenmusic.data.api.NavidromeAuth.token
+            if (token != null) {
+                headers["X-ND-Authorization"] = "Bearer $token"
+            }
             val mediaItem = MediaItem.Builder()
                 .setUri(url)
                 .setMediaId(mediaId)
+                .setRequestHeaders(headers)
                 .setMediaMetadata(
                     Media3Metadata.Builder()
                         .setTitle(title)

@@ -545,16 +545,8 @@ class MusicRepository {
 
     fun getAudiobookChapterStreamUrl(bookId: String, chapterId: String): String {
         val normalizedUrl = serverUrl.trimEnd('/')
-        // Use Subsonic API for streaming (supports audiobook chapters)
-        val token = com.lechenmusic.data.api.NavidromeAuth.token
-        return if (token != null) {
-            "$normalizedUrl/api/audiobook/$bookId/chapters/$chapterId/stream?token=$token"
-        } else {
-            // Fallback to basic auth
-            val passBytes = password.toByteArray()
-            val encodedPass = if (password.startsWith("enc:")) password else "enc:" + passBytes.joinToString("") { "%02x".format(it) }
-            "$normalizedUrl/api/audiobook/$bookId/chapters/$chapterId/stream?u=$username&p=$encodedPass"
-        }
+        // Auth handled via request headers in ExoPlayer (MusicPlayerManager.playUrl)
+        return "$normalizedUrl/api/audiobook/$bookId/chapters/$chapterId/stream"
     }
 
 
