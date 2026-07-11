@@ -28,6 +28,7 @@ fun AudiobookScreen(
     onAudiobookClick: (String) -> Unit
 ) {
     val audiobooks by viewModel.audiobooks.collectAsState()
+    val audiobookError by viewModel.audiobookError.collectAsState()
     val starredAudiobooks by viewModel.starredAudiobooks.collectAsState()
     val serverUrl by viewModel.serverUrl.collectAsState()
     val username by viewModel.username.collectAsState()
@@ -82,12 +83,31 @@ fun AudiobookScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 14.sp
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        "请在媒体库中添加有声书目录并扫描",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                        fontSize = 12.sp
-                    )
+                    if (audiobookError != null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            audiobookError ?: "",
+                            color = MaterialTheme.colorScheme.error,
+                            fontSize = 12.sp,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(horizontal = 32.dp)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            "请检查: 1)服务器地址 2)用户名密码 3)网络连接",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            fontSize = 11.sp,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(horizontal = 32.dp)
+                        )
+                    } else {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            "请在媒体库中添加有声书目录并扫描",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            fontSize = 12.sp
+                        )
+                    }
                 }
             }
         } else {

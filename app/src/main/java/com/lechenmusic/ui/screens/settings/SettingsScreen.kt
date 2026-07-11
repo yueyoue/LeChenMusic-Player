@@ -88,7 +88,7 @@ fun SettingsScreen(
                     InfoRow("专辑数量", if (serverStats.albumCount > 0) "${serverStats.albumCount}" else "加载中...")
                     InfoRow("歌手数量", if (serverStats.artistCount > 0) "${serverStats.artistCount}" else "加载中...")
                     InfoRow("歌单数量", if (serverStats.playlistCount > 0) "${serverStats.playlistCount}" else "加载中...")
-                    InfoRow("有声读物", if (serverStats.audiobookCount > 0) "${serverStats.audiobookCount}" else "加载中...")
+                    InfoRow("有声读物", if (serverStats.audiobookCount > 0) "${serverStats.audiobookCount}" else if (serverStats.songCount > 0) "加载失败" else "加载中...")
                 }
             }
         }

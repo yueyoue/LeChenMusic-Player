@@ -932,6 +932,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _audiobooks = MutableStateFlow<List<com.lechenmusic.data.model.Audiobook>>(emptyList())
     val audiobooks: StateFlow<List<com.lechenmusic.data.model.Audiobook>> = _audiobooks.asStateFlow()
+    private val _audiobookError = MutableStateFlow<String?>(null)
+    val audiobookError: StateFlow<String?> = _audiobookError.asStateFlow()
 
     private val _audiobookDetail = MutableStateFlow<com.lechenmusic.data.model.AudiobookDetail?>(null)
     val audiobookDetail: StateFlow<com.lechenmusic.data.model.AudiobookDetail?> = _audiobookDetail.asStateFlow()
@@ -958,16 +960,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 android.util.Log.d("LeChenMusic", "loadAudiobooks: Starting...")
+                _audiobookError.value = null
                 val result = repository.getAudiobooks()
                 val size = result.getOrNull()?.size ?: 0
                 android.util.Log.d("LeChenMusic", "loadAudiobooks: success=${result.isSuccess}, size=$size")
                 if (result.isSuccess) {
                     _audiobooks.value = result.getOrNull() ?: emptyList()
+                    if (size == 0) {
+                        _audiobookError.value = "有声书数据为空，请检查服务器认证设置"
+                    }
                 } else {
                     android.util.Log.w("LeChenMusic", "loadAudiobooks: Failed", result.exceptionOrNull())
+                    _audiobookError.value = "加载失败: ${result.exceptionOrNull()?.message ?: "未知错误"}"
                 }
             } catch (e: Exception) {
                 android.util.Log.e("LeChenMusic", "loadAudiobooks: Exception", e)
+                _audiobookError.value = "加载异常: ${e.message}"
             }
         }
     }

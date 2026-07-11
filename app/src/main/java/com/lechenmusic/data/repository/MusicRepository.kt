@@ -458,24 +458,16 @@ class MusicRepository {
 
     suspend fun getAudiobooks(): Result<List<com.lechenmusic.data.model.Audiobook>> {
         return try {
-            val token = com.lechenmusic.data.api.NavidromeAuth.token
+            var token = com.lechenmusic.data.api.NavidromeAuth.token
             if (token == null) {
-                android.util.Log.w("LeChenMusic", "getAudiobooks: token is null! Trying to re-authenticate...")
-                // Try to re-authenticate
+                android.util.Log.w("LeChenMusic", "getAudiobooks: token is null, re-authenticating...")
                 val authSuccess = authenticateNavidrome()
-                if (!authSuccess) {
-                    android.util.Log.e("LeChenMusic", "getAudiobooks: Re-authentication failed!")
-                    return Result.success(emptyList())
+                token = com.lechenmusic.data.api.NavidromeAuth.token
+                if (token == null) {
+                    val msg = if (!authSuccess) "Native API认证失败，请检查用户名密码" else "Token获取失败"
+                    android.util.Log.e("LeChenMusic", "getAudiobooks: $msg")
+                    return Result.failure(Exception(msg))
                 }
-                val newToken = com.lechenmusic.data.api.NavidromeAuth.token
-                if (newToken == null) {
-                    android.util.Log.e("LeChenMusic", "getAudiobooks: Still no token after re-auth!")
-                    return Result.success(emptyList())
-                }
-                android.util.Log.d("LeChenMusic", "getAudiobooks: Re-authenticated successfully")
-                // Continue with the new token
-                val response = audiobookApi!!.getAudiobooks("Bearer $newToken")
-                return handleAudiobookResponse(response)
             }
             val response = audiobookApi!!.getAudiobooks("Bearer $token")
             handleAudiobookResponse(response)
