@@ -511,6 +511,10 @@ class MusicPlayerManager(private val context: Context) {
         player?.seekTo(position)
     }
 
+    fun setPlaybackSpeed(speed: Float) {
+        player?.setPlaybackSpeed(speed)
+    }
+
     fun seekToProgress(progress: Float) {
         player?.let {
             val pos = (it.duration * progress).toLong().coerceIn(0, it.duration)

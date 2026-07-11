@@ -84,11 +84,12 @@ fun SettingsScreen(
                 Column(modifier = Modifier.padding(20.dp)) {
                     InfoRow("服务器地址", serverUrl)
                     InfoRow("用户名", username)
-                    InfoRow("歌曲数量", if (serverStats.songCount > 0) "${serverStats.songCount}" else "加载中...")
-                    InfoRow("专辑数量", if (serverStats.albumCount > 0) "${serverStats.albumCount}" else "加载中...")
-                    InfoRow("歌手数量", if (serverStats.artistCount > 0) "${serverStats.artistCount}" else "加载中...")
-                    InfoRow("歌单数量", if (serverStats.playlistCount > 0) "${serverStats.playlistCount}" else "加载中...")
-                    InfoRow("有声读物", if (serverStats.audiobookCount > 0) "${serverStats.audiobookCount}" else if (serverStats.songCount > 0) "加载失败" else "加载中...")
+                    val statsLoaded = serverStats.songCount > 0 || serverStats.albumCount > 0
+                    InfoRow("歌曲数量", if (statsLoaded) "${serverStats.songCount}" else "加载中...")
+                    InfoRow("专辑数量", if (statsLoaded) "${serverStats.albumCount}" else "加载中...")
+                    InfoRow("歌手数量", if (statsLoaded) "${serverStats.artistCount}" else "加载中...")
+                    InfoRow("歌单数量", if (statsLoaded) "${serverStats.playlistCount}" else "加载中...")
+                    InfoRow("有声读物", if (statsLoaded) "${serverStats.audiobookCount}" else "加载中...")
                 }
             }
         }

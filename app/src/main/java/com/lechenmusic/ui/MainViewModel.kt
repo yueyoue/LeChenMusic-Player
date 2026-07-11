@@ -932,6 +932,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _audiobooks = MutableStateFlow<List<com.lechenmusic.data.model.Audiobook>>(emptyList())
     val audiobooks: StateFlow<List<com.lechenmusic.data.model.Audiobook>> = _audiobooks.asStateFlow()
+    private val _audiobookWithProgress = MutableStateFlow<List<com.lechenmusic.data.model.AudiobookWithProgress>>(emptyList())
+    val audiobookWithProgress: StateFlow<List<com.lechenmusic.data.model.AudiobookWithProgress>> = _audiobookWithProgress.asStateFlow()
     private val _audiobookError = MutableStateFlow<String?>(null)
     val audiobookError: StateFlow<String?> = _audiobookError.asStateFlow()
 
@@ -956,6 +958,26 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _audiobookDuration = MutableStateFlow(0L)
     val audiobookDuration: StateFlow<Long> = _audiobookDuration.asStateFlow()
 
+    private val _audiobookPlaybackSpeed = MutableStateFlow(1f)
+    val audiobookPlaybackSpeed: StateFlow<Float> = _audiobookPlaybackSpeed.asStateFlow()
+
+    private val _audiobookTimerMinutes = MutableStateFlow(0)
+    val audiobookTimerMinutes: StateFlow<Int> = _audiobookTimerMinutes.asStateFlow()
+
+    fun audiobookSetTimer(minutes: Int) {
+        _audiobookTimerMinutes.value = minutes
+        if (minutes > 0) {
+            playerManager.setTimer(minutes)
+        } else {
+            playerManager.cancelTimer()
+        }
+    }
+
+    fun audiobookChangeSpeed(speed: Float) {
+        _audiobookPlaybackSpeed.value = speed
+        playerManager.setPlaybackSpeed(speed)
+    }
+
     fun loadAudiobooks() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -977,6 +999,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 android.util.Log.e("LeChenMusic", "loadAudiobooks: Exception", e)
                 _audiobookError.value = "加载异常: ${e.message}"
             }
+        }
+        // Also load audiobooks with progress for "继续收听"
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                repository.getAudiobooksWithProgress().onSuccess { books ->
+                    _audiobookWithProgress.value = books
+                }
+            } catch (_: Exception) {}
         }
     }
 

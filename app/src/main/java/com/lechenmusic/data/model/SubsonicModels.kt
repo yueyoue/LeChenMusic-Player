@@ -231,6 +231,29 @@ data class Audiobook(
     val isStarred: Boolean get() = starred != null
 }
 
+data class AudiobookWithProgress(
+    val id: String = "",
+    val title: String = "",
+    val author: String = "",
+    val narrator: String = "",
+    val description: String = "",
+    val genre: String = "",
+    val year: Int = 0,
+    val coverPath: String? = null,
+    val totalDuration: Int = 0,
+    val chapterCount: Int = 0,
+    val libraryId: Int = 0,
+    val path: String = "",
+    val size: Long = 0,
+    val starred: String? = null,
+    val createdAt: String = "",
+    val updatedAt: String = "",
+    val progress: AudiobookProgress? = null
+) {
+    val isStarred: Boolean get() = starred != null
+    fun toAudiobook() = Audiobook(id, title, author, narrator, description, genre, year, coverPath, totalDuration, chapterCount, libraryId, path, size, starred, createdAt, updatedAt)
+}
+
 data class AudiobookChapter(
     val id: String = "",
     val audiobookId: String = "",

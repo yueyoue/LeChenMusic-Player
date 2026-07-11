@@ -402,6 +402,8 @@ fun LeChenMusicApp(viewModel: MainViewModel) {
                         val username by viewModel.username.collectAsState()
                         val password by viewModel.password.collectAsState()
                         val audiobookCoverUrl by viewModel.playerManager.audiobookCoverUrl.collectAsState()
+                        val playbackSpeed by viewModel.audiobookPlaybackSpeed.collectAsState()
+                        val timerMinutes by viewModel.audiobookTimerMinutes.collectAsState()
                         if (currentBook != null) {
                             AudiobookPlayerScreen(
                                 book = currentBook!!,
@@ -414,6 +416,8 @@ fun LeChenMusicApp(viewModel: MainViewModel) {
                                 username = username,
                                 password = password,
                                 coverUrl = audiobookCoverUrl,
+                                playbackSpeed = playbackSpeed,
+                                timerMinutes = timerMinutes,
                                 onBack = { navController.popBackStack() },
                                 onPlayPause = { viewModel.audiobookTogglePlayPause() },
                                 onSeekTo = { viewModel.audiobookSeekTo(it) },
@@ -422,7 +426,9 @@ fun LeChenMusicApp(viewModel: MainViewModel) {
                                 onPreviousChapter = { viewModel.audiobookPreviousChapter() },
                                 onNextChapter = { viewModel.audiobookNextChapter() },
                                 onChapterSelect = { viewModel.playAudiobookChapter(currentBook!!, chapters[it], chapters) },
-                            onSaveProgress = { viewModel.saveAudiobookProgress() }
+                                onSetTimer = { viewModel.audiobookSetTimer(it) },
+                                onChangeSpeed = { viewModel.audiobookChangeSpeed(it) },
+                                onSaveProgress = { viewModel.saveAudiobookProgress() }
                             )
                         }
                     }

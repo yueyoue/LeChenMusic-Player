@@ -1,5 +1,6 @@
 package com.lechenmusic.ui.screens.audiobook
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -27,6 +28,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.painterResource
 import coil.compose.AsyncImage
 import com.lechenmusic.data.model.Audiobook
 import com.lechenmusic.data.model.AudiobookChapter
@@ -46,6 +48,8 @@ fun AudiobookPlayerScreen(
     username: String,
     password: String,
     coverUrl: String?,
+    playbackSpeed: Float = 1f,
+    timerMinutes: Int = 0,
     onBack: () -> Unit,
     onPlayPause: () -> Unit,
     onSeekTo: (Long) -> Unit,
@@ -54,6 +58,9 @@ fun AudiobookPlayerScreen(
     onPreviousChapter: () -> Unit,
     onNextChapter: () -> Unit,
     onChapterSelect: (Int) -> Unit,
+    onSetTimer: (Int) -> Unit = {},
+    onChangeSpeed: (Float) -> Unit = {},
+    onShowQueue: () -> Unit = {},
     onSaveProgress: () -> Unit = {}
 ) {
     val currentChapter = chapters.getOrNull(currentChapterIndex)
@@ -89,9 +96,7 @@ fun AudiobookPlayerScreen(
                     Icon(Icons.Default.KeyboardArrowDown, contentDescription = "返回")
                 }
                 Text("正在播放", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                IconButton(onClick = { showChapterSheet = true }) {
-                    Icon(Icons.Default.QueueMusic, contentDescription = "章节列表")
-                }
+                Spacer(modifier = Modifier.size(48.dp))
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -203,17 +208,18 @@ fun AudiobookPlayerScreen(
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Skip backward 15s
+                IconButton(onClick = onSkipBackward15s, modifier = Modifier.size(48.dp)) {
+                    Image(
+                        painter = painterResource(id = com.lechenmusic.R.drawable.ic_skip_backward_15),
+                        contentDescription = "后退15秒",
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
+
                 // Previous chapter
                 IconButton(onClick = onPreviousChapter, modifier = Modifier.size(48.dp)) {
                     Icon(Icons.Default.SkipPrevious, contentDescription = "上一章", modifier = Modifier.size(32.dp))
-                }
-
-                // Skip backward 15s
-                IconButton(onClick = onSkipBackward15s, modifier = Modifier.size(48.dp)) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.Replay, contentDescription = "后退15秒", modifier = Modifier.size(32.dp))
-                        Text("15", fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.offset(y = (-1).dp))
-                    }
                 }
 
                 // Play/Pause
@@ -233,21 +239,148 @@ fun AudiobookPlayerScreen(
                     }
                 }
 
-                // Skip forward 15s
-                IconButton(onClick = onSkipForward15s, modifier = Modifier.size(48.dp)) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.Forward, contentDescription = "前进15秒", modifier = Modifier.size(32.dp))
-                        Text("15", fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.offset(y = (-1).dp))
-                    }
-                }
-
                 // Next chapter
                 IconButton(onClick = onNextChapter, modifier = Modifier.size(48.dp)) {
                     Icon(Icons.Default.SkipNext, contentDescription = "下一章", modifier = Modifier.size(32.dp))
                 }
+
+                // Skip forward 15s
+                IconButton(onClick = onSkipForward15s, modifier = Modifier.size(48.dp)) {
+                    Image(
+                        painter = painterResource(id = com.lechenmusic.R.drawable.ic_skip_forward_15),
+                        contentDescription = "前进15秒",
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            // Bottom bar: Timer | Speed | Queue
+            var showTimerSheet by remember { mutableStateOf(false) }
+            var showSpeedSheet by remember { mutableStateOf(false) }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 32.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Timer
+                IconButton(onClick = { showTimerSheet = true }) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            Icons.Default.Timer,
+                            contentDescription = "定时",
+                            modifier = Modifier.size(22.dp),
+                            tint = if (timerMinutes > 0) MaterialTheme.colorScheme.primary
+                                   else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        if (timerMinutes > 0) {
+                            Text("${timerMinutes}分", fontSize = 9.sp, color = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                }
+
+                // Speed
+                IconButton(onClick = { showSpeedSheet = true }) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            "${playbackSpeed}x",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (playbackSpeed != 1f) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text("倍速", fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+
+                // Queue (chapter list)
+                IconButton(onClick = { showChapterSheet = true }) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            Icons.Default.QueueMusic,
+                            contentDescription = "播放列表",
+                            modifier = Modifier.size(22.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text("列表", fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Timer bottom sheet
+            if (showTimerSheet) {
+                ModalBottomSheet(onDismissRequest = { showTimerSheet = false }) {
+                    Column(modifier = Modifier.padding(20.dp)) {
+                        Text("睡眠定时", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        val timerOptions = listOf(0 to "关闭", 15 to "15分钟", 30 to "30分钟", 45 to "45分钟", 60 to "60分钟", 90 to "90分钟")
+                        timerOptions.forEach { (min, label) ->
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onSetTimer(min); showTimerSheet = false }
+                                    .padding(vertical = 2.dp),
+                                shape = RoundedCornerShape(10.dp),
+                                color = if (timerMinutes == min) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                                        else Color.Transparent
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(14.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(label, fontSize = 15.sp)
+                                    if (timerMinutes == min) {
+                                        Spacer(modifier = Modifier.weight(1f))
+                                        Icon(Icons.Default.Check, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                                    }
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+                }
+            }
+
+            // Speed bottom sheet
+            if (showSpeedSheet) {
+                ModalBottomSheet(onDismissRequest = { showSpeedSheet = false }) {
+                    Column(modifier = Modifier.padding(20.dp)) {
+                        Text("播放速度", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        val speeds = listOf(0.5f, 0.75f, 1f, 1.25f, 1.5f, 1.75f, 2f, 2.5f, 3f)
+                        speeds.forEach { speed ->
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onChangeSpeed(speed); showSpeedSheet = false }
+                                    .padding(vertical = 2.dp),
+                                shape = RoundedCornerShape(10.dp),
+                                color = if (playbackSpeed == speed) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                                        else Color.Transparent
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(14.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text("${speed}x", fontSize = 15.sp)
+                                    if (speed == 1f) {
+                                        Text("  正常", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                    if (playbackSpeed == speed) {
+                                        Spacer(modifier = Modifier.weight(1f))
+                                        Icon(Icons.Default.Check, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                                    }
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+                }
+            }
         }
     }
 

@@ -491,6 +491,35 @@ class MusicRepository {
         }
     }
 
+    suspend fun getAudiobooksWithProgress(): Result<List<com.lechenmusic.data.model.AudiobookWithProgress>> {
+        return try {
+            var token = com.lechenmusic.data.api.NavidromeAuth.token
+            if (token == null) {
+                authenticateNavidrome()
+                token = com.lechenmusic.data.api.NavidromeAuth.token
+                if (token == null) return Result.failure(Exception("Not authenticated"))
+            }
+            val response = audiobookApi!!.getAudiobooksWithProgress("Bearer $token")
+            if (!response.isSuccessful || response.body() == null) {
+                return Result.failure(Exception("HTTP ${response.code()}"))
+            }
+            val gson = com.google.gson.Gson()
+            val jsonObj = response.body()!!.asJsonObject
+            val dataArray = jsonObj.getAsJsonArray("data")
+            if (dataArray != null) {
+                val books = gson.fromJson<List<com.lechenmusic.data.model.AudiobookWithProgress>>(
+                    dataArray,
+                    object : com.google.gson.reflect.TypeToken<List<com.lechenmusic.data.model.AudiobookWithProgress>>() {}.type
+                )
+                Result.success(books)
+            } else {
+                Result.success(emptyList())
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun getAudiobookDetail(id: String): Result<com.lechenmusic.data.model.AudiobookDetail> {
         return try {
             var token = com.lechenmusic.data.api.NavidromeAuth.token

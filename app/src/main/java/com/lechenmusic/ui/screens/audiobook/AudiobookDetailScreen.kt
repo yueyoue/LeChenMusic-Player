@@ -191,13 +191,13 @@ fun AudiobookDetailScreen(
                     Text("从头播放")
                 }
                 OutlinedButton(
-                    onClick = { if (chapters.isNotEmpty()) onPlayChapter(book, chapters.last(), chapters) },
+                    onClick = { viewModel.resumeAudiobook(book) },
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Icon(Icons.Default.SkipNext, contentDescription = null)
+                    Icon(Icons.Default.PlayArrow, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("播放最新")
+                    Text("继续播放")
                 }
             }
         }

@@ -68,6 +68,7 @@ fun HomeScreen(
     val radioStations by viewModel.radioStations.collectAsState()
     val homeMode by viewModel.homeMode.collectAsState()
     val audiobooks by viewModel.audiobooks.collectAsState()
+    val audiobookWithProgress by viewModel.audiobookWithProgress.collectAsState()
     val starredAudiobooks by viewModel.starredAudiobooks.collectAsState()
     val serverUrl by viewModel.serverUrl.collectAsState()
     val username by viewModel.username.collectAsState()
@@ -382,20 +383,22 @@ fun HomeScreen(
                             onAudiobookClick = onNavigateToAudiobookDetail
                         )
                     }
-                    // Continue listening
-                    if (audiobooks.isNotEmpty()) {
+                    // Continue listening (real progress data)
+                    val booksWithProgress = audiobookWithProgress.filter { it.progress != null && !it.progress.completed }
+                    if (booksWithProgress.isNotEmpty()) {
                         item {
                             SecHd("⏱️ 继续收听", "全部 ›") {}
                         }
-                        items(audiobooks.take(2)) {
+                        items(booksWithProgress.take(3)) { bwp ->
                             ContCard(
-                                it,
+                                bwp.toAudiobook(),
                                 serverUrl,
                                 username,
-                                password
+                                password,
+                                progress = bwp.progress
                             ) {
-                                viewModel.resumeAudiobook(it)
-                                onNavigateToAudiobookDetail(it.id)
+                                viewModel.resumeAudiobook(bwp.toAudiobook())
+                                onNavigateToAudiobookDetail(bwp.id)
                             }
                         }
                     }
@@ -1037,6 +1040,7 @@ private fun ContCard(
     s: String,
     u: String,
     p: String,
+    progress: com.lechenmusic.data.model.AudiobookProgress? = null,
     onClick: () -> Unit
 ) {
     Surface(
@@ -1079,14 +1083,19 @@ private fun ContCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+                val chapterNum = progress?.chapterNumber ?: 1
                 Text(
-                    "第${(book.chapterCount / 3).coerceAtLeast(1)}章",
+                    "第${chapterNum}章 / ${book.chapterCount}章",
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 3.dp)
                 )
+                val progressPercent = if (book.totalDuration > 0 && progress != null) {
+                    val totalListened = (progress.chapterNumber - 1).coerceAtLeast(0) * 60 + progress.position
+                    (totalListened.toFloat() / book.totalDuration).coerceIn(0f, 1f)
+                } else 0f
                 LinearProgressIndicator(
-                    progress = 0.35f,
+                    progress = progressPercent,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 8.dp)
@@ -1095,12 +1104,16 @@ private fun ContCard(
                     color = MaterialTheme.colorScheme.primary,
                     trackColor = MaterialTheme.colorScheme.surfaceVariant
                 )
-                Text(
-                    "已听 28:15 / 45:20",
-                    fontSize = 10.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 3.dp)
-                )
+                if (progress != null) {
+                    val posMin = progress.position / 60
+                    val posSec = progress.position % 60
+                    Text(
+                        "第${progress.chapterNumber}章 ${posMin}:${"%02d".format(posSec)}",
+                        fontSize = 10.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 3.dp)
+                    )
+                }
             }
             Surface(
                 modifier = Modifier.size(36.dp),
