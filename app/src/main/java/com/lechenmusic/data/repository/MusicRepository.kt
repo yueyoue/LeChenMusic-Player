@@ -554,7 +554,7 @@ class MusicRepository {
         val token = com.lechenmusic.data.api.NavidromeAuth.token
         return if (token != null) {
             // Use ?jwt= param (matches server's jwtauth.TokenFromQuery)
-            "$normalizedUrl/api/audiobook/$bookId/chapters/$chapterId/stream?jwt=***"
+            "$normalizedUrl/api/audiobook/$bookId/chapters/$chapterId/stream?jwt=$token"
         } else {
             "$normalizedUrl/api/audiobook/$bookId/chapters/$chapterId/stream"
         }
