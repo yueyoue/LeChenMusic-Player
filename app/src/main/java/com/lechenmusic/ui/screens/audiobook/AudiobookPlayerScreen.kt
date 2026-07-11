@@ -24,8 +24,11 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.platform.LocalTextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.painterResource
@@ -313,36 +316,100 @@ fun AudiobookPlayerScreen(
 
             // Timer bottom sheet
             if (showTimerSheet) {
-                ModalBottomSheet(onDismissRequest = { showTimerSheet = false }) {
-                    Column(modifier = Modifier.padding(20.dp)) {
-                        Text("睡眠定时", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                        Spacer(modifier = Modifier.height(16.dp))
-                        val timerOptions = listOf(0 to "关闭", 15 to "15分钟", 30 to "30分钟", 45 to "45分钟", 60 to "60分钟", 90 to "90分钟")
-                        timerOptions.forEach { (min, label) ->
-                            Surface(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { onSetTimer(min); showTimerSheet = false }
-                                    .padding(vertical = 2.dp),
-                                shape = RoundedCornerShape(10.dp),
-                                color = if (timerMinutes == min) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-                                        else Color.Transparent
+                var customMinutes by remember { mutableStateOf("") }
+                AlertDialog(
+                    onDismissRequest = { showTimerSheet = false },
+                    title = {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(Icons.Default.Timer, null, modifier = Modifier.size(36.dp), tint = MaterialTheme.colorScheme.primary)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("睡眠定时", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                        }
+                    },
+                    text = {
+                        Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                            val presets = listOf(15 to "15分钟", 30 to "30分钟", 45 to "45分钟", 60 to "60分钟", 90 to "90分钟")
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.Center
                             ) {
-                                Row(
-                                    modifier = Modifier.padding(14.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(label, fontSize = 15.sp)
-                                    if (timerMinutes == min) {
-                                        Spacer(modifier = Modifier.weight(1f))
-                                        Icon(Icons.Default.Check, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                                presets.take(3).forEach { (min, label) ->
+                                    Surface(
+                                        shape = RoundedCornerShape(20.dp),
+                                        color = if (timerMinutes == min) MaterialTheme.colorScheme.primary
+                                                else MaterialTheme.colorScheme.surfaceVariant,
+                                        modifier = Modifier.padding(horizontal = 4.dp).clickable { onSetTimer(min); showTimerSheet = false }
+                                    ) {
+                                        Text(label, fontSize = 13.sp,
+                                            color = if (timerMinutes == min) Color.White else MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp))
                                     }
                                 }
                             }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                presets.drop(3).forEach { (min, label) ->
+                                    Surface(
+                                        shape = RoundedCornerShape(20.dp),
+                                        color = if (timerMinutes == min) MaterialTheme.colorScheme.primary
+                                                else MaterialTheme.colorScheme.surfaceVariant,
+                                        modifier = Modifier.padding(horizontal = 4.dp).clickable { onSetTimer(min); showTimerSheet = false }
+                                    ) {
+                                        Text(label, fontSize = 13.sp,
+                                            color = if (timerMinutes == min) Color.White else MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp))
+                                    }
+                                }
+                                // Cancel timer
+                                if (timerMinutes > 0) {
+                                    Surface(
+                                        shape = RoundedCornerShape(20.dp),
+                                        color = MaterialTheme.colorScheme.error.copy(alpha = 0.1f),
+                                        modifier = Modifier.padding(horizontal = 4.dp).clickable { onSetTimer(0); showTimerSheet = false }
+                                    ) {
+                                        Text("取消", fontSize = 13.sp, color = MaterialTheme.colorScheme.error,
+                                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp))
+                                    }
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(16.dp))
+                            HorizontalDivider()
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                OutlinedTextField(
+                                    value = customMinutes,
+                                    onValueChange = { customMinutes = it.filter { c -> c.isDigit() } },
+                                    placeholder = { Text("自定义分钟数", fontSize = 14.sp) },
+                                    singleLine = true,
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    modifier = Modifier.weight(1f),
+                                    textStyle = LocalTextStyle.current.copy(fontSize = 14.sp)
+                                )
+                                Button(
+                                    onClick = {
+                                        val min = customMinutes.toIntOrNull()
+                                        if (min != null && min > 0) {
+                                            onSetTimer(min)
+                                            showTimerSheet = false
+                                        }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                                ) {
+                                    Text("设置", fontSize = 14.sp)
+                                }
+                            }
                         }
-                        Spacer(modifier = Modifier.height(16.dp))
-                    }
-                }
+                    },
+                    confirmButton = {},
+                    dismissButton = { TextButton(onClick = { showTimerSheet = false }) { Text("关闭") } }
+                )
             }
 
             // Speed bottom sheet

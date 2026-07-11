@@ -542,6 +542,7 @@ class MusicRepository {
                 if (dataObj != null) {
                     val bookObj = dataObj.getAsJsonObject("book")
                     val chaptersArray = dataObj.getAsJsonArray("chapters")
+                    val progressObj = dataObj.getAsJsonObject("progress")
                     val book = if (bookObj != null) gson.fromJson(bookObj, com.lechenmusic.data.model.Audiobook::class.java) else com.lechenmusic.data.model.Audiobook()
                     val chapters = if (chaptersArray != null) {
                         gson.fromJson<List<com.lechenmusic.data.model.AudiobookChapter>>(
@@ -549,8 +550,11 @@ class MusicRepository {
                             object : com.google.gson.reflect.TypeToken<List<com.lechenmusic.data.model.AudiobookChapter>>() {}.type
                         )
                     } else emptyList()
-                    android.util.Log.d("LeChenMusic", "getAudiobookDetail: parsed book=${book.title}, chapters=${chapters.size}")
-                    Result.success(com.lechenmusic.data.model.AudiobookDetail(book = book, chapters = chapters))
+                    val progress = if (progressObj != null && !progressObj.isJsonNull) {
+                        gson.fromJson(progressObj, com.lechenmusic.data.model.AudiobookProgress::class.java)
+                    } else null
+                    android.util.Log.d("LeChenMusic", "getAudiobookDetail: parsed book=${book.title}, chapters=${chapters.size}, progress=${progress != null}")
+                    Result.success(com.lechenmusic.data.model.AudiobookDetail(book = book, chapters = chapters, progress = progress))
                 } else {
                     android.util.Log.w("LeChenMusic", "getAudiobookDetail: no 'data' field in response")
                     Result.failure(Exception("No data in response"))

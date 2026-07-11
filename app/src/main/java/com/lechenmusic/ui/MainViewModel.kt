@@ -283,6 +283,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 if (_currentAudiobook.value != null) {
                     _audiobookPosition.value = playerManager.currentPosition.value
                     _audiobookDuration.value = playerManager.duration.value
+                    _audiobookIsPlaying.value = playerManager.isPlaying.value
                 }
             }
         }
@@ -1003,11 +1004,49 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         // Also load audiobooks with progress for "继续收听"
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                repository.getAudiobooksWithProgress().onSuccess { books ->
-                    _audiobookWithProgress.value = books
+                val result = repository.getAudiobooksWithProgress()
+                if (result.isSuccess) {
+                    _audiobookWithProgress.value = result.getOrNull() ?: emptyList()
+                } else {
+                    // Fallback: load progress for each book individually
+                    loadAudiobookProgressFallback()
                 }
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+                loadAudiobookProgressFallback()
+            }
         }
+    }
+
+    private suspend fun loadAudiobookProgressFallback() {
+        try {
+            val books = _audiobooks.value
+            if (books.isEmpty()) return
+            val booksWithProgress = mutableListOf<com.lechenmusic.data.model.AudiobookWithProgress>()
+            for (book in books.take(10)) {
+                try {
+                    val detailResult = repository.getAudiobookDetail(book.id)
+                    if (detailResult.isSuccess) {
+                        val detail = detailResult.getOrNull()
+                        if (detail != null) {
+                            booksWithProgress.add(
+                                com.lechenmusic.data.model.AudiobookWithProgress(
+                                    id = book.id, title = book.title, author = book.author,
+                                    narrator = book.narrator, description = book.description,
+                                    genre = book.genre, year = book.year, coverPath = book.coverPath,
+                                    totalDuration = book.totalDuration, chapterCount = book.chapterCount,
+                                    libraryId = book.libraryId, path = book.path, size = book.size,
+                                    starred = book.starred, createdAt = book.createdAt, updatedAt = book.updatedAt,
+                                    progress = detail.progress
+                                )
+                            )
+                        }
+                    }
+                } catch (_: Exception) {}
+            }
+            if (booksWithProgress.isNotEmpty()) {
+                _audiobookWithProgress.value = booksWithProgress
+            }
+        } catch (_: Exception) {}
     }
 
     fun loadStarredAudiobooks() {
