@@ -545,8 +545,13 @@ class MusicRepository {
 
     fun getAudiobookChapterStreamUrl(bookId: String, chapterId: String): String {
         val normalizedUrl = serverUrl.trimEnd('/')
-        // Auth handled via request headers in ExoPlayer (MusicPlayerManager.playUrl)
-        return "$normalizedUrl/api/audiobook/$bookId/chapters/$chapterId/stream"
+        val token = com.lechenmusic.data.api.NavidromeAuth.token
+        return if (token != null) {
+            // Use ?jwt= param (matches server's jwtauth.TokenFromQuery)
+            "$normalizedUrl/api/audiobook/$bookId/chapters/$chapterId/stream?jwt=***"
+        } else {
+            "$normalizedUrl/api/audiobook/$bookId/chapters/$chapterId/stream"
+        }
     }
 
 

@@ -437,8 +437,6 @@ class MusicPlayerManager(private val context: Context) {
     }
 
     fun playSong(song: Song, songs: List<Song> = listOf(song)) {
-        // Reset to default media source factory (no auth header for music)
-        resetMediaSourceFactory()
         _playlist.value = songs
         val index = songs.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
         _currentIndex.value = index
@@ -697,27 +695,6 @@ class MusicPlayerManager(private val context: Context) {
         _currentIndex.value = 0
         _isStarred.value = false
 
-        // Create auth-aware data source for audiobook streaming
-        val token = com.lechenmusic.data.api.NavidromeAuth.token
-        if (token != null) {
-            try {
-                val authInterceptor = okhttp3.Interceptor { chain ->
-                    val newReq = chain.request().newBuilder()
-                        .addHeader("X-ND-Authorization", "Bearer $token")
-                        .build()
-                    chain.proceed(newReq)
-                }
-                val authOkHttpClient = okhttp3.OkHttpClient.Builder()
-                    .addInterceptor(authInterceptor)
-                    .build()
-                val authFactory = OkHttpDataSource.Factory(authOkHttpClient)
-                val authCacheFactory = CacheDataSource.Factory()
-                    .setCache(musicCache!!)
-                    .setUpstreamDataSourceFactory(authFactory)
-                    .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
-                player?.setMediaSourceFactory(DefaultMediaSourceFactory(authCacheFactory))
-            } catch (_: Exception) {}
-        }
         player?.apply {
             val mediaItem = MediaItem.Builder()
                 .setUri(url)
@@ -735,12 +712,6 @@ class MusicPlayerManager(private val context: Context) {
             play()
         }
         updateNotification()
-    }
-
-    private fun resetMediaSourceFactory() {
-        try {
-            player?.setMediaSourceFactory(DefaultMediaSourceFactory(cacheDataSourceFactory!!))
-        } catch (_: Exception) {}
     }
 
     fun clearAudiobookCoverUrl() {
