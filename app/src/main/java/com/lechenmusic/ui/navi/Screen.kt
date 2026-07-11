@@ -33,4 +33,8 @@ sealed class Screen(val route: String) {
         fun createRoute(audiobookId: String) = "audiobook_detail/$audiobookId"
     }
     object AudiobookPlayer : Screen("audiobook_player")
+    object NarratorList : Screen("narrator_list")
+    object NarratorDetail : Screen("narrator_detail/{narratorName}") {
+        fun createRoute(narratorName: String) = "narrator_detail/$narratorName"
+    }
 }

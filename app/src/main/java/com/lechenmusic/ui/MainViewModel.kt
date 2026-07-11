@@ -1001,19 +1001,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 _audiobookError.value = "加载异常: ${e.message}"
             }
         }
-        // Also load audiobooks with progress for "继续收听"
+        // Also load audiobooks with progress for "继续收听" (after audiobooks loaded)
         viewModelScope.launch(Dispatchers.IO) {
+            // Wait for audiobooks to be loaded first
+            for (i in 1..50) {
+                if (_audiobooks.value.isNotEmpty()) break
+                kotlinx.coroutines.delay(200)
+            }
             try {
                 val result = repository.getAudiobooksWithProgress()
                 if (result.isSuccess) {
-                    _audiobookWithProgress.value = result.getOrNull() ?: emptyList()
-                } else {
-                    // Fallback: load progress for each book individually
-                    loadAudiobookProgressFallback()
+                    val books = result.getOrNull() ?: emptyList()
+                    if (books.isNotEmpty()) {
+                        _audiobookWithProgress.value = books
+                        return@launch
+                    }
                 }
-            } catch (_: Exception) {
-                loadAudiobookProgressFallback()
-            }
+            } catch (_: Exception) {}
+            // Fallback: load progress for each book individually
+            loadAudiobookProgressFallback()
         }
     }
 
@@ -1025,23 +1031,31 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             for (book in books.take(10)) {
                 try {
                     val detailResult = repository.getAudiobookDetail(book.id)
-                    if (detailResult.isSuccess) {
-                        val detail = detailResult.getOrNull()
-                        if (detail != null) {
-                            booksWithProgress.add(
-                                com.lechenmusic.data.model.AudiobookWithProgress(
-                                    id = book.id, title = book.title, author = book.author,
-                                    narrator = book.narrator, description = book.description,
-                                    genre = book.genre, year = book.year, coverPath = book.coverPath,
-                                    totalDuration = book.totalDuration, chapterCount = book.chapterCount,
-                                    libraryId = book.libraryId, path = book.path, size = book.size,
-                                    starred = book.starred, createdAt = book.createdAt, updatedAt = book.updatedAt,
-                                    progress = detail.progress
-                                )
-                            )
-                        }
-                    }
-                } catch (_: Exception) {}
+                    val progress = if (detailResult.isSuccess) detailResult.getOrNull()?.progress else null
+                    booksWithProgress.add(
+                        com.lechenmusic.data.model.AudiobookWithProgress(
+                            id = book.id, title = book.title, author = book.author,
+                            narrator = book.narrator, description = book.description,
+                            genre = book.genre, year = book.year, coverPath = book.coverPath,
+                            totalDuration = book.totalDuration, chapterCount = book.chapterCount,
+                            libraryId = book.libraryId, path = book.path, size = book.size,
+                            starred = book.starred, createdAt = book.createdAt, updatedAt = book.updatedAt,
+                            progress = progress
+                        )
+                    )
+                } catch (_: Exception) {
+                    // Still add the book even if detail fails
+                    booksWithProgress.add(
+                        com.lechenmusic.data.model.AudiobookWithProgress(
+                            id = book.id, title = book.title, author = book.author,
+                            narrator = book.narrator, description = book.description,
+                            genre = book.genre, year = book.year, coverPath = book.coverPath,
+                            totalDuration = book.totalDuration, chapterCount = book.chapterCount,
+                            libraryId = book.libraryId, path = book.path, size = book.size,
+                            starred = book.starred, createdAt = book.createdAt, updatedAt = book.updatedAt
+                        )
+                    )
+                }
             }
             if (booksWithProgress.isNotEmpty()) {
                 _audiobookWithProgress.value = booksWithProgress
