@@ -155,7 +155,15 @@ class MusicPlayerManager(private val context: Context) {
                     }
                     override fun onPlayerError(error: PlaybackException) {
                         android.util.Log.e("LeChenMusic", "onPlayerError: ${error.errorCodeName} - ${error.message}", error)
-                        android.util.Log.e("LeChenMusic", "onPlayerError: cause=${error.cause}")
+                        // Send error to WEB admin
+                        try {
+                            com.lechenmusic.LeChenApp.instance.sendErrorToServer(
+                                "error",
+                                "ExoPlayer: ${error.errorCodeName} - ${error.message}",
+                                error.stackTraceToString().take(500),
+                                "AudiobookPlayer"
+                            )
+                        } catch (_: Exception) {}
                         skipNext()
                     }
                 })
@@ -690,6 +698,13 @@ class MusicPlayerManager(private val context: Context) {
     fun playUrl(url: String, title: String, artist: String, mediaId: String, coverUrl: String? = null) {
         android.util.Log.d("LeChenMusic", "playUrl called: url=${url.take(80)}..., title=$title, mediaId=$mediaId")
         android.util.Log.d("LeChenMusic", "playUrl: player=${player != null}, urlLength=${url.length}")
+        if (player == null) {
+            android.util.Log.e("LeChenMusic", "playUrl: player is null!")
+            try {
+                com.lechenmusic.LeChenApp.instance.sendErrorToServer("error", "playUrl: ExoPlayer is null", "url=$url", "AudiobookPlayer")
+            } catch (_: Exception) {}
+            return
+        }
         // Create a virtual Song for UI display
         _currentSong.value = Song(
             id = mediaId,
