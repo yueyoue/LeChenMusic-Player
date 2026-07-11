@@ -154,14 +154,6 @@ class MusicPlayerManager(private val context: Context) {
                         }
                     }
                     override fun onPlayerError(error: PlaybackException) {
-                        try {
-                            com.lechenmusic.LeChenApp.instance.sendErrorToServer(
-                                "error",
-                                "ExoPlayer: ${error.errorCodeName} - ${error.message}",
-                                error.stackTraceToString().take(500),
-                                "AudiobookPlayer"
-                            )
-                        } catch (_: Exception) {}
                         skipNext()
                     }
                 })
