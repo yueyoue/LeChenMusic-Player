@@ -696,16 +696,9 @@ class MusicPlayerManager(private val context: Context) {
         _isStarred.value = false
 
         player?.apply {
-            // Build request headers with JWT auth
-            val headers = mutableMapOf<String, String>()
-            val token = com.lechenmusic.data.api.NavidromeAuth.token
-            if (token != null) {
-                headers["X-ND-Authorization"] = "Bearer $token"
-            }
             val mediaItem = MediaItem.Builder()
                 .setUri(url)
                 .setMediaId(mediaId)
-                .setRequestHeaders(headers)
                 .setMediaMetadata(
                     Media3Metadata.Builder()
                         .setTitle(title)
@@ -717,6 +710,20 @@ class MusicPlayerManager(private val context: Context) {
             setMediaItem(mediaItem)
             prepare()
             play()
+        }
+        // Set auth header on OkHttpDataSource for this playback session
+        val token = com.lechenmusic.data.api.NavidromeAuth.token
+        if (token != null) {
+            try {
+                val okHttpClient = okhttp3.OkHttpClient.Builder().build()
+                val authFactory = OkHttpDataSource.Factory(okHttpClient)
+                    .setDefaultRequestProperties(mapOf("X-ND-Authorization" to "Bearer $token"))
+                val authCacheFactory = CacheDataSource.Factory()
+                    .setCache(musicCache!!)
+                    .setUpstreamDataSourceFactory(authFactory)
+                    .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+                player?.setMediaSourceFactory(DefaultMediaSourceFactory(authCacheFactory))
+            } catch (_: Exception) {}
         }
         updateNotification()
     }
