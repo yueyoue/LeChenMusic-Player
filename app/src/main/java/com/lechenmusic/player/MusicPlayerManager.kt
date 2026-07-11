@@ -135,6 +135,7 @@ class MusicPlayerManager(private val context: Context) {
                         updateNotification()
                     }
                     override fun onPlaybackStateChanged(playbackState: Int) {
+                        android.util.Log.d("LeChenMusic", "onPlaybackStateChanged: state=$playbackState")
                         if (playbackState == Player.STATE_READY) {
                             _duration.value = duration
                         }
@@ -154,6 +155,15 @@ class MusicPlayerManager(private val context: Context) {
                         }
                     }
                     override fun onPlayerError(error: PlaybackException) {
+                        android.util.Log.e("LeChenMusic", "onPlayerError: ${error.errorCodeName} - ${error.message}")
+                        try {
+                            com.lechenmusic.LeChenApp.sendErrorToServer(
+                                "error",
+                                "ExoPlayer: ${error.errorCodeName} - ${error.message}",
+                                error.stackTraceToString().take(500),
+                                "AudiobookPlayer"
+                            )
+                        } catch (_: Exception) {}
                         skipNext()
                     }
                 })
@@ -696,6 +706,9 @@ class MusicPlayerManager(private val context: Context) {
         _isStarred.value = false
 
         player?.apply {
+            // Reset player state before loading new media
+            stop()
+            clearMediaItems()
             val mediaItem = MediaItem.Builder()
                 .setUri(url)
                 .setMediaId(mediaId)
