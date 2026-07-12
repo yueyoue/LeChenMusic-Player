@@ -72,28 +72,6 @@ fun AudiobookDetailScreen(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 80.dp)
     ) {
-        // Debug info (temporary)
-        item {
-            val progress = audiobookDetail?.progress
-            Surface(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-                shape = RoundedCornerShape(8.dp),
-                color = Color(0xFF1A1A2E)
-            ) {
-                Column(modifier = Modifier.padding(10.dp)) {
-                    Text("[DEBUG]", fontSize = 11.sp, color = Color(0xFFFFD700), fontWeight = FontWeight.Bold)
-                    Text("book.id: ${book?.id}", fontSize = 10.sp, color = Color.White)
-                    Text("starred字段: ${book?.starred ?: "null"}", fontSize = 10.sp, color = Color.White)
-                    Text("isStarred: ${book?.isStarred}", fontSize = 10.sp, color = Color.White)
-                    Text("progress: ${if (progress != null) "ch=${progress.chapterId.take(8)}.. pos=${progress.position}s" else "null (无进度数据)"}", fontSize = 10.sp, color = Color.White)
-                    Text("chapters: ${chapters.size}", fontSize = 10.sp, color = Color.White)
-                    if (progress == null) {
-                        Text("⚠ 进度为null: 从未保存过或服务端未返回", fontSize = 10.sp, color = Color(0xFFFF6B6B))
-                    }
-                }
-            }
-        }
-
         // Header bar - match AlbumDetailScreen style
         item {
             Row(
@@ -129,9 +107,7 @@ fun AudiobookDetailScreen(
                 verticalAlignment = Alignment.Top
             ) {
                 Surface(
-                    modifier = Modifier
-                        .width(120.dp)
-                        .height(160.dp),
+                    modifier = Modifier.size(120.dp),
                     shape = RoundedCornerShape(10.dp),
                     color = MaterialTheme.colorScheme.surfaceVariant
                 ) {
@@ -220,6 +196,39 @@ fun AudiobookDetailScreen(
                     Icon(Icons.Default.PlayArrow, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("继续播放")
+                }
+            }
+        }
+
+        // Description (collapsible)
+        if (book.description.isNotBlank()) {
+            item {
+                var expanded by remember { mutableStateOf(false) }
+                Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)) {
+                    Text(
+                        "内容简介",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(bottom = 6.dp)
+                    )
+                    Text(
+                        book.description,
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        lineHeight = 20.sp,
+                        maxLines = if (expanded) Int.MAX_VALUE else 3,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (book.description.length > 80) {
+                        Text(
+                            if (expanded) "收起" else "展开全部",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier
+                                .padding(top = 4.dp)
+                                .clickable { expanded = !expanded }
+                        )
+                    }
                 }
             }
         }

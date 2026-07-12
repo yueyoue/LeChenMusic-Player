@@ -20,6 +20,8 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.lechenmusic.data.model.Audiobook
 import com.lechenmusic.ui.MainViewModel
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
 
 @Composable
 fun AudiobookScreen(
@@ -40,11 +42,24 @@ fun AudiobookScreen(
         viewModel.loadStarredAudiobooks()
     }
 
-    val filteredBooks = when (genreFilter) {
+    // Map display genre names to actual genre values in database
+    val actualGenre = when (genreFilter) {
+        "有声小说" -> "有声读物"
+        "儿童读物" -> "儿童"
+        else -> genreFilter
+    }
+    var searchQuery by remember { mutableStateOf("") }
+    val baseBooks = when (actualGenre) {
         "starred" -> starredAudiobooks
         null -> audiobooks
-        else -> audiobooks.filter { it.genre == genreFilter }
+        else -> audiobooks.filter { it.genre == actualGenre }
     }
+    val filteredBooks = if (searchQuery.isBlank()) baseBooks
+        else baseBooks.filter {
+            it.title.contains(searchQuery, ignoreCase = true) ||
+            it.author.contains(searchQuery, ignoreCase = true) ||
+            it.narrator.contains(searchQuery, ignoreCase = true)
+        }
 
     val title = when (genreFilter) {
         "starred" -> "⭐ 收藏的有声书"
@@ -64,6 +79,29 @@ fun AudiobookScreen(
                 Icon(Icons.Default.ArrowBack, contentDescription = "返回")
             }
             Text(title, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        }
+
+        // Search field
+        if (genreFilter == null) {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 4.dp),
+                placeholder = { Text("搜索有声书名称、作者、演播者...", fontSize = 14.sp) },
+                shape = RoundedCornerShape(12.dp),
+                singleLine = true,
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { searchQuery = "" }) {
+                            Icon(Icons.Default.Close, contentDescription = "清除")
+                        }
+                    }
+                },
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search)
+            )
         }
 
         if (filteredBooks.isEmpty()) {
@@ -151,9 +189,7 @@ fun AudiobookCard(
             verticalAlignment = Alignment.Top
         ) {
             Surface(
-                modifier = Modifier
-                    .width(80.dp)
-                    .height(107.dp),
+                modifier = Modifier.size(80.dp),
                 shape = RoundedCornerShape(8.dp),
                 color = MaterialTheme.colorScheme.surface
             ) {

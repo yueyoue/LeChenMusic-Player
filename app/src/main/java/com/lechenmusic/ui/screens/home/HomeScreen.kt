@@ -94,7 +94,7 @@ fun HomeScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 8.dp)
-                            .clickable { onNavigateToSearch() },
+                            .clickable { if (homeMode == "audiobook") onNavigateToAudiobook(null) else onNavigateToSearch() },
                         shape = RoundedCornerShape(14.dp),
                         color = MaterialTheme.colorScheme.surface,
                         shadowElevation = 2.dp
@@ -453,7 +453,10 @@ fun HomeScreen(
                             }
                         } else {
                             Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
-                                Text("暂无演播者", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text("暂无演播者信息", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text("请重新扫描有声书媒体库以读取演播者信息", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
+                                }
                             }
                         }
                     }
@@ -556,6 +559,30 @@ fun HomeScreen(
                             }
                         }
                     }
+                    // 儿童读物
+                    item { SecHd("\uD83D\uDC76 儿童读物", "更多 ›") { onNavigateToAudiobook("儿童") } }
+                    item {
+                        val childBooks = audiobooks.filter { it.genre == "儿童" }
+                        if (childBooks.isNotEmpty()) {
+                            LazyRow(
+                                contentPadding = PaddingValues(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                items(childBooks.take(5)) {
+                                    AbGridCard(
+                                        it,
+                                        serverUrl,
+                                        username,
+                                        password
+                                    ) { onNavigateToAudiobookDetail(it.id) }
+                                }
+                            }
+                        } else {
+                            Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                                Text("暂无儿童读物", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
                     // Favorites
                     item { SecHd("❤️ 我的收藏", "更多 ›") { onNavigateToAudiobook("starred") } }
                     if (starredAudiobooks.isNotEmpty()) {
@@ -651,7 +678,7 @@ private fun AudiobookCarousel(
                 Box(
                     modifier = Modifier
                         .align(Alignment.CenterEnd)
-                        .size(80.dp, 107.dp)
+                        .size(80.dp)
                         .clip(RoundedCornerShape(12.dp))
                         .background(Color.White.copy(alpha = 0.1f)),
                     contentAlignment = Alignment.Center
@@ -746,7 +773,7 @@ private fun AudiobookCarousel(
                     Box(
                         modifier = Modifier
                             .align(Alignment.CenterEnd)
-                            .size(80.dp, 107.dp)
+                            .size(80.dp)
                             .clip(RoundedCornerShape(12.dp))
                             .background(Color.White.copy(alpha = 0.1f)),
                         contentAlignment = Alignment.Center
@@ -1090,9 +1117,7 @@ private fun ContCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Surface(
-                modifier = Modifier
-                    .width(56.dp)
-                    .height(75.dp),
+                modifier = Modifier.size(56.dp),
                 shape = RoundedCornerShape(10.dp),
                 color = MaterialTheme.colorScheme.surfaceVariant
             ) {
@@ -1182,11 +1207,12 @@ private fun getNarrColor(name: String): androidx.compose.ui.graphics.Color {
 
 @Composable
 private fun CatGrid(onGenreClick: (String) -> Unit = {}) {
+    data class CatItem(val emoji: String, val label: String, val genre: String, val color: Color)
     val cats = listOf(
-        Triple("\uD83D\uDCD6", "有声书", Color(0xFFE94560)),
-        Triple("\uD83D\uDCD6", "有声小说", Color(0xFF5352ED)),
-        Triple("\uD83C\uDFA4", "相声", Color(0xFF8E44AD)),
-        Triple("\uD83C\uDFAD", "评书", Color(0xFFF39C12))
+        CatItem("\uD83D\uDCD6", "有声小说", "有声读物", Color(0xFF5352ED)),
+        CatItem("\uD83C\uDFA4", "相声", "相声", Color(0xFF8E44AD)),
+        CatItem("\uD83C\uDFAD", "评书", "评书", Color(0xFFF39C12)),
+        CatItem("\uD83D\uDC76", "儿童读物", "儿童", Color(0xFF00B894))
     )
     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
         for (row in cats.chunked(2)) {
@@ -1194,13 +1220,13 @@ private fun CatGrid(onGenreClick: (String) -> Unit = {}) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                for ((emoji, name, color) in row) {
+                for (cat in row) {
                     Surface(
                         modifier = Modifier
                             .weight(1f)
                             .height(80.dp)
                             .padding(bottom = 10.dp)
-                            .clickable { onGenreClick(name) },
+                            .clickable { onGenreClick(cat.genre) },
                         shape = RoundedCornerShape(14.dp),
                         color = Color.Transparent
                     ) {
@@ -1209,7 +1235,7 @@ private fun CatGrid(onGenreClick: (String) -> Unit = {}) {
                                 .fillMaxSize()
                                 .background(
                                     Brush.linearGradient(
-                                        listOf(color, color.copy(alpha = 0.7f))
+                                        listOf(cat.color, cat.color.copy(alpha = 0.7f))
                                     )
                                 )
                         ) {
@@ -1219,7 +1245,7 @@ private fun CatGrid(onGenreClick: (String) -> Unit = {}) {
                                     .padding(12.dp)
                             ) {
                                 Text(
-                                    "$emoji $name",
+                                    "${cat.emoji} ${cat.label}",
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.White
@@ -1273,9 +1299,7 @@ private fun AbGridCard(
 ) {
     Column(modifier = Modifier.clickable(onClick = onClick)) {
         Surface(
-            modifier = Modifier
-                .width(140.dp)
-                .height(187.dp),
+            modifier = Modifier.size(140.dp),
             shape = RoundedCornerShape(14.dp),
             color = MaterialTheme.colorScheme.surfaceVariant,
             shadowElevation = 2.dp
@@ -1326,9 +1350,7 @@ private fun RankCard(
     Column(modifier = Modifier.clickable(onClick = onClick)) {
         Box {
             Surface(
-                modifier = Modifier
-                    .width(140.dp)
-                    .height(187.dp),
+                modifier = Modifier.size(140.dp),
                 shape = RoundedCornerShape(14.dp),
                 color = MaterialTheme.colorScheme.surfaceVariant,
                 shadowElevation = 2.dp
