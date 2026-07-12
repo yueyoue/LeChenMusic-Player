@@ -1011,21 +1011,34 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 if (_audiobooks.value.isNotEmpty()) break
                 kotlinx.coroutines.delay(200)
             }
+            // Try recent-progress first (only returns books with saved progress, like ting-reader)
+            try {
+                val result = repository.getRecentAudiobookProgress()
+                if (result.isSuccess) {
+                    val books = result.getOrNull() ?: emptyList()
+                    if (books.isNotEmpty()) {
+                        _audiobookWithProgress.value = books
+                        android.util.Log.d("LeChenMusic", "recent-progress: ${books.size} books with progress")
+                        return@launch
+                    }
+                }
+            } catch (e: Exception) {
+                android.util.Log.w("LeChenMusic", "recent-progress failed: ${e.message}")
+            }
+            // Fallback to with-progress
             try {
                 val result = repository.getAudiobooksWithProgress()
                 if (result.isSuccess) {
                     val books = result.getOrNull() ?: emptyList()
-                    // Only use this result if at least one book has non-null progress
                     if (books.isNotEmpty() && books.any { it.progress != null }) {
                         _audiobookWithProgress.value = books
                         return@launch
                     }
-                    android.util.Log.d("LeChenMusic", "with-progress returned ${books.size} books but none with progress, using fallback")
                 }
             } catch (e: Exception) {
                 android.util.Log.w("LeChenMusic", "with-progress failed: ${e.message}")
             }
-            // Fallback: load progress for each book individually
+            // Final fallback: load progress for each book individually
             loadAudiobookProgressFallback()
         }
     }

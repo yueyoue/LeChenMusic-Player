@@ -251,6 +251,11 @@ interface SubsonicApi {
         @retrofit2.http.Header("X-ND-Authorization") authHeader: String
     ): retrofit2.Response<com.google.gson.JsonElement>
 
+    @GET("api/audiobook/recent-progress")
+    suspend fun getRecentAudiobookProgress(
+        @retrofit2.http.Header("X-ND-Authorization") authHeader: String
+    ): retrofit2.Response<com.google.gson.JsonElement>
+
     @GET("api/audiobook/{id}")
     suspend fun getAudiobook(
         @retrofit2.http.Path("id") id: String,

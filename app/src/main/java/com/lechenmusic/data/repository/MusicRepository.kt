@@ -544,6 +544,30 @@ class MusicRepository {
         }
     }
 
+    suspend fun getRecentAudiobookProgress(): Result<List<com.lechenmusic.data.model.AudiobookWithProgress>> {
+        return try {
+            val response = withAudiobookAuthRetry { token ->
+                audiobookApi!!.getRecentAudiobookProgress("Bearer $token")
+            }
+            if (!response.isSuccessful) return Result.failure(Exception("HTTP ${response.code()}"))
+            val bodyElement = response.body() ?: return Result.failure(Exception("空响应"))
+            if (bodyElement.isJsonNull || !bodyElement.isJsonObject) return Result.failure(Exception("非JSON响应"))
+            val jsonObj = bodyElement.asJsonObject
+            val dataElement = jsonObj.get("data")
+            if (dataElement == null || dataElement.isJsonNull || !dataElement.isJsonArray) {
+                return Result.success(emptyList())
+            }
+            val gson = com.google.gson.Gson()
+            val books = gson.fromJson<List<com.lechenmusic.data.model.AudiobookWithProgress>>(
+                dataElement.asJsonArray,
+                object : com.google.gson.reflect.TypeToken<List<com.lechenmusic.data.model.AudiobookWithProgress>>() {}.type
+            )
+            Result.success(books)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun getAudiobookDetail(id: String): Result<com.lechenmusic.data.model.AudiobookDetail> {
         return try {
             val response = withAudiobookAuthRetry { token ->
