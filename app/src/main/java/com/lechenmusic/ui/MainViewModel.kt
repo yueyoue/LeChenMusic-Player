@@ -1349,16 +1349,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     android.util.Log.d("LeChenMusic", "resumeAudiobook: chapter=${resumeChapter.title}, seekTo=${seekToMs}ms")
 
                     // Switch to Main thread for ExoPlayer operations
+                    // Pass initialSeekMs to playUrl so ExoPlayer seeks when ready (STATE_READY)
                     kotlinx.coroutines.withContext(Dispatchers.Main) {
                         _currentAudiobook.value = book
                         _currentAudiobookChapters.value = chapters
                         _currentChapterIndex.value = chapterIndex
-                        playerManager.playUrl(url, resumeChapter.title, book.title, "audiobook_${book.id}_${resumeChapter.id}", coverUrl)
+                        playerManager.playUrl(url, resumeChapter.title, book.title, "audiobook_${book.id}_${resumeChapter.id}", coverUrl, initialSeekMs = seekToMs)
                         _audiobookIsPlaying.value = true
                     }
-                    // Give ExoPlayer time to prepare, then seek
-                    kotlinx.coroutines.delay(500)
-                    playerManager.seekTo(seekToMs)
                 } else {
                     // No progress found, play from beginning
                     android.util.Log.d("LeChenMusic", "resumeAudiobook: no progress, playing from start")

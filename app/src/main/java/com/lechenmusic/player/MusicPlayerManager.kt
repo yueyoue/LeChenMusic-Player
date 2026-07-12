@@ -137,6 +137,13 @@ class MusicPlayerManager(private val context: Context) {
                     override fun onPlaybackStateChanged(playbackState: Int) {
                         if (playbackState == Player.STATE_READY) {
                             _duration.value = duration
+                            // Consume pending seek position (for audiobook resume)
+                            val seekTarget = pendingSeekMs
+                            if (seekTarget > 0) {
+                                pendingSeekMs = 0L
+                                player?.seekTo(seekTarget)
+                                android.util.Log.d("LeChenMusic", "Pending seek applied: ${seekTarget}ms")
+                            }
                         }
                         if (playbackState == Player.STATE_READY && _isPlaying.value) {
                             updateNotification()
@@ -686,7 +693,12 @@ class MusicPlayerManager(private val context: Context) {
     private val _audiobookCoverUrl = MutableStateFlow<String?>(null)
     val audiobookCoverUrl: StateFlow<String?> = _audiobookCoverUrl.asStateFlow()
 
-    fun playUrl(url: String, title: String, artist: String, mediaId: String, coverUrl: String? = null) {
+    // Pending seek position (ms) for resume playback.
+    // Set when playUrl is called with initialSeekMs > 0, consumed when ExoPlayer reaches STATE_READY.
+    @Volatile
+    private var pendingSeekMs: Long = 0L
+
+    fun playUrl(url: String, title: String, artist: String, mediaId: String, coverUrl: String? = null, initialSeekMs: Long = 0) {
         // Create a virtual Song for UI display
         _currentSong.value = Song(
             id = mediaId,
@@ -699,6 +711,7 @@ class MusicPlayerManager(private val context: Context) {
         _playlist.value = emptyList()
         _currentIndex.value = 0
         _isStarred.value = false
+        pendingSeekMs = initialSeekMs
 
         player?.apply {
             // Reset player state before loading new media
