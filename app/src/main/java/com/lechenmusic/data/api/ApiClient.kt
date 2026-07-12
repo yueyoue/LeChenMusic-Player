@@ -165,7 +165,21 @@ object ApiClient {
                     if (token != null) {
                         builder.header("X-ND-Authorization", "Bearer $token")
                     }
-                    chain.proceed(builder.build())
+                    val response = chain.proceed(builder.build())
+                    // Read refreshed JWT token from server response header
+                    // The server's JWTRefresher middleware sends a new token in the Authorization header
+                    val newToken = response.header("Authorization")
+                    if (!newToken.isNullOrBlank()) {
+                        val tokenValue = if (newToken.startsWith("Bearer ", ignoreCase = true)) {
+                            newToken.substring(7)
+                        } else {
+                            newToken
+                        }
+                        if (tokenValue.isNotBlank() && tokenValue != NavidromeAuth.token) {
+                            NavidromeAuth.setToken(tokenValue)
+                        }
+                    }
+                    response
                 }
                 .connectTimeout(30, TimeUnit.SECONDS)
                 .readTimeout(60, TimeUnit.SECONDS)

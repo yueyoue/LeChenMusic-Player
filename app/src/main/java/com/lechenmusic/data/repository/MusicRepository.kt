@@ -249,14 +249,13 @@ class MusicRepository {
             // Get audiobook count
             var audiobookCount = 0
             try {
-                val token = com.lechenmusic.data.api.NavidromeAuth.token
-                if (token != null) {
-                    val abResponse = audiobookApi!!.getAudiobooks("Bearer $token")
-                    if (abResponse.isSuccessful && abResponse.body() != null) {
-                        val jsonObj = abResponse.body()!!.asJsonObject
-                        val dataArray = jsonObj.getAsJsonArray("data")
-                        audiobookCount = dataArray?.size() ?: 0
-                    }
+                val abResponse = withAudiobookAuthRetry { token ->
+                    audiobookApi!!.getAudiobooks("Bearer $token")
+                }
+                if (abResponse.isSuccessful && abResponse.body() != null) {
+                    val jsonObj = abResponse.body()!!.asJsonObject
+                    val dataArray = jsonObj.getAsJsonArray("data")
+                    audiobookCount = dataArray?.size() ?: 0
                 }
             } catch (_: Exception) {}
 
@@ -424,6 +423,43 @@ class MusicRepository {
 
     // ===== Audiobook Methods =====
 
+    /**
+     * Execute an audiobook API call with automatic 401 retry.
+     * If the server returns 401 (token expired), re-authenticate and retry once.
+     * This is the single point of retry logic for all audiobook endpoints.
+     */
+    private suspend fun <T> withAudiobookAuthRetry(
+        block: suspend (token: String) -> T
+    ): T {
+        var token = com.lechenmusic.data.api.NavidromeAuth.token
+        if (token == null) {
+            authenticateNavidrome()
+            token = com.lechenmusic.data.api.NavidromeAuth.token
+                ?: throw Exception("认证失败，请重新登录")
+        }
+
+        // First attempt
+        val result = block(token)
+
+        // Check if response indicates 401 (for retrofit2.Response types)
+        if (result is retrofit2.Response<*>) {
+            if (result.code() == 401) {
+                android.util.Log.w("LeChenMusic", "withAudiobookAuthRetry: Got 401, re-authenticating...")
+                com.lechenmusic.data.api.NavidromeAuth.clear()
+                val authSuccess = authenticateNavidrome()
+                val newToken = com.lechenmusic.data.api.NavidromeAuth.token
+                if (newToken != null && authSuccess) {
+                    android.util.Log.d("LeChenMusic", "withAudiobookAuthRetry: Re-auth success, retrying...")
+                    return block(newToken)
+                } else {
+                    throw Exception("认证已过期，请重新登录")
+                }
+            }
+        }
+
+        return result
+    }
+
     data class AudiobookListResponse(val data: List<com.lechenmusic.data.model.Audiobook>? = null)
     data class AudiobookDetailApiResponse(val data: AudiobookDetailData? = null)
     data class AudiobookDetailData(
@@ -472,18 +508,9 @@ class MusicRepository {
 
     suspend fun getAudiobooks(): Result<List<com.lechenmusic.data.model.Audiobook>> {
         return try {
-            var token = com.lechenmusic.data.api.NavidromeAuth.token
-            if (token == null) {
-                android.util.Log.w("LeChenMusic", "getAudiobooks: token is null, re-authenticating...")
-                val authSuccess = authenticateNavidrome()
-                token = com.lechenmusic.data.api.NavidromeAuth.token
-                if (token == null) {
-                    val msg = if (!authSuccess) "Native API认证失败，请检查用户名密码" else "Token获取失败"
-                    android.util.Log.e("LeChenMusic", "getAudiobooks: $msg")
-                    return Result.failure(Exception(msg))
-                }
+            val response = withAudiobookAuthRetry { token ->
+                audiobookApi!!.getAudiobooks("Bearer $token")
             }
-            val response = audiobookApi!!.getAudiobooks("Bearer $token")
             handleAudiobookResponse(response)
         } catch (e: Exception) {
             android.util.Log.e("LeChenMusic", "getAudiobooks: Exception", e)
@@ -493,13 +520,9 @@ class MusicRepository {
 
     suspend fun getAudiobooksWithProgress(): Result<List<com.lechenmusic.data.model.AudiobookWithProgress>> {
         return try {
-            var token = com.lechenmusic.data.api.NavidromeAuth.token
-            if (token == null) {
-                authenticateNavidrome()
-                token = com.lechenmusic.data.api.NavidromeAuth.token
-                if (token == null) return Result.failure(Exception("Not authenticated"))
+            val response = withAudiobookAuthRetry { token ->
+                audiobookApi!!.getAudiobooksWithProgress("Bearer $token")
             }
-            val response = audiobookApi!!.getAudiobooksWithProgress("Bearer $token")
             if (!response.isSuccessful || response.body() == null) {
                 return Result.failure(Exception("HTTP ${response.code()}"))
             }
@@ -522,17 +545,10 @@ class MusicRepository {
 
     suspend fun getAudiobookDetail(id: String): Result<com.lechenmusic.data.model.AudiobookDetail> {
         return try {
-            var token = com.lechenmusic.data.api.NavidromeAuth.token
-            if (token == null) {
-                android.util.Log.w("LeChenMusic", "getAudiobookDetail: token is null! Re-authenticating...")
-                authenticateNavidrome()
-                token = com.lechenmusic.data.api.NavidromeAuth.token
-                if (token == null) {
-                    return Result.failure(Exception("Not authenticated"))
-                }
-            }
             android.util.Log.d("LeChenMusic", "getAudiobookDetail: calling API for id=$id")
-            val response = audiobookApi!!.getAudiobook(id, "Bearer $token")
+            val response = withAudiobookAuthRetry { token ->
+                audiobookApi!!.getAudiobook(id, "Bearer $token")
+            }
             android.util.Log.d("LeChenMusic", "getAudiobookDetail: HTTP ${response.code()} ok=${response.isSuccessful}")
             if (response.isSuccessful && response.body() != null) {
                 val gson = com.google.gson.Gson()
@@ -596,16 +612,17 @@ class MusicRepository {
 
     suspend fun saveAudiobookProgress(bookId: String, chapterId: String, chapterNumber: Int, positionSeconds: Int): Result<Unit> {
         return try {
-            val token = com.lechenmusic.data.api.NavidromeAuth.token ?: return Result.failure(Exception("Not authenticated"))
-            val body = okhttp3.RequestBody.create(
-                "application/json".toMediaType(),
-                com.google.gson.Gson().toJson(mapOf(
-                    "chapterId" to chapterId,
-                    "chapterNumber" to chapterNumber,
-                    "position" to positionSeconds
-                ))
-            )
-            val response = audiobookApi!!.saveAudiobookProgress(bookId, body, "Bearer $token")
+            val response = withAudiobookAuthRetry { token ->
+                val body = okhttp3.RequestBody.create(
+                    "application/json".toMediaType(),
+                    com.google.gson.Gson().toJson(mapOf(
+                        "chapterId" to chapterId,
+                        "chapterNumber" to chapterNumber,
+                        "position" to positionSeconds
+                    ))
+                )
+                audiobookApi!!.saveAudiobookProgress(bookId, body, "Bearer $token")
+            }
             if (response.isSuccessful) Result.success(Unit)
             else Result.failure(Exception("HTTP ${response.code()}"))
         } catch (e: Exception) {
@@ -615,8 +632,9 @@ class MusicRepository {
 
     suspend fun getAudiobookProgress(bookId: String): Result<com.lechenmusic.data.model.AudiobookProgress?> {
         return try {
-            val token = com.lechenmusic.data.api.NavidromeAuth.token ?: return Result.success(null)
-            val response = audiobookApi!!.getAudiobookProgress(bookId, "Bearer $token")
+            val response = withAudiobookAuthRetry { token ->
+                audiobookApi!!.getAudiobookProgress(bookId, "Bearer $token")
+            }
             if (response.isSuccessful && response.body() != null) {
                 val gson = com.google.gson.Gson()
                 val body = response.body()
@@ -637,8 +655,9 @@ class MusicRepository {
 
     suspend fun getStarredAudiobooks(): Result<List<com.lechenmusic.data.model.Audiobook>> {
         return try {
-            val token = com.lechenmusic.data.api.NavidromeAuth.token ?: return Result.success(emptyList())
-            val response = audiobookApi!!.getStarredAudiobooks("Bearer $token")
+            val response = withAudiobookAuthRetry { token ->
+                audiobookApi!!.getStarredAudiobooks("Bearer $token")
+            }
             if (response.isSuccessful && response.body() != null) {
                 val gson = com.google.gson.Gson()
                 val parsed = gson.fromJson(response.body(), AudiobookListResponse::class.java)
@@ -653,8 +672,9 @@ class MusicRepository {
 
     suspend fun starAudiobook(id: String): Result<Unit> {
         return try {
-            val token = com.lechenmusic.data.api.NavidromeAuth.token ?: return Result.failure(Exception("Not authenticated"))
-            val response = audiobookApi!!.starAudiobook(id, "Bearer $token")
+            val response = withAudiobookAuthRetry { token ->
+                audiobookApi!!.starAudiobook(id, "Bearer $token")
+            }
             if (response.isSuccessful) Result.success(Unit)
             else Result.failure(Exception("HTTP ${response.code()}"))
         } catch (e: Exception) {
@@ -664,8 +684,9 @@ class MusicRepository {
 
     suspend fun unstarAudiobook(id: String): Result<Unit> {
         return try {
-            val token = com.lechenmusic.data.api.NavidromeAuth.token ?: return Result.failure(Exception("Not authenticated"))
-            val response = audiobookApi!!.unstarAudiobook(id, "Bearer $token")
+            val response = withAudiobookAuthRetry { token ->
+                audiobookApi!!.unstarAudiobook(id, "Bearer $token")
+            }
             if (response.isSuccessful) Result.success(Unit)
             else Result.failure(Exception("HTTP ${response.code()}"))
         } catch (e: Exception) {
@@ -679,8 +700,9 @@ class MusicRepository {
 
     suspend fun getNarrators(): Result<List<NarratorInfo>> {
         return try {
-            val token = com.lechenmusic.data.api.NavidromeAuth.token ?: return Result.success(emptyList())
-            val response = audiobookApi!!.getNarrators("Bearer $token")
+            val response = withAudiobookAuthRetry { token ->
+                audiobookApi!!.getNarrators("Bearer $token")
+            }
             if (response.isSuccessful && response.body() != null) {
                 val gson = com.google.gson.Gson()
                 val jsonObj = response.body()?.asJsonObject
@@ -704,8 +726,9 @@ class MusicRepository {
 
     suspend fun getNarratorDetail(name: String): Result<List<com.lechenmusic.data.model.Audiobook>> {
         return try {
-            val token = com.lechenmusic.data.api.NavidromeAuth.token ?: return Result.success(emptyList())
-            val response = audiobookApi!!.getNarratorDetail(name, "Bearer $token")
+            val response = withAudiobookAuthRetry { token ->
+                audiobookApi!!.getNarratorDetail(name, "Bearer $token")
+            }
             if (response.isSuccessful && response.body() != null) {
                 val gson = com.google.gson.Gson()
                 val jsonObj = response.body()?.asJsonObject
@@ -724,8 +747,9 @@ class MusicRepository {
 
     suspend fun searchAudiobooks(query: String): Result<List<com.lechenmusic.data.model.Audiobook>> {
         return try {
-            val token = com.lechenmusic.data.api.NavidromeAuth.token ?: return Result.success(emptyList())
-            val response = audiobookApi!!.searchAudiobooks(query, "Bearer $token")
+            val response = withAudiobookAuthRetry { token ->
+                audiobookApi!!.searchAudiobooks(query, "Bearer $token")
+            }
             if (response.isSuccessful && response.body() != null) {
                 val gson = com.google.gson.Gson()
                 val parsed = gson.fromJson(response.body(), AudiobookListResponse::class.java)
