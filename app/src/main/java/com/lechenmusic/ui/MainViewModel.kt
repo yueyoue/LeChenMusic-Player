@@ -1012,12 +1012,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val result = repository.getAudiobooksWithProgress()
                 if (result.isSuccess) {
                     val books = result.getOrNull() ?: emptyList()
-                    if (books.isNotEmpty()) {
+                    // Only use this result if at least one book has non-null progress
+                    if (books.isNotEmpty() && books.any { it.progress != null }) {
                         _audiobookWithProgress.value = books
                         return@launch
                     }
+                    android.util.Log.d("LeChenMusic", "with-progress returned ${books.size} books but none with progress, using fallback")
                 }
-            } catch (_: Exception) {}
+            } catch (e: Exception) {
+                android.util.Log.w("LeChenMusic", "with-progress failed: ${e.message}")
+            }
             // Fallback: load progress for each book individually
             loadAudiobookProgressFallback()
         }
@@ -1144,11 +1148,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             )
         }
         viewModelScope.launch(Dispatchers.IO) {
-            repository.starAudiobook(id).onSuccess {
-                loadStarredAudiobooks()
-                loadAudiobookDetail(id)
-            }.onFailure {
-                // Revert on failure
+            try {
+                val result = repository.starAudiobook(id)
+                if (result.isSuccess) {
+                    loadStarredAudiobooks()
+                    loadAudiobookDetail(id)
+                } else {
+                    // Revert on failure
+                    android.util.Log.e("LeChenMusic", "starAudiobook failed: ${result.exceptionOrNull()?.message}")
+                    if (currentDetail != null) _audiobookDetail.value = currentDetail
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("LeChenMusic", "starAudiobook exception: ${e.message}")
                 if (currentDetail != null) _audiobookDetail.value = currentDetail
             }
         }
@@ -1163,11 +1174,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             )
         }
         viewModelScope.launch(Dispatchers.IO) {
-            repository.unstarAudiobook(id).onSuccess {
-                loadStarredAudiobooks()
-                loadAudiobookDetail(id)
-            }.onFailure {
-                // Revert on failure
+            try {
+                val result = repository.unstarAudiobook(id)
+                if (result.isSuccess) {
+                    loadStarredAudiobooks()
+                    loadAudiobookDetail(id)
+                } else {
+                    android.util.Log.e("LeChenMusic", "unstarAudiobook failed: ${result.exceptionOrNull()?.message}")
+                    if (currentDetail != null) _audiobookDetail.value = currentDetail
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("LeChenMusic", "unstarAudiobook exception: ${e.message}")
                 if (currentDetail != null) _audiobookDetail.value = currentDetail
             }
         }
@@ -1265,15 +1282,40 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     if (progress != null && progress.chapterId.isNotEmpty()) {
                         val chapter = detail.chapters.find { it.id == progress.chapterId }
                         if (chapter != null) {
-                            playAudiobookChapter(book, chapter, detail.chapters)
+                            val chapters = detail.chapters
+                            val chapterIndex = chapters.indexOfFirst { it.id == chapter.id }.coerceAtLeast(0)
+                            val url = repository.getAudiobookChapterStreamUrl(book.id, chapter.id)
+                            val coverUrl = repository.getAudiobookCoverUrl(book.id)
+                            val seekToMs = progress.position * 1000L
+
+                            // Switch to Main thread for ExoPlayer operations
+                            kotlinx.coroutines.withContext(Dispatchers.Main) {
+                                _currentAudiobook.value = book
+                                _currentAudiobookChapters.value = chapters
+                                _currentChapterIndex.value = chapterIndex
+                                playerManager.playUrl(url, chapter.title, book.title, "audiobook_${book.id}_${chapter.id}", coverUrl)
+                                _audiobookIsPlaying.value = true
+                            }
+                            // Give ExoPlayer time to prepare, then seek
                             kotlinx.coroutines.delay(500)
-                            playerManager.seekTo(progress.position * 1000L)
+                            playerManager.seekTo(seekToMs)
                             return@launch
                         }
                     }
 
                     if (detail.chapters.isNotEmpty()) {
-                        playAudiobookChapter(book, detail.chapters[0], detail.chapters)
+                        val chapters = detail.chapters
+                        val firstChapter = chapters[0]
+                        val url = repository.getAudiobookChapterStreamUrl(book.id, firstChapter.id)
+                        val coverUrl = repository.getAudiobookCoverUrl(book.id)
+
+                        kotlinx.coroutines.withContext(Dispatchers.Main) {
+                            _currentAudiobook.value = book
+                            _currentAudiobookChapters.value = chapters
+                            _currentChapterIndex.value = 0
+                            playerManager.playUrl(url, firstChapter.title, book.title, "audiobook_${book.id}_${firstChapter.id}", coverUrl)
+                            _audiobookIsPlaying.value = true
+                        }
                     }
                 }
             } catch (_: Exception) {}
