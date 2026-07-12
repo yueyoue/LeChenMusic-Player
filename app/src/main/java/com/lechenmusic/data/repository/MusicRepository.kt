@@ -478,7 +478,6 @@ class MusicRepository {
     )
 
     private fun handleAudiobookResponse(response: retrofit2.Response<com.google.gson.JsonElement>): Result<List<com.lechenmusic.data.model.Audiobook>> {
-        android.util.Log.d("LeChenMusic", "getAudiobooks: HTTP ${response.code()} ok=${response.isSuccessful}")
         if (!response.isSuccessful) {
             val msg = when (response.code()) {
                 401 -> "认证失败(401)，请重新登录"
@@ -487,30 +486,24 @@ class MusicRepository {
                 500 -> "服务器内部错误(500)"
                 else -> "HTTP ${response.code()}"
             }
-            android.util.Log.e("LeChenMusic", "getAudiobooks: $msg")
             return Result.failure(Exception(msg))
         }
-        if (response.body() == null) {
-            return Result.failure(Exception("服务器返回空数据"))
-        }
+        val bodyElement = response.body() ?: return Result.failure(Exception("服务器返回空数据"))
+        if (bodyElement.isJsonNull) return Result.failure(Exception("服务器返回null"))
+        if (!bodyElement.isJsonObject) return Result.failure(Exception("服务器返回非JSON对象"))
         return try {
             val gson = com.google.gson.Gson()
-            val bodyElement = response.body()!!
             val jsonObj = bodyElement.asJsonObject
-            val dataArray = jsonObj.getAsJsonArray("data")
-            if (dataArray != null) {
-                val books = gson.fromJson<List<com.lechenmusic.data.model.Audiobook>>(
-                    dataArray,
-                    object : com.google.gson.reflect.TypeToken<List<com.lechenmusic.data.model.Audiobook>>() {}.type
-                )
-                android.util.Log.d("LeChenMusic", "getAudiobooks: parsed ${books.size} books")
-                Result.success(books)
-            } else {
-                android.util.Log.w("LeChenMusic", "getAudiobooks: no 'data' field in response")
-                Result.failure(Exception("服务器返回格式错误: 缺少data字段"))
+            val dataElement = jsonObj.get("data")
+            if (dataElement == null || dataElement.isJsonNull || !dataElement.isJsonArray) {
+                return Result.failure(Exception("服务器返回格式错误: data字段缺失或非数组"))
             }
+            val books = gson.fromJson<List<com.lechenmusic.data.model.Audiobook>>(
+                dataElement.asJsonArray,
+                object : com.google.gson.reflect.TypeToken<List<com.lechenmusic.data.model.Audiobook>>() {}.type
+            )
+            Result.success(books)
         } catch (e: Exception) {
-            android.util.Log.e("LeChenMusic", "getAudiobooks: parse error", e)
             Result.failure(Exception("数据解析失败: ${e.message}"))
         }
     }
@@ -532,21 +525,20 @@ class MusicRepository {
             val response = withAudiobookAuthRetry { token ->
                 audiobookApi!!.getAudiobooksWithProgress("Bearer $token")
             }
-            if (!response.isSuccessful || response.body() == null) {
-                return Result.failure(Exception("HTTP ${response.code()}"))
+            if (!response.isSuccessful) return Result.failure(Exception("HTTP ${response.code()}"))
+            val bodyElement = response.body() ?: return Result.failure(Exception("空响应"))
+            if (bodyElement.isJsonNull || !bodyElement.isJsonObject) return Result.failure(Exception("非JSON响应"))
+            val jsonObj = bodyElement.asJsonObject
+            val dataElement = jsonObj.get("data")
+            if (dataElement == null || dataElement.isJsonNull || !dataElement.isJsonArray) {
+                return Result.success(emptyList())
             }
             val gson = com.google.gson.Gson()
-            val jsonObj = response.body()!!.asJsonObject
-            val dataArray = jsonObj.getAsJsonArray("data")
-            if (dataArray != null) {
-                val books = gson.fromJson<List<com.lechenmusic.data.model.AudiobookWithProgress>>(
-                    dataArray,
-                    object : com.google.gson.reflect.TypeToken<List<com.lechenmusic.data.model.AudiobookWithProgress>>() {}.type
-                )
-                Result.success(books)
-            } else {
-                Result.success(emptyList())
-            }
+            val books = gson.fromJson<List<com.lechenmusic.data.model.AudiobookWithProgress>>(
+                dataElement.asJsonArray,
+                object : com.google.gson.reflect.TypeToken<List<com.lechenmusic.data.model.AudiobookWithProgress>>() {}.type
+            )
+            Result.success(books)
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -669,13 +661,17 @@ class MusicRepository {
             val response = withAudiobookAuthRetry { token ->
                 audiobookApi!!.getStarredAudiobooks("Bearer $token")
             }
-            if (response.isSuccessful && response.body() != null) {
-                val gson = com.google.gson.Gson()
-                val parsed = gson.fromJson(response.body(), AudiobookListResponse::class.java)
-                Result.success(parsed?.data ?: emptyList())
-            } else {
-                Result.success(emptyList())
-            }
+            if (!response.isSuccessful) return Result.success(emptyList())
+            val bodyElement = response.body() ?: return Result.success(emptyList())
+            if (bodyElement.isJsonNull || !bodyElement.isJsonObject) return Result.success(emptyList())
+            val dataElement = bodyElement.asJsonObject.get("data")
+            if (dataElement == null || dataElement.isJsonNull || !dataElement.isJsonArray) return Result.success(emptyList())
+            val gson = com.google.gson.Gson()
+            val books = gson.fromJson<List<com.lechenmusic.data.model.Audiobook>>(
+                dataElement.asJsonArray,
+                object : com.google.gson.reflect.TypeToken<List<com.lechenmusic.data.model.Audiobook>>() {}.type
+            )
+            Result.success(books)
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -761,13 +757,17 @@ class MusicRepository {
             val response = withAudiobookAuthRetry { token ->
                 audiobookApi!!.searchAudiobooks(query, "Bearer $token")
             }
-            if (response.isSuccessful && response.body() != null) {
-                val gson = com.google.gson.Gson()
-                val parsed = gson.fromJson(response.body(), AudiobookListResponse::class.java)
-                Result.success(parsed?.data ?: emptyList())
-            } else {
-                Result.success(emptyList())
-            }
+            if (!response.isSuccessful) return Result.success(emptyList())
+            val bodyElement = response.body() ?: return Result.success(emptyList())
+            if (bodyElement.isJsonNull || !bodyElement.isJsonObject) return Result.success(emptyList())
+            val dataElement = bodyElement.asJsonObject.get("data")
+            if (dataElement == null || dataElement.isJsonNull || !dataElement.isJsonArray) return Result.success(emptyList())
+            val gson = com.google.gson.Gson()
+            val books = gson.fromJson<List<com.lechenmusic.data.model.Audiobook>>(
+                dataElement.asJsonArray,
+                object : com.google.gson.reflect.TypeToken<List<com.lechenmusic.data.model.Audiobook>>() {}.type
+            )
+            Result.success(books)
         } catch (e: Exception) {
             Result.failure(e)
         }
