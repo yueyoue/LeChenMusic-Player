@@ -74,12 +74,27 @@ fun AudiobookPlayerScreen(
         onDispose { onSaveProgress() }
     }
 
-    // Auto-save progress every 30 seconds during playback
+    // Auto-save progress every 5 seconds during playback (like ting-reader)
     LaunchedEffect(isPlaying, currentChapterIndex) {
         while (true) {
-            kotlinx.coroutines.delay(30_000)
+            kotlinx.coroutines.delay(5_000)
             if (isPlaying) onSaveProgress()
         }
+    }
+
+    // Save immediately when paused (ting-reader: flush on pause)
+    var prevIsPlaying by remember { mutableStateOf(isPlaying) }
+    LaunchedEffect(isPlaying) {
+        if (prevIsPlaying && !isPlaying) {
+            // Just paused - flush progress immediately
+            onSaveProgress()
+        }
+        prevIsPlaying = isPlaying
+    }
+
+    // Save when chapter changes
+    LaunchedEffect(currentChapterIndex) {
+        onSaveProgress()
     }
 
     Box(
