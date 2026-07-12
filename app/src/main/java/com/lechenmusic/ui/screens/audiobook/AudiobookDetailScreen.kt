@@ -33,7 +33,6 @@ fun AudiobookDetailScreen(
     val serverUrl by viewModel.serverUrl.collectAsState()
     val username by viewModel.username.collectAsState()
     val password by viewModel.password.collectAsState()
-    val debugLog by viewModel.audiobookDebugLog.collectAsState()
 
     LaunchedEffect(audiobookId) {
         viewModel.loadAudiobookDetail(audiobookId)
@@ -51,41 +50,19 @@ fun AudiobookDetailScreen(
 
     if (book == null) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(24.dp)) {
-                if (loadingTimeout) {
+            if (loadingTimeout) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(Icons.Default.Error, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(48.dp))
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text("加载超时", fontSize = 16.sp, color = Color.Gray)
-                } else {
-                    CircularProgressIndicator()
+                    Text("加载失败", fontSize = 16.sp, color = Color.Gray)
+                    Text("请检查网络连接后重试", fontSize = 14.sp, color = Color.Gray)
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text("正在加载...", fontSize = 14.sp, color = Color.Gray)
-                }
-                // Always show debug log
-                if (debugLog.isNotBlank()) {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = Color(0xFF1A1A2E),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            debugLog,
-                            fontSize = 11.sp,
-                            color = Color(0xFF00FF88),
-                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                            modifier = Modifier.padding(12.dp)
-                        )
+                    Button(onClick = { viewModel.loadAudiobookDetail(audiobookId); loadingTimeout = false }) {
+                        Text("重试")
                     }
                 }
-                Spacer(modifier = Modifier.height(16.dp))
-                Button(onClick = {
-                    viewModel.loadAudiobookDetail(audiobookId)
-                    loadingTimeout = false
-                }) {
-                    Text("重试")
-                }
+            } else {
+                CircularProgressIndicator()
             }
         }
         return

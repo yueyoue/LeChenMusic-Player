@@ -941,15 +941,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _audiobookDetail = MutableStateFlow<com.lechenmusic.data.model.AudiobookDetail?>(null)
     val audiobookDetail: StateFlow<com.lechenmusic.data.model.AudiobookDetail?> = _audiobookDetail.asStateFlow()
 
-    // Debug log for on-screen display
-    private val _audiobookDebugLog = MutableStateFlow("")
-    val audiobookDebugLog: StateFlow<String> = _audiobookDebugLog.asStateFlow()
-    private fun debugLog(msg: String) {
-        val ts = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())
-        _audiobookDebugLog.value += "[$ts] $msg\n"
-        android.util.Log.e("LeChenDebug", msg)
-    }
-
     private val _currentAudiobook = MutableStateFlow<com.lechenmusic.data.model.Audiobook?>(null)
     val currentAudiobook: StateFlow<com.lechenmusic.data.model.Audiobook?> = _currentAudiobook.asStateFlow()
 
@@ -1183,36 +1174,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun loadAudiobookDetail(id: String) {
-        _audiobookDebugLog.value = ""
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                debugLog("=== 开始加载有声书详情 ===")
-                debugLog("ID: $id (长度:${id.length})")
-                debugLog("服务器: ${serverUrl.value.take(40)}")
-                val tk = com.lechenmusic.data.api.NavidromeAuth.token
-                debugLog("Token: ${if (tk != null) "存在(${tk.length}字符)" else "NULL!"}")
-
-                debugLog("正在调用API...")
                 val result = repository.getAudiobookDetail(id)
-                debugLog("API返回: isSuccess=${result.isSuccess}")
-
                 if (result.isSuccess) {
-                    val detail = result.getOrNull()
-                    _audiobookDetail.value = detail
-                    debugLog("✅ 成功!")
-                    debugLog("书名: ${detail?.book?.title}")
-                    debugLog("章节数: ${detail?.chapters?.size}")
-                    debugLog("进度: ${if (detail?.progress != null) "有" else "无"}")
+                    _audiobookDetail.value = result.getOrNull()
                 } else {
-                    val err = result.exceptionOrNull()
-                    debugLog("❌ 失败: ${err?.javaClass?.simpleName}")
-                    debugLog("错误信息: ${err?.message}")
                     _audiobookDetail.value = null
                 }
-            } catch (e: Exception) {
-                debugLog("❌ 异常: ${e.javaClass.simpleName}")
-                debugLog("异常信息: ${e.message}")
-                debugLog("堆栈: ${e.stackTraceToString().take(300)}")
+            } catch (_: Exception) {
                 _audiobookDetail.value = null
             }
         }
@@ -1295,17 +1265,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     if (progress != null && progress.chapterId.isNotEmpty()) {
                         val chapter = detail.chapters.find { it.id == progress.chapterId }
                         if (chapter != null) {
-                            _currentAudiobook.value = book
-                            _currentAudiobookChapters.value = detail.chapters
-                            _currentChapterIndex.value = detail.chapters.indexOfFirst { it.id == chapter.id }.coerceAtLeast(0)
-
-                            val url = repository.getAudiobookChapterStreamUrl(book.id, chapter.id)
-                            val coverUrl = repository.getAudiobookCoverUrl(book.id)
-                            playerManager.playUrl(url, chapter.title, book.title, "audiobook_${book.id}_${chapter.id}", coverUrl)
-
+                            playAudiobookChapter(book, chapter, detail.chapters)
                             kotlinx.coroutines.delay(500)
                             playerManager.seekTo(progress.position * 1000L)
-                            _audiobookIsPlaying.value = true
                             return@launch
                         }
                     }
