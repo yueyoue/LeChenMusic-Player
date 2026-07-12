@@ -655,6 +655,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun playSong(song: Song, playlist: List<Song> = listOf(song)) {
+        // Save audiobook progress before switching to music
+        saveAudiobookProgress()
+
         // Clear audiobook state when playing music
         _currentAudiobook.value = null
         _currentAudiobookChapters.value = emptyList()
@@ -1268,11 +1271,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val chapter = chapters.getOrNull(idx) ?: return
         val positionMs = playerManager.currentPosition.value
         val positionSeconds = (positionMs / 1000).toInt()
+        android.util.Log.d("LeChenMusic", "saveAudiobookProgress: book=${book.id}, chapter=${chapter.id}, pos=${positionSeconds}s")
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                repository.saveAudiobookProgress(book.id, chapter.id, chapter.chapterNumber, positionSeconds)
-            } catch (_: Exception) {}
+                val result = repository.saveAudiobookProgress(book.id, chapter.id, chapter.chapterNumber, positionSeconds)
+                if (result.isSuccess) {
+                    android.util.Log.d("LeChenMusic", "saveAudiobookProgress: OK")
+                } else {
+                    android.util.Log.e("LeChenMusic", "saveAudiobookProgress: FAILED: ${result.exceptionOrNull()?.message}")
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("LeChenMusic", "saveAudiobookProgress: EXCEPTION: ${e.message}")
+            }
         }
     }
 
