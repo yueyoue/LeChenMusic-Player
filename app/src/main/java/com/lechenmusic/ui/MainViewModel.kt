@@ -1176,18 +1176,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun loadAudiobookDetail(id: String) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                android.util.Log.d("LeChenMusic", "loadAudiobookDetail: Loading $id")
+                android.util.Log.e("LeChenDebug", "=== loadAudiobookDetail START ===")
+                android.util.Log.e("LeChenDebug", "id=[$id] length=${id.length}")
+                android.util.Log.e("LeChenDebug", "serverUrl=${serverUrl.value.take(30)}")
+                android.util.Log.e("LeChenDebug", "token=${com.lechenmusic.data.api.NavidromeAuth.token?.take(20) ?: "NULL"}")
                 val result = repository.getAudiobookDetail(id)
+                android.util.Log.e("LeChenDebug", "loadAudiobookDetail: result.isSuccess=${result.isSuccess}")
                 if (result.isSuccess) {
-                    _audiobookDetail.value = result.getOrNull()
-                    android.util.Log.d("LeChenMusic", "loadAudiobookDetail: Success, chapters=${_audiobookDetail.value?.chapters?.size}")
+                    val detail = result.getOrNull()
+                    _audiobookDetail.value = detail
+                    android.util.Log.e("LeChenDebug", "loadAudiobookDetail: SUCCESS book=${detail?.book?.title}, chapters=${detail?.chapters?.size}")
                 } else {
-                    android.util.Log.e("LeChenMusic", "loadAudiobookDetail: Failed: ${result.exceptionOrNull()?.message}")
-                    // Set to empty so UI doesn't spin forever
+                    val err = result.exceptionOrNull()
+                    android.util.Log.e("LeChenDebug", "loadAudiobookDetail: FAILED ${err?.javaClass?.simpleName}: ${err?.message}")
                     _audiobookDetail.value = null
                 }
             } catch (e: Exception) {
-                android.util.Log.e("LeChenMusic", "loadAudiobookDetail: Exception: ${e.message}")
+                android.util.Log.e("LeChenDebug", "loadAudiobookDetail: EXCEPTION ${e.javaClass.simpleName}: ${e.message}", e)
                 _audiobookDetail.value = null
             }
         }

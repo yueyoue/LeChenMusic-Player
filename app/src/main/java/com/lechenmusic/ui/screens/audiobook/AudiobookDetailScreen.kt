@@ -35,7 +35,17 @@ fun AudiobookDetailScreen(
     val password by viewModel.password.collectAsState()
 
     LaunchedEffect(audiobookId) {
+        android.util.Log.e("LeChenDebug", "=== AudiobookDetailScreen ===")
+        android.util.Log.e("LeChenDebug", "audiobookId=[$audiobookId] length=${audiobookId.length}")
+        android.util.Log.e("LeChenDebug", "serverUrl=[${serverUrl.take(30)}...]")
+        android.util.Log.e("LeChenDebug", "username=[$username]")
+        android.util.Log.e("LeChenDebug", "token=[${com.lechenmusic.data.api.NavidromeAuth.token?.take(20) ?: "NULL"}...]")
         viewModel.loadAudiobookDetail(audiobookId)
+    }
+
+    // Debug: watch state changes
+    LaunchedEffect(audiobookDetail) {
+        android.util.Log.e("LeChenDebug", "audiobookDetail changed: book=${audiobookDetail?.book?.title ?: "NULL"}, chapters=${audiobookDetail?.chapters?.size ?: 0}")
     }
 
     var loadingTimeout by remember { mutableStateOf(false) }

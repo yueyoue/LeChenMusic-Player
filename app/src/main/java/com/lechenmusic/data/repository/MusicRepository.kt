@@ -432,22 +432,31 @@ class MusicRepository {
         block: suspend (token: String) -> T
     ): T {
         var token = com.lechenmusic.data.api.NavidromeAuth.token
+        android.util.Log.e("LeChenDebug", "withAudiobookAuthRetry: token=${token?.take(30) ?: "NULL"}")
         if (token == null) {
+            android.util.Log.e("LeChenDebug", "withAudiobookAuthRetry: token is null, authenticating...")
             authenticateNavidrome()
             token = com.lechenmusic.data.api.NavidromeAuth.token
-                ?: throw Exception("认证失败，请重新登录")
+            android.util.Log.e("LeChenDebug", "withAudiobookAuthRetry: after auth, token=${token?.take(30) ?: "STILL_NULL"}")
+            if (token == null) {
+                throw Exception("认证失败，请重新登录")
+            }
         }
 
         // First attempt
+        android.util.Log.e("LeChenDebug", "withAudiobookAuthRetry: calling API...")
         val result = block(token)
+        android.util.Log.e("LeChenDebug", "withAudiobookAuthRetry: API returned, type=${result?.let { it::class.simpleName }}")
 
         // Check if response indicates 401 (for retrofit2.Response types)
         if (result is retrofit2.Response<*>) {
+            android.util.Log.e("LeChenDebug", "withAudiobookAuthRetry: HTTP ${result.code()} ok=${result.isSuccessful}")
             if (result.code() == 401) {
                 android.util.Log.w("LeChenMusic", "withAudiobookAuthRetry: Got 401, re-authenticating...")
                 com.lechenmusic.data.api.NavidromeAuth.clear()
                 val authSuccess = authenticateNavidrome()
                 val newToken = com.lechenmusic.data.api.NavidromeAuth.token
+                android.util.Log.e("LeChenDebug", "withAudiobookAuthRetry: re-auth result: success=$authSuccess, newToken=${newToken?.take(30) ?: "NULL"}")
                 if (newToken != null && authSuccess) {
                     android.util.Log.d("LeChenMusic", "withAudiobookAuthRetry: Re-auth success, retrying...")
                     return block(newToken)
@@ -545,43 +554,54 @@ class MusicRepository {
 
     suspend fun getAudiobookDetail(id: String): Result<com.lechenmusic.data.model.AudiobookDetail> {
         return try {
-            android.util.Log.d("LeChenMusic", "getAudiobookDetail: calling API for id=$id")
+            android.util.Log.e("LeChenDebug", "getAudiobookDetail: START id=$id")
             val response = withAudiobookAuthRetry { token ->
+                android.util.Log.e("LeChenDebug", "getAudiobookDetail: making request with token=${token.take(20)}...")
                 audiobookApi!!.getAudiobook(id, "Bearer $token")
             }
-            android.util.Log.d("LeChenMusic", "getAudiobookDetail: HTTP ${response.code()} ok=${response.isSuccessful}")
+            android.util.Log.e("LeChenDebug", "getAudiobookDetail: HTTP ${response.code()} ok=${response.isSuccessful}")
             if (response.isSuccessful && response.body() != null) {
+                val rawBody = response.body()!!.toString()
+                android.util.Log.e("LeChenDebug", "getAudiobookDetail: rawBody length=${rawBody.length}, first200=${rawBody.take(200)}")
                 val gson = com.google.gson.Gson()
                 val bodyElement = response.body()!!
-                val jsonObj = bodyElement.asJsonObject
-                val dataObj = jsonObj.getAsJsonObject("data")
-                if (dataObj != null) {
-                    val bookObj = dataObj.getAsJsonObject("book")
-                    val chaptersArray = dataObj.getAsJsonArray("chapters")
-                    val progressObj = dataObj.getAsJsonObject("progress")
-                    val book = if (bookObj != null) gson.fromJson(bookObj, com.lechenmusic.data.model.Audiobook::class.java) else com.lechenmusic.data.model.Audiobook()
-                    val chapters = if (chaptersArray != null) {
-                        gson.fromJson<List<com.lechenmusic.data.model.AudiobookChapter>>(
-                            chaptersArray,
-                            object : com.google.gson.reflect.TypeToken<List<com.lechenmusic.data.model.AudiobookChapter>>() {}.type
-                        )
-                    } else emptyList()
-                    val progress = if (progressObj != null && !progressObj.isJsonNull) {
-                        gson.fromJson(progressObj, com.lechenmusic.data.model.AudiobookProgress::class.java)
-                    } else null
-                    android.util.Log.d("LeChenMusic", "getAudiobookDetail: parsed book=${book.title}, chapters=${chapters.size}, progress=${progress != null}")
-                    Result.success(com.lechenmusic.data.model.AudiobookDetail(book = book, chapters = chapters, progress = progress))
-                } else {
-                    android.util.Log.w("LeChenMusic", "getAudiobookDetail: no 'data' field in response")
-                    Result.failure(Exception("No data in response"))
+                try {
+                    val jsonObj = bodyElement.asJsonObject
+                    android.util.Log.e("LeChenDebug", "getAudiobookDetail: jsonObj keys=${jsonObj.keySet()}")
+                    val dataObj = jsonObj.getAsJsonObject("data")
+                    android.util.Log.e("LeChenDebug", "getAudiobookDetail: dataObj=${dataObj != null}, keys=${dataObj?.keySet()}")
+                    if (dataObj != null) {
+                        val bookObj = dataObj.getAsJsonObject("book")
+                        val chaptersArray = dataObj.getAsJsonArray("chapters")
+                        val progressObj = dataObj.getAsJsonObject("progress")
+                        android.util.Log.e("LeChenDebug", "getAudiobookDetail: bookObj=${bookObj != null}, chaptersArray=${chaptersArray != null} size=${chaptersArray?.size()}, progressObj=${progressObj != null}")
+                        val book = if (bookObj != null) gson.fromJson(bookObj, com.lechenmusic.data.model.Audiobook::class.java) else com.lechenmusic.data.model.Audiobook()
+                        val chapters = if (chaptersArray != null) {
+                            gson.fromJson<List<com.lechenmusic.data.model.AudiobookChapter>>(
+                                chaptersArray,
+                                object : com.google.gson.reflect.TypeToken<List<com.lechenmusic.data.model.AudiobookChapter>>() {}.type
+                            )
+                        } else emptyList()
+                        val progress = if (progressObj != null && !progressObj.isJsonNull) {
+                            gson.fromJson(progressObj, com.lechenmusic.data.model.AudiobookProgress::class.java)
+                        } else null
+                        android.util.Log.e("LeChenDebug", "getAudiobookDetail: SUCCESS book=${book.title}, chapters=${chapters.size}")
+                        Result.success(com.lechenmusic.data.model.AudiobookDetail(book = book, chapters = chapters, progress = progress))
+                    } else {
+                        android.util.Log.e("LeChenDebug", "getAudiobookDetail: FAIL - no 'data' field")
+                        Result.failure(Exception("No data in response"))
+                    }
+                } catch (parseErr: Exception) {
+                    android.util.Log.e("LeChenDebug", "getAudiobookDetail: PARSE ERROR: ${parseErr.message}", parseErr)
+                    Result.failure(Exception("JSON解析失败: ${parseErr.message}"))
                 }
             } else {
-                val errorBody = response.errorBody()?.string() ?: "unknown"
-                android.util.Log.e("LeChenMusic", "getAudiobookDetail: HTTP ${response.code()} error=$errorBody")
+                val errorBody = try { response.errorBody()?.string() ?: "unknown" } catch (_: Exception) { "unreadable" }
+                android.util.Log.e("LeChenDebug", "getAudiobookDetail: HTTP ERROR ${response.code()} body=$errorBody")
                 Result.failure(Exception("HTTP ${response.code()}: $errorBody"))
             }
         } catch (e: Exception) {
-            android.util.Log.e("LeChenMusic", "getAudiobookDetail: Exception: ${e.message}", e)
+            android.util.Log.e("LeChenDebug", "getAudiobookDetail: EXCEPTION: ${e.javaClass.simpleName}: ${e.message}", e)
             Result.failure(e)
         }
     }
