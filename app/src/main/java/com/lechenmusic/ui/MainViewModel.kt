@@ -1195,11 +1195,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 val result = repository.getAudiobookDetail(id)
                 if (result.isSuccess) {
-                    _audiobookDetail.value = result.getOrNull()
+                    val detail = result.getOrNull()
+                    val book = detail?.book
+                    android.util.Log.d("LeChenMusic", "loadAudiobookDetail: book=${book?.title}, starred=${book?.starred}, isStarred=${book?.isStarred}, progress=${detail?.progress != null}, progressPos=${detail?.progress?.position}")
+                    _audiobookDetail.value = detail
                 } else {
+                    android.util.Log.e("LeChenMusic", "loadAudiobookDetail failed: ${result.exceptionOrNull()?.message}")
                     _audiobookDetail.value = null
                 }
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                android.util.Log.e("LeChenMusic", "loadAudiobookDetail exception: ${e.message}")
                 _audiobookDetail.value = null
             }
         }
