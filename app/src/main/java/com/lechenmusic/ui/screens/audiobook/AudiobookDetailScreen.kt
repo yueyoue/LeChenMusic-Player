@@ -33,19 +33,10 @@ fun AudiobookDetailScreen(
     val serverUrl by viewModel.serverUrl.collectAsState()
     val username by viewModel.username.collectAsState()
     val password by viewModel.password.collectAsState()
+    val debugLog by viewModel.audiobookDebugLog.collectAsState()
 
     LaunchedEffect(audiobookId) {
-        android.util.Log.e("LeChenDebug", "=== AudiobookDetailScreen ===")
-        android.util.Log.e("LeChenDebug", "audiobookId=[$audiobookId] length=${audiobookId.length}")
-        android.util.Log.e("LeChenDebug", "serverUrl=[${serverUrl.take(30)}...]")
-        android.util.Log.e("LeChenDebug", "username=[$username]")
-        android.util.Log.e("LeChenDebug", "token=[${com.lechenmusic.data.api.NavidromeAuth.token?.take(20) ?: "NULL"}...]")
         viewModel.loadAudiobookDetail(audiobookId)
-    }
-
-    // Debug: watch state changes
-    LaunchedEffect(audiobookDetail) {
-        android.util.Log.e("LeChenDebug", "audiobookDetail changed: book=${audiobookDetail?.book?.title ?: "NULL"}, chapters=${audiobookDetail?.chapters?.size ?: 0}")
     }
 
     var loadingTimeout by remember { mutableStateOf(false) }
@@ -60,19 +51,41 @@ fun AudiobookDetailScreen(
 
     if (book == null) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            if (loadingTimeout) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(24.dp)) {
+                if (loadingTimeout) {
                     Icon(Icons.Default.Error, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(48.dp))
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text("加载失败", fontSize = 16.sp, color = Color.Gray)
-                    Text("请检查网络连接后重试", fontSize = 14.sp, color = Color.Gray)
+                    Text("加载超时", fontSize = 16.sp, color = Color.Gray)
+                } else {
+                    CircularProgressIndicator()
                     Spacer(modifier = Modifier.height(16.dp))
-                    Button(onClick = { viewModel.loadAudiobookDetail(audiobookId); loadingTimeout = false }) {
-                        Text("重试")
+                    Text("正在加载...", fontSize = 14.sp, color = Color.Gray)
+                }
+                // Always show debug log
+                if (debugLog.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = Color(0xFF1A1A2E),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            debugLog,
+                            fontSize = 11.sp,
+                            color = Color(0xFF00FF88),
+                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                            modifier = Modifier.padding(12.dp)
+                        )
                     }
                 }
-            } else {
-                CircularProgressIndicator()
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(onClick = {
+                    viewModel.loadAudiobookDetail(audiobookId)
+                    loadingTimeout = false
+                }) {
+                    Text("重试")
+                }
             }
         }
         return
