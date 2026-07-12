@@ -82,10 +82,14 @@ fun AudiobookDetailScreen(
             ) {
                 Column(modifier = Modifier.padding(10.dp)) {
                     Text("[DEBUG]", fontSize = 11.sp, color = Color(0xFFFFD700), fontWeight = FontWeight.Bold)
-                    Text("starred字段: ${book?.starred ?: "null"}", fontSize = 11.sp, color = Color.White)
-                    Text("isStarred: ${book?.isStarred}", fontSize = 11.sp, color = Color.White)
-                    Text("progress: ${if (progress != null) "ch=${progress.chapterId} pos=${progress.position}" else "null"}", fontSize = 11.sp, color = Color.White)
-                    Text("chapters: ${chapters.size}", fontSize = 11.sp, color = Color.White)
+                    Text("book.id: ${book?.id}", fontSize = 10.sp, color = Color.White)
+                    Text("starred字段: ${book?.starred ?: "null"}", fontSize = 10.sp, color = Color.White)
+                    Text("isStarred: ${book?.isStarred}", fontSize = 10.sp, color = Color.White)
+                    Text("progress: ${if (progress != null) "ch=${progress.chapterId.take(8)}.. pos=${progress.position}s" else "null (无进度数据)"}", fontSize = 10.sp, color = Color.White)
+                    Text("chapters: ${chapters.size}", fontSize = 10.sp, color = Color.White)
+                    if (progress == null) {
+                        Text("⚠ 进度为null: 从未保存过或服务端未返回", fontSize = 10.sp, color = Color(0xFFFF6B6B))
+                    }
                 }
             }
         }

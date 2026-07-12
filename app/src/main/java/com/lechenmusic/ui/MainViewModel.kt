@@ -1279,51 +1279,64 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun resumeAudiobook(book: com.lechenmusic.data.model.Audiobook) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val detailResult = repository.getAudiobookDetail(book.id)
-                if (detailResult.isSuccess) {
-                    val detail = detailResult.getOrNull() ?: return@launch
-                    val progress = detail.progress
+                // First try to use already-loaded detail (avoid extra API call)
+                val cachedDetail = _audiobookDetail.value
+                val detail = if (cachedDetail != null && cachedDetail.book.id == book.id) {
+                    cachedDetail
+                } else {
+                    val detailResult = repository.getAudiobookDetail(book.id)
+                    if (detailResult.isSuccess) detailResult.getOrNull() else null
+                }
+                if (detail == null) return@launch
 
-                    if (progress != null && progress.chapterId.isNotEmpty()) {
-                        val chapter = detail.chapters.find { it.id == progress.chapterId }
-                        if (chapter != null) {
-                            val chapters = detail.chapters
-                            val chapterIndex = chapters.indexOfFirst { it.id == chapter.id }.coerceAtLeast(0)
-                            val url = repository.getAudiobookChapterStreamUrl(book.id, chapter.id)
-                            val coverUrl = repository.getAudiobookCoverUrl(book.id)
-                            val seekToMs = progress.position * 1000L
+                val progress = detail.progress
+                val chapters = detail.chapters
+                if (chapters.isEmpty()) return@launch
 
-                            // Switch to Main thread for ExoPlayer operations
-                            kotlinx.coroutines.withContext(Dispatchers.Main) {
-                                _currentAudiobook.value = book
-                                _currentAudiobookChapters.value = chapters
-                                _currentChapterIndex.value = chapterIndex
-                                playerManager.playUrl(url, chapter.title, book.title, "audiobook_${book.id}_${chapter.id}", coverUrl)
-                                _audiobookIsPlaying.value = true
-                            }
-                            // Give ExoPlayer time to prepare, then seek
-                            kotlinx.coroutines.delay(500)
-                            playerManager.seekTo(seekToMs)
-                            return@launch
-                        }
+                // Find resume chapter (inspired by ting-reader)
+                // 1. Use progress.chapterId if available
+                // 2. Otherwise use the first chapter
+                val resumeChapter = if (progress != null && progress.chapterId.isNotEmpty()) {
+                    chapters.find { it.id == progress.chapterId }
+                } else null
+
+                if (resumeChapter != null) {
+                    val chapterIndex = chapters.indexOfFirst { it.id == resumeChapter.id }.coerceAtLeast(0)
+                    val url = repository.getAudiobookChapterStreamUrl(book.id, resumeChapter.id)
+                    val coverUrl = repository.getAudiobookCoverUrl(book.id)
+                    val seekToMs = progress!!.position * 1000L
+
+                    android.util.Log.d("LeChenMusic", "resumeAudiobook: chapter=${resumeChapter.title}, seekTo=${seekToMs}ms")
+
+                    // Switch to Main thread for ExoPlayer operations
+                    kotlinx.coroutines.withContext(Dispatchers.Main) {
+                        _currentAudiobook.value = book
+                        _currentAudiobookChapters.value = chapters
+                        _currentChapterIndex.value = chapterIndex
+                        playerManager.playUrl(url, resumeChapter.title, book.title, "audiobook_${book.id}_${resumeChapter.id}", coverUrl)
+                        _audiobookIsPlaying.value = true
                     }
+                    // Give ExoPlayer time to prepare, then seek
+                    kotlinx.coroutines.delay(500)
+                    playerManager.seekTo(seekToMs)
+                } else {
+                    // No progress found, play from beginning
+                    android.util.Log.d("LeChenMusic", "resumeAudiobook: no progress, playing from start")
+                    val firstChapter = chapters[0]
+                    val url = repository.getAudiobookChapterStreamUrl(book.id, firstChapter.id)
+                    val coverUrl = repository.getAudiobookCoverUrl(book.id)
 
-                    if (detail.chapters.isNotEmpty()) {
-                        val chapters = detail.chapters
-                        val firstChapter = chapters[0]
-                        val url = repository.getAudiobookChapterStreamUrl(book.id, firstChapter.id)
-                        val coverUrl = repository.getAudiobookCoverUrl(book.id)
-
-                        kotlinx.coroutines.withContext(Dispatchers.Main) {
-                            _currentAudiobook.value = book
-                            _currentAudiobookChapters.value = chapters
-                            _currentChapterIndex.value = 0
-                            playerManager.playUrl(url, firstChapter.title, book.title, "audiobook_${book.id}_${firstChapter.id}", coverUrl)
-                            _audiobookIsPlaying.value = true
-                        }
+                    kotlinx.coroutines.withContext(Dispatchers.Main) {
+                        _currentAudiobook.value = book
+                        _currentAudiobookChapters.value = chapters
+                        _currentChapterIndex.value = 0
+                        playerManager.playUrl(url, firstChapter.title, book.title, "audiobook_${book.id}_${firstChapter.id}", coverUrl)
+                        _audiobookIsPlaying.value = true
                     }
                 }
-            } catch (_: Exception) {}
+            } catch (e: Exception) {
+                android.util.Log.e("LeChenMusic", "resumeAudiobook exception: ${e.message}")
+            }
         }
     }
 
