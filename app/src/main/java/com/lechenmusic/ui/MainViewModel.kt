@@ -1134,23 +1134,39 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun star(id: String) {
+        // Optimistic update
+        val current = _currentAlbum.value
+        if (current != null && current.id == id) {
+            _currentAlbum.value = current.copy(starred = java.time.Instant.now().toString())
+        }
         viewModelScope.launch(Dispatchers.IO) {
             repository.star(id).onSuccess {
                 repository.getStarred().onSuccess {
                     _starredSongs.value = it.songs
                     _starredAlbums.value = it.albums
                 }
+            }.onFailure {
+                // Revert on failure
+                if (current != null) _currentAlbum.value = current
             }
         }
     }
 
     fun unstar(id: String) {
+        // Optimistic update
+        val current = _currentAlbum.value
+        if (current != null && current.id == id) {
+            _currentAlbum.value = current.copy(starred = null)
+        }
         viewModelScope.launch(Dispatchers.IO) {
             repository.unstar(id).onSuccess {
                 repository.getStarred().onSuccess {
                     _starredSongs.value = it.songs
                     _starredAlbums.value = it.albums
                 }
+            }.onFailure {
+                // Revert on failure
+                if (current != null) _currentAlbum.value = current
             }
         }
     }
