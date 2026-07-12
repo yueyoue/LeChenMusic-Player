@@ -74,6 +74,14 @@ fun AudiobookPlayerScreen(
         onDispose { onSaveProgress() }
     }
 
+    // Auto-save progress every 30 seconds during playback
+    LaunchedEffect(isPlaying, currentChapterIndex) {
+        while (true) {
+            kotlinx.coroutines.delay(30_000)
+            if (isPlaying) onSaveProgress()
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
