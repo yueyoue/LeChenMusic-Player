@@ -72,6 +72,24 @@ fun AudiobookDetailScreen(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 80.dp)
     ) {
+        // Debug info (temporary)
+        item {
+            val progress = audiobookDetail?.progress
+            Surface(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                shape = RoundedCornerShape(8.dp),
+                color = Color(0xFF1A1A2E)
+            ) {
+                Column(modifier = Modifier.padding(10.dp)) {
+                    Text("[DEBUG]", fontSize = 11.sp, color = Color(0xFFFFD700), fontWeight = FontWeight.Bold)
+                    Text("starred字段: ${book?.starred ?: "null"}", fontSize = 11.sp, color = Color.White)
+                    Text("isStarred: ${book?.isStarred}", fontSize = 11.sp, color = Color.White)
+                    Text("progress: ${if (progress != null) "ch=${progress.chapterId} pos=${progress.position}" else "null"}", fontSize = 11.sp, color = Color.White)
+                    Text("chapters: ${chapters.size}", fontSize = 11.sp, color = Color.White)
+                }
+            }
+        }
+
         // Header bar - match AlbumDetailScreen style
         item {
             Row(
