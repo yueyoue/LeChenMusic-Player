@@ -276,6 +276,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         // Update progress periodically (faster interval for accurate lyrics sync)
         viewModelScope.launch {
+            var audiobookProgressSaveCounter = 0
             while (true) {
                 kotlinx.coroutines.delay(200)
                 playerManager.updateProgress()
@@ -284,6 +285,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     _audiobookPosition.value = playerManager.currentPosition.value
                     _audiobookDuration.value = playerManager.duration.value
                     _audiobookIsPlaying.value = playerManager.isPlaying.value
+                    // Auto-save audiobook progress every 15 seconds during playback
+                    if (_audiobookIsPlaying.value) {
+                        audiobookProgressSaveCounter++
+                        if (audiobookProgressSaveCounter >= 75) { // 75 * 200ms = 15s
+                            audiobookProgressSaveCounter = 0
+                            saveAudiobookProgress()
+                        }
+                    } else {
+                        audiobookProgressSaveCounter = 0
+                    }
                 }
             }
         }

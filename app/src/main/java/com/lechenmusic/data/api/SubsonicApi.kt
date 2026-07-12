@@ -274,7 +274,7 @@ interface SubsonicApi {
         @retrofit2.http.Header("X-ND-Authorization") authHeader: String
     ): retrofit2.Response<com.google.gson.JsonElement>
 
-    @retrofit2.http.POST("api/audiobook/{id}/progress")
+    @retrofit2.http.PUT("api/audiobook/{id}/progress")
     suspend fun saveAudiobookProgress(
         @retrofit2.http.Path("id") id: String,
         @retrofit2.http.Body body: okhttp3.RequestBody,
