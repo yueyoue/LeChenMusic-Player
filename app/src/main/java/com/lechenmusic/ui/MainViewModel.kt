@@ -1016,27 +1016,32 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val result = repository.getRecentAudiobookProgress()
                 if (result.isSuccess) {
                     val books = result.getOrNull() ?: emptyList()
+                    android.util.Log.d("LeChenMusic", "recent-progress: ${books.size} books")
                     if (books.isNotEmpty()) {
                         _audiobookWithProgress.value = books
-                        android.util.Log.d("LeChenMusic", "recent-progress: ${books.size} books with progress")
                         return@launch
                     }
+                } else {
+                    android.util.Log.w("LeChenMusic", "recent-progress API failed: ${result.exceptionOrNull()?.message}")
                 }
             } catch (e: Exception) {
-                android.util.Log.w("LeChenMusic", "recent-progress failed: ${e.message}")
+                android.util.Log.w("LeChenMusic", "recent-progress exception: ${e.message}")
             }
-            // Fallback to with-progress
+            // Fallback to with-progress (returns ALL books, progress may be null)
             try {
                 val result = repository.getAudiobooksWithProgress()
                 if (result.isSuccess) {
                     val books = result.getOrNull() ?: emptyList()
-                    if (books.isNotEmpty() && books.any { it.progress != null }) {
+                    android.util.Log.d("LeChenMusic", "with-progress: ${books.size} books, ${books.count { it.progress != null }} with progress")
+                    if (books.isNotEmpty()) {
                         _audiobookWithProgress.value = books
                         return@launch
                     }
+                } else {
+                    android.util.Log.w("LeChenMusic", "with-progress API failed: ${result.exceptionOrNull()?.message}")
                 }
             } catch (e: Exception) {
-                android.util.Log.w("LeChenMusic", "with-progress failed: ${e.message}")
+                android.util.Log.w("LeChenMusic", "with-progress exception: ${e.message}")
             }
             // Final fallback: load progress for each book individually
             loadAudiobookProgressFallback()
@@ -1047,11 +1052,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         try {
             val books = _audiobooks.value
             if (books.isEmpty()) return
+            android.util.Log.d("LeChenMusic", "loadAudiobookProgressFallback: checking ${books.size} books")
             val booksWithProgress = mutableListOf<com.lechenmusic.data.model.AudiobookWithProgress>()
-            for (book in books.take(10)) {
+            for (book in books) {
                 try {
                     val detailResult = repository.getAudiobookDetail(book.id)
                     val progress = if (detailResult.isSuccess) detailResult.getOrNull()?.progress else null
+                    if (progress != null) {
+                        android.util.Log.d("LeChenMusic", "loadAudiobookProgressFallback: ${book.title} has progress ch=${progress.chapterNumber} pos=${progress.position}s")
+                    }
                     booksWithProgress.add(
                         com.lechenmusic.data.model.AudiobookWithProgress(
                             id = book.id, title = book.title, author = book.author,
@@ -1064,7 +1073,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         )
                     )
                 } catch (_: Exception) {
-                    // Still add the book even if detail fails
                     booksWithProgress.add(
                         com.lechenmusic.data.model.AudiobookWithProgress(
                             id = book.id, title = book.title, author = book.author,
@@ -1078,9 +1086,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
             if (booksWithProgress.isNotEmpty()) {
+                val withProgress = booksWithProgress.filter { it.progress != null }
+                android.util.Log.d("LeChenMusic", "loadAudiobookProgressFallback: ${withProgress.size}/${booksWithProgress.size} books have progress")
                 _audiobookWithProgress.value = booksWithProgress
             }
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            android.util.Log.e("LeChenMusic", "loadAudiobookProgressFallback failed: ${e.message}")
+        }
     }
 
     fun loadStarredAudiobooks() {

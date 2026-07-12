@@ -383,12 +383,12 @@ fun HomeScreen(
                             onAudiobookClick = onNavigateToAudiobookDetail
                         )
                     }
-                    // Continue listening (real progress data)
+                    // Continue listening (like ting-reader: always show section)
                     val booksWithProgress = audiobookWithProgress.filter { it.progress != null && !it.progress.completed }
+                    item {
+                        SecHd("⏱️ 继续收听", "全部 ›") {}
+                    }
                     if (booksWithProgress.isNotEmpty()) {
-                        item {
-                            SecHd("⏱️ 继续收听", "全部 ›") {}
-                        }
                         items(booksWithProgress.take(3)) { bwp ->
                             ContCard(
                                 bwp.toAudiobook(),
@@ -399,6 +399,39 @@ fun HomeScreen(
                             ) {
                                 viewModel.resumeAudiobook(bwp.toAudiobook())
                                 onNavigateToAudiobookDetail(bwp.id)
+                            }
+                        }
+                    } else {
+                        item {
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 5.dp),
+                                shape = RoundedCornerShape(14.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(20.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Icon(
+                                        Icons.Default.MenuBook,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                        modifier = Modifier.size(36.dp)
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        "还没有收听记录",
+                                        fontSize = 13.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Text(
+                                        "播放有声书后将显示在此处",
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                    )
+                                }
                             }
                         }
                     }
