@@ -58,7 +58,9 @@ fun HomeScreen(
     onNavigateToAllPlaylists: () -> Unit = {},
     onNavigateToCachedMusic: () -> Unit = {},
     onNavigateToAudiobook: (String?) -> Unit = {},
-    onNavigateToAudiobookDetail: (String) -> Unit = {}
+    onNavigateToAudiobookDetail: (String) -> Unit = {},
+    onNavigateToNarrator: (String) -> Unit = {},
+    onNavigateToNarratorList: () -> Unit = {}
 ) {
     val newestAlbums by viewModel.newestAlbums.collectAsState()
     val randomAlbums by viewModel.randomAlbums.collectAsState()
@@ -439,7 +441,7 @@ fun HomeScreen(
                     item { SecHd("\uD83D\uDCC2 分类", "全部 ›") { onNavigateToAudiobook(null) } }
                     item { CatGrid { genre -> onNavigateToAudiobook(genre) } }
                     // Narrators
-                    item { SecHd("\uD83C\uDFA4 演播者", "全部 ›") { onNavigateToAudiobook(null) } }
+                    item { SecHd("\uD83C\uDFA4 演播者", "全部 ›") { onNavigateToNarratorList() } }
                     item {
                         val narrators by viewModel.narrators.collectAsState()
                         if (narrators.isNotEmpty()) {
@@ -448,7 +450,13 @@ fun HomeScreen(
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
                                 items(narrators.take(8)) { narr ->
-                                    NarrItem(narr.name, "${'$'}{narr.count}部", getNarrColor(narr.name))
+                                    NarrItem(
+                                        name = narr.name,
+                                        count = "${'$'}{narr.count}部",
+                                        color = getNarrColor(narr.name),
+                                        serverUrl = serverUrl,
+                                        onClick = { onNavigateToNarrator(narr.name) }
+                                    )
                                 }
                             }
                         } else {
@@ -1261,17 +1269,37 @@ private fun CatGrid(onGenreClick: (String) -> Unit = {}) {
 }
 
 @Composable
-private fun NarrItem(name: String, count: String, color: Color) {
+private fun NarrItem(
+    name: String,
+    count: String,
+    color: Color,
+    serverUrl: String = "",
+    onClick: () -> Unit = {}
+) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.width(80.dp)
+        modifier = Modifier
+            .width(80.dp)
+            .clickable(onClick = onClick)
     ) {
         Surface(
             modifier = Modifier.size(64.dp),
             shape = CircleShape,
             color = color
         ) {
-            Box(contentAlignment = Alignment.Center) { Text("\uD83C\uDFA4", fontSize = 24.sp) }
+            val avatarUrl = if (serverUrl.isNotEmpty()) {
+                com.lechenmusic.data.api.SubsonicApi.getNarratorAvatarUrl(serverUrl, name)
+            } else ""
+            if (avatarUrl.isNotEmpty()) {
+                AsyncImage(
+                    model = avatarUrl,
+                    contentDescription = name,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Box(contentAlignment = Alignment.Center) { Text("\uD83C\uDFA4", fontSize = 24.sp) }
+            }
         }
         Spacer(modifier = Modifier.height(6.dp))
         Text(

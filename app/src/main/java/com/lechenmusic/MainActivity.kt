@@ -43,6 +43,8 @@ import com.lechenmusic.ui.screens.home.CachedMusicScreen
 import com.lechenmusic.ui.screens.audiobook.AudiobookScreen
 import com.lechenmusic.ui.screens.audiobook.AudiobookDetailScreen
 import com.lechenmusic.ui.screens.audiobook.AudiobookPlayerScreen
+import com.lechenmusic.ui.screens.audiobook.AudiobookNarratorListScreen
+import com.lechenmusic.ui.screens.audiobook.AudiobookNarratorDetailScreen
 import com.lechenmusic.ui.theme.LeChenMusicTheme
 import com.lechenmusic.update.UpdateInfo
 
@@ -247,7 +249,9 @@ fun LeChenMusicApp(viewModel: MainViewModel) {
                             onNavigateToAllPlaylists = { navController.navigate(Screen.AllPlaylists.route) },
                             onNavigateToCachedMusic = { navController.navigate(Screen.CachedMusic.route) },
                             onNavigateToAudiobook = { genre -> navController.navigate(Screen.Audiobook.createRoute(genre)) },
-                            onNavigateToAudiobookDetail = { id -> navController.navigate(Screen.AudiobookDetail.createRoute(id)) }
+                            onNavigateToAudiobookDetail = { id -> navController.navigate(Screen.AudiobookDetail.createRoute(id)) },
+                            onNavigateToNarrator = { name -> navController.navigate(Screen.NarratorDetail.createRoute(name)) },
+                            onNavigateToNarratorList = { navController.navigate(Screen.NarratorList.route) }
                         )
                     }
                     composable(Screen.Favorites.route) {
@@ -389,6 +393,22 @@ fun LeChenMusicApp(viewModel: MainViewModel) {
                                 viewModel.playAudiobookChapter(book, chapter, chapters)
                                 // Don't navigate - let mini player handle it
                             }
+                        )
+                    }
+                    composable(Screen.NarratorList.route) {
+                        AudiobookNarratorListScreen(
+                            viewModel = viewModel,
+                            onBack = { navController.popBackStack() },
+                            onNarratorClick = { name -> navController.navigate(Screen.NarratorDetail.createRoute(name)) }
+                        )
+                    }
+                    composable(Screen.NarratorDetail.route) { backStackEntry ->
+                        val narratorName = backStackEntry.arguments?.getString("narratorName") ?: ""
+                        AudiobookNarratorDetailScreen(
+                            viewModel = viewModel,
+                            narratorName = narratorName,
+                            onBack = { navController.popBackStack() },
+                            onBookClick = { id -> navController.navigate(Screen.AudiobookDetail.createRoute(id)) }
                         )
                     }
                     composable(Screen.AudiobookPlayer.route) {
