@@ -219,6 +219,17 @@ class MusicRepository {
         }
     }
 
+    /** Get similar songs based on a song ID */
+    suspend fun getSimilarSongs2(songId: String, count: Int = 20): Result<List<Song>> {
+        return try {
+            val response = api!!.getSimilarSongs2(username, password, songId, count)
+            val songs = response.subsonicResponse.similarSongs2?.song ?: emptyList()
+            Result.success(songs)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun getServerStats(): Result<ServerStats> {
         return try {
             // Get real counts from server

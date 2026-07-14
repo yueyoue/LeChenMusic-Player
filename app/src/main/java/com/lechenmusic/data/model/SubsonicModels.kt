@@ -33,7 +33,8 @@ data class SubsonicBody(
     val albumCount: Int? = null,
     val artistCount: Int? = null,
     val indexes: IndexesWrapper? = null,
-    val internetRadioStations: InternetRadioStationsWrapper? = null
+    val internetRadioStations: InternetRadioStationsWrapper? = null,
+    val similarSongs2: SongsWrapper? = null
 )
 
 data class IndexesWrapper(
