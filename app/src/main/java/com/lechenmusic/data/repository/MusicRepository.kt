@@ -202,7 +202,6 @@ class MusicRepository {
     suspend fun getLyrics(artist: String, title: String): Result<String?> {
         return try {
             val response = api!!.getLyrics(username, password, artist, title)
-            // Check both 'value' and 'lyrics' fields for lyrics text
             val lyrics = response.subsonicResponse.lyrics?.text
             Result.success(lyrics)
         } catch (e: Exception) {
