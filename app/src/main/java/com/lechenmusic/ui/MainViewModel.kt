@@ -557,8 +557,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
             // 2. 尝试获取结构化歌词（带时间戳）
             try {
-                repository.getLyricsBySongId(song.id).onSuccess { lyricsList ->
-                    val syncedLyric = lyricsList?.structuredLyric
+                repository.getLyricsBySongId(song.id).onSuccess { lyricsResponse ->
+                    val syncedLyric = lyricsResponse?.lyricsList?.structuredLyric
                         ?.firstOrNull { it.synced && !it.line.isNullOrEmpty() }
                     if (syncedLyric != null) {
                         val lrcBuilder = StringBuilder()
