@@ -182,6 +182,8 @@ class MusicPlayerManager(private val context: Context) {
                 override fun onPause() { togglePlayPause() }
                 override fun onSkipToNext() { skipNext() }
                 override fun onSkipToPrevious() { skipPrevious() }
+                override fun onFastForward() { seekRelative(15000L) }
+                override fun onRewind() { seekRelative(-15000L) }
                 override fun onStop() { forcePause() }
             })
         }
@@ -349,6 +351,8 @@ class MusicPlayerManager(private val context: Context) {
                 PlaybackStateCompat.ACTION_SKIP_TO_NEXT or
                 PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS or
                 PlaybackStateCompat.ACTION_PLAY_PAUSE or
+                PlaybackStateCompat.ACTION_FAST_FORWARD or
+                PlaybackStateCompat.ACTION_REWIND or
                 PlaybackStateCompat.ACTION_SET_RATING
             )
             .setState(
@@ -425,6 +429,7 @@ class MusicPlayerManager(private val context: Context) {
                 )
 
             if (isAudiobook) {
+                // Audiobook: prev, rewind 15s, play/pause, forward 15s, next
                 val rewindIntent = Intent(ACTION_REWIND_15).setPackage(context.packageName)
                 val rewindPending = PendingIntent.getBroadcast(
                     context, 5, rewindIntent,
@@ -435,15 +440,29 @@ class MusicPlayerManager(private val context: Context) {
                     context, 6, forwardIntent,
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                 )
-                builder.addAction(NotificationCompat.Action(R.drawable.ic_notif_rewind_15, "后退15秒", rewindPending))
-                builder.addAction(NotificationCompat.Action(playPauseIcon, if (_isPlaying.value) "暂停" else "播放", playPausePending))
-                builder.addAction(NotificationCompat.Action(R.drawable.ic_notif_forward_15, "前进15秒", forwardPending))
+                builder
+                    .addAction(NotificationCompat.Action(R.drawable.ic_notif_prev, "上一章", prevPending))
+                    .addAction(NotificationCompat.Action(R.drawable.ic_notif_rewind_15, "后退15秒", rewindPending))
+                    .addAction(NotificationCompat.Action(playPauseIcon, if (_isPlaying.value) "暂停" else "播放", playPausePending))
+                    .addAction(NotificationCompat.Action(R.drawable.ic_notif_forward_15, "前进15秒", forwardPending))
+                    .addAction(NotificationCompat.Action(R.drawable.ic_notif_next, "下一章", nextPending))
+                builder.setStyle(
+                    MediaStyle()
+                        .setMediaSession(sessionCompat.sessionToken)
+                        .setShowActionsInCompactView(1, 2, 3)
+                )
             } else {
-                builder.addAction(NotificationCompat.Action(R.drawable.ic_notif_prev, "上一曲", prevPending))
-                builder.addAction(NotificationCompat.Action(playPauseIcon, if (_isPlaying.value) "暂停" else "播放", playPausePending))
-                builder.addAction(NotificationCompat.Action(R.drawable.ic_notif_next, "下一曲", nextPending))
+                builder
+                    .addAction(NotificationCompat.Action(R.drawable.ic_notif_prev, "上一曲", prevPending))
+                    .addAction(NotificationCompat.Action(playPauseIcon, if (_isPlaying.value) "暂停" else "播放", playPausePending))
+                    .addAction(NotificationCompat.Action(R.drawable.ic_notif_next, "下一曲", nextPending))
+                    .addAction(NotificationCompat.Action(favIcon, if (_isStarred.value) "取消收藏" else "收藏", favPending))
+                builder.setStyle(
+                    MediaStyle()
+                        .setMediaSession(sessionCompat.sessionToken)
+                        .setShowActionsInCompactView(0, 1, 2)
+                )
             }
-            builder.addAction(NotificationCompat.Action(favIcon, if (_isStarred.value) "取消收藏" else "收藏", favPending))
 
             val notification = builder.build()
 
