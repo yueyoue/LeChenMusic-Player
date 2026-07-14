@@ -620,15 +620,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun loadSimilarSongs(songId: String) {
         viewModelScope.launch {
             repository.getSimilarSongs2(songId, 20).onSuccess { songs ->
-                // Update the playlist with similar songs for the SimilarView
-                val currentPlaylist = _playerManager.value?.playlist?.value ?: emptyList()
-                val currentIndex = _playerManager.value?.currentIndex?.value ?: 0
-                val currentSong = _playerManager.value?.currentSong?.value
+                val currentSong = playerManager.currentSong.value
                 // Keep current song and add similar songs
                 val newList = mutableListOf<Song>()
                 if (currentSong != null) newList.add(currentSong)
                 newList.addAll(songs.filter { it.id != currentSong?.id })
-                _playerManager.value?.setPlaylist(newList, 0)
+                // Play the first song with the new playlist
+                if (newList.isNotEmpty()) {
+                    playerManager.playSong(newList.first(), newList)
+                }
             }
         }
     }
