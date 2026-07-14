@@ -9,29 +9,28 @@ import android.os.Build
 import android.support.v4.media.session.MediaSessionCompat
 import androidx.core.app.NotificationCompat
 import androidx.media.app.NotificationCompat.MediaStyle
-import androidx.media3.session.MediaSession
-import androidx.media3.session.MediaSessionService
 import com.lechenmusic.MainActivity
 
 /**
  * Foreground service for persistent music playback.
+ * Lock screen controls are handled via MediaSessionCompat in MusicPlayerManager.
  */
-class MusicPlaybackService : MediaSessionService() {
+class MusicPlaybackService : android.app.Service() {
 
     companion object {
         const val CHANNEL_ID = "lechen_music_playback"
         const val NOTIFICATION_ID = 1001
-        var sharedMediaSession: MediaSession? = null
         var sharedSessionToken: MediaSessionCompat.Token? = null
     }
-
-    private var mediaSession: MediaSession? = null
 
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
-        mediaSession = sharedMediaSession
         startForeground(NOTIFICATION_ID, buildNotification())
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        return android.app.Service.START_STICKY
     }
 
     fun refreshNotification() {
@@ -41,8 +40,8 @@ class MusicPlaybackService : MediaSessionService() {
         } catch (_: Exception) {}
     }
 
-    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? {
-        return mediaSession ?: sharedMediaSession
+    override fun onBind(intent: Intent?): android.os.IBinder? {
+        return null
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
@@ -50,11 +49,6 @@ class MusicPlaybackService : MediaSessionService() {
     }
 
     override fun onDestroy() {
-        mediaSession?.run {
-            player.release()
-            release()
-        }
-        mediaSession = null
         super.onDestroy()
     }
 

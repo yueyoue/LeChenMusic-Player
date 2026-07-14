@@ -29,7 +29,6 @@ import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import okhttp3.OkHttpClient
-import androidx.media3.session.MediaSession
 import com.lechenmusic.MainActivity
 import com.lechenmusic.R
 import com.lechenmusic.data.model.Song
@@ -51,7 +50,6 @@ class MusicPlayerManager(private val context: Context) {
     private var player: ExoPlayer? = null
     private var repository: MusicRepository? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-    private var mediaSession: MediaSession? = null
     private var mediaSessionCompat: MediaSessionCompat? = null
 
     // Music disk cache
@@ -171,9 +169,6 @@ class MusicPlayerManager(private val context: Context) {
 
         createNotificationChannel()
 
-        // Media3 session for player integration
-        mediaSession = MediaSession.Builder(context, player!!).build()
-
         // MediaSessionCompat for notification lock screen controls
         mediaSessionCompat = MediaSessionCompat(context, "LeChenMusicSession").apply {
             isActive = true
@@ -188,7 +183,6 @@ class MusicPlayerManager(private val context: Context) {
             })
         }
 
-        MusicPlaybackService.sharedMediaSession = mediaSession
         MusicPlaybackService.sharedSessionToken = mediaSessionCompat?.sessionToken
 
         startForegroundService()
@@ -335,35 +329,42 @@ class MusicPlayerManager(private val context: Context) {
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val sessionCompat = mediaSessionCompat ?: return
 
+        val isAudiobook = _audiobookCoverUrl.value != null || song.id.startsWith("audiobook_")
+        val currentPositionMs = player?.currentPosition ?: _currentPosition.value
+        val currentDurationMs = (player?.duration?.takeIf { it > 0 } ?: song.duration * 1000L).coerceAtLeast(0)
+
         // Update MediaSessionCompat metadata (for lock screen display)
         val metadataBuilder = MediaMetadataCompat.Builder()
             .putString(MediaMetadataCompat.METADATA_KEY_TITLE, song.title)
             .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, song.artist)
             .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, song.album)
-            .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, song.duration * 1000L)
+            .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, currentDurationMs)
         sessionCompat.setMetadata(metadataBuilder.build())
 
-        // Update playback state with current position
-        val stateBuilder = PlaybackStateCompat.Builder()
-            .setActions(
-                PlaybackStateCompat.ACTION_PLAY or
+        // Build PlaybackStateCompat actions based on content type
+        var actions = PlaybackStateCompat.ACTION_PLAY or
                 PlaybackStateCompat.ACTION_PAUSE or
-                PlaybackStateCompat.ACTION_SKIP_TO_NEXT or
-                PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS or
-                PlaybackStateCompat.ACTION_PLAY_PAUSE or
-                PlaybackStateCompat.ACTION_FAST_FORWARD or
-                PlaybackStateCompat.ACTION_REWIND or
-                PlaybackStateCompat.ACTION_SET_RATING
-            )
-            .addCustomAction(
-                PlaybackStateCompat.CustomAction.Builder("REWIND_15", "后退15秒", R.drawable.ic_notif_rewind_15).build()
-            )
-            .addCustomAction(
-                PlaybackStateCompat.CustomAction.Builder("FORWARD_15", "前进15秒", R.drawable.ic_notif_forward_15).build()
-            )
+                PlaybackStateCompat.ACTION_PLAY_PAUSE
+
+        if (isAudiobook) {
+            // Audiobook: enable fast forward / rewind (±15s) on lock screen
+            actions = actions or
+                    PlaybackStateCompat.ACTION_SKIP_TO_NEXT or
+                    PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS or
+                    PlaybackStateCompat.ACTION_FAST_FORWARD or
+                    PlaybackStateCompat.ACTION_REWIND
+        } else {
+            // Music: prev/next only, no ±15s on lock screen
+            actions = actions or
+                    PlaybackStateCompat.ACTION_SKIP_TO_NEXT or
+                    PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
+        }
+
+        val stateBuilder = PlaybackStateCompat.Builder()
+            .setActions(actions)
             .setState(
                 if (_isPlaying.value) PlaybackStateCompat.STATE_PLAYING else PlaybackStateCompat.STATE_PAUSED,
-                player?.currentPosition ?: _currentPosition.value,
+                currentPositionMs,
                 1.0f
             )
         sessionCompat.setPlaybackState(stateBuilder.build())
@@ -406,7 +407,7 @@ class MusicPlayerManager(private val context: Context) {
                     .putString(MediaMetadataCompat.METADATA_KEY_TITLE, song.title)
                     .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, song.artist)
                     .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, song.album)
-                    .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, song.duration * 1000L)
+                    .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, currentDurationMs)
                     .putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, albumArt)
                     .build()
                 sessionCompat.setMetadata(metaWithArt)
@@ -414,7 +415,6 @@ class MusicPlayerManager(private val context: Context) {
 
             val playPauseIcon = if (_isPlaying.value) R.drawable.ic_notif_pause else R.drawable.ic_notif_play
             val favIcon = if (_isStarred.value) R.drawable.ic_notif_favorite else R.drawable.ic_notif_favorite_border
-            val isAudiobook = _audiobookCoverUrl.value != null || song.id.startsWith("audiobook_")
 
             val builder = NotificationCompat.Builder(context, CHANNEL_ID)
                 .setContentIntent(pendingIntent)
@@ -582,7 +582,8 @@ class MusicPlayerManager(private val context: Context) {
     /** Seek relative to current position (positive = forward, negative = backward) */
     fun seekRelative(deltaMs: Long) {
         player?.let {
-            val newPos = (it.currentPosition + deltaMs).coerceIn(0, it.duration)
+            val maxPos = if (it.duration > 0) it.duration else it.currentPosition + deltaMs + 1
+            val newPos = (it.currentPosition + deltaMs).coerceIn(0, maxPos)
             it.seekTo(newPos)
         }
     }
@@ -680,6 +681,52 @@ class MusicPlayerManager(private val context: Context) {
     }
 
     /**
+     * Lightweight lock screen position update.
+     * Called periodically to keep the lock screen progress bar and time in sync.
+     * Does NOT reload album art (use updateNotification() for full refresh).
+     */
+    fun updateLockScreenPosition() {
+        val sessionCompat = mediaSessionCompat ?: return
+        val song = _currentSong.value ?: return
+        val isAudiobook = _audiobookCoverUrl.value != null || song.id.startsWith("audiobook_")
+        val currentPositionMs = player?.currentPosition ?: _currentPosition.value
+        val currentDurationMs = (player?.duration?.takeIf { it > 0 } ?: song.duration * 1000L).coerceAtLeast(0)
+
+        // Update metadata duration if it changed significantly
+        val metadataBuilder = MediaMetadataCompat.Builder()
+            .putString(MediaMetadataCompat.METADATA_KEY_TITLE, song.title)
+            .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, song.artist)
+            .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, song.album)
+            .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, currentDurationMs)
+        sessionCompat.setMetadata(metadataBuilder.build())
+
+        // Update playback state with current position
+        var actions = PlaybackStateCompat.ACTION_PLAY or
+                PlaybackStateCompat.ACTION_PAUSE or
+                PlaybackStateCompat.ACTION_PLAY_PAUSE
+        if (isAudiobook) {
+            actions = actions or
+                    PlaybackStateCompat.ACTION_SKIP_TO_NEXT or
+                    PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS or
+                    PlaybackStateCompat.ACTION_FAST_FORWARD or
+                    PlaybackStateCompat.ACTION_REWIND
+        } else {
+            actions = actions or
+                    PlaybackStateCompat.ACTION_SKIP_TO_NEXT or
+                    PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
+        }
+
+        val stateBuilder = PlaybackStateCompat.Builder()
+            .setActions(actions)
+            .setState(
+                if (_isPlaying.value) PlaybackStateCompat.STATE_PLAYING else PlaybackStateCompat.STATE_PAUSED,
+                currentPositionMs,
+                1.0f
+            )
+        sessionCompat.setPlaybackState(stateBuilder.build())
+    }
+
+    /**
      * Get current position directly from ExoPlayer (most accurate).
      * Use this for lyrics sync and other time-critical displays.
      */
@@ -703,11 +750,7 @@ class MusicPlayerManager(private val context: Context) {
             it.release()
         }
         mediaSessionCompat = null
-        mediaSession?.run {
-            player.release()
-            release()
-        }
-        mediaSession = null
+        player?.release()
         player = null
         musicCache?.release()
         musicCache = null

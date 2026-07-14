@@ -277,9 +277,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         // Update progress periodically (faster interval for accurate lyrics sync)
         viewModelScope.launch {
             var audiobookProgressSaveCounter = 0
+            var lockScreenUpdateCounter = 0
             while (true) {
                 kotlinx.coroutines.delay(200)
                 playerManager.updateProgress()
+                // Update lock screen position every ~1 second
+                lockScreenUpdateCounter++
+                if (lockScreenUpdateCounter >= 5) {
+                    lockScreenUpdateCounter = 0
+                    playerManager.updateLockScreenPosition()
+                }
                 // Sync audiobook progress from ExoPlayer
                 if (_currentAudiobook.value != null) {
                     _audiobookPosition.value = playerManager.currentPosition.value
