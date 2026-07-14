@@ -180,6 +180,12 @@ class MusicPlayerManager(private val context: Context) {
                 override fun onFastForward() { seekRelative(15000L) }
                 override fun onRewind() { seekRelative(-15000L) }
                 override fun onStop() { forcePause() }
+                override fun onCustomAction(action: String, extras: android.os.Bundle?) {
+                    when (action) {
+                        "REWIND_15" -> seekRelative(-15000L)
+                        "FORWARD_15" -> seekRelative(15000L)
+                    }
+                }
             })
         }
 
@@ -367,6 +373,18 @@ class MusicPlayerManager(private val context: Context) {
                 currentPositionMs,
                 1.0f
             )
+
+        // Add custom 15s skip actions for audiobook lock screen
+        if (isAudiobook) {
+            stateBuilder
+                .addCustomAction(
+                    PlaybackStateCompat.CustomAction.Builder("REWIND_15", "后退15秒", R.drawable.ic_notif_rewind_15).build()
+                )
+                .addCustomAction(
+                    PlaybackStateCompat.CustomAction.Builder("FORWARD_15", "前进15秒", R.drawable.ic_notif_forward_15).build()
+                )
+        }
+
         sessionCompat.setPlaybackState(stateBuilder.build())
 
         val openIntent = Intent(context, MainActivity::class.java)
@@ -723,6 +741,18 @@ class MusicPlayerManager(private val context: Context) {
                 currentPositionMs,
                 1.0f
             )
+
+        // Add custom 15s skip actions for audiobook lock screen
+        if (isAudiobook) {
+            stateBuilder
+                .addCustomAction(
+                    PlaybackStateCompat.CustomAction.Builder("REWIND_15", "后退15秒", R.drawable.ic_notif_rewind_15).build()
+                )
+                .addCustomAction(
+                    PlaybackStateCompat.CustomAction.Builder("FORWARD_15", "前进15秒", R.drawable.ic_notif_forward_15).build()
+                )
+        }
+
         sessionCompat.setPlaybackState(stateBuilder.build())
     }
 
