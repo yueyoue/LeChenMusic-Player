@@ -615,6 +615,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         return Regex("\\[(\\d{1,2}):(\\d{2})(?:\\.(\\d{1,3}))?\\]").findAll(text).toList()
     }
 
+    /** Load similar songs based on current song */
+    fun loadSimilarSongs(songId: String) {
+        viewModelScope.launch {
+            repository.getSimilarSongs2(songId, 20).onSuccess { songs ->
+                val currentSong = playerManager.currentSong.value
+                val newList = mutableListOf<Song>()
+                if (currentSong != null) newList.add(currentSong)
+                newList.addAll(songs.filter { it.id != currentSong?.id })
+                if (newList.isNotEmpty()) {
+                    playerManager.playSong(newList.first(), newList)
+                }
+            }
+        }
+    }
+
     fun loadArtists() {
         viewModelScope.launch {
             repository.getArtists().onSuccess { _artists.value = it }
