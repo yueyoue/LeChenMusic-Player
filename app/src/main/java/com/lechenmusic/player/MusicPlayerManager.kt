@@ -378,10 +378,10 @@ class MusicPlayerManager(private val context: Context) {
         if (isAudiobook) {
             stateBuilder
                 .addCustomAction(
-                    PlaybackStateCompat.CustomAction.Builder("REWIND_15", "后退15秒", R.drawable.ic_skip_backward_15).build()
+                    PlaybackStateCompat.CustomAction.Builder("REWIND_15", "后退15秒", R.drawable.ic_lock_skip_backward_15).build()
                 )
                 .addCustomAction(
-                    PlaybackStateCompat.CustomAction.Builder("FORWARD_15", "前进15秒", R.drawable.ic_skip_forward_15).build()
+                    PlaybackStateCompat.CustomAction.Builder("FORWARD_15", "前进15秒", R.drawable.ic_lock_skip_forward_15).build()
                 )
         }
 
@@ -466,9 +466,9 @@ class MusicPlayerManager(private val context: Context) {
                 )
                 builder
                     .addAction(NotificationCompat.Action(R.drawable.ic_notif_prev, "上一章", prevPending))
-                    .addAction(NotificationCompat.Action(R.drawable.ic_skip_backward_15, "后退15秒", rewindPending))
+                    .addAction(NotificationCompat.Action(R.drawable.ic_lock_skip_backward_15, "后退15秒", rewindPending))
                     .addAction(NotificationCompat.Action(playPauseIcon, if (_isPlaying.value) "暂停" else "播放", playPausePending))
-                    .addAction(NotificationCompat.Action(R.drawable.ic_skip_forward_15, "前进15秒", forwardPending))
+                    .addAction(NotificationCompat.Action(R.drawable.ic_lock_skip_forward_15, "前进15秒", forwardPending))
                     .addAction(NotificationCompat.Action(R.drawable.ic_notif_next, "下一章", nextPending))
                 builder.setStyle(
                     MediaStyle()
@@ -746,10 +746,10 @@ class MusicPlayerManager(private val context: Context) {
         if (isAudiobook) {
             stateBuilder
                 .addCustomAction(
-                    PlaybackStateCompat.CustomAction.Builder("REWIND_15", "后退15秒", R.drawable.ic_skip_backward_15).build()
+                    PlaybackStateCompat.CustomAction.Builder("REWIND_15", "后退15秒", R.drawable.ic_lock_skip_backward_15).build()
                 )
                 .addCustomAction(
-                    PlaybackStateCompat.CustomAction.Builder("FORWARD_15", "前进15秒", R.drawable.ic_skip_forward_15).build()
+                    PlaybackStateCompat.CustomAction.Builder("FORWARD_15", "前进15秒", R.drawable.ic_lock_skip_forward_15).build()
                 )
         }
 
