@@ -168,6 +168,17 @@ interface SubsonicApi {
         @Query("f") format: String = "json"
     ): SubsonicResponse
 
+    // Get structured lyrics by song ID (with timestamps)
+    @GET("rest/getLyricsBySongId")
+    suspend fun getLyricsBySongId(
+        @Query("u") username: String,
+        @Query("p") password: String,
+        @Query("id") id: String,
+        @Query("v") version: String = "1.16.1",
+        @Query("c") client: String = "lechenmusic",
+        @Query("f") format: String = "json"
+    ): SubsonicResponse
+
     // Update playlist (add/remove songs)
     @GET("rest/updatePlaylist")
     suspend fun updatePlaylist(
