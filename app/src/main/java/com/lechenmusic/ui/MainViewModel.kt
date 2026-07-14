@@ -555,40 +555,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 return@launch
             }
 
-            // 2. 尝试获取结构化歌词（带时间戳）
-            repository.getLyricsBySongId(song.id).onSuccess { lines ->
-                if (!lines.isNullOrEmpty()) {
-                    val lrcText = buildString {
-                        for (line in lines) {
-                            val totalMs = line.start
-                            val min = totalMs / 60000
-                            val sec = (totalMs % 60000) / 1000
-                            val ms = (totalMs % 1000) / 10
-                            append("[%02d:%02d.%02d] %s\n".format(min, sec, ms, line.value))
-                        }
-                    }
-                    if (lrcText.isNotBlank()) {
-                        _currentLyrics.value = lrcText
-                        lyricsCache.put(song.id, lrcText)
-                        return@launch
-                    }
-                }
-            }
-
-            // 3. 从服务器获取普通歌词
+            // 2. 从服务器获取歌词
             var serverLyrics: String? = null
             repository.getLyrics(song.artist, song.title).onSuccess { lyrics ->
                 serverLyrics = lyrics
             }
 
-            // 4. 判断服务器歌词是否有 LRC 时间戳
+            // 3. 判断服务器歌词是否有 LRC 时间戳
             val hasLrcTimestamp = serverLyrics?.let { parseLrcTimestamps(it) }?.isNotEmpty() == true
 
             if (hasLrcTimestamp) {
+                // 服务器歌词带时间戳，直接用
                 _currentLyrics.value = serverLyrics
                 lyricsCache.put(song.id, serverLyrics!!)
             } else {
-                // 5. 尝试从 QQ 音乐获取 LRC
+                // 4. 服务器歌词是纯文本，尝试从 QQ 音乐获取 LRC
                 val qqLyrics = try {
                     QQLyricsApi.fetchLyrics(serverUrl.value, song.artist, song.title, song.duration)
                 } catch (e: Exception) {
@@ -596,9 +577,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
 
                 if (qqLyrics != null) {
+                    // QQ 音乐返回了 LRC 歌词
                     _currentLyrics.value = qqLyrics
                     lyricsCache.put(song.id, qqLyrics)
                 } else if (serverLyrics != null) {
+                    // QQ 音乐也没有，用服务器的纯文本
                     _currentLyrics.value = serverLyrics
                     lyricsCache.put(song.id, serverLyrics!!)
                 }
