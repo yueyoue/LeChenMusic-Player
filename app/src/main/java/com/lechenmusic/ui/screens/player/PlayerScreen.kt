@@ -14,8 +14,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -160,26 +158,30 @@ fun PlayerScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Content area with HorizontalPager for smooth swipe
-            val pagerState = rememberPagerState(pageCount = { 3 })
-            LaunchedEffect(pagerState.currentPage) {
-                currentView = PlayerView.values()[pagerState.currentPage]
-            }
-            // Sync tab click to pager
-            LaunchedEffect(currentView) {
-                val targetPage = currentView.ordinal
-                if (pagerState.currentPage != targetPage) {
-                    pagerState.animateScrollToPage(targetPage)
-                }
-            }
-
-            HorizontalPager(
-                state = pagerState,
+            // Content area with swipe
+            Box(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
-            ) { page ->
-                when (PlayerView.values()[page]) {
+                    .pointerInput(Unit) {
+                        detectHorizontalDragGestures { _, dragAmount ->
+                            if (dragAmount < -50) {
+                                currentView = when (currentView) {
+                                    PlayerView.COVER -> PlayerView.LYRICS
+                                    PlayerView.LYRICS -> PlayerView.SIMILAR
+                                    PlayerView.SIMILAR -> PlayerView.SIMILAR
+                                }
+                            } else if (dragAmount > 50) {
+                                currentView = when (currentView) {
+                                    PlayerView.SIMILAR -> PlayerView.LYRICS
+                                    PlayerView.LYRICS -> PlayerView.COVER
+                                    PlayerView.COVER -> PlayerView.COVER
+                                }
+                            }
+                        }
+                    }
+            ) {
+                when (currentView) {
                     PlayerView.COVER -> CoverView(song, serverUrl, username, password)
                     PlayerView.LYRICS -> LyricsView(song, currentLyrics, currentPosition, duration)
                     PlayerView.SIMILAR -> SimilarView(playlist, currentIndex, serverUrl, username, password) {
