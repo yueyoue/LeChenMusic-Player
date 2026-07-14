@@ -28,13 +28,11 @@ data class SubsonicBody(
     val unstar: Any? = null,
     val starResult: StarResult? = null,
     val lyrics: LyricsData? = null,
-    val lyricsList: LyricsListResponse? = null,
     val songCount: Int? = null,
     val albumCount: Int? = null,
     val artistCount: Int? = null,
     val indexes: IndexesWrapper? = null,
-    val internetRadioStations: InternetRadioStationsWrapper? = null,
-    val similarSongs2: SongsWrapper? = null
+    val internetRadioStations: InternetRadioStationsWrapper? = null
 )
 
 data class IndexesWrapper(
@@ -197,28 +195,6 @@ data class LyricsData(
     /** Get lyrics text, checking both 'value' and 'lyrics' fields */
     val text: String? get() = value?.takeIf { it.isNotBlank() } ?: lyrics?.takeIf { it.isNotBlank() }
 }
-
-// Structured lyrics with timestamps (from getLyricsBySongId)
-data class LyricsListResponse(
-    val lyricsList: StructuredLyricsList? = null
-)
-
-data class StructuredLyricsList(
-    val structuredLyric: List<StructuredLyric>? = null
-)
-
-data class StructuredLyric(
-    val lang: String? = null,
-    val synced: Boolean = false,
-    val displayArtist: String? = null,
-    val displayTitle: String? = null,
-    val line: List<LyricLineData>? = null
-)
-
-data class LyricLineData(
-    val start: Long = 0,  // milliseconds
-    val value: String = ""
-)
 
 data class InternetRadioStationsWrapper(
     val internetRadioStation: List<InternetRadioStation>? = null

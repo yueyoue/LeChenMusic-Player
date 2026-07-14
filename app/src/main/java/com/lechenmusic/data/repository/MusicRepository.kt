@@ -210,29 +210,6 @@ class MusicRepository {
         }
     }
 
-    /** Get structured lyrics with timestamps by song ID */
-    suspend fun getLyricsBySongId(songId: String): Result<List<com.lechenmusic.data.model.LyricLineData>?> {
-        return try {
-            val response = api!!.getLyricsBySongId(username, password, songId)
-            val syncedLyric = response.subsonicResponse.lyricsList?.structuredLyric
-                ?.firstOrNull { it.synced && !it.line.isNullOrEmpty() }
-            Result.success(syncedLyric?.line)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-
-    /** Get similar songs based on a song ID */
-    suspend fun getSimilarSongs2(songId: String, count: Int = 20): Result<List<Song>> {
-        return try {
-            val response = api!!.getSimilarSongs2(username, password, songId, count)
-            val songs = response.subsonicResponse.similarSongs2?.song ?: emptyList()
-            Result.success(songs)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-
     suspend fun getServerStats(): Result<ServerStats> {
         return try {
             // Get real counts from server
