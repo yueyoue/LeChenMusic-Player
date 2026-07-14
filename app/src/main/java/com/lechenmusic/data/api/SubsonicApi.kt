@@ -320,9 +320,11 @@ interface SubsonicApi {
 
     companion object {
         /** Build narrator avatar URL for loading with Coil/AsyncImage */
-        fun getNarratorAvatarUrl(serverUrl: String, narratorName: String): String {
+        fun getNarratorAvatarUrl(serverUrl: String, narratorName: String, token: String? = null): String {
             val base = serverUrl.trimEnd('/')
-            return "$base/api/audiobook/narrator/${java.net.URLEncoder.encode(narratorName, "UTF-8")}/avatar"
+            val safeName = java.net.URLEncoder.encode(narratorName, "UTF-8")
+            // Use public scrape image endpoint (no auth required)
+            return "$base/api/scrape/image/narrator/$safeName"
         }
     }
 
