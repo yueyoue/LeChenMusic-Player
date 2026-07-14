@@ -464,11 +464,19 @@ class MusicPlayerManager(private val context: Context) {
                     context, 6, forwardIntent,
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                 )
+                // Scale skip icons to match other notification button size (24dp)
+                val iconSize = (24 * context.resources.displayMetrics.density).toInt()
+                val skipBackIcon = Bitmap.createScaledBitmap(
+                    BitmapFactory.decodeResource(context.resources, R.drawable.ic_skip_backward_15),
+                    iconSize, iconSize, true)
+                val skipFwdIcon = Bitmap.createScaledBitmap(
+                    BitmapFactory.decodeResource(context.resources, R.drawable.ic_skip_forward_15),
+                    iconSize, iconSize, true)
                 builder
                     .addAction(NotificationCompat.Action(R.drawable.ic_notif_prev, "上一章", prevPending))
-                    .addAction(NotificationCompat.Action(R.drawable.ic_skip_backward_15, "后退15秒", rewindPending))
+                    .addAction(NotificationCompat.Action(skipBackIcon, "后退15秒", rewindPending))
                     .addAction(NotificationCompat.Action(playPauseIcon, if (_isPlaying.value) "暂停" else "播放", playPausePending))
-                    .addAction(NotificationCompat.Action(R.drawable.ic_skip_forward_15, "前进15秒", forwardPending))
+                    .addAction(NotificationCompat.Action(skipFwdIcon, "前进15秒", forwardPending))
                     .addAction(NotificationCompat.Action(R.drawable.ic_notif_next, "下一章", nextPending))
                 builder.setStyle(
                     MediaStyle()
