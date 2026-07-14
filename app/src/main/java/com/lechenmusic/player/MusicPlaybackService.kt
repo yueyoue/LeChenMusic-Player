@@ -65,11 +65,12 @@ class MusicPlaybackService : MediaSessionService() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        // Minimal notification - MusicPlayerManager.updateNotification() will replace it
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentIntent(pendingIntent)
             .setSmallIcon(android.R.drawable.ic_media_play)
             .setContentTitle("悦音")
-            .setContentText("正在播放音乐")
+            .setContentText("正在播放")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setCategory(NotificationCompat.CATEGORY_TRANSPORT)

@@ -835,18 +835,14 @@ private fun LyricsView(
         else emptyList()
     }
 
-    // Calculate active line index using derivedStateOf for efficient recomposition
-    val activeLineIndex by remember {
-        derivedStateOf {
-            if (lrcLines != null) {
-                findActiveLyricLine(lrcLines, currentPosition)
-            } else {
-                if (plainLines.isEmpty() || duration <= 0L) 0
-                else {
-                    val progress = currentPosition.toFloat() / duration.toFloat()
-                    (progress * plainLines.size).toInt().coerceIn(0, plainLines.lastIndex)
-                }
-            }
+    // Calculate active line index directly (not in derivedStateOf so Compose tracks changes)
+    val activeLineIndex = if (lrcLines != null) {
+        findActiveLyricLine(lrcLines, currentPosition)
+    } else {
+        if (plainLines.isEmpty() || duration <= 0L) 0
+        else {
+            val progress = currentPosition.toFloat() / duration.toFloat()
+            (progress * plainLines.size).toInt().coerceIn(0, plainLines.lastIndex)
         }
     }
 
