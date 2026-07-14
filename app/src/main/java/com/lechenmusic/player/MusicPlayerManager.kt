@@ -355,6 +355,12 @@ class MusicPlayerManager(private val context: Context) {
                 PlaybackStateCompat.ACTION_REWIND or
                 PlaybackStateCompat.ACTION_SET_RATING
             )
+            .addCustomAction(
+                PlaybackStateCompat.CustomAction.Builder("REWIND_15", "后退15秒", R.drawable.ic_notif_rewind_15).build()
+            )
+            .addCustomAction(
+                PlaybackStateCompat.CustomAction.Builder("FORWARD_15", "前进15秒", R.drawable.ic_notif_forward_15).build()
+            )
             .setState(
                 if (_isPlaying.value) PlaybackStateCompat.STATE_PLAYING else PlaybackStateCompat.STATE_PAUSED,
                 player?.currentPosition ?: _currentPosition.value,
