@@ -406,31 +406,7 @@ class MusicPlayerManager(private val context: Context) {
             val favIcon = if (_isStarred.value) R.drawable.ic_notif_favorite else R.drawable.ic_notif_favorite_border
             val isAudiobook = _audiobookCoverUrl.value != null || song.id.startsWith("audiobook_")
 
-            // Build actions list
-            val actions = mutableListOf<NotificationCompat.Action>()
-
-            if (isAudiobook) {
-                // Audiobook: rewind 15s, play/pause, forward 15s
-                val rewindIntent = Intent(ACTION_REWIND_15).setPackage(context.packageName)
-                val rewindPending = PendingIntent.getBroadcast(
-                    context, 5, rewindIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
-                val forwardIntent = Intent(ACTION_FORWARD_15).setPackage(context.packageName)
-                val forwardPending = PendingIntent.getBroadcast(
-                    context, 6, forwardIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
-                actions.add(R.drawable.ic_notif_rewind_15, "后退15秒", rewindPending)
-                actions.add(playPauseIcon, if (_isPlaying.value) "暂停" else "播放", playPausePending)
-                actions.add(R.drawable.ic_notif_forward_15, "前进15秒", forwardPending)
-            } else {
-                // Music: prev, play/pause, next
-                actions.add(R.drawable.ic_notif_prev, "上一曲", prevPending)
-                actions.add(playPauseIcon, if (_isPlaying.value) "暂停" else "播放", playPausePending)
-                actions.add(R.drawable.ic_notif_next, "下一曲", nextPending)
-            }
-
+            // Build notification actions
             val builder = NotificationCompat.Builder(context, CHANNEL_ID)
                 .setContentIntent(pendingIntent)
                 .setSmallIcon(android.R.drawable.ic_media_play)
@@ -449,11 +425,29 @@ class MusicPlayerManager(private val context: Context) {
                         .setShowActionsInCompactView(0, 1, 2)
                 )
 
-            for (action in actions) {
-                builder.addAction(action)
+            if (isAudiobook) {
+                // Audiobook: rewind 15s, play/pause, forward 15s
+                val rewindIntent = Intent(ACTION_REWIND_15).setPackage(context.packageName)
+                val rewindPending = PendingIntent.getBroadcast(
+                    context, 5, rewindIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+                val forwardIntent = Intent(ACTION_FORWARD_15).setPackage(context.packageName)
+                val forwardPending = PendingIntent.getBroadcast(
+                    context, 6, forwardIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+                builder.addAction(NotificationCompat.Action(R.drawable.ic_notif_rewind_15, "后退15秒", rewindPending))
+                builder.addAction(NotificationCompat.Action(playPauseIcon, if (_isPlaying.value) "暂停" else "播放", playPausePending))
+                builder.addAction(NotificationCompat.Action(R.drawable.ic_notif_forward_15, "前进15秒", forwardPending))
+            } else {
+                // Music: prev, play/pause, next
+                builder.addAction(NotificationCompat.Action(R.drawable.ic_notif_prev, "上一曲", prevPending))
+                builder.addAction(NotificationCompat.Action(playPauseIcon, if (_isPlaying.value) "暂停" else "播放", playPausePending))
+                builder.addAction(NotificationCompat.Action(R.drawable.ic_notif_next, "下一曲", nextPending))
             }
             // Add favorite as extra action
-            builder.addAction(favIcon, if (_isStarred.value) "取消收藏" else "收藏", favPending)
+            builder.addAction(NotificationCompat.Action(favIcon, if (_isStarred.value) "取消收藏" else "收藏", favPending))
 
             val notification = builder.build()
 
