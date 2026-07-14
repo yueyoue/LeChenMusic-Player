@@ -161,7 +161,7 @@ fun PlayerScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Content area with HorizontalPager for smooth swipe
-            val pagerState = rememberPagerState(initialPage = 0) { 3 }
+            val pagerState = rememberPagerState(pageCount = { 3 })
             LaunchedEffect(pagerState.currentPage) {
                 currentView = PlayerView.values()[pagerState.currentPage]
             }
