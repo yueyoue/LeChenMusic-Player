@@ -105,6 +105,8 @@ class MusicPlayerManager(private val context: Context) {
         const val ACTION_PREV = "com.lechenmusic.PREV"
         const val ACTION_NEXT = "com.lechenmusic.NEXT"
         const val ACTION_PLAY_PAUSE = "com.lechenmusic.PLAY_PAUSE"
+        const val ACTION_REWIND_15 = "com.lechenmusic.REWIND_15"
+        const val ACTION_FORWARD_15 = "com.lechenmusic.FORWARD_15"
         const val CHANNEL_ID = "lechen_music_playback"
         const val NOTIFICATION_ID = 1001
     }
@@ -200,6 +202,8 @@ class MusicPlayerManager(private val context: Context) {
                     ACTION_PREV -> skipPrevious()
                     ACTION_NEXT -> skipNext()
                     ACTION_PLAY_PAUSE -> togglePlayPause()
+                    ACTION_REWIND_15 -> seekRelative(-15000L)
+                    ACTION_FORWARD_15 -> seekRelative(15000L)
                 }
             }
         }
@@ -209,6 +213,8 @@ class MusicPlayerManager(private val context: Context) {
             addAction(ACTION_PREV)
             addAction(ACTION_NEXT)
             addAction(ACTION_PLAY_PAUSE)
+            addAction(ACTION_REWIND_15)
+            addAction(ACTION_FORWARD_15)
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             context.registerReceiver(alarmReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
@@ -398,8 +404,34 @@ class MusicPlayerManager(private val context: Context) {
 
             val playPauseIcon = if (_isPlaying.value) R.drawable.ic_notif_pause else R.drawable.ic_notif_play
             val favIcon = if (_isStarred.value) R.drawable.ic_notif_favorite else R.drawable.ic_notif_favorite_border
+            val isAudiobook = _audiobookCoverUrl.value != null || song.id.startsWith("audiobook_")
 
-            val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+            // Build actions list
+            val actions = mutableListOf<NotificationCompat.Action>()
+
+            if (isAudiobook) {
+                // Audiobook: rewind 15s, play/pause, forward 15s
+                val rewindIntent = Intent(ACTION_REWIND_15).setPackage(context.packageName)
+                val rewindPending = PendingIntent.getBroadcast(
+                    context, 5, rewindIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+                val forwardIntent = Intent(ACTION_FORWARD_15).setPackage(context.packageName)
+                val forwardPending = PendingIntent.getBroadcast(
+                    context, 6, forwardIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+                actions.add(R.drawable.ic_notif_rewind_15, "后退15秒", rewindPending)
+                actions.add(playPauseIcon, if (_isPlaying.value) "暂停" else "播放", playPausePending)
+                actions.add(R.drawable.ic_notif_forward_15, "前进15秒", forwardPending)
+            } else {
+                // Music: prev, play/pause, next
+                actions.add(R.drawable.ic_notif_prev, "上一曲", prevPending)
+                actions.add(playPauseIcon, if (_isPlaying.value) "暂停" else "播放", playPausePending)
+                actions.add(R.drawable.ic_notif_next, "下一曲", nextPending)
+            }
+
+            val builder = NotificationCompat.Builder(context, CHANNEL_ID)
                 .setContentIntent(pendingIntent)
                 .setSmallIcon(android.R.drawable.ic_media_play)
                 .setContentTitle(song.title)
@@ -416,11 +448,14 @@ class MusicPlayerManager(private val context: Context) {
                         .setMediaSession(sessionCompat.sessionToken)
                         .setShowActionsInCompactView(0, 1, 2)
                 )
-                .addAction(R.drawable.ic_notif_prev, "上一曲", prevPending)
-                .addAction(playPauseIcon, if (_isPlaying.value) "暂停" else "播放", playPausePending)
-                .addAction(R.drawable.ic_notif_next, "下一曲", nextPending)
-                .addAction(favIcon, if (_isStarred.value) "取消收藏" else "收藏", favPending)
-                .build()
+
+            for (action in actions) {
+                builder.addAction(action)
+            }
+            // Add favorite as extra action
+            builder.addAction(favIcon, if (_isStarred.value) "取消收藏" else "收藏", favPending)
+
+            val notification = builder.build()
 
             nm.notify(NOTIFICATION_ID, notification)
         }
@@ -526,6 +561,14 @@ class MusicPlayerManager(private val context: Context) {
         player?.let {
             val pos = (it.duration * progress).toLong().coerceIn(0, it.duration)
             it.seekTo(pos)
+        }
+    }
+
+    /** Seek relative to current position (positive = forward, negative = backward) */
+    fun seekRelative(deltaMs: Long) {
+        player?.let {
+            val newPos = (it.currentPosition + deltaMs).coerceIn(0, it.duration)
+            it.seekTo(newPos)
         }
     }
 

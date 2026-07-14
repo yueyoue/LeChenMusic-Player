@@ -452,7 +452,7 @@ fun HomeScreen(
                                 items(narrators.take(8)) { narr ->
                                     NarrItem(
                                         name = narr.name,
-                                        count = "${'$'}{narr.count}部",
+                                        count = "${narr.count}部作品",
                                         color = getNarrColor(narr.name),
                                         serverUrl = serverUrl,
                                         onClick = { onNavigateToNarrator(narr.name) }

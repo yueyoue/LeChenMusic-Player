@@ -555,13 +555,35 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 return@launch
             }
 
-            // 2. 从服务器获取歌词
+            // 2. 尝试从服务器获取结构化歌词（带时间戳）
+            val structuredResult = repository.getLyricsBySongId(song.id)
+            structuredResult.onSuccess { lines ->
+                if (!lines.isNullOrEmpty()) {
+                    // 转换为 LRC 格式
+                    val lrcText = buildString {
+                        for (line in lines) {
+                            val totalMs = line.start
+                            val min = totalMs / 60000
+                            val sec = (totalMs % 60000) / 1000
+                            val ms = (totalMs % 1000) / 10
+                            append("[%02d:%02d.%02d] %s\n".format(min, sec, ms, line.value))
+                        }
+                    }
+                    if (lrcText.isNotBlank()) {
+                        _currentLyrics.value = lrcText
+                        lyricsCache.put(song.id, lrcText)
+                        return@launch
+                    }
+                }
+            }
+
+            // 3. 从服务器获取普通歌词
             var serverLyrics: String? = null
             repository.getLyrics(song.artist, song.title).onSuccess { lyrics ->
                 serverLyrics = lyrics
             }
 
-            // 3. 判断服务器歌词是否有 LRC 时间戳
+            // 4. 判断服务器歌词是否有 LRC 时间戳
             val hasLrcTimestamp = serverLyrics?.let { parseLrcTimestamps(it) }?.isNotEmpty() == true
 
             if (hasLrcTimestamp) {
@@ -569,7 +591,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 _currentLyrics.value = serverLyrics
                 lyricsCache.put(song.id, serverLyrics!!)
             } else {
-                // 4. 服务器歌词是纯文本，尝试从 QQ 音乐获取 LRC
+                // 5. 服务器歌词是纯文本，尝试从 QQ 音乐获取 LRC
                 val qqLyrics = try {
                     QQLyricsApi.fetchLyrics(serverUrl.value, song.artist, song.title, song.duration)
                 } catch (e: Exception) {
@@ -592,6 +614,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     /** 快速检测歌词是否包含 LRC 时间戳 */
     private fun parseLrcTimestamps(text: String): List<MatchResult> {
         return Regex("\\[(\\d{1,2}):(\\d{2})(?:\\.(\\d{1,3}))?\\]").findAll(text).toList()
+    }
+
+    /** Load similar songs based on current song */
+    fun loadSimilarSongs(songId: String) {
+        viewModelScope.launch {
+            repository.getSimilarSongs2(songId, 20).onSuccess { songs ->
+                // Update the playlist with similar songs for the SimilarView
+                val currentPlaylist = _playerManager.value?.playlist?.value ?: emptyList()
+                val currentIndex = _playerManager.value?.currentIndex?.value ?: 0
+                val currentSong = _playerManager.value?.currentSong?.value
+                // Keep current song and add similar songs
+                val newList = mutableListOf<Song>()
+                if (currentSong != null) newList.add(currentSong)
+                newList.addAll(songs.filter { it.id != currentSong?.id })
+                _playerManager.value?.setPlaylist(newList, 0)
+            }
+        }
     }
 
     fun loadArtists() {
