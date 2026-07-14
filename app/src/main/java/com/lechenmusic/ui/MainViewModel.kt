@@ -555,21 +555,44 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 return@launch
             }
 
-            // 2. 从服务器获取歌词
+            // 2. 尝试获取结构化歌词（带时间戳）
+            try {
+                repository.getLyricsBySongId(song.id).onSuccess { lyricsList ->
+                    val syncedLyric = lyricsList?.structuredLyric
+                        ?.firstOrNull { it.synced && !it.line.isNullOrEmpty() }
+                    if (syncedLyric != null) {
+                        val lrcBuilder = StringBuilder()
+                        for (line in syncedLyric.line!!) {
+                            val totalMs = line.start
+                            val min = (totalMs / 60000).toInt()
+                            val sec = ((totalMs % 60000) / 1000).toInt()
+                            val ms = ((totalMs % 1000) / 10).toInt()
+                            lrcBuilder.append(String.format("[%02d:%02d.%02d] %s\n", min, sec, ms, line.value))
+                        }
+                        val lrcText = lrcBuilder.toString()
+                        if (lrcText.isNotBlank()) {
+                            _currentLyrics.value = lrcText
+                            lyricsCache.put(song.id, lrcText)
+                            return@launch
+                        }
+                    }
+                }
+            } catch (_: Exception) {}
+
+            // 3. 从服务器获取普通歌词
             var serverLyrics: String? = null
             repository.getLyrics(song.artist, song.title).onSuccess { lyrics ->
                 serverLyrics = lyrics
             }
 
-            // 3. 判断服务器歌词是否有 LRC 时间戳
+            // 4. 判断服务器歌词是否有 LRC 时间戳
             val hasLrcTimestamp = serverLyrics?.let { parseLrcTimestamps(it) }?.isNotEmpty() == true
 
             if (hasLrcTimestamp) {
-                // 服务器歌词带时间戳，直接用
                 _currentLyrics.value = serverLyrics
                 lyricsCache.put(song.id, serverLyrics!!)
             } else {
-                // 4. 服务器歌词是纯文本，尝试从 QQ 音乐获取 LRC
+                // 5. 尝试从 QQ 音乐获取 LRC
                 val qqLyrics = try {
                     QQLyricsApi.fetchLyrics(serverUrl.value, song.artist, song.title, song.duration)
                 } catch (e: Exception) {
@@ -577,11 +600,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
 
                 if (qqLyrics != null) {
-                    // QQ 音乐返回了 LRC 歌词
                     _currentLyrics.value = qqLyrics
                     lyricsCache.put(song.id, qqLyrics)
                 } else if (serverLyrics != null) {
-                    // QQ 音乐也没有，用服务器的纯文本
                     _currentLyrics.value = serverLyrics
                     lyricsCache.put(song.id, serverLyrics!!)
                 }

@@ -209,6 +209,16 @@ class MusicRepository {
         }
     }
 
+    /** Get structured lyrics with timestamps by song ID */
+    suspend fun getLyricsBySongId(songId: String): Result<com.lechenmusic.data.model.LyricsListResponse?> {
+        return try {
+            val response = api!!.getLyricsBySongId(username, password, songId)
+            Result.success(response.subsonicResponse.lyricsList)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun getServerStats(): Result<ServerStats> {
         return try {
             // Get real counts from server
