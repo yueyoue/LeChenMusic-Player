@@ -426,7 +426,30 @@ fun LeChenMusicApp(viewModel: MainViewModel) {
                         val audiobookCoverUrl by viewModel.playerManager.audiobookCoverUrl.collectAsState()
                         val playbackSpeed by viewModel.audiobookPlaybackSpeed.collectAsState()
                         val timerMinutes by viewModel.audiobookTimerMinutes.collectAsState()
-                        if (currentBook != null) {
+                        // 如果 currentBook 为 null 但有有声书封面，说明是从通知栏进入，尝试恢复状态
+                        if (currentBook == null && audiobookCoverUrl != null) {
+                            // 从歌曲ID中提取bookId，尝试加载
+                            val currentSong by viewModel.playerManager.currentSong.collectAsState()
+                            val bookId = currentSong?.id?.removePrefix("audiobook_")?.substringBefore("_")
+                            if (bookId != null) {
+                                LaunchedEffect(bookId) {
+                                    viewModel.loadAudiobookDetail(bookId)
+                                }
+                            }
+                            // 显示通用播放器作为临时回退
+                            PlayerScreen(
+                                playerManager = viewModel.playerManager,
+                                viewModel = viewModel,
+                                serverUrl = serverUrl,
+                                username = username,
+                                password = password,
+                                onBack = { navController.popBackStack() },
+                                onShowPlaylist = {},
+                                onShowMore = {},
+                                onNavigateToArtist = {},
+                                onNavigateToAlbum = {}
+                            )
+                        } else if (currentBook != null) {
                             AudiobookPlayerScreen(
                                 book = currentBook!!,
                                 chapters = chapters,
