@@ -260,6 +260,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     loadHomeData()
                     // Auto-sync all songs in background
                     loadAllSongs()
+                    // 恢复有声书播放状态（如果正在播放）
+                    restoreAudiobookState()
                 }
             }
         }
@@ -1036,7 +1038,39 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         playerManager.setPlaybackSpeed(speed)
     }
 
-    fun loadAudiobooks() {
+        /**
+     * 从当前播放歌曲恢复有声书状态
+     * 用于从通知栏/锁屏进入APP时恢复状态
+     */
+    private fun restoreAudiobookState() {
+        val song = playerManager.currentSong.value ?: return
+        if (!song.id.startsWith("audiobook_")) return
+        
+        // 从歌曲ID中提取bookId: audiobook_{bookId}_{chapterId}
+        val parts = song.id.removePrefix("audiobook_").split("_")
+        if (parts.size < 2) return
+        val bookId = parts[0]
+        
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val result = repository.getAudiobookDetail(bookId)
+                if (result.isSuccess) {
+                    val detail = result.getOrNull()
+                    if (detail != null) {
+                        _currentAudiobook.value = detail.book
+                        _currentAudiobookChapters.value = detail.chapters ?: emptyList()
+                        _currentChapterIndex.value = detail.chapters?.indexOfFirst { 
+                            it.id == detail.progress?.chapterId 
+                        }?.coerceAtLeast(0) ?: 0
+                    }
+                }
+            } catch (e: Exception) {
+                // 静默失败，不影响正常使用
+            }
+        }
+    }
+    
+fun loadAudiobooks() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 android.util.Log.d("LeChenMusic", "loadAudiobooks: Starting...")
