@@ -184,14 +184,16 @@ fun LeChenMusicApp(viewModel: MainViewModel) {
                             if (currentSong != null && currentRoute != Screen.Player.route && currentRoute != Screen.AudiobookPlayer.route) {
                                 val currentBook by viewModel.currentAudiobook.collectAsState()
                                 val audiobookCoverUrl by viewModel.playerManager.audiobookCoverUrl.collectAsState()
+                                // 判断是否在播放有声书
+                                val isAudiobookPlaying = currentBook != null || audiobookCoverUrl != null || (currentSong?.id?.startsWith("audiobook_") == true)
                                 MiniPlayer(
                                     playerManager = viewModel.playerManager,
                                     serverUrl = serverUrl,
                                     username = username,
                                     password = password,
-                                    audiobookCoverUrl = if (currentBook != null) audiobookCoverUrl else null,
+                                    audiobookCoverUrl = if (isAudiobookPlaying) audiobookCoverUrl else null,
                                     onClick = {
-                                        if (currentBook != null) {
+                                        if (isAudiobookPlaying) {
                                             navController.navigate(Screen.AudiobookPlayer.route)
                                         } else {
                                             navController.navigate(Screen.Player.route)
