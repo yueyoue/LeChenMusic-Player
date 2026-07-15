@@ -239,13 +239,13 @@ fun AudiobookPlayerScreen(
                     Image(
                         painter = painterResource(id = com.lechenmusic.R.drawable.ic_skip_backward_15),
                         contentDescription = "后退15秒",
-                        modifier = Modifier.size(32.dp)
+                        modifier = Modifier.size(30.dp)
                     )
                 }
 
                 // Previous chapter
                 IconButton(onClick = onPreviousChapter, modifier = Modifier.size(48.dp)) {
-                    Icon(Icons.Default.SkipPrevious, contentDescription = "上一章", modifier = Modifier.size(32.dp))
+                    Icon(Icons.Default.SkipPrevious, contentDescription = "上一章", modifier = Modifier.size(30.dp))
                 }
 
                 // Play/Pause
@@ -260,14 +260,14 @@ fun AudiobookPlayerScreen(
                             if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                             contentDescription = if (isPlaying) "暂停" else "播放",
                             tint = Color.White,
-                            modifier = Modifier.size(32.dp)
+                            modifier = Modifier.size(30.dp)
                         )
                     }
                 }
 
                 // Next chapter
                 IconButton(onClick = onNextChapter, modifier = Modifier.size(48.dp)) {
-                    Icon(Icons.Default.SkipNext, contentDescription = "下一章", modifier = Modifier.size(32.dp))
+                    Icon(Icons.Default.SkipNext, contentDescription = "下一章", modifier = Modifier.size(30.dp))
                 }
 
                 // Skip forward 15s
@@ -275,7 +275,7 @@ fun AudiobookPlayerScreen(
                     Image(
                         painter = painterResource(id = com.lechenmusic.R.drawable.ic_skip_forward_15),
                         contentDescription = "前进15秒",
-                        modifier = Modifier.size(32.dp)
+                        modifier = Modifier.size(30.dp)
                     )
                 }
             }
