@@ -232,17 +232,17 @@ fun SkipForward15Button(
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        // The repeat icon from music player
+        // The repeat icon from music player (same size as music player: 24dp)
         Icon(
             imageVector = Icons.Filled.Repeat,
             contentDescription = "前进15秒",
             tint = tint,
-            modifier = Modifier.size(size * 0.75f)
+            modifier = Modifier.size(24.dp)
         )
         // "15" text overlay in the center
         Text(
             text = "15",
-            fontSize = (size * 0.22f).value.sp,
+            fontSize = 9.sp,
             fontWeight = FontWeight.Bold,
             color = tint,
             textAlign = TextAlign.Center
@@ -267,19 +267,19 @@ fun SkipBackward15Button(
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        // The repeat icon, mirrored horizontally
+        // The repeat icon, mirrored horizontally (same size as music player: 24dp)
         Icon(
             imageVector = Icons.Filled.Repeat,
             contentDescription = "后退15秒",
             tint = tint,
             modifier = Modifier
-                .size(size * 0.75f)
+                .size(24.dp)
                 .graphicsLayer(scaleX = -1f)
         )
         // "15" text overlay in the center
         Text(
             text = "15",
-            fontSize = (size * 0.22f).value.sp,
+            fontSize = 9.sp,
             fontWeight = FontWeight.Bold,
             color = tint,
             textAlign = TextAlign.Center
