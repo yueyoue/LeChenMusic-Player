@@ -4,16 +4,22 @@
     android:viewportWidth="24"
     android:viewportHeight="24"
     android:tint="#FFFFFF">
-    <!-- Material Design Repeat icon -->
+    <!-- Repeat icon outer shape (smaller to leave room for "15") -->
+    <!-- Top arrow pointing right -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M7,7h10v3l4,-4 -4,-4v3H5v6h2V7zM17,17H7v-3l-4,4 4,4v-3h12v-6h-2v4z"/>
-    <!-- "1" digit -->
+        android:pathData="M5,6h8v2.5l3.5,-3 -3.5,-3v2.5H3v5h2z"/>
+    <!-- Bottom arrow pointing left -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M10.5,10L11.5,10L11.5,15L10,14.5L10,13.5L11.5,13.5L11.5,10Z"/>
-    <!-- "5" digit -->
+        android:pathData="M19,18H11v-2.5L7.5,19l3.5,3v-2.5h6v-5h-2z"/>
+    <!-- Bold "15" in center -->
+    <!-- "1" - thick vertical line -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M13,10L16,10L16,11L14,11L14,12L15.5,12L15,14.5L13,14.5L13.5,13.5L14.5,13.5L14.8,12L13,12L13,10Z"/>
+        android:pathData="M10,9.5L11.2,9L11.2,15.5L9.5,15L9.8,14L11.2,14.3L11.2,9.5Z"/>
+    <!-- "5" - bold digit -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M12.5,9.5L16,9.5L16,11L14,11L13.8,12.5L15.8,12L15.2,15.5L12.2,15.5L12.8,14L14.2,14.2L14.5,12.5L12.5,12.8Z"/>
 </vector>
