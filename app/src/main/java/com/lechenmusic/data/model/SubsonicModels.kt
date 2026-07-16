@@ -306,3 +306,29 @@ data class AudiobookDetail(
     val chapters: List<AudiobookChapter> = emptyList(),
     val progress: AudiobookProgress? = null
 )
+
+// ===== App Config / Slide Models =====
+
+data class SlideConfig(
+    val id: String = "",
+    val imageUrl: String = "",
+    val title: String = "",
+    val link: String = "",  // Format: "playlist:<id>", "album:<id>", or "audiobook:<id>"
+    val sort: Int = 0
+)
+
+data class AppConfigResponse(
+    val versionName: String = "",
+    val versionCode: Int = 0,
+    val apkFileName: String = "",
+    val apkFileSize: Long = 0,
+    val apkUploadTime: String = "",
+    val updateLog: String = "",
+    val forceUpdate: Boolean = false,
+    val splashImageUrl: String = "",
+    val splashDuration: Int = 3,
+    val slides: List<SlideConfig> = emptyList(),
+    val musicSlides: List<SlideConfig> = emptyList(),
+    val audiobookSlides: List<SlideConfig> = emptyList(),
+    val serverUrl: String = ""
+)

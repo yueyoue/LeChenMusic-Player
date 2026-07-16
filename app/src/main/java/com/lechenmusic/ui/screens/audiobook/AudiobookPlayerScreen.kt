@@ -1,6 +1,5 @@
 package com.lechenmusic.ui.screens.audiobook
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -31,11 +30,12 @@ import androidx.compose.foundation.text.KeyboardOptions
 
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.res.painterResource
 import coil.compose.AsyncImage
 import com.lechenmusic.data.model.Audiobook
 import com.lechenmusic.data.model.AudiobookChapter
 import com.lechenmusic.ui.components.CoverImage
+import com.lechenmusic.ui.components.SkipBackward15Button
+import com.lechenmusic.ui.components.SkipForward15Button
 import com.lechenmusic.ui.screens.player.PlayerProgressBar
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -235,13 +235,11 @@ fun AudiobookPlayerScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Skip backward 15s
-                IconButton(onClick = onSkipBackward15s, modifier = Modifier.size(48.dp)) {
-                    Image(
-                        painter = painterResource(id = com.lechenmusic.R.drawable.ic_skip_backward_15),
-                        contentDescription = "后退15秒",
-                        modifier = Modifier.size(30.dp)
-                    )
-                }
+                SkipBackward15Button(
+                    onClick = onSkipBackward15s,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    size = 48.dp
+                )
 
                 // Previous chapter
                 IconButton(onClick = onPreviousChapter, modifier = Modifier.size(48.dp)) {
@@ -271,13 +269,11 @@ fun AudiobookPlayerScreen(
                 }
 
                 // Skip forward 15s
-                IconButton(onClick = onSkipForward15s, modifier = Modifier.size(48.dp)) {
-                    Image(
-                        painter = painterResource(id = com.lechenmusic.R.drawable.ic_skip_forward_15),
-                        contentDescription = "前进15秒",
-                        modifier = Modifier.size(30.dp)
-                    )
-                }
+                SkipForward15Button(
+                    onClick = onSkipForward15s,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    size = 48.dp
+                )
             }
 
             // Bottom bar: Timer | Speed | Queue

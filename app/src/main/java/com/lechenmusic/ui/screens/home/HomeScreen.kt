@@ -75,6 +75,8 @@ fun HomeScreen(
     val serverUrl by viewModel.serverUrl.collectAsState()
     val username by viewModel.username.collectAsState()
     val password by viewModel.password.collectAsState()
+    val musicSlides by viewModel.musicSlides.collectAsState()
+    val audiobookSlides by viewModel.audiobookSlides.collectAsState()
 
     // Pull-to-refresh state
 
@@ -152,78 +154,25 @@ fun HomeScreen(
 
                 // ===== MUSIC MODE =====
                 if (homeMode == "music") {
-                    // Hero
+                    // Music homepage slides carousel
                     item {
-                        Surface(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 8.dp)
-                                .height(170.dp),
-                            shape = RoundedCornerShape(18.dp),
-                            color = Color.Transparent
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(
-                                        Brush.linearGradient(
-                                            listOf(
-                                                Color(0xFF6C5CE7),
-                                                Color(0xFFA78BFA),
-                                                Color(0xFFD4BBFF)
-                                            )
-                                        )
-                                    )
-                                    .padding(20.dp)
-                            ) {
-                                Column {
-                                    Surface(
-                                        shape = RoundedCornerShape(10.dp),
-                                        color = Color.White.copy(alpha = 0.15f)
-                                    ) {
-                                        Text(
-                                            "每日推荐",
-                                            modifier = Modifier.padding(
-                                                horizontal = 10.dp,
-                                                vertical = 3.dp
-                                            ),
-                                            fontSize = 10.sp,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = Color.White
-                                        )
+                        MusicSlidesCarousel(
+                            slides = musicSlides,
+                            serverUrl = serverUrl,
+                            onSlideClick = { link ->
+                                // Parse link format: "playlist:<id>" or "album:<id>"
+                                when {
+                                    link.startsWith("playlist:") -> {
+                                        val id = link.removePrefix("playlist:")
+                                        onPlaylistClick(id)
                                     }
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Text(
-                                        "今日精选",
-                                        fontSize = 22.sp,
-                                        fontWeight = FontWeight.ExtraBold,
-                                        color = Color.White
-                                    )
-                                    Text(
-                                        "为你推荐",
-                                        fontSize = 22.sp,
-                                        fontWeight = FontWeight.ExtraBold,
-                                        color = Color.White
-                                    )
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        "根据你的口味生成",
-                                        fontSize = 12.sp,
-                                        color = Color.White.copy(alpha = 0.8f)
-                                    )
-                                }
-                                Box(
-                                    modifier = Modifier
-                                        .align(Alignment.CenterEnd)
-                                        .size(100.dp)
-                                        .clip(RoundedCornerShape(16.dp))
-                                        .background(Color.White.copy(alpha = 0.1f)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text("\uD83C\uDFB5", fontSize = 42.sp)
+                                    link.startsWith("album:") -> {
+                                        val id = link.removePrefix("album:")
+                                        onAlbumClick(id)
+                                    }
                                 }
                             }
-                        }
+                        )
                     }
                     // Quick access - Task 3: align with hero boundaries
                     item {
@@ -375,13 +324,23 @@ fun HomeScreen(
 
                 // ===== AUDIOBOOK MODE =====
                 if (homeMode == "audiobook") {
-                    // Task 1: Carousel slider (5 slides)
+                    // Audiobook homepage slides carousel (server-configured)
                     item {
-                        AudiobookCarousel(
+                        AudiobookSlidesCarousel(
+                            slides = audiobookSlides,
                             audiobooks = audiobooks,
                             serverUrl = serverUrl,
                             username = username,
                             password = password,
+                            onSlideClick = { link ->
+                                // Parse link format: "audiobook:<id>"
+                                when {
+                                    link.startsWith("audiobook:") -> {
+                                        val id = link.removePrefix("audiobook:")
+                                        onNavigateToAudiobookDetail(id)
+                                    }
+                                }
+                            },
                             onAudiobookClick = onNavigateToAudiobookDetail
                         )
                     }
@@ -623,7 +582,301 @@ fun HomeScreen(
     }
 }
 
-// ==================== Task 1: Audiobook Carousel ====================
+// ==================== Music Slides Carousel ====================
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun MusicSlidesCarousel(
+    slides: List<com.lechenmusic.data.model.SlideConfig>,
+    serverUrl: String,
+    onSlideClick: (String) -> Unit
+) {
+    if (slides.isEmpty()) {
+        // Fallback: show the original static hero
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .height(170.dp),
+            shape = RoundedCornerShape(18.dp),
+            color = Color.Transparent
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.linearGradient(
+                            listOf(Color(0xFF6C5CE7), Color(0xFFA78BFA), Color(0xFFD4BBFF))
+                        )
+                    )
+                    .padding(20.dp)
+            ) {
+                Column {
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = Color.White.copy(alpha = 0.15f)
+                    ) {
+                        Text(
+                            "每日推荐",
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color.White
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("今日精选", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
+                    Text("为你推荐", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text("根据你的口味生成", fontSize = 12.sp, color = Color.White.copy(alpha = 0.8f))
+                }
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .size(100.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color.White.copy(alpha = 0.1f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("\uD83C\uDFB5", fontSize = 42.sp)
+                }
+            }
+        }
+        return
+    }
+
+    val pagerState = rememberPagerState(pageCount = { slides.size })
+    val coroutineScope = rememberCoroutineScope()
+
+    // Auto-scroll
+    LaunchedEffect(pagerState.currentPage) {
+        delay(4000)
+        val nextPage = (pagerState.currentPage + 1) % slides.size
+        coroutineScope.launch {
+            pagerState.animateScrollToPage(nextPage)
+        }
+    }
+
+    Column {
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .height(170.dp)
+        ) { page ->
+            val slide = slides[page]
+            val gradients = listOf(
+                listOf(Color(0xFF6C5CE7), Color(0xFFA78BFA), Color(0xFFD4BBFF)),
+                listOf(Color(0xFFE94560), Color(0xFFFF6B81), Color(0xFFFF8787)),
+                listOf(Color(0xFF00B894), Color(0xFF55EFC4), Color(0xFF81ECEC)),
+                listOf(Color(0xFFF39C12), Color(0xFFFDCB6E), Color(0xFFFFF3CD)),
+                listOf(Color(0xFF3498DB), Color(0xFF74B9FF), Color(0xFFA8D8EA))
+            )
+            val gradient = gradients[page % gradients.size]
+
+            Surface(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clickable {
+                        if (slide.link.isNotEmpty()) onSlideClick(slide.link)
+                    },
+                shape = RoundedCornerShape(18.dp),
+                color = Color.Transparent
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Brush.linearGradient(gradient))
+                ) {
+                    // Background image if available
+                    if (slide.imageUrl.isNotEmpty()) {
+                        val normalizedUrl = serverUrl.trimEnd('/')
+                        val fullImageUrl = if (slide.imageUrl.startsWith("http")) slide.imageUrl
+                            else "$normalizedUrl${slide.imageUrl}"
+                        AsyncImage(
+                            model = fullImageUrl,
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop,
+                            alpha = 0.3f
+                        )
+                    }
+                    // Text overlay
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(20.dp)
+                    ) {
+                        if (slide.title.isNotEmpty()) {
+                            Text(
+                                slide.title,
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = Color.White,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // Page indicators
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 4.dp),
+            horizontalArrangement = Arrangement.Center
+        ) {
+            repeat(slides.size) { index ->
+                val color = if (pagerState.currentPage == index)
+                    MaterialTheme.colorScheme.primary
+                else
+                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                Box(
+                    modifier = Modifier
+                        .padding(horizontal = 3.dp)
+                        .size(
+                            width = if (pagerState.currentPage == index) 16.dp else 6.dp,
+                            height = 6.dp
+                        )
+                        .clip(RoundedCornerShape(3.dp))
+                        .background(color)
+                )
+            }
+        }
+    }
+}
+
+// ==================== Audiobook Slides Carousel ====================
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun AudiobookSlidesCarousel(
+    slides: List<com.lechenmusic.data.model.SlideConfig>,
+    audiobooks: List<com.lechenmusic.data.model.Audiobook>,
+    serverUrl: String,
+    username: String,
+    password: String,
+    onSlideClick: (String) -> Unit,
+    onAudiobookClick: (String) -> Unit
+) {
+    // If server has configured slides, use them; otherwise fallback to audiobook list
+    if (slides.isNotEmpty()) {
+        val pagerState = rememberPagerState(pageCount = { slides.size })
+        val coroutineScope = rememberCoroutineScope()
+
+        LaunchedEffect(pagerState.currentPage) {
+            delay(4000)
+            val nextPage = (pagerState.currentPage + 1) % slides.size
+            coroutineScope.launch {
+                pagerState.animateScrollToPage(nextPage)
+            }
+        }
+
+        Column {
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .height(170.dp)
+            ) { page ->
+                val slide = slides[page]
+                val gradients = listOf(
+                    listOf(Color(0xFFE94560), Color(0xFFFF6B81), Color(0xFFFF8787)),
+                    listOf(Color(0xFF6C5CE7), Color(0xFFA78BFA), Color(0xFFD4BBFF)),
+                    listOf(Color(0xFF00B894), Color(0xFF55EFC4), Color(0xFF81ECEC)),
+                    listOf(Color(0xFFF39C12), Color(0xFFFDCB6E), Color(0xFFFFF3CD)),
+                    listOf(Color(0xFF3498DB), Color(0xFF74B9FF), Color(0xFFA8D8EA))
+                )
+                val gradient = gradients[page % gradients.size]
+
+                Surface(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clickable {
+                            if (slide.link.isNotEmpty()) onSlideClick(slide.link)
+                        },
+                    shape = RoundedCornerShape(18.dp),
+                    color = Color.Transparent
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Brush.linearGradient(gradient))
+                    ) {
+                        if (slide.imageUrl.isNotEmpty()) {
+                            val normalizedUrl = serverUrl.trimEnd('/')
+                            val fullImageUrl = if (slide.imageUrl.startsWith("http")) slide.imageUrl
+                                else "$normalizedUrl${slide.imageUrl}"
+                            AsyncImage(
+                                model = fullImageUrl,
+                                contentDescription = null,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop,
+                                alpha = 0.3f
+                            )
+                        }
+                        Column(
+                            modifier = Modifier
+                                .align(Alignment.BottomStart)
+                                .padding(20.dp)
+                        ) {
+                            if (slide.title.isNotEmpty()) {
+                                Text(
+                                    slide.title,
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = Color.White,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp),
+                horizontalArrangement = Arrangement.Center
+            ) {
+                repeat(slides.size) { index ->
+                    val color = if (pagerState.currentPage == index)
+                        MaterialTheme.colorScheme.primary
+                    else
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                    Box(
+                        modifier = Modifier
+                            .padding(horizontal = 3.dp)
+                            .size(
+                                width = if (pagerState.currentPage == index) 16.dp else 6.dp,
+                                height = 6.dp
+                            )
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(color)
+                    )
+                }
+            }
+        }
+    } else {
+        // Fallback: use the original audiobook carousel (picks from audiobook list)
+        AudiobookCarousel(
+            audiobooks = audiobooks,
+            serverUrl = serverUrl,
+            username = username,
+            password = password,
+            onAudiobookClick = onAudiobookClick
+        )
+    }
+}
+
+// ==================== Task 1: Audiobook Carousel (Fallback) ====================
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable

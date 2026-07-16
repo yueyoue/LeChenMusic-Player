@@ -457,6 +457,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             loadStarredAudiobooks()
             loadAudiobooks()
             loadNarrators()
+            loadSlides()
 
             // Load recent played songs from stored IDs
             loadRecentPlayedSongs()
@@ -981,6 +982,55 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 repository.getPlaylists().onSuccess { _playlists.value = it }
             }.onFailure {
                 _toastMessage.value = "修改失败: ${it.message}"
+            }
+        }
+    }
+
+    // ===== Slide State =====
+    private val _musicSlides = MutableStateFlow<List<com.lechenmusic.data.model.SlideConfig>>(emptyList())
+    val musicSlides: StateFlow<List<com.lechenmusic.data.model.SlideConfig>> = _musicSlides.asStateFlow()
+
+    private val _audiobookSlides = MutableStateFlow<List<com.lechenmusic.data.model.SlideConfig>>(emptyList())
+    val audiobookSlides: StateFlow<List<com.lechenmusic.data.model.SlideConfig>> = _audiobookSlides.asStateFlow()
+
+    fun loadSlides() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val token = com.lechenmusic.data.api.NavidromeAuth.token ?: return@launch
+                val authHeader = "Bearer $token"
+                val api = com.lechenmusic.data.api.ApiClient.getAudiobookApi(serverUrl.value)
+                val response = api.getAppConfig(authHeader)
+                if (response.isSuccessful) {
+                    val json = response.body()?.asJsonObject
+                    val data = json?.getAsJsonObject("data")
+                    if (data != null) {
+                        val gson = com.google.gson.Gson()
+                        // Parse music slides
+                        val musicSlidesArr = data.getAsJsonArray("musicSlides")
+                        if (musicSlidesArr != null) {
+                            _musicSlides.value = musicSlidesArr.map { el ->
+                                gson.fromJson(el, com.lechenmusic.data.model.SlideConfig::class.java)
+                            }
+                        } else {
+                            // Fallback to legacy slides
+                            val legacySlides = data.getAsJsonArray("slides")
+                            if (legacySlides != null) {
+                                _musicSlides.value = legacySlides.map { el ->
+                                    gson.fromJson(el, com.lechenmusic.data.model.SlideConfig::class.java)
+                                }
+                            }
+                        }
+                        // Parse audiobook slides
+                        val audiobookSlidesArr = data.getAsJsonArray("audiobookSlides")
+                        if (audiobookSlidesArr != null) {
+                            _audiobookSlides.value = audiobookSlidesArr.map { el ->
+                                gson.fromJson(el, com.lechenmusic.data.model.SlideConfig::class.java)
+                            }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                android.util.Log.w("LeChenMusic", "loadSlides failed: ${e.message}")
             }
         }
     }

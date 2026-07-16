@@ -12,10 +12,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -197,6 +206,163 @@ private fun getQualityColor(song: Song): Color {
         suffix == "FLAC" || suffix == "DSD" || suffix == "WAV" || suffix == "AIFF" -> Color(0xFFFF6B81) // Red for lossless
         song.bitRate >= 320 -> Color(0xFF5352ED) // Purple for high bitrate
         else -> Color(0xFF2ED573) // Green for normal
+    }
+}
+
+// ==================== Skip 15s Buttons ====================
+// Custom buttons that mimic the music player's repeat/loop icon with "15" text inside.
+// Forward: clockwise arrow | Backward: counter-clockwise arrow (mirrored)
+
+/**
+ * A skip-forward-15-seconds button styled like the repeat icon with "15" inside.
+ * The arrow rotates clockwise.
+ */
+@Composable
+fun SkipForward15Button(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    tint: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    size: androidx.compose.ui.unit.Dp = 48.dp
+) {
+    Box(
+        modifier = modifier
+            .size(size)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        androidx.compose.foundation.Canvas(
+            modifier = Modifier.size(size * 0.85f)
+        ) {
+            val canvasSize = this.size.width
+            val strokeWidth = canvasSize * 0.1f
+            val arcRadius = canvasSize * 0.38f
+            val center = Offset(canvasSize / 2f, canvasSize / 2f)
+
+            // Draw circular arc (about 300 degrees, clockwise)
+            val arcTopLeft = Offset(center.x - arcRadius, center.y - arcRadius)
+            val arcSize = Size(arcRadius * 2, arcRadius * 2)
+
+            drawArc(
+                color = tint,
+                startAngle = -60f,
+                sweepAngle = 300f,
+                useCenter = false,
+                topLeft = arcTopLeft,
+                size = arcSize,
+                style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+            )
+
+            // Draw arrowhead at the end of the arc (at angle -60 + 300 = 240 degrees)
+            val arrowAngle = Math.toRadians(240.0)
+            val arrowTipX = center.x + arcRadius * kotlin.math.cos(arrowAngle).toFloat()
+            val arrowTipY = center.y + arcRadius * kotlin.math.sin(arrowAngle).toFloat()
+
+            val arrowSize = canvasSize * 0.14f
+            // Arrow tip pointing in the direction of the arc (perpendicular to radius at 240 degrees)
+            val tangentAngle = arrowAngle + Math.PI / 2 // perpendicular to radius
+            val arrowLeft = Offset(
+                arrowTipX - arrowSize * kotlin.math.cos(tangentAngle - 0.5).toFloat(),
+                arrowTipY - arrowSize * kotlin.math.sin(tangentAngle - 0.5).toFloat()
+            )
+            val arrowRight = Offset(
+                arrowTipX - arrowSize * kotlin.math.cos(tangentAngle + 0.5).toFloat(),
+                arrowTipY - arrowSize * kotlin.math.sin(tangentAngle + 0.5).toFloat()
+            )
+
+            val arrowPath = Path().apply {
+                moveTo(arrowTipX, arrowTipY)
+                lineTo(arrowLeft.x, arrowLeft.y)
+                lineTo(arrowRight.x, arrowRight.y)
+                close()
+            }
+            drawPath(arrowPath, color = tint)
+        }
+
+        // Draw "15" text in the center
+        Text(
+            text = "15",
+            fontSize = (size * 0.26f).value.sp,
+            fontWeight = FontWeight.Bold,
+            color = tint,
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+/**
+ * A skip-backward-15-seconds button styled like the mirrored repeat icon with "15" inside.
+ * The arrow rotates counter-clockwise (horizontal mirror of forward).
+ */
+@Composable
+fun SkipBackward15Button(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    tint: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    size: androidx.compose.ui.unit.Dp = 48.dp
+) {
+    Box(
+        modifier = modifier
+            .size(size)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        androidx.compose.foundation.Canvas(
+            modifier = Modifier.size(size * 0.85f)
+        ) {
+            val canvasSize = this.size.width
+            val strokeWidth = canvasSize * 0.1f
+            val arcRadius = canvasSize * 0.38f
+            val center = Offset(canvasSize / 2f, canvasSize / 2f)
+
+            // Draw circular arc (about 300 degrees, counter-clockwise = mirrored)
+            val arcTopLeft = Offset(center.x - arcRadius, center.y - arcRadius)
+            val arcSize = Size(arcRadius * 2, arcRadius * 2)
+
+            drawArc(
+                color = tint,
+                startAngle = 240f,
+                sweepAngle = -300f,
+                useCenter = false,
+                topLeft = arcTopLeft,
+                size = arcSize,
+                style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+            )
+
+            // Draw arrowhead at the end of the arc (at angle 240 - 300 = -60 degrees)
+            val arrowAngle = Math.toRadians(-60.0)
+            val arrowTipX = center.x + arcRadius * kotlin.math.cos(arrowAngle).toFloat()
+            val arrowTipY = center.y + arcRadius * kotlin.math.sin(arrowAngle).toFloat()
+
+            val arrowSize = canvasSize * 0.14f
+            // Arrow tip pointing in the direction of the arc (perpendicular to radius at -60 degrees)
+            // For counter-clockwise, the tangent is flipped
+            val tangentAngle = arrowAngle - Math.PI / 2
+            val arrowLeft = Offset(
+                arrowTipX - arrowSize * kotlin.math.cos(tangentAngle - 0.5).toFloat(),
+                arrowTipY - arrowSize * kotlin.math.sin(tangentAngle - 0.5).toFloat()
+            )
+            val arrowRight = Offset(
+                arrowTipX - arrowSize * kotlin.math.cos(tangentAngle + 0.5).toFloat(),
+                arrowTipY - arrowSize * kotlin.math.sin(tangentAngle + 0.5).toFloat()
+            )
+
+            val arrowPath = Path().apply {
+                moveTo(arrowTipX, arrowTipY)
+                lineTo(arrowLeft.x, arrowLeft.y)
+                lineTo(arrowRight.x, arrowRight.y)
+                close()
+            }
+            drawPath(arrowPath, color = tint)
+        }
+
+        // Draw "15" text in the center
+        Text(
+            text = "15",
+            fontSize = (size * 0.26f).value.sp,
+            fontWeight = FontWeight.Bold,
+            color = tint,
+            textAlign = TextAlign.Center
+        )
     }
 }
 
