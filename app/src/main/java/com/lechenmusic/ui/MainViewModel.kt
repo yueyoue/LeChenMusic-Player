@@ -276,6 +276,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
 
+        // Register callback for audiobook auto-play next chapter
+        playerManager.onPlaybackCompleted = {
+            // Only auto-advance for audiobook playback
+            if (_currentAudiobook.value != null) {
+                android.util.Log.d("LeChenMusic", "Audiobook chapter ended, auto-playing next chapter")
+                audiobookNextChapter()
+            }
+        }
+
         // Update progress periodically (faster interval for accurate lyrics sync)
         viewModelScope.launch {
             var audiobookProgressSaveCounter = 0

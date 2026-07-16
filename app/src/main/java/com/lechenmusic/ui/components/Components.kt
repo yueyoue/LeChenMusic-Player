@@ -159,7 +159,7 @@ fun SongItem(
                     ) {
                         Text(
                             text = qualityText,
-                            fontSize = 9.sp,
+                            fontSize = 8.sp,
                             fontWeight = FontWeight.Bold,
                             color = getQualityColor(song),
                             modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
@@ -242,7 +242,7 @@ fun SkipForward15Button(
         // "15" text overlay in the center
         Text(
             text = "15",
-            fontSize = 9.sp,
+            fontSize = 8.sp,
             fontWeight = FontWeight.Bold,
             color = tint,
             textAlign = TextAlign.Center
@@ -279,7 +279,7 @@ fun SkipBackward15Button(
         // "15" text overlay in the center
         Text(
             text = "15",
-            fontSize = 9.sp,
+            fontSize = 8.sp,
             fontWeight = FontWeight.Bold,
             color = tint,
             textAlign = TextAlign.Center

@@ -97,6 +97,9 @@ class MusicPlayerManager(private val context: Context) {
 
     var onSongAutoAdvanced: ((Song) -> Unit)? = null
 
+    // Called when current media item playback completes (STATE_ENDED)
+    var onPlaybackCompleted: (() -> Unit)? = null
+
     companion object {
         const val ACTION_STOP_PLAYBACK = "com.lechenmusic.STOP_PLAYBACK"
         const val ACTION_TOGGLE_FAVORITE = "com.lechenmusic.TOGGLE_FAVORITE"
@@ -147,6 +150,11 @@ class MusicPlayerManager(private val context: Context) {
                         }
                         if (playbackState == Player.STATE_READY && _isPlaying.value) {
                             updateNotification()
+                        }
+                        // When playback ends, notify for auto-play next chapter
+                        if (playbackState == Player.STATE_ENDED) {
+                            android.util.Log.d("LeChenMusic", "Playback STATE_ENDED, calling onPlaybackCompleted")
+                            onPlaybackCompleted?.invoke()
                         }
                     }
                     override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
