@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.layout.ContentScale
@@ -210,12 +211,12 @@ private fun getQualityColor(song: Song): Color {
 }
 
 // ==================== Skip 15s Buttons ====================
-// Custom buttons that mimic the music player's repeat/loop icon with "15" text inside.
-// Forward: loop arrow | Backward: mirrored loop arrow
+// Uses the music player's Repeat icon with "15" text overlay.
+// Forward: Repeat icon + 15 | Backward: mirrored Repeat icon + 15
 
 /**
- * A skip-forward-15-seconds button styled like the repeat/loop icon with "15" inside.
- * The icon is two curved arrows forming a loop (like Material Icons Repeat).
+ * A skip-forward-15-seconds button: Repeat icon + "15" text inside.
+ * Exactly the same icon as the music player's repeat/loop button.
  */
 @Composable
 fun SkipForward15Button(
@@ -230,69 +231,17 @@ fun SkipForward15Button(
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        androidx.compose.foundation.Canvas(
-            modifier = Modifier.size(size * 0.8f)
-        ) {
-            val w = this.size.width
-            val strokeW = w * 0.09f
-            val arrowSize = w * 0.12f
-
-            // Top arrow: clockwise loop (goes right, curves down-left)
-            val topPath = Path().apply {
-                // Start from left, go right along top
-                moveTo(w * 0.2f, w * 0.32f)
-                // Line to the right
-                lineTo(w * 0.72f, w * 0.32f)
-                // Arrow head at right end of top line
-            }
-            drawPath(topPath, color = tint, style = Stroke(width = strokeW, cap = StrokeCap.Round))
-
-            // Top arrow head (pointing right)
-            val topArrowTip = Offset(w * 0.72f, w * 0.32f)
-            val topArrowPath = Path().apply {
-                moveTo(topArrowTip.x, topArrowTip.y)
-                lineTo(topArrowTip.x - arrowSize, topArrowTip.y - arrowSize * 0.7f)
-                lineTo(topArrowTip.x - arrowSize, topArrowTip.y + arrowSize * 0.7f)
-                close()
-            }
-            drawPath(topArrowPath, color = tint)
-
-            // Right vertical connector (top to bottom)
-            val rightConn = Path().apply {
-                moveTo(w * 0.72f, w * 0.32f)
-                lineTo(w * 0.72f, w * 0.68f)
-            }
-            drawPath(rightConn, color = tint, style = Stroke(width = strokeW, cap = StrokeCap.Round))
-
-            // Bottom arrow: counter-clockwise loop (goes left, curves up-right)
-            val bottomPath = Path().apply {
-                moveTo(w * 0.8f, w * 0.68f)
-                lineTo(w * 0.28f, w * 0.68f)
-            }
-            drawPath(bottomPath, color = tint, style = Stroke(width = strokeW, cap = StrokeCap.Round))
-
-            // Bottom arrow head (pointing left)
-            val bottomArrowTip = Offset(w * 0.28f, w * 0.68f)
-            val bottomArrowPath = Path().apply {
-                moveTo(bottomArrowTip.x, bottomArrowTip.y)
-                lineTo(bottomArrowTip.x + arrowSize, bottomArrowTip.y - arrowSize * 0.7f)
-                lineTo(bottomArrowTip.x + arrowSize, bottomArrowTip.y + arrowSize * 0.7f)
-                close()
-            }
-            drawPath(bottomArrowPath, color = tint)
-
-            // Left vertical connector (bottom to top)
-            val leftConn = Path().apply {
-                moveTo(w * 0.28f, w * 0.68f)
-                lineTo(w * 0.28f, w * 0.32f)
-            }
-            drawPath(leftConn, color = tint, style = Stroke(width = strokeW, cap = StrokeCap.Round))
-        }
-
-        // Draw "15" text in the center
+        // The repeat icon from music player
+        Icon(
+            imageVector = Icons.Default.Repeat,
+            contentDescription = "前进15秒",
+            tint = tint,
+            modifier = Modifier.size(size * 0.75f)
+        )
+        // "15" text overlay in the center
         Text(
             text = "15",
-            fontSize = (size * 0.24f).value.sp,
+            fontSize = (size * 0.22f).value.sp,
             fontWeight = FontWeight.Bold,
             color = tint,
             textAlign = TextAlign.Center
@@ -301,8 +250,8 @@ fun SkipForward15Button(
 }
 
 /**
- * A skip-backward-15-seconds button styled like the mirrored repeat/loop icon with "15" inside.
- * The icon is mirrored horizontally (arrows point in opposite direction).
+ * A skip-backward-15-seconds button: Mirrored Repeat icon + "15" text inside.
+ * The icon is flipped horizontally (scaleX = -1).
  */
 @Composable
 fun SkipBackward15Button(
@@ -317,66 +266,19 @@ fun SkipBackward15Button(
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        androidx.compose.foundation.Canvas(
-            modifier = Modifier.size(size * 0.8f)
-        ) {
-            val w = this.size.width
-            val strokeW = w * 0.09f
-            val arrowSize = w * 0.12f
-
-            // Top arrow: goes LEFT (mirrored)
-            val topPath = Path().apply {
-                moveTo(w * 0.8f, w * 0.32f)
-                lineTo(w * 0.28f, w * 0.32f)
-            }
-            drawPath(topPath, color = tint, style = Stroke(width = strokeW, cap = StrokeCap.Round))
-
-            // Top arrow head (pointing left)
-            val topArrowTip = Offset(w * 0.28f, w * 0.32f)
-            val topArrowPath = Path().apply {
-                moveTo(topArrowTip.x, topArrowTip.y)
-                lineTo(topArrowTip.x + arrowSize, topArrowTip.y - arrowSize * 0.7f)
-                lineTo(topArrowTip.x + arrowSize, topArrowTip.y + arrowSize * 0.7f)
-                close()
-            }
-            drawPath(topArrowPath, color = tint)
-
-            // Left vertical connector (top to bottom)
-            val leftConn = Path().apply {
-                moveTo(w * 0.28f, w * 0.32f)
-                lineTo(w * 0.28f, w * 0.68f)
-            }
-            drawPath(leftConn, color = tint, style = Stroke(width = strokeW, cap = StrokeCap.Round))
-
-            // Bottom arrow: goes RIGHT (mirrored)
-            val bottomPath = Path().apply {
-                moveTo(w * 0.2f, w * 0.68f)
-                lineTo(w * 0.72f, w * 0.68f)
-            }
-            drawPath(bottomPath, color = tint, style = Stroke(width = strokeW, cap = StrokeCap.Round))
-
-            // Bottom arrow head (pointing right)
-            val bottomArrowTip = Offset(w * 0.72f, w * 0.68f)
-            val bottomArrowPath = Path().apply {
-                moveTo(bottomArrowTip.x, bottomArrowTip.y)
-                lineTo(bottomArrowTip.x - arrowSize, bottomArrowTip.y - arrowSize * 0.7f)
-                lineTo(bottomArrowTip.x - arrowSize, bottomArrowTip.y + arrowSize * 0.7f)
-                close()
-            }
-            drawPath(bottomArrowPath, color = tint)
-
-            // Right vertical connector (bottom to top)
-            val rightConn = Path().apply {
-                moveTo(w * 0.72f, w * 0.68f)
-                lineTo(w * 0.72f, w * 0.32f)
-            }
-            drawPath(rightConn, color = tint, style = Stroke(width = strokeW, cap = StrokeCap.Round))
-        }
-
-        // Draw "15" text in the center
+        // The repeat icon, mirrored horizontally
+        Icon(
+            imageVector = Icons.Default.Repeat,
+            contentDescription = "后退15秒",
+            tint = tint,
+            modifier = Modifier
+                .size(size * 0.75f)
+                .graphicsLayer(scaleX = -1f)
+        )
+        // "15" text overlay in the center
         Text(
             text = "15",
-            fontSize = (size * 0.24f).value.sp,
+            fontSize = (size * 0.22f).value.sp,
             fontWeight = FontWeight.Bold,
             color = tint,
             textAlign = TextAlign.Center
