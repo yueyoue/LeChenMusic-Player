@@ -1,0 +1,25 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="#FFFFFF">
+    <!-- Backward loop icon: mirrored, two arrows forming a loop -->
+    <!-- Top arrow pointing left (mirrored) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M20,8 L8,8 L8,5 L3,9 L8,13 L8,10 L18,10 L20,8 Z"/>
+    <!-- Bottom arrow pointing right (mirrored) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M4,16 L16,16 L16,19 L21,15 L16,11 L16,14 L6,14 L4,16 Z"/>
+    <!-- 15 text - drawn as simple paths -->
+    <!-- "1" -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M10.5,11 L11.5,11 L11.5,15 L10,14.5 L10,13.5 L11.5,13.5 L11.5,11 Z"/>
+    <!-- "5" -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M13,11 L16,11 L16,12 L14,12 L14,13 L15.5,13 L15,15 L13,15 L13.5,14 L14.5,14 L14.8,13 L13,13 L13,11 Z"/>
+</vector>

@@ -211,11 +211,11 @@ private fun getQualityColor(song: Song): Color {
 
 // ==================== Skip 15s Buttons ====================
 // Custom buttons that mimic the music player's repeat/loop icon with "15" text inside.
-// Forward: clockwise arrow | Backward: counter-clockwise arrow (mirrored)
+// Forward: loop arrow | Backward: mirrored loop arrow
 
 /**
- * A skip-forward-15-seconds button styled like the repeat icon with "15" inside.
- * The arrow rotates clockwise.
+ * A skip-forward-15-seconds button styled like the repeat/loop icon with "15" inside.
+ * The icon is two curved arrows forming a loop (like Material Icons Repeat).
  */
 @Composable
 fun SkipForward15Button(
@@ -231,57 +231,68 @@ fun SkipForward15Button(
         contentAlignment = Alignment.Center
     ) {
         androidx.compose.foundation.Canvas(
-            modifier = Modifier.size(size * 0.85f)
+            modifier = Modifier.size(size * 0.8f)
         ) {
-            val canvasSize = this.size.width
-            val strokeWidth = canvasSize * 0.1f
-            val arcRadius = canvasSize * 0.38f
-            val center = Offset(canvasSize / 2f, canvasSize / 2f)
+            val w = this.size.width
+            val strokeW = w * 0.09f
+            val arrowSize = w * 0.12f
 
-            // Draw circular arc (about 300 degrees, clockwise)
-            val arcTopLeft = Offset(center.x - arcRadius, center.y - arcRadius)
-            val arcSize = Size(arcRadius * 2, arcRadius * 2)
+            // Top arrow: clockwise loop (goes right, curves down-left)
+            val topPath = Path().apply {
+                // Start from left, go right along top
+                moveTo(w * 0.2f, w * 0.32f)
+                // Line to the right
+                lineTo(w * 0.72f, w * 0.32f)
+                // Arrow head at right end of top line
+            }
+            drawPath(topPath, color = tint, style = Stroke(width = strokeW, cap = StrokeCap.Round))
 
-            drawArc(
-                color = tint,
-                startAngle = -60f,
-                sweepAngle = 300f,
-                useCenter = false,
-                topLeft = arcTopLeft,
-                size = arcSize,
-                style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
-            )
-
-            // Draw arrowhead at the end of the arc (at angle -60 + 300 = 240 degrees)
-            val arrowAngle = Math.toRadians(240.0)
-            val arrowTipX = center.x + arcRadius * kotlin.math.cos(arrowAngle).toFloat()
-            val arrowTipY = center.y + arcRadius * kotlin.math.sin(arrowAngle).toFloat()
-
-            val arrowSize = canvasSize * 0.14f
-            // Arrow tip pointing in the direction of the arc (perpendicular to radius at 240 degrees)
-            val tangentAngle = arrowAngle + Math.PI / 2 // perpendicular to radius
-            val arrowLeft = Offset(
-                arrowTipX - arrowSize * kotlin.math.cos(tangentAngle - 0.5).toFloat(),
-                arrowTipY - arrowSize * kotlin.math.sin(tangentAngle - 0.5).toFloat()
-            )
-            val arrowRight = Offset(
-                arrowTipX - arrowSize * kotlin.math.cos(tangentAngle + 0.5).toFloat(),
-                arrowTipY - arrowSize * kotlin.math.sin(tangentAngle + 0.5).toFloat()
-            )
-
-            val arrowPath = Path().apply {
-                moveTo(arrowTipX, arrowTipY)
-                lineTo(arrowLeft.x, arrowLeft.y)
-                lineTo(arrowRight.x, arrowRight.y)
+            // Top arrow head (pointing right)
+            val topArrowTip = Offset(w * 0.72f, w * 0.32f)
+            val topArrowPath = Path().apply {
+                moveTo(topArrowTip.x, topArrowTip.y)
+                lineTo(topArrowTip.x - arrowSize, topArrowTip.y - arrowSize * 0.7f)
+                lineTo(topArrowTip.x - arrowSize, topArrowTip.y + arrowSize * 0.7f)
                 close()
             }
-            drawPath(arrowPath, color = tint)
+            drawPath(topArrowPath, color = tint)
+
+            // Right vertical connector (top to bottom)
+            val rightConn = Path().apply {
+                moveTo(w * 0.72f, w * 0.32f)
+                lineTo(w * 0.72f, w * 0.68f)
+            }
+            drawPath(rightConn, color = tint, style = Stroke(width = strokeW, cap = StrokeCap.Round))
+
+            // Bottom arrow: counter-clockwise loop (goes left, curves up-right)
+            val bottomPath = Path().apply {
+                moveTo(w * 0.8f, w * 0.68f)
+                lineTo(w * 0.28f, w * 0.68f)
+            }
+            drawPath(bottomPath, color = tint, style = Stroke(width = strokeW, cap = StrokeCap.Round))
+
+            // Bottom arrow head (pointing left)
+            val bottomArrowTip = Offset(w * 0.28f, w * 0.68f)
+            val bottomArrowPath = Path().apply {
+                moveTo(bottomArrowTip.x, bottomArrowTip.y)
+                lineTo(bottomArrowTip.x + arrowSize, bottomArrowTip.y - arrowSize * 0.7f)
+                lineTo(bottomArrowTip.x + arrowSize, bottomArrowTip.y + arrowSize * 0.7f)
+                close()
+            }
+            drawPath(bottomArrowPath, color = tint)
+
+            // Left vertical connector (bottom to top)
+            val leftConn = Path().apply {
+                moveTo(w * 0.28f, w * 0.68f)
+                lineTo(w * 0.28f, w * 0.32f)
+            }
+            drawPath(leftConn, color = tint, style = Stroke(width = strokeW, cap = StrokeCap.Round))
         }
 
         // Draw "15" text in the center
         Text(
             text = "15",
-            fontSize = (size * 0.26f).value.sp,
+            fontSize = (size * 0.24f).value.sp,
             fontWeight = FontWeight.Bold,
             color = tint,
             textAlign = TextAlign.Center
@@ -290,8 +301,8 @@ fun SkipForward15Button(
 }
 
 /**
- * A skip-backward-15-seconds button styled like the mirrored repeat icon with "15" inside.
- * The arrow rotates counter-clockwise (horizontal mirror of forward).
+ * A skip-backward-15-seconds button styled like the mirrored repeat/loop icon with "15" inside.
+ * The icon is mirrored horizontally (arrows point in opposite direction).
  */
 @Composable
 fun SkipBackward15Button(
@@ -307,58 +318,65 @@ fun SkipBackward15Button(
         contentAlignment = Alignment.Center
     ) {
         androidx.compose.foundation.Canvas(
-            modifier = Modifier.size(size * 0.85f)
+            modifier = Modifier.size(size * 0.8f)
         ) {
-            val canvasSize = this.size.width
-            val strokeWidth = canvasSize * 0.1f
-            val arcRadius = canvasSize * 0.38f
-            val center = Offset(canvasSize / 2f, canvasSize / 2f)
+            val w = this.size.width
+            val strokeW = w * 0.09f
+            val arrowSize = w * 0.12f
 
-            // Draw circular arc (about 300 degrees, counter-clockwise = mirrored)
-            val arcTopLeft = Offset(center.x - arcRadius, center.y - arcRadius)
-            val arcSize = Size(arcRadius * 2, arcRadius * 2)
+            // Top arrow: goes LEFT (mirrored)
+            val topPath = Path().apply {
+                moveTo(w * 0.8f, w * 0.32f)
+                lineTo(w * 0.28f, w * 0.32f)
+            }
+            drawPath(topPath, color = tint, style = Stroke(width = strokeW, cap = StrokeCap.Round))
 
-            drawArc(
-                color = tint,
-                startAngle = 240f,
-                sweepAngle = -300f,
-                useCenter = false,
-                topLeft = arcTopLeft,
-                size = arcSize,
-                style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
-            )
-
-            // Draw arrowhead at the end of the arc (at angle 240 - 300 = -60 degrees)
-            val arrowAngle = Math.toRadians(-60.0)
-            val arrowTipX = center.x + arcRadius * kotlin.math.cos(arrowAngle).toFloat()
-            val arrowTipY = center.y + arcRadius * kotlin.math.sin(arrowAngle).toFloat()
-
-            val arrowSize = canvasSize * 0.14f
-            // Arrow tip pointing in the direction of the arc (perpendicular to radius at -60 degrees)
-            // For counter-clockwise, the tangent is flipped
-            val tangentAngle = arrowAngle - Math.PI / 2
-            val arrowLeft = Offset(
-                arrowTipX - arrowSize * kotlin.math.cos(tangentAngle - 0.5).toFloat(),
-                arrowTipY - arrowSize * kotlin.math.sin(tangentAngle - 0.5).toFloat()
-            )
-            val arrowRight = Offset(
-                arrowTipX - arrowSize * kotlin.math.cos(tangentAngle + 0.5).toFloat(),
-                arrowTipY - arrowSize * kotlin.math.sin(tangentAngle + 0.5).toFloat()
-            )
-
-            val arrowPath = Path().apply {
-                moveTo(arrowTipX, arrowTipY)
-                lineTo(arrowLeft.x, arrowLeft.y)
-                lineTo(arrowRight.x, arrowRight.y)
+            // Top arrow head (pointing left)
+            val topArrowTip = Offset(w * 0.28f, w * 0.32f)
+            val topArrowPath = Path().apply {
+                moveTo(topArrowTip.x, topArrowTip.y)
+                lineTo(topArrowTip.x + arrowSize, topArrowTip.y - arrowSize * 0.7f)
+                lineTo(topArrowTip.x + arrowSize, topArrowTip.y + arrowSize * 0.7f)
                 close()
             }
-            drawPath(arrowPath, color = tint)
+            drawPath(topArrowPath, color = tint)
+
+            // Left vertical connector (top to bottom)
+            val leftConn = Path().apply {
+                moveTo(w * 0.28f, w * 0.32f)
+                lineTo(w * 0.28f, w * 0.68f)
+            }
+            drawPath(leftConn, color = tint, style = Stroke(width = strokeW, cap = StrokeCap.Round))
+
+            // Bottom arrow: goes RIGHT (mirrored)
+            val bottomPath = Path().apply {
+                moveTo(w * 0.2f, w * 0.68f)
+                lineTo(w * 0.72f, w * 0.68f)
+            }
+            drawPath(bottomPath, color = tint, style = Stroke(width = strokeW, cap = StrokeCap.Round))
+
+            // Bottom arrow head (pointing right)
+            val bottomArrowTip = Offset(w * 0.72f, w * 0.68f)
+            val bottomArrowPath = Path().apply {
+                moveTo(bottomArrowTip.x, bottomArrowTip.y)
+                lineTo(bottomArrowTip.x - arrowSize, bottomArrowTip.y - arrowSize * 0.7f)
+                lineTo(bottomArrowTip.x - arrowSize, bottomArrowTip.y + arrowSize * 0.7f)
+                close()
+            }
+            drawPath(bottomArrowPath, color = tint)
+
+            // Right vertical connector (bottom to top)
+            val rightConn = Path().apply {
+                moveTo(w * 0.72f, w * 0.68f)
+                lineTo(w * 0.72f, w * 0.32f)
+            }
+            drawPath(rightConn, color = tint, style = Stroke(width = strokeW, cap = StrokeCap.Round))
         }
 
         // Draw "15" text in the center
         Text(
             text = "15",
-            fontSize = (size * 0.26f).value.sp,
+            fontSize = (size * 0.24f).value.sp,
             fontWeight = FontWeight.Bold,
             color = tint,
             textAlign = TextAlign.Center
