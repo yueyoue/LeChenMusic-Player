@@ -7,6 +7,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -233,7 +234,7 @@ fun SkipForward15Button(
     ) {
         // The repeat icon from music player
         Icon(
-            imageVector = Icons.Default.Repeat,
+            imageVector = Icons.Filled.Repeat,
             contentDescription = "前进15秒",
             tint = tint,
             modifier = Modifier.size(size * 0.75f)
@@ -268,7 +269,7 @@ fun SkipBackward15Button(
     ) {
         // The repeat icon, mirrored horizontally
         Icon(
-            imageVector = Icons.Default.Repeat,
+            imageVector = Icons.Filled.Repeat,
             contentDescription = "后退15秒",
             tint = tint,
             modifier = Modifier
