@@ -4,7 +4,6 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.lechenmusic.LeChenApp
-import com.lechenmusic.data.api.QQLyricsApi
 import com.lechenmusic.data.model.*
 import com.lechenmusic.data.repository.LyricsCache
 import com.lechenmusic.data.repository.MusicRepository
@@ -577,7 +576,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             // 2. 尝试获取结构化歌词（带时间戳）
             try {
                 repository.getLyricsBySongId(song.id).onSuccess { lyricsResponse ->
-                    val syncedLyric = lyricsResponse?.lyricsList?.structuredLyric
+                    val syncedLyric = lyricsResponse?.structuredLyrics
                         ?.firstOrNull { it.synced && !it.line.isNullOrEmpty() }
                     if (syncedLyric != null) {
                         val lrcBuilder = StringBuilder()
@@ -604,34 +603,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 serverLyrics = lyrics
             }
 
-            // 4. 判断服务器歌词是否有 LRC 时间戳
-            val hasLrcTimestamp = serverLyrics?.let { parseLrcTimestamps(it) }?.isNotEmpty() == true
-
-            if (hasLrcTimestamp) {
+            // 4. 使用服务器歌词
+            if (serverLyrics != null) {
                 _currentLyrics.value = serverLyrics
-                lyricsCache.put(song.id, serverLyrics!!)
-            } else {
-                // 5. 尝试从 QQ 音乐获取 LRC
-                val qqLyrics = try {
-                    QQLyricsApi.fetchLyrics(serverUrl.value, song.artist, song.title, song.duration)
-                } catch (e: Exception) {
-                    null
-                }
-
-                if (qqLyrics != null) {
-                    _currentLyrics.value = qqLyrics
-                    lyricsCache.put(song.id, qqLyrics)
-                } else if (serverLyrics != null) {
-                    _currentLyrics.value = serverLyrics
-                    lyricsCache.put(song.id, serverLyrics!!)
-                }
+                lyricsCache.put(song.id, serverLyrics)
             }
         }
-    }
-
-    /** 快速检测歌词是否包含 LRC 时间戳 */
-    private fun parseLrcTimestamps(text: String): List<MatchResult> {
-        return Regex("\\[(\\d{1,2}):(\\d{2})(?:\\.(\\d{1,3}))?\\]").findAll(text).toList()
     }
 
     /** Load similar songs based on current song */

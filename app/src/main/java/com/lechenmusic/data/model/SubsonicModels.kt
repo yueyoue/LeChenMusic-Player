@@ -200,11 +200,7 @@ data class LyricsData(
 
 // Structured lyrics with timestamps (from getLyricsBySongId)
 data class LyricsListResponse(
-    val lyricsList: StructuredLyricsList? = null
-)
-
-data class StructuredLyricsList(
-    val structuredLyric: List<StructuredLyric>? = null
+    val structuredLyrics: List<StructuredLyric>? = null
 )
 
 data class StructuredLyric(
