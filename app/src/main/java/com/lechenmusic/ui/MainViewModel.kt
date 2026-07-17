@@ -604,9 +604,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             // 4. 使用服务器歌词
-            if (serverLyrics != null) {
-                _currentLyrics.value = serverLyrics
-                lyricsCache.put(song.id, serverLyrics)
+            val finalLyrics = serverLyrics
+            if (finalLyrics != null) {
+                _currentLyrics.value = finalLyrics
+                lyricsCache.put(song.id, finalLyrics)
             }
         }
     }
