@@ -2,8 +2,9 @@ package com.lechenmusic.ui.screens.audiobook
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -16,6 +17,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -42,21 +44,23 @@ fun AudiobookNarratorListScreen(
         Color(0xFFF39C12), Color(0xFF8E44AD), Color(0xFF00B894)
     )
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("演播者") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "返回")
-                    }
-                }
-            )
+    Column(modifier = Modifier.fillMaxSize()) {
+        // Header - no TopAppBar, just a simple row like AudiobookScreen
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(Icons.Default.ArrowBack, contentDescription = "返回")
+            }
+            Text("🎙️ 演播者", fontSize = 18.sp, fontWeight = FontWeight.Bold)
         }
-    ) { padding ->
+
         if (narrators.isEmpty()) {
             Box(
-                modifier = Modifier.fillMaxSize().padding(padding),
+                modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -66,57 +70,74 @@ fun AudiobookNarratorListScreen(
                 }
             }
         } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(padding),
-                contentPadding = PaddingValues(vertical = 8.dp)
+            // Grid style - 2 columns, like album display
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 items(narrators) { narr ->
                     val colorIdx = narr.name.hashCode().mod(colors.size).let { if (it < 0) it + colors.size else it }
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp)
-                            .clickable { onNarratorClick(narr.name) },
-                        shape = RoundedCornerShape(14.dp),
-                        color = MaterialTheme.colorScheme.surface,
-                        shadowElevation = 1.dp
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Surface(
-                                modifier = Modifier.size(48.dp),
-                                shape = CircleShape,
-                                color = colors[colorIdx]
-                            ) {
-                                val avatarUrl = SubsonicApi.getNarratorAvatarUrl(serverUrl, narr.name)
-                                AsyncImage(
-                                    model = avatarUrl,
-                                    contentDescription = narr.name,
-                                    modifier = Modifier.fillMaxSize().clip(CircleShape),
-                                    contentScale = ContentScale.Crop
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(14.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    narr.name,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Text(
-                                    "${narr.count}部作品",
-                                    fontSize = 12.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                    }
+                    NarratorGridCard(
+                        name = narr.name,
+                        count = narr.count,
+                        color = colors[colorIdx],
+                        serverUrl = serverUrl,
+                        onClick = { onNarratorClick(narr.name) }
+                    )
                 }
             }
         }
+    }
+}
+
+@Composable
+fun NarratorGridCard(
+    name: String,
+    count: Int,
+    color: Color,
+    serverUrl: String,
+    onClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier.clickable(onClick = onClick),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // Avatar - circular
+        Surface(
+            modifier = Modifier.size(100.dp),
+            shape = CircleShape,
+            color = color
+        ) {
+            val avatarUrl = SubsonicApi.getNarratorAvatarUrl(serverUrl, name)
+            AsyncImage(
+                model = avatarUrl,
+                contentDescription = name,
+                modifier = Modifier.fillMaxSize().clip(CircleShape),
+                contentScale = ContentScale.Crop
+            )
+        }
+
+        // Name
+        Text(
+            text = name,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Medium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 8.dp)
+        )
+
+        // Count
+        Text(
+            text = "${count}部作品",
+            fontSize = 11.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            modifier = Modifier.padding(top = 2.dp)
+        )
     }
 }
