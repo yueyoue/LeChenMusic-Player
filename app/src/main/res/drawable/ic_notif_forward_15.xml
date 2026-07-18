@@ -4,8 +4,8 @@
     android:viewportWidth="24"
     android:viewportHeight="24"
     android:tint="#FFFFFF">
-    <!-- 顺时针循环箭头 (前进15秒) -->
+    <!-- Material Design Repeat icon (forward) -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M12,4 C15.05,4 17.72,5.95 19.2,8.05 L16.5,8.05 L20.5,12 L16.5,15.95 L19.2,15.95 C17.72,18.05 15.05,19.5 12,19.5 C8.69,19.5 6,16.81 6,13.5 C6,10.19 8.69,7.5 12,7.5 C13.78,7.5 15.38,8.28 16.5,9.55 L18,8.22 C16.53,6.55 14.39,5.5 12,5.5 C7.58,5.5 4,9.08 4,13.5 C4,17.92 7.58,21.5 12,21.5 C16.42,21.5 20,17.92 20,13.5 C20,9.08 16.42,5.5 12,5.5 Z" />
+        android:pathData="M7,7h10v3l4,-4 -4,-4v3H5v6h2V7zM17,17H7v-3l-4,4 4,4v-3h12v-6h-2v4z"/>
 </vector>
