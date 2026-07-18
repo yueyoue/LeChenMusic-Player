@@ -227,3 +227,20 @@ fun AudiobookGridCard(
         )
     }
 }
+
+fun getAudiobookCoverUrl(serverUrl: String, username: String, password: String, bookId: String): String? {
+    val normalizedUrl = serverUrl.trimEnd('/')
+    val encodedPass = if (password.startsWith("enc:")) password
+                      else "enc:${password.toByteArray().joinToString("") { "%02x".format(it) }}"
+    return "$normalizedUrl/api/audiobook/$bookId/cover?u=$username&p=$encodedPass"
+}
+
+fun formatDuration(seconds: Int): String {
+    val hours = seconds / 3600
+    val minutes = (seconds % 3600) / 60
+    return when {
+        hours > 0 -> "${hours}h${minutes}m"
+        minutes > 0 -> "${minutes}m"
+        else -> "${seconds}s"
+    }
+}
