@@ -7,7 +7,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -23,6 +22,8 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
+import com.lechenmusic.R
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -232,20 +233,11 @@ fun SkipForward15Button(
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        // The repeat icon from music player (same size as music player: 24dp)
         Icon(
-            imageVector = Icons.Filled.Repeat,
+            painter = painterResource(id = R.drawable.ic_forward_15),
             contentDescription = "前进15秒",
             tint = tint,
-            modifier = Modifier.size(24.dp)
-        )
-        // "15" text overlay in the center
-        Text(
-            text = "15",
-            fontSize = 8.sp,
-            fontWeight = FontWeight.Bold,
-            color = tint,
-            textAlign = TextAlign.Center
+            modifier = Modifier.size(30.dp)
         )
     }
 }
@@ -267,22 +259,11 @@ fun SkipBackward15Button(
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        // The repeat icon, mirrored horizontally (same size as music player: 24dp)
         Icon(
-            imageVector = Icons.Filled.Repeat,
+            painter = painterResource(id = R.drawable.ic_rewind_15),
             contentDescription = "后退15秒",
             tint = tint,
-            modifier = Modifier
-                .size(24.dp)
-                .graphicsLayer(scaleX = -1f)
-        )
-        // "15" text overlay in the center
-        Text(
-            text = "15",
-            fontSize = 8.sp,
-            fontWeight = FontWeight.Bold,
-            color = tint,
-            textAlign = TextAlign.Center
+            modifier = Modifier.size(30.dp)
         )
     }
 }

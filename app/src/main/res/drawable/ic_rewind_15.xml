@@ -1,11 +1,10 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="24dp"
-    android:height="24dp"
+    android:width="30dp"
+    android:height="30dp"
     android:viewportWidth="24"
     android:viewportHeight="24"
-    android:tint="#FFFFFF">
-    <!-- 向后15秒：镜像箭头 + 15正常 -->
-    <!-- 圆圈箭头（镜像） -->
+    android:tint="?attr/colorOnSurfaceVariant">
+    <!-- 圆圈箭头（镜像朝左） -->
     <group
         android:pivotX="12"
         android:pivotY="12"
