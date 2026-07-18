@@ -57,6 +57,12 @@ class MusicPlayerManager(private val context: Context) {
     private var cacheDataSourceFactory: CacheDataSource.Factory? = null
     private var currentCacheSizeBytes: Long = 4L * 1024 * 1024 * 1024 // default 4GB
 
+    // Fully played song IDs — only these should appear in cache list
+    private val fullyPlayedPrefs by lazy { context.getSharedPreferences("fully_played_songs", Context.MODE_PRIVATE) }
+    private val fullyPlayedSongIds: MutableSet<String> by lazy {
+        fullyPlayedPrefs.getStringSet("ids", emptySet())?.toMutableSet() ?: mutableSetOf()
+    }
+
     private val _currentSong = MutableStateFlow<Song?>(null)
     val currentSong: StateFlow<Song?> = _currentSong.asStateFlow()
 
@@ -151,8 +157,14 @@ class MusicPlayerManager(private val context: Context) {
                         if (playbackState == Player.STATE_READY && _isPlaying.value) {
                             updateNotification()
                         }
-                        // When playback ends, notify for auto-play next chapter
+                        // When playback ends, mark song as fully played and notify
                         if (playbackState == Player.STATE_ENDED) {
+                            // Track fully played song for cache filtering
+                            val endedSong = _currentSong.value
+                            if (endedSong != null && !endedSong.id.startsWith("audiobook_") && !endedSong.id.startsWith("radio_")) {
+                                fullyPlayedSongIds.add(endedSong.id)
+                                fullyPlayedPrefs.edit().putStringSet("ids", fullyPlayedSongIds).apply()
+                            }
                             android.util.Log.d("LeChenMusic", "Playback STATE_ENDED, calling onPlaybackCompleted")
                             onPlaybackCompleted?.invoke()
                         }
@@ -280,19 +292,20 @@ class MusicPlayerManager(private val context: Context) {
         return try { musicCache?.cacheSpace ?: 0 } catch (_: Exception) { 0 }
     }
 
-    /** Get song IDs that are fully cached locally */
+    /** Get song IDs that are fully cached locally AND fully played */
     fun getCachedSongIds(): Set<String> {
         return try {
             val cache = musicCache ?: return emptySet()
-            val ids = mutableSetOf<String>()
+            val cachedIds = mutableSetOf<String>()
             for (key in cache.keys) {
                 // Stream URL format: .../rest/stream?...&id=<songId>&...
                 val match = Regex("[?&]id=([^&]+)").find(key)
                 if (match != null) {
-                    ids.add(match.groupValues[1])
+                    cachedIds.add(match.groupValues[1])
                 }
             }
-            ids
+            // Only return songs that are both in cache AND fully played
+            cachedIds.intersect(fullyPlayedSongIds)
         } catch (_: Exception) { emptySet() }
     }
 

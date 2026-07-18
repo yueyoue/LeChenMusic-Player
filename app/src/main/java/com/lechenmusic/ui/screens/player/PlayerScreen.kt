@@ -71,6 +71,8 @@ fun PlayerScreen(
     val currentIndex by playerManager.currentIndex.collectAsState()
     val currentLyrics by viewModel.currentLyrics.collectAsState()
     val playlists by viewModel.playlists.collectAsState()
+    val aiRecommendedSongs by viewModel.aiRecommendedSongs.collectAsState()
+    val aiRecommendLoading by viewModel.aiRecommendLoading.collectAsState()
 
     var currentView by remember { mutableStateOf(PlayerView.COVER) }
     var showTimerDialog by remember { mutableStateOf(false) }
@@ -94,6 +96,13 @@ fun PlayerScreen(
     // Load lyrics when song changes
     LaunchedEffect(song.id) {
         viewModel.loadLyrics(song)
+    }
+
+    // Load AI recommendations when song changes
+    LaunchedEffect(song.id) {
+        if (!song.id.startsWith("audiobook_") && !song.id.startsWith("radio_")) {
+            viewModel.loadAIRecommendedSongs(song.id)
+        }
     }
 
     Box(
@@ -184,8 +193,11 @@ fun PlayerScreen(
                 when (currentView) {
                     PlayerView.COVER -> CoverView(song, serverUrl, username, password)
                     PlayerView.LYRICS -> LyricsView(song, currentLyrics, currentPosition, duration)
-                    PlayerView.SIMILAR -> SimilarView(playlist, currentIndex, serverUrl, username, password) {
-                        playerManager.playSong(it, playlist)
+                    PlayerView.SIMILAR -> SimilarView(
+                        aiRecommendedSongs, aiRecommendLoading,
+                        serverUrl, username, password
+                    ) {
+                        playerManager.playSong(it, aiRecommendedSongs)
                     }
                 }
             }
@@ -927,8 +939,8 @@ private fun LyricsView(
 
 @Composable
 private fun SimilarView(
-    playlist: List<Song>,
-    currentIndex: Int,
+    recommendedSongs: List<Song>,
+    isLoading: Boolean,
     serverUrl: String,
     username: String,
     password: String,
@@ -936,33 +948,103 @@ private fun SimilarView(
 ) {
     LazyColumn(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
         item {
-            Text(
-                "推荐歌曲",
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 12.dp),
-                textAlign = TextAlign.Center
-            )
-        }
-        val similar = playlist.filterIndexed { i, _ -> i != currentIndex }.take(10)
-        items(similar) { song ->
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onSongClick(song) }
-                    .padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
+                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
             ) {
-                CoverImage(
-                    coverArtId = song.coverArt ?: song.albumId,
-                    serverUrl = serverUrl,
-                    username = username,
-                    password = password,
-                    modifier = Modifier.size(48.dp).clip(RoundedCornerShape(8.dp))
+                Icon(
+                    Icons.Default.AutoAwesome,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.primary
                 )
-                Column(modifier = Modifier.weight(1f).padding(start = 12.dp)) {
-                    Text(song.title, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                    Text(song.artist, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    "AI 推荐",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+        if (isLoading) {
+            item {
+                Box(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 40.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(32.dp),
+                            strokeWidth = 3.dp
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            "正在分析你的音乐口味...",
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        } else if (recommendedSongs.isEmpty()) {
+            item {
+                Box(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 40.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            Icons.Default.MusicNote,
+                            contentDescription = null,
+                            modifier = Modifier.size(40.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            "暂无推荐",
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            "多听几首歌，AI 会越来越懂你",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        )
+                    }
+                }
+            }
+        } else {
+            items(recommendedSongs) { song ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onSongClick(song) }
+                        .padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    CoverImage(
+                        coverArtId = song.coverArt ?: song.albumId,
+                        serverUrl = serverUrl,
+                        username = username,
+                        password = password,
+                        modifier = Modifier.size(48.dp).clip(RoundedCornerShape(8.dp))
+                    )
+                    Column(modifier = Modifier.weight(1f).padding(start = 12.dp)) {
+                        Text(song.title, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                        Text(song.artist, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    // Play button
+                    IconButton(onClick = { onSongClick(song) }, modifier = Modifier.size(36.dp)) {
+                        Icon(
+                            Icons.Default.PlayArrow,
+                            contentDescription = "播放",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
             }
         }

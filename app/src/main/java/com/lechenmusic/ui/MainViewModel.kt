@@ -124,6 +124,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _isCheckingUpdate = MutableStateFlow(false)
     val isCheckingUpdate: StateFlow<Boolean> = _isCheckingUpdate.asStateFlow()
 
+    // AI Recommended songs (based on current song via getSimilarSongs2)
+    private val _aiRecommendedSongs = MutableStateFlow<List<Song>>(emptyList())
+    val aiRecommendedSongs: StateFlow<List<Song>> = _aiRecommendedSongs.asStateFlow()
+
+    private val _aiRecommendLoading = MutableStateFlow(false)
+    val aiRecommendLoading: StateFlow<Boolean> = _aiRecommendLoading.asStateFlow()
+
     // Toast message for user feedback
     private val _toastMessage = MutableStateFlow<String?>(null)
     val toastMessage: StateFlow<String?> = _toastMessage.asStateFlow()
@@ -267,11 +274,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         // Register callback for auto-advance (lock screen / background playback)
         playerManager.onSongAutoAdvanced = { song ->
-            viewModelScope.launch {
-                settings.addRecentPlay(song.id)
-                addSongToRecentCache(song)
-                // Refresh recent played songs list
-                loadRecentPlayedSongs()
+            // Only record music songs, not audiobooks or radio
+            if (!song.id.startsWith("audiobook_") && !song.id.startsWith("radio_")) {
+                viewModelScope.launch {
+                    settings.addRecentPlay(song.id)
+                    addSongToRecentCache(song)
+                    // Refresh recent played songs list
+                    loadRecentPlayedSongs()
+                }
             }
         }
 
@@ -505,8 +515,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             if (cachedJson.isNotBlank()) {
                 val type = object : TypeToken<List<Song>>() {}.type
                 val cachedSongs: List<Song> = Gson().fromJson(cachedJson, type) ?: emptyList()
-                if (cachedSongs.isNotEmpty()) {
-                    _recentPlayedSongs.value = cachedSongs.take(20)
+                // Filter out audiobooks and radio — only show music
+                val musicOnly = cachedSongs.filter { !it.id.startsWith("audiobook_") && !it.id.startsWith("radio_") }
+                if (musicOnly.isNotEmpty()) {
+                    _recentPlayedSongs.value = musicOnly.take(20)
                     return
                 }
             }
@@ -515,7 +527,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         // Fallback: search through albums by IDs
         val idsStr = settings.recentPlayIds.first()
         if (idsStr.isBlank()) return
-        val ids = idsStr.split(",").filter { it.isNotEmpty() }
+        val ids = idsStr.split(",").filter { it.isNotEmpty() && !it.startsWith("audiobook_") && !it.startsWith("radio_") }
         if (ids.isEmpty()) return
         val recentSongs = mutableListOf<Song>()
 
@@ -624,6 +636,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     playerManager.playSong(newList.first(), newList)
                 }
             }
+        }
+    }
+
+    /** Load AI recommended songs based on current song for player recommendation tab */
+    fun loadAIRecommendedSongs(songId: String) {
+        viewModelScope.launch {
+            _aiRecommendLoading.value = true
+            _aiRecommendedSongs.value = emptyList()
+            repository.getSimilarSongs2(songId, 20).onSuccess { songs ->
+                _aiRecommendedSongs.value = songs.filter { it.id != songId }.take(15)
+            }.onFailure {
+                android.util.Log.w("LeChenMusic", "loadAIRecommendedSongs failed: ${it.message}")
+            }
+            _aiRecommendLoading.value = false
         }
     }
 
