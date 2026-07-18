@@ -1,5 +1,6 @@
 package com.lechenmusic.ui.screens.audiobook
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -191,10 +192,8 @@ fun AudiobookGridCard(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .then(
-                            Modifier.background(
-                                Brush.linearGradient(listOf(Color(0xFF667eea), Color(0xFF764ba2)))
-                            )
+                        .background(
+                            Brush.linearGradient(listOf(Color(0xFF667eea), Color(0xFF764ba2)))
                         ),
                     contentAlignment = Alignment.Center
                 ) {
@@ -228,8 +227,3 @@ fun AudiobookGridCard(
         )
     }
 }
-
-// Need to import background
-private fun Modifier.background(brush: Brush): Modifier = this.then(
-    Modifier.background(brush)
-)
