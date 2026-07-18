@@ -1,0 +1,11 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="#FFFFFF">
+    <!-- Material Design Repeat icon, mirrored (backward) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M17,7H7v3L3,6l4,-4v3h12v6h-2V7zM7,17h10v-3l4,4-4,4v-3H5v-6h2v4z"/>
+</vector>
