@@ -3,7 +3,7 @@
     android:height="30dp"
     android:viewportWidth="24"
     android:viewportHeight="24"
-    android:tint="?attr/colorOnSurfaceVariant">
+    android:tint="#FFFFFF">
     <!-- 圆圈箭头（镜像朝左） -->
     <group
         android:pivotX="12"
