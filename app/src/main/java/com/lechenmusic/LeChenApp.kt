@@ -50,6 +50,7 @@ class LeChenApp : Application() {
             } catch (_: Exception) {}
             android.os.Process.killProcess(android.os.Process.myPid())
         }
+    }
 
     companion object {
         lateinit var instance: LeChenApp
