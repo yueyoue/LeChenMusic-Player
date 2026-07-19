@@ -169,7 +169,7 @@ fun ArtistDetailScreen(
                             SongMoreMenuButton(
                                 song = song, playlists = playlists, isStarred = song.isStarred,
                                 onFavorite = { if (song.isStarred) viewModel.unstar(song.id) else viewModel.star(song.id) },
-                                onAddToPlaylist = { pid -> viewModel.addToPlaylist(pid, song.id) },
+                                onAddToPlaylist = { pid: String -> viewModel.addToPlaylist(pid, song.id) },
                                 onAddToQueue = { viewModel.addToQueue(song) },
                                 onGoToArtist = { if (song.artistId.isNotBlank()) onArtistClick(song.artistId) },
                                 onGoToAlbum = { if (song.albumId.isNotBlank()) onAlbumClick(song.albumId) },
