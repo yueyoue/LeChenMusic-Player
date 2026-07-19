@@ -20,7 +20,9 @@ import com.lechenmusic.ui.components.SongItemWithMenu
 @Composable
 fun AllSongsScreen(
     viewModel: MainViewModel,
-    onSongClick: (Song, List<Song>) -> Unit
+    onSongClick: (Song, List<Song>) -> Unit,
+    onArtistClick: (String) -> Unit = {},
+    onAlbumClick: (String) -> Unit = {}
 ) {
     val allSongs by viewModel.allSongs.collectAsState()
     val isLoading by viewModel.allSongsLoading.collectAsState()
