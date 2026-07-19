@@ -22,7 +22,9 @@ import com.lechenmusic.ui.components.SongItemWithMenu
 fun CachedMusicScreen(
     viewModel: MainViewModel,
     onBack: () -> Unit,
-    onSongClick: (Song, List<Song>) -> Unit
+    onSongClick: (Song, List<Song>) -> Unit,
+    onArtistClick: (String) -> Unit = {},
+    onAlbumClick: (String) -> Unit = {}
 ) {
     val cachedSongs by viewModel.cachedSongs.collectAsState()
     val serverUrl by viewModel.serverUrl.collectAsState()
