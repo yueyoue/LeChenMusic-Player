@@ -38,7 +38,8 @@ fun SearchScreen(
     val username by viewModel.username.collectAsState()
     val password by viewModel.password.collectAsState()
 
-    var query by remember { mutableStateOf("") }
+    // Restore previous search state
+    var query by remember { mutableStateOf(searchQuery) }
     var selectedTab by remember { mutableStateOf(0) }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -130,7 +131,17 @@ fun SearchScreen(
             } else {
                 when (selectedTab) {
                     0 -> {
-                        val songs = searchResults?.song ?: emptyList()
+                        // Filter songs: only show if title or artist matches query
+                        // This prevents lyrics-only matches from appearing
+                        val rawSongs = searchResults?.song ?: emptyList()
+                        val songs = if (query.length >= 2) {
+                            val q = query.lowercase()
+                            rawSongs.filter { song ->
+                                song.title.lowercase().contains(q) ||
+                                song.artist.lowercase().contains(q) ||
+                                song.album.lowercase().contains(q)
+                            }
+                        } else rawSongs
                         items(songs) { song ->
                             SongItem(
                                 song = song,

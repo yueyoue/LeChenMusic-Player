@@ -22,7 +22,6 @@ import androidx.compose.ui.unit.sp
 import com.lechenmusic.data.model.InternetRadioStation
 import com.lechenmusic.ui.MainViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RadioScreen(
     viewModel: MainViewModel,
@@ -39,23 +38,23 @@ fun RadioScreen(
         Color(0xFFFF6348)
     )
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("电台") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "返回")
-                    }
-                }
-            )
+    Column(modifier = Modifier.fillMaxSize()) {
+        // Top bar - consistent with other screens, no extra padding
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(Icons.Default.ArrowBack, contentDescription = "返回")
+            }
+            Text("电台", fontSize = 18.sp, fontWeight = FontWeight.Bold)
         }
-    ) { padding ->
+
         if (radioStations.isEmpty()) {
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
+                modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -75,10 +74,8 @@ fun RadioScreen(
             }
         } else {
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(radioStations) { station ->

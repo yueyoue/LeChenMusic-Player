@@ -261,7 +261,8 @@ fun LeChenMusicApp(viewModel: MainViewModel) {
                             viewModel = viewModel,
                             onSongClick = { song, playlist -> viewModel.playSong(song, playlist) },
                             onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) },
-                            onAudiobookClick = { navController.navigate(Screen.AudiobookDetail.createRoute(it)) }
+                            onAudiobookClick = { navController.navigate(Screen.AudiobookDetail.createRoute(it)) },
+                            onPlaylistClick = { navController.navigate(Screen.PlaylistDetail.createRoute(it)) }
                         )
                     }
                     composable(Screen.Search.route) {

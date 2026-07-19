@@ -31,12 +31,42 @@ fun AlbumsScreen(
     var sortType by remember { mutableStateOf("all") }
     var isLoadingAll by remember { mutableStateOf(false) }
 
+    // Store unsorted albums for client-side sorting
+    var allAlbumsUnsorted by remember { mutableStateOf<List<Album>>(emptyList()) }
+
     LaunchedEffect(sortType) {
-        if (sortType == "all") {
-            isLoadingAll = true
-            viewModel.loadAllAlbums { albums = it; isLoadingAll = false }
-        } else {
-            viewModel.loadAlbums(sortType) { albums = it }
+        when (sortType) {
+            "all" -> {
+                isLoadingAll = true
+                viewModel.loadAllAlbums { allAlbumsUnsorted = it; albums = it; isLoadingAll = false }
+            }
+            "name" -> {
+                if (allAlbumsUnsorted.isNotEmpty()) {
+                    albums = allAlbumsUnsorted.sortedBy { it.name.lowercase() }
+                } else {
+                    isLoadingAll = true
+                    viewModel.loadAllAlbums { unsorted ->
+                        allAlbumsUnsorted = unsorted
+                        albums = unsorted.sortedBy { it.name.lowercase() }
+                        isLoadingAll = false
+                    }
+                }
+            }
+            "artist" -> {
+                if (allAlbumsUnsorted.isNotEmpty()) {
+                    albums = allAlbumsUnsorted.sortedBy { it.artist.lowercase() }
+                } else {
+                    isLoadingAll = true
+                    viewModel.loadAllAlbums { unsorted ->
+                        allAlbumsUnsorted = unsorted
+                        albums = unsorted.sortedBy { it.artist.lowercase() }
+                        isLoadingAll = false
+                    }
+                }
+            }
+            else -> {
+                viewModel.loadAlbums(sortType) { albums = it }
+            }
         }
     }
 
@@ -56,6 +86,21 @@ fun AlbumsScreen(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             listOf("all" to "全部", "recent" to "最近", "random" to "随机").forEach { (type, label) ->
+                FilterChip(
+                    selected = sortType == type,
+                    onClick = { sortType = type },
+                    label = { Text(label) }
+                )
+            }
+        }
+        // Secondary sort options
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            listOf("name" to "按名称", "artist" to "按艺术家").forEach { (type, label) ->
                 FilterChip(
                     selected = sortType == type,
                     onClick = { sortType = type },

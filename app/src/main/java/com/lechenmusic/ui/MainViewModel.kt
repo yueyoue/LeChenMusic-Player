@@ -287,10 +287,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         // Register callback for audiobook auto-play next chapter
         playerManager.onPlaybackCompleted = {
-            // Only auto-advance for audiobook playback
             if (_currentAudiobook.value != null) {
+                // Auto-advance for audiobook playback
                 android.util.Log.d("LeChenMusic", "Audiobook chapter ended, auto-playing next chapter")
                 audiobookNextChapter()
+            } else {
+                // Music playback completed — add current song to recent cache
+                // This ensures daily recommendations and other playlists get cached
+                val song = playerManager.currentSong.value
+                if (song != null && !song.id.startsWith("radio_")) {
+                    android.util.Log.d("LeChenMusic", "Music playback completed, caching song: ${song.title}")
+                    viewModelScope.launch {
+                        settings.addRecentPlay(song.id)
+                        addSongToRecentCache(song)
+                        loadRecentPlayedSongs()
+                        loadCachedSongs()
+                    }
+                }
             }
         }
 
@@ -355,7 +368,40 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             settings.clearLogin()
             _isLoggedIn.value = false
+            // Clear all cached data when logging out / switching servers
+            _newestAlbums.value = emptyList()
             _randomAlbums.value = emptyList()
+            _dailySongs.value = emptyList()
+            _recentSongs.value = emptyList()
+            _playlists.value = emptyList()
+            _artists.value = emptyList()
+            _searchResults.value = null
+            _searchQuery.value = ""
+            _starredSongs.value = emptyList()
+            _starredAlbums.value = emptyList()
+            _starredAudiobooks.value = emptyList()
+            _recentPlayedSongs.value = emptyList()
+            _allSongs.value = emptyList()
+            _cachedSongs.value = emptyList()
+            _radioStations.value = emptyList()
+            _currentAlbum.value = null
+            _currentArtist.value = null
+            _currentPlaylist.value = null
+            _currentLyrics.value = null
+            _audiobooks.value = emptyList()
+            _audiobookWithProgress.value = emptyList()
+            _narrators.value = emptyList()
+            _narratorWorks.value = emptyList()
+            _audiobookSearchResults.value = emptyList()
+            _audiobookDetail.value = null
+            _currentAudiobook.value = null
+            _currentAudiobookChapters.value = emptyList()
+            _musicSlides.value = emptyList()
+            _audiobookSlides.value = emptyList()
+            _serverStats.value = com.lechenmusic.data.repository.ServerStats()
+            _homeMode.value = "music"
+            // Clear player state
+            playerManager.forcePause()
         }
     }
 

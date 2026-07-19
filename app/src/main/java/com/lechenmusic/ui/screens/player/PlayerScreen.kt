@@ -233,12 +233,26 @@ fun PlayerScreen(
                         }
                     }
                 }
-                Text(
-                    "${song.artist} · ${song.album}",
-                    fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(top = 4.dp)
-                )
+                ) {
+                    Text(
+                        song.artist,
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.clickable {
+                            if (song.artistId.isNotBlank()) {
+                                onNavigateToArtist(song.artistId)
+                            }
+                        }
+                    )
+                    Text(
+                        " · ${song.album}",
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
 
             // Progress Bar (自定义pointerInput手势，绕过Slider框架开销)
@@ -738,6 +752,18 @@ fun PlayerScreen(
                 MoreItem(Icons.Default.PlaylistAdd, "添加到歌单") {
                     showMoreSheet = false
                     showPlaylistSelectionDialog = true
+                }
+                MoreItem(Icons.Default.QueueMusic, "添加到播放列表") {
+                    showMoreSheet = false
+                    // Add current song to the end of the playback queue
+                    val currentPlaylist = playlist.toMutableList()
+                    if (currentPlaylist.none { it.id == song.id }) {
+                        currentPlaylist.add(song)
+                        playerManager.playSong(song, currentPlaylist)
+                        Toast.makeText(context, "已添加到播放列表", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(context, "歌曲已在播放列表中", Toast.LENGTH_SHORT).show()
+                    }
                 }
                 MoreItem(Icons.Default.Timer, "定时停止播放") {
                     showMoreSheet = false
