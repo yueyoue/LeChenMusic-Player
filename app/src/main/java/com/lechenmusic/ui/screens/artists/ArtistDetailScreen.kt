@@ -27,7 +27,7 @@ import com.lechenmusic.data.model.Song
 import com.lechenmusic.ui.MainViewModel
 import com.lechenmusic.ui.components.AlbumCard
 import com.lechenmusic.ui.components.CoverImage
-import com.lechenmusic.ui.components.SongMoreMenuButton
+import com.lechenmusic.ui.components.SongContextMenu
 
 @Composable
 fun ArtistDetailScreen(
@@ -166,13 +166,11 @@ fun ArtistDetailScreen(
                                 Text(song.title, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 Text(song.album, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                             }
-                            SongMoreMenuButton(
-                                song = song, playlists = playlists, isStarred = song.isStarred,
-                                onFavorite = { if (song.isStarred) viewModel.unstar(song.id) else viewModel.star(song.id) },
+                            SongContextMenu(
+                                song = song, playlists = playlists,
+                                onStar = { viewModel.star(song.id) },
+                                onUnstar = { viewModel.unstar(song.id) },
                                 onAddToPlaylist = { pid: String -> viewModel.addToPlaylist(pid, song.id) },
-                                onAddToQueue = { viewModel.addToQueue(song) },
-                                onGoToArtist = { if (song.artistId.isNotBlank()) onArtistClick(song.artistId) },
-                                onGoToAlbum = { if (song.albumId.isNotBlank()) onAlbumClick(song.albumId) },
                                 onCreatePlaylist = { name: String -> viewModel.createPlaylistAndAddSong(name, song.id) }
                             )
                         }

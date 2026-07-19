@@ -1456,7 +1456,12 @@ fun loadAudiobooks() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 repository.star(id)
-                loadPlaylists()
+                repository.getPlaylists().onSuccess { _playlists.value = it }
+                repository.getStarred().onSuccess {
+                    _starredSongs.value = it.songs
+                    _starredAlbums.value = it.albums
+                    _starredPlaylists.value = it.playlists
+                }
             } catch (e: Exception) {
                 android.util.Log.e("LeChenMusic", "starPlaylist exception: ${e.message}")
             }
@@ -1467,7 +1472,12 @@ fun loadAudiobooks() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 repository.unstar(id)
-                loadPlaylists()
+                repository.getPlaylists().onSuccess { _playlists.value = it }
+                repository.getStarred().onSuccess {
+                    _starredSongs.value = it.songs
+                    _starredAlbums.value = it.albums
+                    _starredPlaylists.value = it.playlists
+                }
             } catch (e: Exception) {
                 android.util.Log.e("LeChenMusic", "unstarPlaylist exception: ${e.message}")
             }
