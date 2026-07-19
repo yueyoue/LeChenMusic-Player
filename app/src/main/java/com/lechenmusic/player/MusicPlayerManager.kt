@@ -170,8 +170,25 @@ class MusicPlayerManager(private val context: Context) {
                         }
                     }
                     override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                        // Capture the PREVIOUS song before updating to the new one
+                        val previousSong = _currentSong.value
                         updateCurrentFromPlayer()
                         updateNotification()
+
+                        // When auto-advancing (previous song finished naturally),
+                        // mark the previous song as fully played so it appears in cache.
+                        // STATE_ENDED only fires for the LAST song in a playlist,
+                        // so intermediate songs need to be caught here.
+                        if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO ||
+                            reason == Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT) {
+                            if (previousSong != null &&
+                                !previousSong.id.startsWith("audiobook_") &&
+                                !previousSong.id.startsWith("radio_")) {
+                                fullyPlayedSongIds.add(previousSong.id)
+                                fullyPlayedPrefs.edit().putStringSet("ids", fullyPlayedSongIds).apply()
+                            }
+                        }
+
                         val song = _currentSong.value
                         if (song != null) {
                             scope.launch(Dispatchers.IO) {

@@ -442,3 +442,182 @@ fun SectionHeader(
         }
     }
 }
+
+// ==================== Song Context Menu (Three-dot Menu) ====================
+
+@Composable
+fun SongContextMenu(
+    song: Song,
+    playlists: List<com.lechenmusic.data.model.Playlist>,
+    onStar: () -> Unit,
+    onUnstar: () -> Unit,
+    onAddToPlaylist: (String) -> Unit,
+    onCreatePlaylist: ((String) -> Unit)? = null
+) {
+    var expanded by remember { mutableStateOf(false) }
+    var showPlaylistMenu by remember { mutableStateOf(false) }
+    var showCreateDialog by remember { mutableStateOf(false) }
+
+    Box {
+        IconButton(
+            onClick = { expanded = true },
+            modifier = Modifier.size(32.dp)
+        ) {
+            Icon(
+                Icons.Default.MoreVert,
+                contentDescription = "更多",
+                modifier = Modifier.size(18.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = {
+                expanded = false
+                showPlaylistMenu = false
+            }
+        ) {
+            DropdownMenuItem(
+                text = { Text(if (song.isStarred) "取消收藏" else "收藏") },
+                onClick = {
+                    expanded = false
+                    if (song.isStarred) onUnstar() else onStar()
+                },
+                leadingIcon = {
+                    Icon(
+                        if (song.isStarred) Icons.Default.FavoriteBorder else Icons.Default.Favorite,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = if (song.isStarred) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFFE94560)
+                    )
+                }
+            )
+            DropdownMenuItem(
+                text = { Text("添加到歌单") },
+                onClick = { showPlaylistMenu = !showPlaylistMenu },
+                leadingIcon = { Icon(Icons.Default.PlaylistAdd, contentDescription = null, modifier = Modifier.size(20.dp)) },
+                trailingIcon = { Icon(Icons.Default.ArrowRight, contentDescription = null, modifier = Modifier.size(16.dp)) }
+            )
+            if (showPlaylistMenu) {
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                playlists.forEach { pl ->
+                    DropdownMenuItem(
+                        text = { Text(pl.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        onClick = {
+                            expanded = false
+                            showPlaylistMenu = false
+                            onAddToPlaylist(pl.id)
+                        },
+                        leadingIcon = { Icon(Icons.Default.PlaylistAdd, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant) }
+                    )
+                }
+                if (onCreatePlaylist != null) {
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                    DropdownMenuItem(
+                        text = { Text("新建歌单...") },
+                        onClick = {
+                            expanded = false
+                            showPlaylistMenu = false
+                            showCreateDialog = true
+                        },
+                        leadingIcon = { Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary) }
+                    )
+                }
+            }
+        }
+    }
+
+    if (showCreateDialog && onCreatePlaylist != null) {
+        var newName by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { showCreateDialog = false },
+            title = { Text("新建歌单") },
+            text = {
+                OutlinedTextField(
+                    value = newName,
+                    onValueChange = { newName = it },
+                    label = { Text("歌单名称") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (newName.isNotBlank()) {
+                        onCreatePlaylist(newName)
+                        showCreateDialog = false
+                    }
+                }) { Text("创建") }
+            },
+            dismissButton = { TextButton(onClick = { showCreateDialog = false }) { Text("取消") } }
+        )
+    }
+}
+
+@Composable
+fun SongItemWithMenu(
+    song: Song,
+    serverUrl: String,
+    username: String,
+    password: String,
+    playlists: List<com.lechenmusic.data.model.Playlist>,
+    onClick: () -> Unit,
+    onStar: () -> Unit,
+    onUnstar: () -> Unit,
+    onAddToPlaylist: (String) -> Unit,
+    onCreatePlaylist: ((String) -> Unit)? = null,
+    trailing: @Composable (() -> Unit)? = null
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 20.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        CoverImage(
+            coverArtId = song.coverArt ?: song.albumId,
+            serverUrl = serverUrl,
+            username = username,
+            password = password,
+            modifier = Modifier.size(48.dp).clip(RoundedCornerShape(8.dp))
+        )
+        Column(modifier = Modifier.weight(1f).padding(start = 12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = song.title,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false)
+                )
+            }
+            Text(
+                text = "${song.artist} · ${song.album}",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        if (trailing != null) {
+            trailing()
+        } else {
+            Text(
+                text = song.durationFormatted,
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        SongContextMenu(
+            song = song,
+            playlists = playlists,
+            onStar = onStar,
+            onUnstar = onUnstar,
+            onAddToPlaylist = onAddToPlaylist,
+            onCreatePlaylist = onCreatePlaylist
+        )
+    }
+}

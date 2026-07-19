@@ -15,7 +15,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lechenmusic.data.model.Song
 import com.lechenmusic.ui.MainViewModel
-import com.lechenmusic.ui.components.SongItem
+import com.lechenmusic.ui.components.SongItemWithMenu
 
 @Composable
 fun AllSongsScreen(
@@ -29,6 +29,7 @@ fun AllSongsScreen(
     val username by viewModel.username.collectAsState()
     val password by viewModel.password.collectAsState()
     val toastMessage by viewModel.toastMessage.collectAsState()
+    val playlists by viewModel.playlists.collectAsState()
     val context = LocalContext.current
     var initialLoadTriggered by remember { mutableStateOf(false) }
 
@@ -79,12 +80,17 @@ fun AllSongsScreen(
                 }
             }
             items(allSongs) { song ->
-                SongItem(
+                SongItemWithMenu(
                     song = song,
                     serverUrl = serverUrl,
                     username = username,
                     password = password,
-                    onClick = { onSongClick(song, allSongs) }
+                    playlists = playlists,
+                    onClick = { onSongClick(song, allSongs) },
+                    onStar = { viewModel.star(song.id) },
+                    onUnstar = { viewModel.unstar(song.id) },
+                    onAddToPlaylist = { plId -> viewModel.addToPlaylist(plId, song.id) },
+                    onCreatePlaylist = { name -> viewModel.createPlaylistAndAddSong(name, song.id) }
                 )
             }
         } else if (isLoading) {

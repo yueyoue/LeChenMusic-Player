@@ -22,7 +22,7 @@ import androidx.compose.ui.unit.sp
 import com.lechenmusic.data.model.Song
 import com.lechenmusic.ui.MainViewModel
 import com.lechenmusic.ui.components.CoverImage
-import com.lechenmusic.ui.components.SongItem
+import com.lechenmusic.ui.components.SongItemWithMenu
 
 @Composable
 fun AlbumDetailScreen(
@@ -35,6 +35,7 @@ fun AlbumDetailScreen(
     val serverUrl by viewModel.serverUrl.collectAsState()
     val username by viewModel.username.collectAsState()
     val password by viewModel.password.collectAsState()
+    val playlists by viewModel.playlists.collectAsState()
 
     LaunchedEffect(albumId) {
         viewModel.loadAlbumDetail(albumId)
@@ -113,12 +114,17 @@ fun AlbumDetailScreen(
 
         // Songs
         itemsIndexed(currentAlbum.song ?: emptyList()) { index, song ->
-            SongItem(
+            SongItemWithMenu(
                 song = song,
                 serverUrl = serverUrl,
                 username = username,
                 password = password,
+                playlists = playlists,
                 onClick = { onSongClick(song, currentAlbum.song ?: emptyList()) },
+                onStar = { viewModel.star(song.id) },
+                onUnstar = { viewModel.unstar(song.id) },
+                onAddToPlaylist = { plId -> viewModel.addToPlaylist(plId, song.id) },
+                onCreatePlaylist = { name -> viewModel.createPlaylistAndAddSong(name, song.id) },
                 trailing = {
                     Text("${index + 1}", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }

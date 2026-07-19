@@ -18,7 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lechenmusic.data.model.Song
 import com.lechenmusic.ui.MainViewModel
-import com.lechenmusic.ui.components.SongItem
+import com.lechenmusic.ui.components.SongItemWithMenu
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -204,12 +204,17 @@ fun PlaylistDetailScreen(
 
         // Songs
         itemsIndexed(currentPlaylist.songs) { index, song ->
-            SongItem(
+            SongItemWithMenu(
                 song = song,
                 serverUrl = serverUrl,
                 username = username,
                 password = password,
+                playlists = playlists,
                 onClick = { onSongClick(song, currentPlaylist.songs) },
+                onStar = { viewModel.star(song.id) },
+                onUnstar = { viewModel.unstar(song.id) },
+                onAddToPlaylist = { plId -> viewModel.addToPlaylist(plId, song.id, currentPlaylist.owner) },
+                onCreatePlaylist = { name -> viewModel.createPlaylistAndAddSong(name, song.id) },
                 trailing = {
                     if (isOwner) {
                         IconButton(

@@ -15,7 +15,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lechenmusic.data.model.Song
 import com.lechenmusic.ui.MainViewModel
-import com.lechenmusic.ui.components.SongItem
+import com.lechenmusic.ui.components.SongItemWithMenu
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -28,6 +28,7 @@ fun CachedMusicScreen(
     val serverUrl by viewModel.serverUrl.collectAsState()
     val username by viewModel.username.collectAsState()
     val password by viewModel.password.collectAsState()
+    val playlists by viewModel.playlists.collectAsState()
 
     // Refresh cached songs when entering this screen
     LaunchedEffect(Unit) {
@@ -87,12 +88,17 @@ fun CachedMusicScreen(
                 contentPadding = PaddingValues(bottom = 80.dp)
             ) {
                 items(cachedSongs) { song ->
-                    SongItem(
+                    SongItemWithMenu(
                         song = song,
                         serverUrl = serverUrl,
                         username = username,
                         password = password,
-                        onClick = { onSongClick(song, cachedSongs) }
+                        playlists = playlists,
+                        onClick = { onSongClick(song, cachedSongs) },
+                        onStar = { viewModel.star(song.id) },
+                        onUnstar = { viewModel.unstar(song.id) },
+                        onAddToPlaylist = { plId -> viewModel.addToPlaylist(plId, song.id) },
+                        onCreatePlaylist = { name -> viewModel.createPlaylistAndAddSong(name, song.id) }
                     )
                 }
             }
