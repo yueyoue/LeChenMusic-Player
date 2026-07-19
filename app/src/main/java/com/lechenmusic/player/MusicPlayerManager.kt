@@ -199,6 +199,15 @@ class MusicPlayerManager(private val context: Context) {
                     }
                     override fun onPlayerError(error: PlaybackException) {
                         android.util.Log.e("LeChenMusic", "onPlayerError: ${error.errorCodeName} - ${error.message}")
+                        // #19: Report playback error to server
+                        try {
+                            LeChenApp.sendErrorToServer(
+                                "error",
+                                "Playback error: ${error.errorCodeName} - ${error.message}",
+                                error.stackTrace.take(10).joinToString("\n") { "at $it" },
+                                "player"
+                            )
+                        } catch (_: Exception) {}
                         skipNext()
                     }
                 })
@@ -315,10 +324,20 @@ class MusicPlayerManager(private val context: Context) {
             val cache = musicCache ?: return emptySet()
             val cachedIds = mutableSetOf<String>()
             for (key in cache.keys) {
-                // Stream URL format: .../rest/stream?...&id=<songId>&...
                 val match = Regex("[?&]id=([^&]+)").find(key)
                 if (match != null) {
-                    cachedIds.add(match.groupValues[1])
+                    val songId = match.groupValues[1]
+                    // #18: Verify the song is fully cached (not partial)
+                    try {
+                        val cachedBytes = cache.getCachedBytes(key, 0, Long.MAX_VALUE)
+                        // Only consider songs with at least 100KB cached (skip tiny/partial)
+                        if (cachedBytes > 100 * 1024) {
+                            cachedIds.add(songId)
+                        }
+                    } catch (_: Exception) {
+                        // If we can't check bytes, include it if fully played
+                        cachedIds.add(songId)
+                    }
                 }
             }
             // Only return songs that are both in cache AND fully played

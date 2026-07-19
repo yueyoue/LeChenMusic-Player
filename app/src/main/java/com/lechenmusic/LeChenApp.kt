@@ -18,7 +18,25 @@ class LeChenApp : Application() {
     override fun onCreate() {
         super.onCreate()
 
-        // Crash handler - log crashes to file and report to server
+        instance = this
+        repository = MusicRepository()
+        settingsRepository = SettingsRepository(this)
+        lyricsCache = LyricsCache(this)
+        playerManager = MusicPlayerManager(this)
+        playerManager.init(repository)
+
+        // #19: Initialize global error reporter
+        try {
+            val prefs = getSharedPreferences("settings", MODE_PRIVATE)
+            val serverUrl = prefs.getString("serverUrl", "") ?: ""
+            val username = prefs.getString("username", "") ?: ""
+            if (serverUrl.isNotBlank()) {
+                ErrorReporter.init(this, serverUrl, username, "")
+            }
+        } catch (_: Exception) {}
+
+        // Crash handler - log crashes and report to server
+        val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
             try {
                 val crashLog = java.io.File(getExternalFilesDir(null), "crash_log.txt")
@@ -28,21 +46,10 @@ class LeChenApp : Application() {
                 android.util.Log.e("LeChenMusic", "CRASH: ${throwable.message}", throwable)
 
                 // Report crash to server
-                try {
-                    val stack = throwable.stackTrace.take(20).joinToString("\n") { "at $it" }
-                    sendErrorToServer("crash", throwable.message ?: "Unknown", stack, "crash")
-                } catch (_: Exception) {}
+                sendErrorToServer("crash", throwable.message ?: "Unknown", throwable.stackTrace.take(20).joinToString("\n") { "at $it" }, "crash_${thread.name}")
             } catch (_: Exception) {}
             android.os.Process.killProcess(android.os.Process.myPid())
         }
-
-        instance = this
-        repository = MusicRepository()
-        settingsRepository = SettingsRepository(this)
-        lyricsCache = LyricsCache(this)
-        playerManager = MusicPlayerManager(this)
-        playerManager.init(repository)
-    }
 
     companion object {
         lateinit var instance: LeChenApp

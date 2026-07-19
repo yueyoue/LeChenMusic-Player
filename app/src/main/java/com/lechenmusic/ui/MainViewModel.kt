@@ -235,6 +235,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // Artist detail
     private val _currentArtist = MutableStateFlow<ArtistDetail?>(null)
     val currentArtist: StateFlow<ArtistDetail?> = _currentArtist.asStateFlow()
+    private val _artistSongs = MutableStateFlow<List<Song>>(emptyList())
+    val artistSongs: StateFlow<List<Song>> = _artistSongs.asStateFlow()
 
     // Playlist detail
     private val _currentPlaylist = MutableStateFlow<PlaylistDetail?>(null)
@@ -760,7 +762,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun loadArtistDetail(artistId: String) {
         viewModelScope.launch {
-            repository.getArtist(artistId).onSuccess { _currentArtist.value = it }
+            repository.getArtist(artistId).onSuccess { detail ->
+                _currentArtist.value = detail
+                // Collect all songs from artist's albums
+                val allSongs = mutableListOf<Song>()
+                detail.album?.forEach { album ->
+                    repository.getAlbum(album.id).onSuccess { albumDetail ->
+                        albumDetail.song?.let { allSongs.addAll(it) }
+                    }
+                }
+                _artistSongs.value = allSongs
+            }
         }
     }
 

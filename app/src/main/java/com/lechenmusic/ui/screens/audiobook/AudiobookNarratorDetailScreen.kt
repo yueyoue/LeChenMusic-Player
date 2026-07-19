@@ -65,37 +65,38 @@ fun AudiobookNarratorDetailScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // Narrator header with gradient background
+            // #11: Narrator header with background image + gradient fade (like artist detail)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(200.dp)
+                    .height(250.dp)
             ) {
-                // Gradient background
+                // Background image
+                val avatarUrl = SubsonicApi.getNarratorAvatarUrl(serverUrl, narratorName)
+                if (avatarUrl.isNotEmpty()) {
+                    AsyncImage(
+                        model = avatarUrl,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+                // Gradient overlay: visible at top, transparent at bottom
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(
                             Brush.verticalGradient(
-                                listOf(
-                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                                colors = listOf(
+                                    Color.Black.copy(alpha = 0.6f),
+                                    Color.Transparent,
+                                    Color.Transparent,
                                     MaterialTheme.colorScheme.background
                                 )
                             )
                         )
-                ) {
-                    val avatarUrl = SubsonicApi.getNarratorAvatarUrl(serverUrl, narratorName)
-                    if (avatarUrl.isNotEmpty()) {
-                        AsyncImage(
-                            model = avatarUrl,
-                            contentDescription = null,
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop,
-                            alpha = 0.2f
-                        )
-                    }
-                }
-                // Narrator info centered
+                )
+                // Narrator info at bottom
                 Column(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
@@ -107,7 +108,6 @@ fun AudiobookNarratorDetailScreen(
                         shape = CircleShape,
                         color = MaterialTheme.colorScheme.primaryContainer
                     ) {
-                        val avatarUrl = SubsonicApi.getNarratorAvatarUrl(serverUrl, narratorName)
                         AsyncImage(
                             model = avatarUrl,
                             contentDescription = narratorName,

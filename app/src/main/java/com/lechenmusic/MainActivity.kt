@@ -288,7 +288,9 @@ fun LeChenMusicApp(viewModel: MainViewModel) {
                     composable(Screen.AllSongs.route) {
                         AllSongsScreen(
                             viewModel = viewModel,
-                            onSongClick = { song, playlist -> viewModel.playSong(song, playlist) }
+                            onSongClick = { song, playlist -> viewModel.playSong(song, playlist) },
+                            onArtistClick = { navController.navigate(Screen.ArtistDetail.createRoute(it)) },
+                            onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) }
                         )
                     }
                     composable(Screen.AllPlaylists.route) {
@@ -302,14 +304,18 @@ fun LeChenMusicApp(viewModel: MainViewModel) {
                         CachedMusicScreen(
                             viewModel = viewModel,
                             onBack = { navController.popBackStack() },
-                            onSongClick = { song, playlist -> viewModel.playSong(song, playlist) }
+                            onSongClick = { song, playlist -> viewModel.playSong(song, playlist) },
+                            onArtistClick = { navController.navigate(Screen.ArtistDetail.createRoute(it)) },
+                            onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) }
                         )
                     }
                     composable(Screen.RecentPlayed.route) {
                         RecentPlayedScreen(
                             viewModel = viewModel,
                             onBack = { navController.popBackStack() },
-                            onSongClick = { song, playlist -> viewModel.playSong(song, playlist) }
+                            onSongClick = { song, playlist -> viewModel.playSong(song, playlist) },
+                            onArtistClick = { navController.navigate(Screen.ArtistDetail.createRoute(it)) },
+                            onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) }
                         )
                     }
                     composable(Screen.Settings.route) {
@@ -349,7 +355,9 @@ fun LeChenMusicApp(viewModel: MainViewModel) {
                             viewModel = viewModel,
                             albumId = albumId,
                             onBack = { navController.popBackStack() },
-                            onSongClick = { song, playlist -> viewModel.playSong(song, playlist) }
+                            onSongClick = { song, playlist -> viewModel.playSong(song, playlist) },
+                            onArtistClick = { navController.navigate(Screen.ArtistDetail.createRoute(it)) },
+                            onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) }
                         )
                     }
                     composable(Screen.ArtistDetail.route) { backStackEntry ->
@@ -359,7 +367,8 @@ fun LeChenMusicApp(viewModel: MainViewModel) {
                             artistId = artistId,
                             onBack = { navController.popBackStack() },
                             onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) },
-                            onSongClick = { song, playlist -> viewModel.playSong(song, playlist) }
+                            onSongClick = { song, playlist -> viewModel.playSong(song, playlist) },
+                            onArtistClick = { navController.navigate(Screen.ArtistDetail.createRoute(it)) }
                         )
                     }
                     composable(Screen.PlaylistDetail.route) { backStackEntry ->
@@ -368,7 +377,9 @@ fun LeChenMusicApp(viewModel: MainViewModel) {
                             viewModel = viewModel,
                             playlistId = playlistId,
                             onBack = { navController.popBackStack() },
-                            onSongClick = { song, playlist -> viewModel.playSong(song, playlist) }
+                            onSongClick = { song, playlist -> viewModel.playSong(song, playlist) },
+                            onArtistClick = { navController.navigate(Screen.ArtistDetail.createRoute(it)) },
+                            onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) }
                         )
                     }
                     composable(Screen.Radio.route) {
