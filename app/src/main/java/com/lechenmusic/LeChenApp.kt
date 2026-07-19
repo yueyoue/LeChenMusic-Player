@@ -46,7 +46,7 @@ class LeChenApp : Application() {
                 android.util.Log.e("LeChenMusic", "CRASH: ${throwable.message}", throwable)
 
                 // Report crash to server
-                sendErrorToServer("crash", throwable.message ?: "Unknown", throwable.stackTrace.take(20).joinToString("\n") { "at $it" }, "crash_${thread.name}")
+                Companion.sendErrorToServer("crash", throwable.message ?: "Unknown", throwable.stackTrace.take(20).joinToString("\n") { "at $it" }, "crash_${thread.name}")
             } catch (_: Exception) {}
             android.os.Process.killProcess(android.os.Process.myPid())
         }

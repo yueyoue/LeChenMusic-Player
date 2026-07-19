@@ -46,6 +46,7 @@ object ErrorReporter {
         }
 
         // Set global coroutine exception handler
+        val currentDefault = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler(
             Thread.UncaughtExceptionHandler { thread, throwable ->
                 try {
@@ -57,10 +58,7 @@ object ErrorReporter {
                     )
                 } catch (_: Exception) {}
                 // Let default handler take over
-                val handler = Thread.getDefaultUncaughtExceptionHandler()
-                if (handler != this@ErrorReporter) {
-                    handler?.uncaughtException(thread, throwable)
-                }
+                currentDefault?.uncaughtException(thread, throwable)
             }
         )
 
