@@ -113,6 +113,9 @@ dependencies {
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
+    // Pinyin4j - Chinese character to pinyin conversion
+    implementation("com.belerweb:pinyin4j:2.5.1")
+
     // Debug
     debugImplementation("androidx.compose.ui:ui-tooling")
 }

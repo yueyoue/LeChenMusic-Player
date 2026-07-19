@@ -595,6 +595,26 @@ class MusicPlayerManager(private val context: Context) {
         } catch (_: Exception) { }
     }
 
+    // Add song to end of current queue
+    fun addToQueue(song: Song) {
+        player?.apply {
+            val url = repository!!.getStreamUrl(song.id)
+            val mediaItem = MediaItem.Builder()
+                .setUri(url)
+                .setMediaId(song.id)
+                .setMediaMetadata(
+                    Media3Metadata.Builder()
+                        .setTitle(song.title)
+                        .setArtist(song.artist)
+                        .setAlbumTitle(song.album)
+                        .build()
+                )
+                .build()
+            addMediaItem(mediaItem)
+            _playlist.value = _playlist.value + song
+        }
+    }
+
     fun skipNext() {
         player?.let {
             if (_shuffleMode.value) {
