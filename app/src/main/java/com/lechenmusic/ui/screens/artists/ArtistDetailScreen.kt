@@ -24,7 +24,6 @@ import com.lechenmusic.data.model.Song
 import com.lechenmusic.ui.MainViewModel
 import com.lechenmusic.ui.components.AlbumCard
 import com.lechenmusic.ui.components.CoverImage
-import com.lechenmusic.ui.components.SongItem
 
 @Composable
 fun ArtistDetailScreen(
@@ -39,18 +38,11 @@ fun ArtistDetailScreen(
     val username by viewModel.username.collectAsState()
     val password by viewModel.password.collectAsState()
 
-    var selectedTab by remember { mutableIntStateOf(0) }
-
     LaunchedEffect(artistId) {
         viewModel.loadArtistDetail(artistId)
     }
 
     val currentArtist = artist ?: return
-
-    // Collect all songs from all albums
-    val allSongs = remember(currentArtist) {
-        currentArtist.album?.flatMap { it.song ?: emptyList() } ?: emptyList()
-    }
 
     LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 160.dp)) {
         // Gradient background header with artist info
@@ -138,106 +130,48 @@ fun ArtistDetailScreen(
             }
         }
 
-        // Tabs: 专辑 / 歌曲
+        // Albums section title
         item {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                listOf("专辑" to 0, "歌曲" to 1).forEach { (label, index) ->
-                    Text(
-                        text = label,
-                        fontSize = 15.sp,
-                        fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal,
-                        color = if (selectedTab == index) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier
-                            .clickable { selectedTab = index }
-                            .padding(vertical = 8.dp)
-                    )
-                }
-            }
-            HorizontalDivider(
-                modifier = Modifier.padding(horizontal = 20.dp),
-                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+            Text(
+                "专辑 (${currentArtist.album?.size ?: 0})",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
             )
         }
 
-        when (selectedTab) {
-            0 -> {
-                // Albums tab
-                if (!currentArtist.album.isNullOrEmpty()) {
-                    items(currentArtist.album!!.chunked(2)) { row ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 20.dp, vertical = 4.dp),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            row.forEach { album ->
-                                AlbumCard(
-                                    album = album,
-                                    serverUrl = serverUrl,
-                                    username = username,
-                                    password = password,
-                                    onClick = { onAlbumClick(album.id) },
-                                    modifier = Modifier.weight(1f)
-                                )
-                            }
-                        }
-                    }
-                } else {
-                    item {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(40.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                "暂无专辑",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-            }
-            1 -> {
-                // Songs tab
-                if (allSongs.isNotEmpty()) {
-                    item {
-                        Text(
-                            "${allSongs.size} 首歌曲",
-                            fontSize = 13.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
-                        )
-                    }
-                    items(allSongs) { song ->
-                        SongItem(
-                            song = song,
+        if (!currentArtist.album.isNullOrEmpty()) {
+            items(currentArtist.album!!.chunked(2)) { row ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    row.forEach { album ->
+                        AlbumCard(
+                            album = album,
                             serverUrl = serverUrl,
                             username = username,
                             password = password,
-                            onClick = { onSongClick(song, allSongs) }
+                            onClick = { onAlbumClick(album.id) },
+                            modifier = Modifier.weight(1f)
                         )
                     }
-                } else {
-                    item {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(40.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                "暂无歌曲",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
+                }
+            }
+        } else {
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(40.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        "暂无专辑",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
         }
