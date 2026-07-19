@@ -97,6 +97,19 @@ fun PlaylistDetailScreen(
                         tint = MaterialTheme.colorScheme.primary
                     )
                 }
+                // Star/Unstar button
+                IconButton(
+                    onClick = {
+                        if (currentPlaylist.isStarred) viewModel.unstarPlaylist(playlistId)
+                        else viewModel.starPlaylist(playlistId)
+                    }
+                ) {
+                    Icon(
+                        if (currentPlaylist.isStarred) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        contentDescription = if (currentPlaylist.isStarred) "取消收藏" else "收藏",
+                        tint = if (currentPlaylist.isStarred) Color(0xFFE94560) else MaterialTheme.colorScheme.onSurface
+                    )
+                }
             }
         }
 

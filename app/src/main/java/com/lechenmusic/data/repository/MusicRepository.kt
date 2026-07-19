@@ -192,7 +192,8 @@ class MusicRepository {
             Result.success(StarredData(
                 songs = starred?.song ?: emptyList(),
                 albums = starred?.album ?: emptyList(),
-                artists = starred?.artist ?: emptyList()
+                artists = starred?.artist ?: emptyList(),
+                playlists = starred?.playlist ?: emptyList()
             ))
         } catch (e: Exception) {
             Result.failure(e)
@@ -819,6 +820,6 @@ class MusicRepository {
 
 }
 
-data class StarredData(val songs: List<com.lechenmusic.data.model.Song> = emptyList(), val albums: List<com.lechenmusic.data.model.Album> = emptyList(), val artists: List<com.lechenmusic.data.model.Artist> = emptyList())
+data class StarredData(val songs: List<com.lechenmusic.data.model.Song> = emptyList(), val albums: List<com.lechenmusic.data.model.Album> = emptyList(), val artists: List<com.lechenmusic.data.model.Artist> = emptyList(), val playlists: List<com.lechenmusic.data.model.Playlist> = emptyList())
 data class ServerStats(val songCount: Int = 0, val albumCount: Int = 0, val playlistCount: Int = 0, val artistCount: Int = 0, val audiobookCount: Int = 0)
 

@@ -38,6 +38,7 @@ fun FavoritesScreen(
     val starredAlbums by viewModel.starredAlbums.collectAsState()
     val starredAudiobooks by viewModel.starredAudiobooks.collectAsState()
     val playlists by viewModel.playlists.collectAsState()
+    val starredPlaylists by viewModel.starredPlaylists.collectAsState()
     val serverUrl by viewModel.serverUrl.collectAsState()
     val username by viewModel.username.collectAsState()
     val password by viewModel.password.collectAsState()
@@ -80,7 +81,7 @@ fun FavoritesScreen(
             0 -> MusicTab(starredSongs, serverUrl, username, password, onSongClick)
             1 -> AlbumsTab(starredAlbums, serverUrl, username, password, onAlbumClick)
             2 -> AudiobooksTab(starredAudiobooks, serverUrl, username, password, onAudiobookClick)
-            3 -> PlaylistsTab(playlists, serverUrl, username, password, onPlaylistClick)
+            3 -> PlaylistsTab(starredPlaylists, serverUrl, username, password, onPlaylistClick)
         }
     }
 }

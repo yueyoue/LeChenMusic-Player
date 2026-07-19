@@ -128,8 +128,11 @@ data class Playlist(
     val duration: Int = 0,
     val owner: String = "",
     val public: Boolean = false,
-    val coverArt: String? = null
-)
+    val coverArt: String? = null,
+    val starred: String? = null
+) {
+    val isStarred: Boolean get() = starred != null
+}
 
 data class PlaylistDetail(
     val id: String = "",
@@ -140,11 +143,12 @@ data class PlaylistDetail(
     val owner: String = "",
     val public: Boolean = false,
     val coverArt: String? = null,
+    val starred: String? = null,
     val song: List<Song>? = null,
     @SerializedName("entry") val entry: List<Song>? = null
 ) {
-    /** Get songs from either 'song' or 'entry' field */
     val songs: List<Song> get() = song ?: entry ?: emptyList()
+    val isStarred: Boolean get() = starred != null
 }
 
 data class SongsWrapper(
@@ -185,7 +189,8 @@ data class StarResult(val status: String = "")
 data class Starred2Data(
     val song: List<Song>? = null,
     val album: List<Album>? = null,
-    val artist: List<Artist>? = null
+    val artist: List<Artist>? = null,
+    val playlist: List<Playlist>? = null
 )
 
 data class LyricsData(

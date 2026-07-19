@@ -74,6 +74,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val starredAlbums: StateFlow<List<Album>> = _starredAlbums.asStateFlow()
     private val _starredAudiobooks = MutableStateFlow<List<Audiobook>>(emptyList())
     val starredAudiobooks: StateFlow<List<Audiobook>> = _starredAudiobooks.asStateFlow()
+    private val _starredPlaylists = MutableStateFlow<List<Playlist>>(emptyList())
+    val starredPlaylists: StateFlow<List<Playlist>> = _starredPlaylists.asStateFlow()
 
     // Server stats
     private val _serverStats = MutableStateFlow(ServerStats())
@@ -382,6 +384,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _starredSongs.value = emptyList()
             _starredAlbums.value = emptyList()
             _starredAudiobooks.value = emptyList()
+            _starredPlaylists.value = emptyList()
             _recentPlayedSongs.value = emptyList()
             _allSongs.value = emptyList()
             _cachedSongs.value = emptyList()
@@ -519,6 +522,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             repository.getStarred().onSuccess { 
                 _starredSongs.value = it.songs
                 _starredAlbums.value = it.albums
+                _starredPlaylists.value = it.playlists
             }
             loadStarredAudiobooks()
             loadAudiobooks()
@@ -1365,16 +1369,15 @@ fun loadAudiobooks() {
                 repository.getStarred().onSuccess {
                     _starredSongs.value = it.songs
                     _starredAlbums.value = it.albums
+                    _starredPlaylists.value = it.playlists
                 }
             }.onFailure {
-                // Revert on failure
                 if (current != null) _currentAlbum.value = current
             }
         }
     }
 
     fun unstar(id: String) {
-        // Optimistic update
         val current = _currentAlbum.value
         if (current != null && current.id == id) {
             _currentAlbum.value = current.copy(starred = null)
@@ -1384,9 +1387,9 @@ fun loadAudiobooks() {
                 repository.getStarred().onSuccess {
                     _starredSongs.value = it.songs
                     _starredAlbums.value = it.albums
+                    _starredPlaylists.value = it.playlists
                 }
             }.onFailure {
-                // Revert on failure
                 if (current != null) _currentAlbum.value = current
             }
         }
@@ -1439,6 +1442,29 @@ fun loadAudiobooks() {
             } catch (e: Exception) {
                 android.util.Log.e("LeChenMusic", "unstarAudiobook exception: ${e.message}")
                 if (currentDetail != null) _audiobookDetail.value = currentDetail
+            }
+        }
+    }
+
+    // Star/Unstar playlist (for #4: favorites sync)
+    fun starPlaylist(id: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                repository.star(id)
+                loadPlaylists()
+            } catch (e: Exception) {
+                android.util.Log.e("LeChenMusic", "starPlaylist exception: ${e.message}")
+            }
+        }
+    }
+
+    fun unstarPlaylist(id: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                repository.unstar(id)
+                loadPlaylists()
+            } catch (e: Exception) {
+                android.util.Log.e("LeChenMusic", "unstarPlaylist exception: ${e.message}")
             }
         }
     }
