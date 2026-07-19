@@ -7,6 +7,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -22,9 +23,8 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.painterResource
-import com.lechenmusic.R
 import androidx.compose.ui.graphics.vector.path
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -213,13 +213,162 @@ private fun getQualityColor(song: Song): Color {
 }
 
 // ==================== Skip 15s Buttons ====================
-// Uses the music player's Repeat icon with "15" text overlay.
-// Forward: Repeat icon + 15 | Backward: mirrored Repeat icon + 15
+// Custom SVG icons: 后退15秒 / 前进15秒
 
-/**
- * A skip-forward-15-seconds button: Repeat icon + "15" text inside.
- * Exactly the same icon as the music player's repeat/loop button.
- */
+private val SkipBackward15Icon: ImageVector by lazy {
+    ImageVector.Builder(
+        name = "SkipBackward15",
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 1024f,
+        viewportHeight = 1024f
+    ).apply {
+        path(
+            fill = SolidColor(Color.Black)
+        ) {
+            moveTo(299.52f, 224.512f)
+            lineTo(306.112f, 187.648f)
+            horizontalLineTo(306.048f)
+            arcTo(27.392f, 27.392f, 0f, false, false, 252.16f, 178.048f)
+            horizontalLineTo(252.096f)
+            lineTo(231.232f, 295.04f)
+            arcTo(27.456f, 27.456f, 0f, false, false, 278.848f, 317.952f)
+            quadTo(373.696f, 210.304f, 517.12f, 210.304f)
+            quadTo(648.576f, 210.304f, 741.568f, 303.232f)
+            quadTo(834.496f, 396.224f, 834.496f, 527.68f)
+            quadTo(834.496f, 659.136f, 741.568f, 752.128f)
+            quadTo(648.576f, 845.056f, 517.12f, 845.056f)
+            quadTo(389.952f, 845.056f, 298.048f, 757.376f)
+            arcTo(27.328f, 27.328f, 0f, false, false, 260.224f, 797.0f)
+            quadTo(368.0f, 899.912f, 627.12f, 899.912f)
+            quadTo(781.36f, 899.912f, 890.352f, 790.92f)
+            quadTo(999.344f, 681.864f, 999.344f, 527.68f)
+            quadTo(999.344f, 373.44f, 890.352f, 264.448f)
+            quadTo(781.36f, 155.52f, 671.296f, 155.52f)
+            quadTo(546.944f, 155.52f, 453.696f, 224.576f)
+            lineTo(299.52f, 224.512f)
+            close()
+            moveTo(477.632f, 641.536f)
+            horizontalLineTo(337.6f)
+            verticalLineTo(607.168f)
+            horizontalLineTo(389.504f)
+            verticalLineTo(454.272f)
+            horizontalLineTo(346.752f)
+            verticalLineTo(427.968f)
+            curveTo(369.792f, 423.552f, 385.856f, 417.728f, 400.512f, 408.96f)
+            horizontalLineTo(431.936f)
+            verticalLineTo(607.168f)
+            horizontalLineTo(477.632f)
+            verticalLineTo(641.536f)
+            close()
+            moveTo(668.224f, 565.824f)
+            curveTo(668.224f, 616.64f, 629.056f, 645.952f, 586.304f, 645.952f)
+            curveTo(548.608f, 645.952f, 524.096f, 630.912f, 506.944f, 613.76f)
+            lineTo(526.272f, 586.688f)
+            curveTo(540.224f, 599.872f, 557.376f, 611.52f, 580.8f, 611.52f)
+            curveTo(606.784f, 611.52f, 625.792f, 595.072f, 625.792f, 566.912f)
+            curveTo(625.792f, 539.136f, 608.576f, 523.392f, 582.976f, 523.392f)
+            curveTo(568.0f, 523.392f, 559.552f, 527.424f, 545.664f, 536.576f)
+            lineTo(525.568f, 523.776f)
+            lineTo(532.544f, 408.96f)
+            horizontalLineTo(656.832f)
+            verticalLineTo(444.416f)
+            horizontalLineTo(569.088f)
+            lineTo(564.352f, 500.736f)
+            arcTo(65.92f, 65.92f, 0f, false, true, 595.072f, 493.056f)
+            curveTo(634.944f, 493.056f, 668.224f, 515.712f, 668.224f, 565.824f)
+            close()
+            moveTo(295.168f, 564.736f)
+            horizontalLineTo(208.128f)
+            verticalLineTo(534.016f)
+            horizontalLineTo(295.168f)
+            verticalLineTo(564.736f)
+            close()
+        }
+    }.build()
+}
+
+private val SkipForward15Icon: ImageVector by lazy {
+    ImageVector.Builder(
+        name = "SkipForward15",
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 1024f,
+        viewportHeight = 1024f
+    ).apply {
+        path(
+            fill = SolidColor(Color.Black)
+        ) {
+            moveTo(724.48f, 221.44f)
+            lineTo(717.888f, 184.576f)
+            horizontalLineTo(717.952f)
+            arcTo(27.392f, 27.392f, 0f, false, true, 771.84f, 174.976f)
+            horizontalLineTo(771.904f)
+            lineTo(792.768f, 292.032f)
+            arcTo(27.456f, 27.456f, 0f, false, true, 745.152f, 314.944f)
+            quadTo(650.304f, 207.232f, 506.88f, 207.232f)
+            quadTo(375.424f, 207.232f, 282.432f, 300.224f)
+            quadTo(189.504f, 393.152f, 189.504f, 527.616f)
+            quadTo(189.504f, 658.112f, 282.432f, 752.064f)
+            quadTo(375.424f, 845.0f, 506.88f, 845.0f)
+            quadTo(634.048f, 845.0f, 725.952f, 757.32f)
+            arcTo(27.328f, 27.328f, 0f, false, true, 763.776f, 796.936f)
+            quadTo(656.0f, 899.976f, 396.88f, 899.976f)
+            quadTo(242.64f, 899.976f, 133.648f, 790.92f)
+            quadTo(24.656f, 681.864f, 24.656f, 527.68f)
+            quadTo(24.656f, 373.504f, 133.648f, 264.448f)
+            quadTo(242.64f, 155.392f, 506.88f, 155.392f)
+            quadTo(631.232f, 155.392f, 724.48f, 224.448f)
+            lineTo(724.48f, 221.44f)
+            close()
+            moveTo(457.536f, 638.464f)
+            horizontalLineTo(317.44f)
+            verticalLineTo(604.16f)
+            horizontalLineTo(369.408f)
+            verticalLineTo(451.2f)
+            horizontalLineTo(326.592f)
+            verticalLineTo(424.96f)
+            curveTo(349.632f, 420.544f, 365.76f, 414.72f, 380.352f, 405.952f)
+            horizontalLineTo(411.84f)
+            verticalLineTo(604.16f)
+            horizontalLineTo(457.536f)
+            verticalLineTo(638.464f)
+            close()
+            moveTo(648.064f, 562.752f)
+            curveTo(648.064f, 613.632f, 608.96f, 642.88f, 566.144f, 642.88f)
+            curveTo(528.512f, 642.88f, 504.0f, 627.84f, 486.784f, 610.688f)
+            lineTo(506.176f, 583.616f)
+            curveTo(520.064f, 596.8f, 537.28f, 607.776f, 560.608f, 607.776f)
+            curveTo(586.592f, 607.776f, 605.6f, 591.264f, 605.6f, 563.008f)
+            curveTo(605.6f, 535.232f, 588.448f, 519.488f, 562.848f, 519.488f)
+            curveTo(547.808f, 519.488f, 539.392f, 523.52f, 525.472f, 532.672f)
+            lineTo(505.376f, 519.872f)
+            lineTo(512.288f, 405.056f)
+            horizontalLineTo(636.8f)
+            verticalLineTo(440.512f)
+            horizontalLineTo(548.992f)
+            lineTo(544.192f, 496.832f)
+            arcTo(65.92f, 65.92f, 0f, false, true, 574.912f, 489.152f)
+            curveTo(614.784f, 489.152f, 648.064f, 511.808f, 648.064f, 562.752f)
+            close()
+            moveTo(775.36f, 602.24f)
+            horizontalLineTo(743.552f)
+            verticalLineTo(533.12f)
+            horizontalLineTo(678.08f)
+            verticalLineTo(502.4f)
+            horizontalLineTo(743.552f)
+            verticalLineTo(433.28f)
+            horizontalLineTo(775.36f)
+            verticalLineTo(502.4f)
+            horizontalLineTo(840.832f)
+            verticalLineTo(533.12f)
+            horizontalLineTo(775.36f)
+            verticalLineTo(602.24f)
+            close()
+        }
+    }.build()
+}
+
 @Composable
 fun SkipForward15Button(
     onClick: () -> Unit,
@@ -234,18 +383,14 @@ fun SkipForward15Button(
         contentAlignment = Alignment.Center
     ) {
         Icon(
-            painter = painterResource(id = R.drawable.ic_forward_15),
+            imageVector = SkipForward15Icon,
             contentDescription = "前进15秒",
             tint = tint,
-            modifier = Modifier.size(30.dp)
+            modifier = Modifier.size(28.dp)
         )
     }
 }
 
-/**
- * A skip-backward-15-seconds button: Mirrored Repeat icon + "15" text inside.
- * The icon is flipped horizontally (scaleX = -1).
- */
 @Composable
 fun SkipBackward15Button(
     onClick: () -> Unit,
@@ -260,10 +405,10 @@ fun SkipBackward15Button(
         contentAlignment = Alignment.Center
     ) {
         Icon(
-            painter = painterResource(id = R.drawable.ic_rewind_15),
+            imageVector = SkipBackward15Icon,
             contentDescription = "后退15秒",
             tint = tint,
-            modifier = Modifier.size(30.dp)
+            modifier = Modifier.size(28.dp)
         )
     }
 }
