@@ -26,7 +26,9 @@ fun PlaylistDetailScreen(
     viewModel: MainViewModel,
     playlistId: String,
     onBack: () -> Unit,
-    onSongClick: (Song, List<Song>) -> Unit
+    onSongClick: (Song, List<Song>) -> Unit,
+    onArtistClick: (String) -> Unit = {},
+    onAlbumClick: (String) -> Unit = {}
 ) {
     val playlist by viewModel.currentPlaylist.collectAsState()
     val playlists by viewModel.playlists.collectAsState()
