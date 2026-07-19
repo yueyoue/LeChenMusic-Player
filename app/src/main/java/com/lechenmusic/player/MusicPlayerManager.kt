@@ -8,6 +8,7 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import com.lechenmusic.LeChenApp
 import android.content.IntentFilter
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory

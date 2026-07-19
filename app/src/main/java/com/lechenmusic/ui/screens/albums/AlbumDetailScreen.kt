@@ -29,7 +29,9 @@ fun AlbumDetailScreen(
     viewModel: MainViewModel,
     albumId: String,
     onBack: () -> Unit,
-    onSongClick: (Song, List<Song>) -> Unit
+    onSongClick: (Song, List<Song>) -> Unit,
+    onArtistClick: (String) -> Unit = {},
+    onAlbumClick: (String) -> Unit = {}
 ) {
     val album by viewModel.currentAlbum.collectAsState()
     val serverUrl by viewModel.serverUrl.collectAsState()
