@@ -19,7 +19,9 @@ import com.lechenmusic.ui.components.SongItemWithMenu
 fun RecentPlayedScreen(
     viewModel: MainViewModel,
     onBack: () -> Unit,
-    onSongClick: (Song, List<Song>) -> Unit
+    onSongClick: (Song, List<Song>) -> Unit,
+    onArtistClick: (String) -> Unit = {},
+    onAlbumClick: (String) -> Unit = {}
 ) {
     val recentPlayedSongs by viewModel.recentPlayedSongs.collectAsState()
     val serverUrl by viewModel.serverUrl.collectAsState()
