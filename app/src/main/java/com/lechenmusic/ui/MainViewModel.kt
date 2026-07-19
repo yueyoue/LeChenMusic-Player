@@ -937,6 +937,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun addToQueue(song: Song) {
+        playerManager.addToQueue(song)
+        _toastMessage.value = "已添加到播放队列"
+    }
+
     fun createPlaylistAndAddSong(name: String, songId: String, isPublic: Boolean = false) {
         viewModelScope.launch {
             val idToSend = songId.ifBlank { null }

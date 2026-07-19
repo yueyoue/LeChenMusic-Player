@@ -173,7 +173,7 @@ fun ArtistDetailScreen(
                                 onAddToQueue = { viewModel.addToQueue(song) },
                                 onGoToArtist = { if (song.artistId.isNotBlank()) onArtistClick(song.artistId) },
                                 onGoToAlbum = { if (song.albumId.isNotBlank()) onAlbumClick(song.albumId) },
-                                onCreatePlaylist = { name -> viewModel.createPlaylistAndAddSong(name, song.id) }
+                                onCreatePlaylist = { name: String -> viewModel.createPlaylistAndAddSong(name, song.id) }
                             )
                         }
                     }
