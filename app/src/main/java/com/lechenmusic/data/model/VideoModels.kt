@@ -35,6 +35,10 @@ data class VideoInfo(
     val rate: String? = null,       // 评分
     val type: String = "",          // 类型：movie/tv/show/anime
     val desc: String = "",
+    val episodes: List<String> = emptyList(),                // LunaTV 搜索结果包含 episodes
+    @SerializedName("episodes_titles") val episodesTitles: List<String> = emptyList(),
+    @SerializedName("quality_tag") val qualityTag: String = "",
+    val remarks: String = "",
     val director: String = "",
     val actor: String = "",
     val area: String = "",
