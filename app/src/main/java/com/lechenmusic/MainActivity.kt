@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.*
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -258,6 +259,8 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                             onNavigateToNarrator = { name -> navController.navigate(Screen.NarratorDetail.createRoute(name)) },
                             onNavigateToNarratorList = { navController.navigate(Screen.NarratorList.route) },
                             onNavigateToVideoDetail = { source, videoId -> navController.navigate(Screen.VideoDetail.createRoute(source, videoId)) },
+                            onNavigateToVideoCategory = { type -> navController.navigate(Screen.VideoCategory.createRoute(type)) },
+                            onNavigateToLive = { navController.navigate(Screen.Live.route) },
                             videoViewModel = videoViewModel
                         )
                     }

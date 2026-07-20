@@ -63,6 +63,8 @@ fun HomeScreen(
     onNavigateToNarrator: (String) -> Unit = {},
     onNavigateToNarratorList: () -> Unit = {},
     onNavigateToVideoDetail: (String, String) -> Unit = { _, _ -> },
+    onNavigateToVideoCategory: (String) -> Unit = {},
+    onNavigateToLive: () -> Unit = {},
     videoViewModel: com.lechenmusic.ui.VideoViewModel? = null
 ) {
     val newestAlbums by viewModel.newestAlbums.collectAsState()
@@ -663,11 +665,11 @@ fun HomeScreen(
                                                 selectedVideoTab = index
                                                 when (index) {
                                                     0 -> {} // 推荐，当前页
-                                                    1 -> navController.navigate("video_category/movie")
-                                                    2 -> navController.navigate("video_category/tv")
-                                                    3 -> navController.navigate("video_category/anime")
-                                                    4 -> navController.navigate("video_category/variety")
-                                                    5 -> navController.navigate(Screen.Live.route)
+                                                    1 -> onNavigateToVideoCategory("movie")
+                                                    2 -> onNavigateToVideoCategory("tv")
+                                                    3 -> onNavigateToVideoCategory("anime")
+                                                    4 -> onNavigateToVideoCategory("variety")
+                                                    5 -> onNavigateToLive()
                                                 }
                                             },
                                             shape = RoundedCornerShape(20.dp),
