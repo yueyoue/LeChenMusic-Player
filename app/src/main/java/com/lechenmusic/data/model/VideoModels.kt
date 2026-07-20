@@ -244,28 +244,31 @@ data class DoubanMovie(
     val year: String = "",
     val cover: String = "",
     val cover_url: String = "",
-    val pic: DoubanPic? = null,            // 新版API用 pic 对象
+    val pic: DoubanPic? = null,
     val is_new: Boolean = false,
     val release_date: String = "",
     val uri: String = "",
     val rate: String = "",
     val rating: DoubanRating? = null,
-    val card_subtitle: String = "",        // "2025 / 美国 / 恐怖 / 导演 / 演员"
+    val card_subtitle: String = "",
     val episodes_info: String = "",
     val rect_cover: String = "",
     val cover_y: Int = 0,
     val is_beetle_mailer: Boolean = false,
     val null_rating_reason: String = ""
 ) {
-    val displayCover: String get() = pic?.normal?.ifBlank { pic.large }
-        ?: cover_url.ifBlank { cover }
+    val displayCover: String get() {
+        val raw = pic?.normal?.ifBlank { pic.large }
+            ?: cover_url.ifBlank { cover }
+        // 豆瓣图片CDN代理：避免418/403
+        return raw.replace(Regex("img\\d+\\.doubanio\\.com"), "img.doubanio.cmliussss.com")
+    }
     val displayRate: String get() {
         val r = rate.ifBlank { rating?.value?.toString() ?: "" }
         return if (r.contains(".")) r else if (r.isNotBlank()) "$r.0" else ""
     }
     val displayYear: String get() {
         if (year.isNotBlank()) return year
-        // 从 card_subtitle 提取年份: "2025 / 美国 / ..."
         return card_subtitle.split("/").firstOrNull()?.trim() ?: ""
     }
 }

@@ -646,6 +646,48 @@ fun HomeScreen(
                             }
                         }
                     } else {
+                        // 横向分类导航菜单
+                        item {
+                            var selectedVideoTab by remember { mutableIntStateOf(0) }
+                            val videoTabs = listOf("\uD83C\uDFAE 推荐", "\uD83C\uDFAC 电影", "\uD83D\uDCFA 剧集", "\uD83C\uDF8C 动漫", "\uD83C\uDFAD 综艺", "\uD83D\uDCFA 直播")
+                            Column {
+                                androidx.compose.foundation.lazy.LazyRow(
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                                    contentPadding = PaddingValues(horizontal = 12.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    items(videoTabs.size) { index ->
+                                        val isSelected = selectedVideoTab == index
+                                        Surface(
+                                            onClick = {
+                                                selectedVideoTab = index
+                                                when (index) {
+                                                    0 -> {} // 推荐，当前页
+                                                    1 -> navController.navigate("video_category/movie")
+                                                    2 -> navController.navigate("video_category/tv")
+                                                    3 -> navController.navigate("video_category/anime")
+                                                    4 -> navController.navigate("video_category/variety")
+                                                    5 -> navController.navigate(Screen.Live.route)
+                                                }
+                                            },
+                                            shape = RoundedCornerShape(20.dp),
+                                            color = if (isSelected) MaterialTheme.colorScheme.primary
+                                                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                        ) {
+                                            Text(
+                                                videoTabs[index],
+                                                fontSize = 13.sp,
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                                color = if (isSelected) MaterialTheme.colorScheme.onPrimary
+                                                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
                         // 1. 最近观看（播放记录）
                         if (videoPlayRecords.isNotEmpty()) {
                             item {

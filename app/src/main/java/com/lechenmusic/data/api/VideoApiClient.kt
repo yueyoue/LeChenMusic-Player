@@ -23,7 +23,7 @@ interface LunaTvApi {
     suspend fun login(@Body request: Map<String, String>): Response<LoginResponse>
 
     @GET("api/search")
-    suspend fun search(@Query("keyword") keyword: String): Response<SearchResponse>
+    suspend fun search(@Query("q") keyword: String): Response<SearchResponse>
 
     @GET("api/detail")
     suspend fun getDetail(

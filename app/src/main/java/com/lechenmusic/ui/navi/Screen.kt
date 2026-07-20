@@ -48,4 +48,7 @@ sealed class Screen(val route: String) {
         fun createRoute(videoTitle: String, source: String, episodeIndex: Int) = "video_player/$videoTitle/$source/$episodeIndex"
     }
     object Live : Screen("live")
+    object VideoCategory : Screen("video_category/{type}") {
+        fun createRoute(type: String) = "video_category/$type"
+    }
 }

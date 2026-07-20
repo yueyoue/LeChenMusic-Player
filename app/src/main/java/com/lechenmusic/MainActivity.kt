@@ -12,6 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -532,21 +533,57 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                         val source = backStackEntry.arguments?.getString("source") ?: ""
                         val episodeIndex = backStackEntry.arguments?.getString("episodeIndex")?.toIntOrNull() ?: 0
                         val detail by videoViewModel.videoDetail.collectAsState()
+                        val detailLoading by videoViewModel.detailLoading.collectAsState()
                         val sources = detail?.toSources() ?: emptyList()
-                        // 根据 source 名找到对应的 source index
                         val sourceIndex = sources.indexOfFirst { it.source == source }.coerceAtLeast(0)
-                        com.lechenmusic.ui.screens.video.VideoPlayerScreen(
-                            videoTitle = videoTitle,
-                            sources = sources,
-                            initialSource = sourceIndex,
-                            initialEpisode = episodeIndex,
-                            onBack = { navController.popBackStack() }
-                        )
+
+                        if (detailLoading || sources.isEmpty()) {
+                            // 加载中或无数据时显示加载状态
+                            Box(modifier = Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    CircularProgressIndicator(color = Color.White)
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Text(
+                                        if (detailLoading) "正在加载播放源..." else "未找到播放资源",
+                                        color = Color.White.copy(alpha = 0.7f),
+                                        fontSize = 14.sp
+                                    )
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    TextButton(onClick = { navController.popBackStack() }) {
+                                        Text("返回", color = Color.White)
+                                    }
+                                }
+                            }
+                        } else {
+                            com.lechenmusic.ui.screens.video.VideoPlayerScreen(
+                                videoTitle = videoTitle,
+                                sources = sources,
+                                initialSource = sourceIndex,
+                                initialEpisode = episodeIndex,
+                                onBack = { navController.popBackStack() }
+                            )
+                        }
                     }
                     composable(Screen.Live.route) {
                         com.lechenmusic.ui.screens.video.LiveScreen(
                             viewModel = videoViewModel,
                             onBack = { navController.popBackStack() }
+                        )
+                    }
+                    composable(Screen.VideoCategory.route) { backStackEntry ->
+                        val type = backStackEntry.arguments?.getString("type") ?: "movie"
+                        com.lechenmusic.ui.screens.video.VideoCategoryScreen(
+                            viewModel = videoViewModel,
+                            categoryType = type,
+                            onBack = { navController.popBackStack() },
+                            onVideoClick = { video ->
+                                if (video.source.isNotBlank()) {
+                                    navController.navigate(Screen.VideoDetail.createRoute(video.source, video.id))
+                                } else {
+                                    videoViewModel.searchAndLoadDetail(video.title, video.id)
+                                    navController.navigate(Screen.VideoDetail.createRoute("searching", video.id))
+                                }
+                            }
                         )
                     }
 

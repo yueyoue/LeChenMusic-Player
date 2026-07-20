@@ -35,7 +35,7 @@ class LeChenApp : Application() {
                         .addInterceptor { chain ->
                             val request = chain.request()
                             val url = request.url.toString()
-                            val newRequest = if (url.contains("douban.com") || url.contains("doubanio.com")) {
+                            val newRequest = if (url.contains("douban.com") || url.contains("doubanio.com") || url.contains("cmliussss.com")) {
                                 request.newBuilder()
                                     .header("Referer", "https://movie.douban.com/")
                                     .header("User-Agent", "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36")
