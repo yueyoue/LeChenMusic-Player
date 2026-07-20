@@ -204,24 +204,6 @@ private fun VideoRecommendTab(
                 }
             }
 
-            // 即将上映
-            val comingSoon = homeData?.comingSoon
-            if (!comingSoon.isNullOrEmpty()) {
-                item {
-                    SectionHeader("即将上映")
-                    Spacer(modifier = Modifier.height(8.dp))
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        items(comingSoon) { video ->
-                            VideoHorizontalCard(video = video, onClick = { onVideoClick(video) })
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
-                }
-            }
-
             // 热门推荐（3列网格）
             val hotAll = buildList {
                 homeData?.hotMovies?.let { addAll(it) }
@@ -702,7 +684,7 @@ private fun ContinueWatchCard(
                     modifier = Modifier.align(Alignment.BottomStart)
                 ) {
                     Text(
-                        "看到第${record.episodeIndex + 1}集",
+                        "看到第${record.displayEpisodeIndex + 1}集",
                         fontSize = 10.sp,
                         color = Color.White,
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
