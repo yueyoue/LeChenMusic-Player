@@ -119,11 +119,24 @@ fun VideoPlayerScreen(
     // 加载视频
     LaunchedEffect(selectedSource, selectedEpisode) {
         val episode = sources.getOrNull(selectedSource)?.episodes?.getOrNull(selectedEpisode)
+        try {
+            logFile.appendText("[${java.text.SimpleDateFormat("HH:mm:ss.SSS", java.util.Locale.getDefault()).format(java.util.Date())}] [Player] 加载集数: source=$selectedSource, ep=$selectedEpisode, url=${episode?.url?.take(80)}\n")
+        } catch (_: Exception) {}
         if (episode != null && episode.url.isNotBlank()) {
-            exoPlayer.setMediaItem(MediaItem.fromUri(episode.url))
-            exoPlayer.prepare()
-            exoPlayer.playWhenReady = true
-            isPlaying = true
+            try {
+                exoPlayer.setMediaItem(MediaItem.fromUri(episode.url))
+                exoPlayer.prepare()
+                exoPlayer.playWhenReady = true
+                isPlaying = true
+            } catch (e: Exception) {
+                try {
+                    logFile.appendText("[Player] ExoPlayer 异常: ${e.javaClass.simpleName}: ${e.message}\n")
+                } catch (_: Exception) {}
+            }
+        } else {
+            try {
+                logFile.appendText("[Player] episode 为空或 URL 为空\n")
+            } catch (_: Exception) {}
         }
     }
 
