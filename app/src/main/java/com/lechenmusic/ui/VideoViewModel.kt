@@ -274,7 +274,12 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                     val detail = response.body()!!
                     // 检查是否有可播放资源
                     if (detail.episodes.isEmpty() && detail.sources.isEmpty()) {
-                        _toastMessage.value = "该源暂无播放资源"
+                        _toastMessage.value = "该源暂无播放资源，正在尝试其他源..."
+                        // 尝试用标题搜索其他源
+                        if (detail.title.isNotBlank()) {
+                            searchAndPlay(detail.title, detail.doubanId)
+                            return@launch
+                        }
                     }
                     _videoDetail.value = detail
                 } else {
@@ -295,9 +300,16 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
     /**
      * 搜索 LunaTV 找到源，直接构造 VideoDetail 用于播放
      * 跳过详情页，搜索结果已包含 episodes
+     *
+     * Bug修复：
+     * 1. 添加加载状态提示用户正在搜索
+     * 2. 搜索结果为空或episodes为空时提示而不是闪退
+     * 3. 优先选择标题完全匹配+有episodes的结果
      */
     fun searchAndPlay(title: String, doubanId: String) {
         viewModelScope.launch {
+            _searchSourceLoading.value = true
+            _searchSourceMessage.value = "正在搜索播放源：$title"
             _detailLoading.value = true
             try {
                 val api = VideoApiClient.getApi(videoServerUrl.value)
@@ -305,24 +317,32 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                 val results = searchResp.body()?.results ?: emptyList()
 
                 if (results.isEmpty()) {
-                    _toastMessage.value = "未找到可用播放源"
+                    _toastMessage.value = "未找到「$title」的播放源"
+                    _searchSourceLoading.value = false
                     _detailLoading.value = false
                     return@launch
                 }
 
-                // 优先选择标题匹配的源
+                _searchSourceMessage.value = "已找到 ${results.size} 个源，正在选择最佳..."
+
+                // 优先选择标题完全匹配 + 有 episodes 的结果
                 val matched = results.firstOrNull {
-                    it.title.contains(title, ignoreCase = true)
-                } ?: results.first()
+                    it.title.contains(title, ignoreCase = true) && it.episodes.isNotEmpty()
+                }
+                    ?: results.firstOrNull { it.episodes.isNotEmpty() }
+                    ?: results.first()
+
+                // 检查 episodes 是否为空
+                if (matched.episodes.isEmpty()) {
+                    _toastMessage.value = "「${matched.title}」暂无可播放资源"
+                    _searchSourceLoading.value = false
+                    _detailLoading.value = false
+                    return@launch
+                }
+
+                _searchSourceMessage.value = "已找到播放源：${matched.displaySourceName}，共 ${matched.episodes.size} 集"
 
                 // 直接用搜索结果构造 VideoDetail（搜索结果已包含 episodes）
-                val eps = matched.episodes.mapIndexed { index, url ->
-                    VideoEpisode(
-                        index = index,
-                        title = matched.episodesTitles.getOrNull(index) ?: "第${index + 1}集",
-                        url = url
-                    )
-                }
                 val detail = VideoDetail(
                     id = matched.id,
                     title = matched.title,
@@ -339,8 +359,10 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                 _videoDetail.value = detail
                 _needNavigateToPlayer.value = true
             } catch (e: Exception) {
-                _toastMessage.value = "搜索失败: ${e.message}"
+                _toastMessage.value = "搜索播放源失败: ${e.message}"
             } finally {
+                _searchSourceLoading.value = false
+                _searchSourceMessage.value = ""
                 _detailLoading.value = false
             }
         }
@@ -350,6 +372,12 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
     private val _needNavigateToPlayer = MutableStateFlow(false)
     val needNavigateToPlayer: StateFlow<Boolean> = _needNavigateToPlayer.asStateFlow()
     fun consumeNavigateToPlayer() { _needNavigateToPlayer.value = false }
+
+    // 搜索播放源的加载状态（用于 UI 弹窗提示）
+    private val _searchSourceLoading = MutableStateFlow(false)
+    val searchSourceLoading: StateFlow<Boolean> = _searchSourceLoading.asStateFlow()
+    private val _searchSourceMessage = MutableStateFlow("")
+    val searchSourceMessage: StateFlow<String> = _searchSourceMessage.asStateFlow()
 
     // ==================== 收藏 ====================
 

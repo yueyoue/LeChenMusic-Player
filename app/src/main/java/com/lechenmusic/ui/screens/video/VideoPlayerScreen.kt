@@ -45,6 +45,40 @@ fun VideoPlayerScreen(
     initialEpisode: Int = 0,
     onBack: () -> Unit
 ) {
+    // Bug修复：sources 为空时显示提示而不是闪退
+    if (sources.isEmpty() || sources.all { it.episodes.isEmpty() }) {
+        Box(
+            modifier = Modifier.fillMaxSize().background(Color.Black),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(
+                    Icons.Default.ErrorOutline,
+                    null,
+                    tint = Color.White.copy(alpha = 0.5f),
+                    modifier = Modifier.size(64.dp)
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    "该源暂无播放资源",
+                    color = Color.White.copy(alpha = 0.7f),
+                    fontSize = 16.sp
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    videoTitle,
+                    color = Color.White.copy(alpha = 0.5f),
+                    fontSize = 14.sp
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+                Button(onClick = onBack) {
+                    Text("返回")
+                }
+            }
+        }
+        return
+    }
+
     val context = LocalContext.current
     val activity = context as? Activity
     val scope = rememberCoroutineScope()

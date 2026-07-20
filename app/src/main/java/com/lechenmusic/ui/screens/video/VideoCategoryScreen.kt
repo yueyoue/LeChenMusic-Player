@@ -38,6 +38,8 @@ fun VideoCategoryScreen(
 ) {
     val categoryResults by viewModel.categoryResults.collectAsState()
     val isLoading by viewModel.categoryLoading.collectAsState()
+    val searchSourceLoading by viewModel.searchSourceLoading.collectAsState()
+    val searchSourceMsg by viewModel.searchSourceMessage.collectAsState()
 
     val title = when (categoryType) {
         "movie" -> "电影"
@@ -60,6 +62,31 @@ fun VideoCategoryScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
+        // Bug修复：搜索播放源时显示加载弹窗
+        if (searchSourceLoading) {
+            AlertDialog(
+                onDismissRequest = { /* 不允许关闭 */ },
+                title = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text("搜索播放源", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    }
+                },
+                text = {
+                    Text(
+                        searchSourceMsg.ifBlank { "正在搜索，请稍候..." },
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                },
+                confirmButton = {}
+            )
+        }
+
         // 顶部栏
         TopAppBar(
             title = { Text(title, fontWeight = FontWeight.Bold) },

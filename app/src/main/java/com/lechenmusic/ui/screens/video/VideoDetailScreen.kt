@@ -199,6 +199,9 @@ fun VideoDetailScreen(
                         val src = currentDetail.toSources().getOrNull(selectedSource)
                         if (src != null && src.episodes.isNotEmpty()) {
                             onPlay(src.source, 0)
+                        } else {
+                            // Bug修复：无播放资源时提示而不是闪退
+                            viewModel.searchAndPlay(currentDetail.title, currentDetail.doubanId)
                         }
                     },
                     modifier = Modifier.weight(1f),
@@ -206,7 +209,11 @@ fun VideoDetailScreen(
                 ) {
                     Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(20.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("立即播放", fontSize = 15.sp)
+                    Text(
+                        if (currentDetail.toSources().getOrNull(selectedSource)?.episodes?.isNotEmpty() == true)
+                            "立即播放" else "搜索播放源",
+                        fontSize = 15.sp
+                    )
                 }
 
                 // 收藏按钮
