@@ -367,8 +367,7 @@ fun LeChenMusicApp(viewModel: MainViewModel) {
                             artistId = artistId,
                             onBack = { navController.popBackStack() },
                             onAlbumClick = { aId -> navController.navigate(Screen.AlbumDetail.createRoute(aId)) },
-                            onSongClick = { s: com.lechenmusic.data.model.Song, p: List<com.lechenmusic.data.model.Song> -> viewModel.playSong(s, p) },
-                            onArtistClick = { artistId -> navController.navigate(Screen.ArtistDetail.createRoute(artistId)) }
+                            onSongClick = { s: com.lechenmusic.data.model.Song, p: List<com.lechenmusic.data.model.Song> -> viewModel.playSong(s, p) }
                         )
                     }
                     composable(Screen.PlaylistDetail.route) { backStackEntry ->
