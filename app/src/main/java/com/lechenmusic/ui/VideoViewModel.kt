@@ -17,8 +17,12 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
 
     private val settings = SettingsRepository(application)
 
-    /** 影视模块错误上报到 WEB 管理端 */
-    private fun reportVideoError(screen: String, message: String, throwable: Throwable? = null) {
+    /** 影视模块错误上报到 WEB 管理端 + 本地 Toast */
+    fun reportVideoError(screen: String, message: String, throwable: Throwable? = null) {
+        val fullMsg = "[影视] $message${throwable?.let { "\n${it.javaClass.simpleName}: ${it.message}" } ?: ""}"
+        // 本地 Toast 显示（调试用）
+        _toastMessage.value = fullMsg.take(200)
+        // 上报到 WEB 管理端
         ErrorReporter.reportError(
             level = "error",
             message = "[影视] $message",

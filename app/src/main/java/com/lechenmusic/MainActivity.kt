@@ -561,13 +561,28 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                                 }
                             }
                         } else {
-                            com.lechenmusic.ui.screens.video.VideoPlayerScreen(
-                                videoTitle = videoTitle,
-                                sources = sources,
-                                initialSource = sourceIndex,
-                                initialEpisode = episodeIndex,
-                                onBack = { navController.popBackStack() }
-                            )
+                            try {
+                                com.lechenmusic.ui.screens.video.VideoPlayerScreen(
+                                    videoTitle = videoTitle,
+                                    sources = sources,
+                                    initialSource = sourceIndex,
+                                    initialEpisode = episodeIndex,
+                                    onBack = { navController.popBackStack() }
+                                )
+                            } catch (e: Exception) {
+                                videoViewModel.reportVideoError("VideoPlayer", "播放器初始化崩溃", e)
+                                Box(modifier = Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Text("播放器初始化失败", color = Color.White, fontSize = 16.sp)
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Text(e.message ?: "", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
+                                        Spacer(modifier = Modifier.height(16.dp))
+                                        TextButton(onClick = { navController.popBackStack() }) {
+                                            Text("返回", color = Color.White)
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                     // 直接播放路由（搜索结果直接播放，无需参数）
@@ -593,13 +608,29 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                                 }
                             }
                         } else {
-                            com.lechenmusic.ui.screens.video.VideoPlayerScreen(
-                                videoTitle = detail?.title ?: "影视播放",
-                                sources = sources,
-                                initialSource = 0,
-                                initialEpisode = 0,
-                                onBack = { navController.popBackStack() }
-                            )
+                            try {
+                                com.lechenmusic.ui.screens.video.VideoPlayerScreen(
+                                    videoTitle = detail?.title ?: "影视播放",
+                                    sources = sources,
+                                    initialSource = 0,
+                                    initialEpisode = 0,
+                                    onBack = { navController.popBackStack() }
+                                )
+                            } catch (e: Exception) {
+                                // 播放器初始化崩溃保护
+                                videoViewModel.reportVideoError("VideoPlayerDirect", "播放器初始化崩溃", e)
+                                Box(modifier = Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Text("播放器初始化失败", color = Color.White, fontSize = 16.sp)
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Text(e.message ?: "", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
+                                        Spacer(modifier = Modifier.height(16.dp))
+                                        TextButton(onClick = { navController.popBackStack() }) {
+                                            Text("返回", color = Color.White)
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
 

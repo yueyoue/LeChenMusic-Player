@@ -19,13 +19,13 @@ object ErrorReporter {
     private const val TAG = "ErrorReporter"
     private var serverUrl = ""
     private var username = ""
-    private var token = ""
+    private var tokenProvider: (() -> String?)? = null
     private var appVersion = ""
 
-    fun init(context: Context, server: String, user: String, authToken: String) {
+    fun init(context: Context, server: String, user: String, tokenProv: (() -> String?)? = null) {
         serverUrl = server.trimEnd('/')
         username = user
-        token = authToken
+        tokenProvider = tokenProv
         appVersion = try {
             context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "unknown"
         } catch (_: Exception) { "unknown" }
@@ -101,7 +101,10 @@ object ErrorReporter {
             val conn = url.openConnection() as HttpURLConnection
             conn.requestMethod = "POST"
             conn.setRequestProperty("Content-Type", "application/json")
-            conn.setRequestProperty("X-ND-Authorization", "Bearer $token")
+            val tok = tokenProvider?.invoke()
+            if (!tok.isNullOrBlank()) {
+                conn.setRequestProperty("X-ND-Authorization", "Bearer $tok")
+            }
             conn.connectTimeout = 5000
             conn.readTimeout = 5000
             conn.doOutput = true

@@ -54,7 +54,7 @@ class LeChenApp : Application() {
             val serverUrl = prefs.getString("serverUrl", "") ?: ""
             val username = prefs.getString("username", "") ?: ""
             if (serverUrl.isNotBlank()) {
-                ErrorReporter.init(this, serverUrl, username, "")
+                ErrorReporter.init(this, serverUrl, username) { NavidromeAuth.token }
             }
         } catch (_: Exception) {}
 
