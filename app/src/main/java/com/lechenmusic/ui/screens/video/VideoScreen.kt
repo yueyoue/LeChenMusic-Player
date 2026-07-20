@@ -428,9 +428,9 @@ fun VideoCard(
                     )
                 )
         ) {
-            if (video.cover.isNotBlank()) {
+            if (video.displayCover.isNotBlank()) {
                 AsyncImage(
-                    model = video.cover,
+                    model = video.displayCover,
                     contentDescription = video.title,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
@@ -467,7 +467,7 @@ fun VideoCard(
             }
 
             // 进度条
-            if (video.playTime > 0 && video.totalTime > 0) {
+            if (video.displayPlayTime > 0 && video.displayTotalTime > 0) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -485,14 +485,14 @@ fun VideoCard(
             }
 
             // 集数标签
-            if (video.totalEpisodes > 1) {
+            if (video.displayTotalEpisodes > 1) {
                 Surface(
                     shape = RoundedCornerShape(topStart = 10.dp, bottomEnd = 10.dp),
                     color = Color.Black.copy(alpha = 0.6f),
                     modifier = Modifier.align(Alignment.BottomStart)
                 ) {
                     Text(
-                        "更新至${video.totalEpisodes}集",
+                        "更新至${video.displayTotalEpisodes}集",
                         fontSize = 10.sp,
                         color = Color.White,
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
@@ -545,9 +545,9 @@ fun VideoHorizontalCard(
                     )
                 )
         ) {
-            if (video.cover.isNotBlank()) {
+            if (video.displayCover.isNotBlank()) {
                 AsyncImage(
-                    model = video.cover,
+                    model = video.displayCover,
                     contentDescription = video.title,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
@@ -582,14 +582,14 @@ fun VideoHorizontalCard(
                 }
             }
 
-            if (video.totalEpisodes > 1) {
+            if (video.displayTotalEpisodes > 1) {
                 Surface(
                     shape = RoundedCornerShape(topStart = 10.dp, bottomEnd = 10.dp),
                     color = Color.Black.copy(alpha = 0.6f),
                     modifier = Modifier.align(Alignment.BottomStart)
                 ) {
                     Text(
-                        "更新至${video.totalEpisodes}集",
+                        "更新至${video.displayTotalEpisodes}集",
                         fontSize = 10.sp,
                         color = Color.White,
                         modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
@@ -661,7 +661,7 @@ private fun ContinueWatchCard(
             }
 
             // 进度条
-            if (record.totalTime > 0) {
+            if (record.displayTotalTime > 0) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -695,7 +695,7 @@ private fun ContinueWatchCard(
             }
 
             // 集数标签
-            if (record.totalEpisodes > 1) {
+            if (record.displayTotalEpisodes > 1) {
                 Surface(
                     shape = RoundedCornerShape(topStart = 10.dp, bottomEnd = 10.dp),
                     color = Color.Black.copy(alpha = 0.6f),
@@ -730,5 +730,10 @@ fun categoryName(type: String): String = when (type) {
     "anime" -> "动漫"
     "live" -> "直播"
     "short" -> "短剧"
+    "电影" -> "电影"
+    "电视剧" -> "电视剧"
+    "动漫" -> "动漫"
+    "综艺" -> "综艺"
+    "纪录片" -> "纪录片"
     else -> type
 }

@@ -176,9 +176,9 @@ private fun VideoSearchResultItem(
             shape = RoundedCornerShape(8.dp),
             color = MaterialTheme.colorScheme.surfaceVariant
         ) {
-            if (video.cover.isNotBlank()) {
+            if (video.displayCover.isNotBlank()) {
                 AsyncImage(
-                    model = video.cover,
+                    model = video.displayCover,
                     contentDescription = null,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
@@ -219,8 +219,8 @@ private fun VideoSearchResultItem(
                         append(video.year)
                         append(" · ")
                         append(categoryName(video.type))
-                        if (video.sourceName.isNotBlank()) append(" · ${video.sourceName}")
-                        if (video.totalEpisodes > 1) append(" · ${video.totalEpisodes}集")
+                        if (video.displaySourceName.isNotBlank()) append(" · ${video.displaySourceName}")
+                        if (video.displayTotalEpisodes > 1) append(" · ${video.displayTotalEpisodes}集")
                     },
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant

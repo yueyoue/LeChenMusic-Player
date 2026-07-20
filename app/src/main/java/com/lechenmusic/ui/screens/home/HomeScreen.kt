@@ -605,7 +605,6 @@ fun HomeScreen(
 
                 // ===== VIDEO MODE =====
                 if (homeMode == "video") {
-                    // 加载数据（LaunchedEffect 不能在 LazyColumn 内调用，已在 item 中）
                     item {
                         androidx.compose.runtime.LaunchedEffect(isVideoLoggedIn) {
                             if (isVideoLoggedIn) {
@@ -616,7 +615,6 @@ fun HomeScreen(
                     }
 
                     if (!isVideoLoggedIn) {
-                        // 未登录提示
                         item {
                             Box(
                                 modifier = Modifier
@@ -648,10 +646,10 @@ fun HomeScreen(
                             }
                         }
                     } else {
-                        // 继续观看
+                        // 1. 最近观看（播放记录）
                         if (videoPlayRecords.isNotEmpty()) {
                             item {
-                                SecHd("\u23F0 继续观看", "")
+                                SecHd("\u23F0 最近观看", "")
                             }
                             item {
                                 LazyRow(
@@ -661,67 +659,95 @@ fun HomeScreen(
                                     items(videoPlayRecords.take(10)) { record ->
                                         com.lechenmusic.ui.screens.video.VideoHorizontalCard(
                                             video = com.lechenmusic.data.model.VideoInfo(
-                                                id = record.videoId,
+                                                id = record.videoIdRaw,
                                                 source = record.source,
                                                 title = record.title,
                                                 cover = record.cover,
                                                 year = record.year,
                                                 type = record.type,
-                                                totalEpisodes = record.totalEpisodes,
-                                                playTime = record.playTime,
-                                                totalTime = record.totalTime
+                                                totalEpisodes = record.displayTotalEpisodes,
+                                                playTime = record.displayPlayTime,
+                                                totalTime = record.displayTotalTime
                                             ),
-                                            onClick = { onNavigateToVideoDetail(record.source, record.videoId) }
+                                            onClick = { onNavigateToVideoDetail(record.source, record.videoIdRaw) }
                                         )
                                     }
                                 }
                             }
                         }
 
-                        // 热门推荐（3列网格）
-                        val hotAll = buildList {
-                            videoHomeData?.hotMovies?.let { addAll(it) }
-                            videoHomeData?.hotTvShows?.let { addAll(it) }
-                            videoHomeData?.hotAnime?.let { addAll(it) }
-                        }.distinctBy { it.id }.take(12)
-
-                        if (hotAll.isNotEmpty()) {
+                        // 2. 热门电影
+                        val hotMovies = videoHomeData?.hotMovies ?: emptyList()
+                        if (hotMovies.isNotEmpty()) {
+                            item { SecHd("\uD83C\uDFAC 热门电影", "") }
                             item {
-                                SecHd("\uD83D\uDD25 热门推荐", "")
-                            }
-                            items(hotAll.chunked(3)) { row ->
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                                LazyRow(
+                                    contentPadding = PaddingValues(horizontal = 16.dp),
                                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                                 ) {
-                                    row.forEach { video ->
-                                        com.lechenmusic.ui.screens.video.VideoCard(
+                                    items(hotMovies) { video ->
+                                        com.lechenmusic.ui.screens.video.VideoHorizontalCard(
                                             video = video,
-                                            onClick = { onNavigateToVideoDetail(video.source, video.id) },
-                                            modifier = Modifier.weight(1f)
+                                            onClick = { onNavigateToVideoDetail("", video.id) }
                                         )
-                                    }
-                                    repeat(3 - row.size) {
-                                        Spacer(modifier = Modifier.weight(1f))
                                     }
                                 }
                             }
-                        } else if (!videoHomeLoading) {
-                            // 加载中或无数据
+                        }
+
+                        // 3. 热门剧集
+                        val hotTv = videoHomeData?.hotTvShows ?: emptyList()
+                        if (hotTv.isNotEmpty()) {
+                            item { SecHd("\uD83D\uDCFA 热门剧集", "") }
                             item {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(40.dp),
-                                    contentAlignment = Alignment.Center
+                                LazyRow(
+                                    contentPadding = PaddingValues(horizontal = 16.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                                 ) {
-                                    Text(
-                                        "暂无推荐数据",
-                                        fontSize = 13.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
+                                    items(hotTv) { video ->
+                                        com.lechenmusic.ui.screens.video.VideoHorizontalCard(
+                                            video = video,
+                                            onClick = { onNavigateToVideoDetail("", video.id) }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // 4. 热门综艺
+                        val hotVariety = videoHomeData?.hotVariety ?: emptyList()
+                        if (hotVariety.isNotEmpty()) {
+                            item { SecHd("\uD83C\uDFAD 热门综艺", "") }
+                            item {
+                                LazyRow(
+                                    contentPadding = PaddingValues(horizontal = 16.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    items(hotVariety) { video ->
+                                        com.lechenmusic.ui.screens.video.VideoHorizontalCard(
+                                            video = video,
+                                            onClick = { onNavigateToVideoDetail("", video.id) }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // 5. 热门动漫
+                        val hotAnime = videoHomeData?.hotAnime ?: emptyList()
+                        if (hotAnime.isNotEmpty()) {
+                            item { SecHd("\uD83C\uDF8C 热门动漫", "") }
+                            item {
+                                LazyRow(
+                                    contentPadding = PaddingValues(horizontal = 16.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    items(hotAnime) { video ->
+                                        com.lechenmusic.ui.screens.video.VideoHorizontalCard(
+                                            video = video,
+                                            onClick = { onNavigateToVideoDetail("", video.id) }
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -736,6 +762,24 @@ fun HomeScreen(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     CircularProgressIndicator(modifier = Modifier.size(32.dp))
+                                }
+                            }
+                        }
+
+                        // 空状态
+                        if (!videoHomeLoading && hotMovies.isEmpty() && hotTv.isEmpty() && videoPlayRecords.isEmpty()) {
+                            item {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(40.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        "暂无推荐数据，下拉刷新",
+                                        fontSize = 13.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
                                 }
                             }
                         }

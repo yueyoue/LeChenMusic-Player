@@ -72,7 +72,7 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
     private val _playRecords = MutableStateFlow<List<VideoPlayRecord>>(emptyList())
     val playRecords: StateFlow<List<VideoPlayRecord>> = _playRecords.asStateFlow()
 
-    // ===== 分类 (使用搜索实现) =====
+    // ===== 分类搜索 =====
     private val _categoryResults = MutableStateFlow<List<VideoInfo>>(emptyList())
     val categoryResults: StateFlow<List<VideoInfo>> = _categoryResults.asStateFlow()
 
@@ -96,7 +96,6 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
     fun clearToast() { _toastMessage.value = null }
 
     init {
-        // 自动恢复登录状态
         viewModelScope.launch {
             combine(videoServerUrl, videoUsername, videoPassword) { url, user, pass ->
                 Triple(url, user, pass)
@@ -117,15 +116,16 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 val api = VideoApiClient.getApi(serverUrl)
                 val response = withContext(Dispatchers.IO) {
-                    api.login(LoginRequest(username, password))
+                    api.login(mapOf("username" to username, "password" to password))
                 }
-                if (response.isSuccessful && response.body()?.code == 0) {
+                if (response.isSuccessful && response.body()?.ok == true) {
                     settings.saveVideoLogin(serverUrl, username, password)
                     _isLoggedIn.value = true
                     _toastMessage.value = "登录成功"
                     loadHomeData()
+                    loadPlayRecords()
                 } else {
-                    _loginError.value = response.body()?.msg ?: "登录失败，请检查账号密码"
+                    _loginError.value = "登录失败，请检查账号密码"
                 }
             } catch (e: Exception) {
                 _loginError.value = "连接失败: ${e.message}"
@@ -139,11 +139,12 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
         try {
             val api = VideoApiClient.getApi(serverUrl)
             val response = withContext(Dispatchers.IO) {
-                api.login(LoginRequest(username, password))
+                api.login(mapOf("username" to username, "password" to password))
             }
-            if (response.isSuccessful && response.body()?.code == 0) {
+            if (response.isSuccessful && response.body()?.ok == true) {
                 _isLoggedIn.value = true
                 loadHomeData()
+                loadPlayRecords()
             } else {
                 _isLoggedIn.value = false
             }
@@ -172,12 +173,12 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 val api = VideoApiClient.getApi(serverUrl)
                 val response = withContext(Dispatchers.IO) {
-                    api.login(LoginRequest(username, password))
+                    api.login(mapOf("username" to username, "password" to password))
                 }
-                if (response.isSuccessful && response.body()?.code == 0) {
+                if (response.isSuccessful && response.body()?.ok == true) {
                     onResult(true, "连接成功 ✓")
                 } else {
-                    onResult(false, response.body()?.msg ?: "连接失败")
+                    onResult(false, "连接失败")
                 }
             } catch (e: Exception) {
                 onResult(false, "连接失败: ${e.message}")
@@ -185,7 +186,7 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // ==================== 首页推荐 ====================
+    // ==================== 首页推荐（豆瓣） ====================
 
     fun loadHomeData() {
         viewModelScope.launch {
@@ -193,25 +194,17 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
             _homeError.value = null
             try {
                 val doubanApi = DoubanApiClient.getApi()
-                // 并行加载电影、电视剧、动漫
-                val moviesResp = withContext(Dispatchers.IO) {
-                    doubanApi.getRecentHot("movie", limit = 12)
-                }
-                val tvResp = withContext(Dispatchers.IO) {
-                    doubanApi.getRecentHot("tv", limit = 12)
-                }
-                val animeResp = withContext(Dispatchers.IO) {
-                    doubanApi.getRecentHot("anime", limit = 12)
-                }
-
-                val movies = moviesResp.body()?.items?.map { it.toVideoInfo("movie") } ?: emptyList()
-                val tv = tvResp.body()?.items?.map { it.toVideoInfo("tv") } ?: emptyList()
-                val anime = animeResp.body()?.items?.map { it.toVideoInfo("anime") } ?: emptyList()
+                val moviesResp = withContext(Dispatchers.IO) { doubanApi.getRecentHot("movie", limit = 12) }
+                val tvResp = withContext(Dispatchers.IO) { doubanApi.getRecentHot("tv", limit = 12) }
+                val animeResp = withContext(Dispatchers.IO) { doubanApi.getRecentHot("anime", limit = 12) }
+                val showResp = withContext(Dispatchers.IO) { doubanApi.getRecentHot("show", limit = 12) }
 
                 _homeData.value = HomeRecommendData(
-                    hotMovies = movies,
-                    hotTvShows = tv,
-                    hotAnime = anime
+                    continueWatch = _playRecords.value,
+                    hotMovies = moviesResp.body()?.items?.map { it.toVideoInfo("movie") } ?: emptyList(),
+                    hotTvShows = tvResp.body()?.items?.map { it.toVideoInfo("tv") } ?: emptyList(),
+                    hotAnime = animeResp.body()?.items?.map { it.toVideoInfo("anime") } ?: emptyList(),
+                    hotVariety = showResp.body()?.items?.map { it.toVideoInfo("show") } ?: emptyList()
                 )
             } catch (e: Exception) {
                 _homeError.value = "加载失败: ${e.message}"
@@ -223,6 +216,7 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
 
     fun refreshHome() {
         loadHomeData()
+        loadPlayRecords()
     }
 
     // ==================== 搜索 ====================
@@ -238,11 +232,11 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                 addSearchHistory(keyword)
                 val api = VideoApiClient.getApi(videoServerUrl.value)
                 val response = withContext(Dispatchers.IO) { api.search(keyword) }
-                if (response.isSuccessful && response.body()?.code == 0) {
-                    _searchResults.value = response.body()?.data ?: emptyList()
+                if (response.isSuccessful) {
+                    _searchResults.value = response.body()?.results ?: emptyList()
                 } else {
                     _searchResults.value = emptyList()
-                    _toastMessage.value = response.body()?.msg ?: "搜索失败"
+                    _toastMessage.value = "搜索失败"
                 }
             } catch (e: Exception) {
                 _searchResults.value = emptyList()
@@ -276,10 +270,10 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 val api = VideoApiClient.getApi(videoServerUrl.value)
                 val response = withContext(Dispatchers.IO) { api.getDetail(source, id) }
-                if (response.isSuccessful && response.body()?.code == 0) {
-                    _videoDetail.value = response.body()?.data
+                if (response.isSuccessful && response.body() != null) {
+                    _videoDetail.value = response.body()
                 } else {
-                    _toastMessage.value = response.body()?.msg ?: "加载详情失败"
+                    _toastMessage.value = "加载详情失败"
                 }
             } catch (e: Exception) {
                 _toastMessage.value = "加载详情失败: ${e.message}"
@@ -301,8 +295,8 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 val api = VideoApiClient.getApi(videoServerUrl.value)
                 val response = withContext(Dispatchers.IO) { api.getFavorites() }
-                if (response.isSuccessful && response.body()?.code == 0) {
-                    _favorites.value = response.body()?.data ?: emptyList()
+                if (response.isSuccessful) {
+                    _favorites.value = response.body() ?: emptyList()
                 }
             } catch (_: Exception) { }
             _favoritesLoading.value = false
@@ -317,7 +311,7 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                     source = video.source,
                     id = video.id,
                     title = video.title,
-                    cover = video.cover,
+                    cover = video.displayCover,
                     year = video.year,
                     type = video.type
                 )
@@ -338,7 +332,7 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                     source = video.source,
                     id = video.id,
                     title = video.title,
-                    cover = video.cover
+                    cover = video.displayCover
                 )
                 withContext(Dispatchers.IO) { api.removeFavorite(request) }
                 _toastMessage.value = "已取消收藏"
@@ -360,8 +354,20 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 val api = VideoApiClient.getApi(videoServerUrl.value)
                 val response = withContext(Dispatchers.IO) { api.getPlayRecords() }
-                if (response.isSuccessful && response.body()?.code == 0) {
-                    _playRecords.value = response.body()?.data ?: emptyList()
+                if (response.isSuccessful && response.body() != null) {
+                    // LunaTV 返回 dict: {"source+id": record}
+                    val dict = response.body()!!
+                    val records = dict.entries.mapNotNull { (key, record) ->
+                        // 从 key 中提取 source 和 id (格式: "source+id")
+                        val parts = key.split("+", limit = 2)
+                        val source = parts.getOrElse(0) { "" }
+                        val videoId = parts.getOrElse(1) { key }
+                        record.copy(
+                            videoIdRaw = videoId,
+                            source = source
+                        )
+                    }.sortedByDescending { it.saveTime }
+                    _playRecords.value = records
                 }
             } catch (_: Exception) { }
         }
@@ -388,20 +394,16 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // ==================== 分类 (通过搜索实现) ====================
+    // ==================== 分类搜索 ====================
 
-    /**
-     * 通过搜索关键词获取分类内容
-     * LunaTV 没有 /api/category 接口，使用搜索方式获取
-     */
     fun searchCategory(keyword: String) {
         viewModelScope.launch {
             _categoryLoading.value = true
             try {
                 val api = VideoApiClient.getApi(videoServerUrl.value)
                 val response = withContext(Dispatchers.IO) { api.search(keyword) }
-                if (response.isSuccessful && response.body()?.code == 0) {
-                    _categoryResults.value = response.body()?.data ?: emptyList()
+                if (response.isSuccessful) {
+                    _categoryResults.value = response.body()?.results ?: emptyList()
                 } else {
                     _categoryResults.value = emptyList()
                 }
@@ -424,10 +426,9 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 val api = VideoApiClient.getApi(videoServerUrl.value)
                 val response = withContext(Dispatchers.IO) { api.getLiveSources() }
-                if (response.isSuccessful && response.body()?.code == 0) {
-                    _liveSources.value = response.body()?.data ?: emptyList()
-                    // 自动加载第一个源的频道
-                    val sources = response.body()?.data
+                if (response.isSuccessful) {
+                    _liveSources.value = response.body() ?: emptyList()
+                    val sources = response.body()
                     if (!sources.isNullOrEmpty()) {
                         loadLiveChannels(sources.first().source)
                     }
@@ -443,8 +444,8 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 val api = VideoApiClient.getApi(videoServerUrl.value)
                 val response = withContext(Dispatchers.IO) { api.getLiveChannels(source) }
-                if (response.isSuccessful && response.body()?.code == 0) {
-                    _liveChannels.value = response.body()?.data ?: emptyList()
+                if (response.isSuccessful) {
+                    _liveChannels.value = response.body() ?: emptyList()
                 }
             } catch (_: Exception) { }
             _liveLoading.value = false

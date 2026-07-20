@@ -532,7 +532,7 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                         val source = backStackEntry.arguments?.getString("source") ?: ""
                         val episodeIndex = backStackEntry.arguments?.getString("episodeIndex")?.toIntOrNull() ?: 0
                         val detail by videoViewModel.videoDetail.collectAsState()
-                        val sources = detail?.sources ?: emptyList()
+                        val sources = detail?.toSources() ?: emptyList()
                         // 根据 source 名找到对应的 source index
                         val sourceIndex = sources.indexOfFirst { it.source == source }.coerceAtLeast(0)
                         com.lechenmusic.ui.screens.video.VideoPlayerScreen(

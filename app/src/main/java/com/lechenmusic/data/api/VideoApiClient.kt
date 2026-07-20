@@ -15,11 +15,12 @@ import java.util.concurrent.TimeUnit
 
 /**
  * LunaTV API 接口定义
+ * 注意：LunaTV 返回的是裸 JSON，没有 code/msg/data 包装
  */
 interface LunaTvApi {
 
     @POST("api/login")
-    suspend fun login(@Body request: LoginRequest): Response<LoginResponse>
+    suspend fun login(@Body request: Map<String, String>): Response<LoginResponse>
 
     @GET("api/search")
     suspend fun search(@Query("keyword") keyword: String): Response<SearchResponse>
@@ -28,31 +29,32 @@ interface LunaTvApi {
     suspend fun getDetail(
         @Query("source") source: String,
         @Query("id") id: String
-    ): Response<VideoDetailResponse>
+    ): Response<VideoDetail>
 
     @GET("api/favorites")
-    suspend fun getFavorites(): Response<FavoritesResponse>
+    suspend fun getFavorites(): Response<List<VideoInfo>>
 
     @POST("api/favorites")
-    suspend fun addFavorite(@Body request: FavoriteRequest): Response<LunaApiResponse<Unit>>
+    suspend fun addFavorite(@Body request: FavoriteRequest): Response<Map<String, Any>>
 
     @HTTP(method = "DELETE", path = "api/favorites", hasBody = true)
-    suspend fun removeFavorite(@Body request: FavoriteRequest): Response<LunaApiResponse<Unit>>
+    suspend fun removeFavorite(@Body request: FavoriteRequest): Response<Map<String, Any>>
 
+    /** 返回 dict: {"source+id": {record...}} */
     @GET("api/playrecords")
-    suspend fun getPlayRecords(): Response<PlayRecordsResponse>
+    suspend fun getPlayRecords(): Response<Map<String, VideoPlayRecord>>
 
     @POST("api/playrecords")
-    suspend fun savePlayRecord(@Body request: PlayRecordRequest): Response<LunaApiResponse<Unit>>
+    suspend fun savePlayRecord(@Body request: PlayRecordRequest): Response<Map<String, Any>>
 
     @HTTP(method = "DELETE", path = "api/playrecords", hasBody = true)
-    suspend fun deletePlayRecord(@Body request: Map<String, String>): Response<LunaApiResponse<Unit>>
+    suspend fun deletePlayRecord(@Body request: Map<String, String>): Response<Map<String, Any>>
 
     @GET("api/live/sources")
-    suspend fun getLiveSources(): Response<LiveSourcesResponse>
+    suspend fun getLiveSources(): Response<List<LiveSource>>
 
     @GET("api/live/channels")
-    suspend fun getLiveChannels(@Query("source") source: String): Response<LiveChannelsResponse>
+    suspend fun getLiveChannels(@Query("source") source: String): Response<List<LiveChannelGroup>>
 
     @GET("api/search/resources")
     suspend fun getSearchResources(): Response<List<SearchResourceResponse>>
@@ -88,10 +90,6 @@ object VideoCookieJar : CookieJar {
 
     fun clear() {
         cookieStore.clear()
-    }
-
-    fun hasCookies(host: String): Boolean {
-        return cookieStore[host]?.isNotEmpty() == true
     }
 }
 

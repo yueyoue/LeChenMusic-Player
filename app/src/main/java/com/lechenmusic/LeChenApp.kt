@@ -25,6 +25,27 @@ class LeChenApp : Application() {
         playerManager = MusicPlayerManager(this)
         playerManager.init(repository)
 
+        // 配置 Coil 图片加载器，为豆瓣图片添加 Referer
+        coil.Coil.setImageLoader(
+            coil.ImageLoader.Builder(this)
+                .okHttpClient {
+                    okhttp3.OkHttpClient.Builder()
+                        .addInterceptor { chain ->
+                            val request = chain.request()
+                            val url = request.url.toString()
+                            val newRequest = if (url.contains("douban.com") || url.contains("doubanio.com")) {
+                                request.newBuilder()
+                                    .header("Referer", "https://movie.douban.com/")
+                                    .header("User-Agent", "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36")
+                                    .build()
+                            } else request
+                            chain.proceed(newRequest)
+                        }
+                        .build()
+                }
+                .build()
+        )
+
         // #19: Initialize global error reporter
         try {
             val prefs = getSharedPreferences("settings", MODE_PRIVATE)

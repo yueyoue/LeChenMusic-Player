@@ -78,9 +78,9 @@ fun VideoDetailScreen(
             ) {
                 // 背景图 + 渐变遮罩
                 Box(modifier = Modifier.fillMaxSize()) {
-                    if (currentDetail.cover.isNotBlank()) {
+                    if (currentDetail.displayCover.isNotBlank()) {
                         AsyncImage(
-                            model = currentDetail.cover,
+                            model = currentDetail.displayCover,
                             contentDescription = null,
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop,
@@ -125,9 +125,9 @@ fun VideoDetailScreen(
                         shape = RoundedCornerShape(10.dp),
                         color = MaterialTheme.colorScheme.surfaceVariant
                     ) {
-                        if (currentDetail.cover.isNotBlank()) {
+                        if (currentDetail.displayCover.isNotBlank()) {
                             AsyncImage(
-                                model = currentDetail.cover,
+                                model = currentDetail.displayCover,
                                 contentDescription = null,
                                 modifier = Modifier.fillMaxSize(),
                                 contentScale = ContentScale.Crop
@@ -165,7 +165,7 @@ fun VideoDetailScreen(
                             Text(currentDetail.year, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                categoryName(currentDetail.type),
+                                categoryName(currentDetail.displayType),
                                 fontSize = 13.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -194,7 +194,7 @@ fun VideoDetailScreen(
                 // 播放按钮
                 Button(
                     onClick = {
-                        val src = currentDetail.sources.getOrNull(selectedSource)
+                        val src = currentDetail.toSources().getOrNull(selectedSource)
                         if (src != null && src.episodes.isNotEmpty()) {
                             onPlay(src.source, 0)
                         }
@@ -214,9 +214,9 @@ fun VideoDetailScreen(
                             id = currentDetail.id,
                             source = currentDetail.source,
                             title = currentDetail.title,
-                            cover = currentDetail.cover,
+                            cover = currentDetail.displayCover,
                             year = currentDetail.year,
-                            type = currentDetail.type
+                            type = currentDetail.displayType
                         )
                         if (isStarred) viewModel.removeFavorite(videoInfo)
                         else viewModel.addFavorite(videoInfo)
@@ -297,13 +297,13 @@ fun VideoDetailScreen(
         }
 
         // 播放源选择
-        if (currentDetail.sources.size > 1) {
+        if (currentDetail.toSources().size > 1) {
             item {
                 Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
                     Text("播放源", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(8.dp))
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        itemsIndexed(currentDetail.sources) { index, src ->
+                        itemsIndexed(currentDetail.toSources()) { index, src ->
                             FilterChip(
                                 selected = selectedSource == index,
                                 onClick = { selectedSource = index },
@@ -316,7 +316,7 @@ fun VideoDetailScreen(
         }
 
         // 选集
-        val currentSrc = currentDetail.sources.getOrNull(selectedSource)
+        val currentSrc = currentDetail.toSources().getOrNull(selectedSource)
         if (currentSrc != null) {
             item {
                 Text(
