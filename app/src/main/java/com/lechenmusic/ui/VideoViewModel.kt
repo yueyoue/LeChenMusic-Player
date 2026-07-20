@@ -293,10 +293,10 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
-     * 先搜索 LunaTV 找到 source+id，再加载详情
-     * 优先选择有 episodes 的源
+     * 搜索 LunaTV 找到源，直接构造 VideoDetail 用于播放
+     * 跳过详情页，搜索结果已包含 episodes
      */
-    fun searchAndLoadDetail(title: String, doubanId: String) {
+    fun searchAndPlay(title: String, doubanId: String) {
         viewModelScope.launch {
             _detailLoading.value = true
             try {
@@ -315,13 +315,41 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                     it.title.contains(title, ignoreCase = true)
                 } ?: results.first()
 
-                loadDetail(matched.source, matched.id)
+                // 直接用搜索结果构造 VideoDetail（搜索结果已包含 episodes）
+                val eps = matched.episodes.mapIndexed { index, url ->
+                    VideoEpisode(
+                        index = index,
+                        title = matched.episodesTitles.getOrNull(index) ?: "第${index + 1}集",
+                        url = url
+                    )
+                }
+                val detail = VideoDetail(
+                    id = matched.id,
+                    title = matched.title,
+                    year = matched.year,
+                    poster = matched.poster,
+                    source = matched.source,
+                    sourceName = matched.sourceName,
+                    sourceNameAlt = matched.sourceNameAlt,
+                    desc = matched.desc,
+                    typeName = matched.type,
+                    episodes = matched.episodes,
+                    episodesTitles = matched.episodesTitles
+                )
+                _videoDetail.value = detail
+                _needNavigateToPlayer.value = true
             } catch (e: Exception) {
                 _toastMessage.value = "搜索失败: ${e.message}"
+            } finally {
                 _detailLoading.value = false
             }
         }
     }
+
+    // 导航触发器
+    private val _needNavigateToPlayer = MutableStateFlow(false)
+    val needNavigateToPlayer: StateFlow<Boolean> = _needNavigateToPlayer.asStateFlow()
+    fun consumeNavigateToPlayer() { _needNavigateToPlayer.value = false }
 
     // ==================== 收藏 ====================
 

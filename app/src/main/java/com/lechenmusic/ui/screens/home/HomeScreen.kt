@@ -63,6 +63,7 @@ fun HomeScreen(
     onNavigateToNarrator: (String) -> Unit = {},
     onNavigateToNarratorList: () -> Unit = {},
     onNavigateToVideoDetail: (String, String) -> Unit = { _, _ -> },
+    onNavigateToVideoPlayer: () -> Unit = {},
     onNavigateToVideoCategory: (String) -> Unit = {},
     onNavigateToLive: () -> Unit = {},
     videoViewModel: com.lechenmusic.ui.VideoViewModel? = null
@@ -614,6 +615,14 @@ fun HomeScreen(
                                 videoViewModel?.loadPlayRecords()
                             }
                         }
+                        // 搜索完成后直接跳转播放器
+                        val needNav = videoViewModel?.needNavigateToPlayer?.collectAsState()?.value ?: false
+                        androidx.compose.runtime.LaunchedEffect(needNav) {
+                            if (needNav) {
+                                videoViewModel?.consumeNavigateToPlayer()
+                                onNavigateToVideoPlayer()
+                            }
+                        }
                     }
 
                     if (!isVideoLoggedIn) {
@@ -737,8 +746,8 @@ fun HomeScreen(
                                                     onNavigateToVideoDetail(video.source, video.id)
                                                 } else {
                                                     // 豆瓣电影：先搜索 LunaTV 找到源
-                                                    videoViewModel?.searchAndLoadDetail(video.title, video.id)
-                                                    onNavigateToVideoDetail("searching", video.id)
+                                                    videoViewModel?.searchAndPlay(video.title, video.id)
+                                                    
                                                 }
                                             }
                                         )
@@ -763,8 +772,8 @@ fun HomeScreen(
                                                 if (video.source.isNotBlank()) {
                                                     onNavigateToVideoDetail(video.source, video.id)
                                                 } else {
-                                                    videoViewModel?.searchAndLoadDetail(video.title, video.id)
-                                                    onNavigateToVideoDetail("searching", video.id)
+                                                    videoViewModel?.searchAndPlay(video.title, video.id)
+                                                    
                                                 }
                                             }
                                         )
@@ -789,8 +798,8 @@ fun HomeScreen(
                                                 if (video.source.isNotBlank()) {
                                                     onNavigateToVideoDetail(video.source, video.id)
                                                 } else {
-                                                    videoViewModel?.searchAndLoadDetail(video.title, video.id)
-                                                    onNavigateToVideoDetail("searching", video.id)
+                                                    videoViewModel?.searchAndPlay(video.title, video.id)
+                                                    
                                                 }
                                             }
                                         )
@@ -815,8 +824,8 @@ fun HomeScreen(
                                                 if (video.source.isNotBlank()) {
                                                     onNavigateToVideoDetail(video.source, video.id)
                                                 } else {
-                                                    videoViewModel?.searchAndLoadDetail(video.title, video.id)
-                                                    onNavigateToVideoDetail("searching", video.id)
+                                                    videoViewModel?.searchAndPlay(video.title, video.id)
+                                                    
                                                 }
                                             }
                                         )

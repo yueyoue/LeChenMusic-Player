@@ -259,6 +259,7 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                             onNavigateToNarrator = { name -> navController.navigate(Screen.NarratorDetail.createRoute(name)) },
                             onNavigateToNarratorList = { navController.navigate(Screen.NarratorList.route) },
                             onNavigateToVideoDetail = { source, videoId -> navController.navigate(Screen.VideoDetail.createRoute(source, videoId)) },
+                            onNavigateToVideoPlayer = { navController.navigate(Screen.VideoPlayerDirect.route) },
                             onNavigateToVideoCategory = { type -> navController.navigate(Screen.VideoCategory.createRoute(type)) },
                             onNavigateToLive = { navController.navigate(Screen.Live.route) },
                             videoViewModel = videoViewModel
@@ -567,6 +568,39 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                             )
                         }
                     }
+                    // 直接播放路由（搜索结果直接播放，无需参数）
+                    composable(Screen.VideoPlayerDirect.route) {
+                        val detail by videoViewModel.videoDetail.collectAsState()
+                        val detailLoading by videoViewModel.detailLoading.collectAsState()
+                        val sources = detail?.toSources() ?: emptyList()
+
+                        if (detailLoading || sources.isEmpty()) {
+                            Box(modifier = Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    CircularProgressIndicator(color = Color.White)
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Text(
+                                        if (detailLoading) "正在搜索播放源..." else "未找到播放资源",
+                                        color = Color.White.copy(alpha = 0.7f),
+                                        fontSize = 14.sp
+                                    )
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    TextButton(onClick = { navController.popBackStack() }) {
+                                        Text("返回", color = Color.White)
+                                    }
+                                }
+                            }
+                        } else {
+                            com.lechenmusic.ui.screens.video.VideoPlayerScreen(
+                                videoTitle = detail?.title ?: "影视播放",
+                                sources = sources,
+                                initialSource = 0,
+                                initialEpisode = 0,
+                                onBack = { navController.popBackStack() }
+                            )
+                        }
+                    }
+
                     composable(Screen.Live.route) {
                         com.lechenmusic.ui.screens.video.LiveScreen(
                             viewModel = videoViewModel,
@@ -575,16 +609,25 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                     }
                     composable(Screen.VideoCategory.route) { backStackEntry ->
                         val type = backStackEntry.arguments?.getString("type") ?: "movie"
+                        // 搜索完成后直接跳转播放器
+                        val needNav by videoViewModel.needNavigateToPlayer.collectAsState()
+                        androidx.compose.runtime.LaunchedEffect(needNav) {
+                            if (needNav) {
+                                videoViewModel.consumeNavigateToPlayer()
+                                navController.navigate(Screen.VideoPlayerDirect.route)
+                            }
+                        }
                         com.lechenmusic.ui.screens.video.VideoCategoryScreen(
                             viewModel = videoViewModel,
                             categoryType = type,
                             onBack = { navController.popBackStack() },
                             onVideoClick = { video ->
                                 if (video.source.isNotBlank()) {
+                                    // 有 source 的直接加载详情播放
                                     navController.navigate(Screen.VideoDetail.createRoute(video.source, video.id))
                                 } else {
-                                    videoViewModel.searchAndLoadDetail(video.title, video.id)
-                                    navController.navigate(Screen.VideoDetail.createRoute("searching", video.id))
+                                    // 豆瓣电影：搜索后直接播放
+                                    videoViewModel.searchAndPlay(video.title, video.id)
                                 }
                             }
                         )
