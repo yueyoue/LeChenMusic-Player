@@ -452,7 +452,10 @@ fun SongContextMenu(
     onStar: () -> Unit,
     onUnstar: () -> Unit,
     onAddToPlaylist: (String) -> Unit,
-    onCreatePlaylist: ((String) -> Unit)? = null
+    onCreatePlaylist: ((String) -> Unit)? = null,
+    onAddToQueue: (() -> Unit)? = null,
+    onNavigateToArtist: (() -> Unit)? = null,
+    onNavigateToAlbum: (() -> Unit)? = null
 ) {
     var expanded by remember { mutableStateOf(false) }
     var showPlaylistMenu by remember { mutableStateOf(false) }
@@ -486,10 +489,10 @@ fun SongContextMenu(
                 },
                 leadingIcon = {
                     Icon(
-                        if (song.isStarred) Icons.Default.FavoriteBorder else Icons.Default.Favorite,
+                        if (song.isStarred) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                         contentDescription = null,
                         modifier = Modifier.size(20.dp),
-                        tint = if (song.isStarred) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFFE94560)
+                        tint = if (song.isStarred) Color(0xFFE94560) else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             )
@@ -525,6 +528,24 @@ fun SongContextMenu(
                     )
                 }
             }
+            // 添加到播放队列
+            DropdownMenuItem(
+                text = { Text("添加到播放队列") },
+                onClick = { expanded = false; onAddToQueue?.invoke() },
+                leadingIcon = { Icon(Icons.Default.QueueMusic, contentDescription = null, modifier = Modifier.size(20.dp)) }
+            )
+            // 歌手
+            DropdownMenuItem(
+                text = { Text("歌手") },
+                onClick = { expanded = false; onNavigateToArtist?.invoke() },
+                leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(20.dp)) }
+            )
+            // 专辑
+            DropdownMenuItem(
+                text = { Text("专辑") },
+                onClick = { expanded = false; onNavigateToAlbum?.invoke() },
+                leadingIcon = { Icon(Icons.Default.Album, contentDescription = null, modifier = Modifier.size(20.dp)) }
+            )
         }
     }
 
@@ -567,6 +588,9 @@ fun SongItemWithMenu(
     onUnstar: () -> Unit,
     onAddToPlaylist: (String) -> Unit,
     onCreatePlaylist: ((String) -> Unit)? = null,
+    onAddToQueue: (() -> Unit)? = null,
+    onNavigateToArtist: (() -> Unit)? = null,
+    onNavigateToAlbum: (() -> Unit)? = null,
     trailing: @Composable (() -> Unit)? = null
 ) {
     Row(
@@ -617,7 +641,10 @@ fun SongItemWithMenu(
             onStar = onStar,
             onUnstar = onUnstar,
             onAddToPlaylist = onAddToPlaylist,
-            onCreatePlaylist = onCreatePlaylist
+            onCreatePlaylist = onCreatePlaylist,
+            onAddToQueue = onAddToQueue,
+            onNavigateToArtist = onNavigateToArtist,
+            onNavigateToAlbum = onNavigateToAlbum
         )
     }
 }

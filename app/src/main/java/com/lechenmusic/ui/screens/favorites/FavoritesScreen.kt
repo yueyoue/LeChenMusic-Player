@@ -38,13 +38,12 @@ fun FavoritesScreen(
     val starredAlbums by viewModel.starredAlbums.collectAsState()
     val starredAudiobooks by viewModel.starredAudiobooks.collectAsState()
     val playlists by viewModel.playlists.collectAsState()
-    val starredPlaylists by viewModel.starredPlaylists.collectAsState()
     val serverUrl by viewModel.serverUrl.collectAsState()
     val username by viewModel.username.collectAsState()
     val password by viewModel.password.collectAsState()
 
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("音乐", "专辑", "有声书", "歌单")
+    val tabs = listOf("音乐", "专辑", "歌单", "有声书")
 
     Column(modifier = Modifier.fillMaxSize()) {
         Text(
@@ -55,7 +54,7 @@ fun FavoritesScreen(
         )
 
         // Tabs
-        ScrollableTabRow(
+        TabRow(
             selectedTabIndex = selectedTab,
             modifier = Modifier.padding(horizontal = 16.dp),
             containerColor = MaterialTheme.colorScheme.surface,
@@ -80,8 +79,8 @@ fun FavoritesScreen(
         when (selectedTab) {
             0 -> MusicTab(starredSongs, serverUrl, username, password, onSongClick)
             1 -> AlbumsTab(starredAlbums, serverUrl, username, password, onAlbumClick)
-            2 -> AudiobooksTab(starredAudiobooks, serverUrl, username, password, onAudiobookClick)
-            3 -> PlaylistsTab(starredPlaylists, serverUrl, username, password, onPlaylistClick)
+            2 -> PlaylistsTab(playlists, serverUrl, username, password, onPlaylistClick)
+            3 -> AudiobooksTab(starredAudiobooks, serverUrl, username, password, onAudiobookClick)
         }
     }
 }

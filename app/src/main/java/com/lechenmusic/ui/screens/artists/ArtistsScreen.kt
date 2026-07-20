@@ -26,6 +26,7 @@ import com.lechenmusic.data.model.Artist
 import com.lechenmusic.ui.MainViewModel
 import com.lechenmusic.ui.components.CoverImage
 import kotlinx.coroutines.launch
+import net.sourceforge.pinyin4j.PinyinHelper
 
 @Composable
 fun ArtistsScreen(
@@ -44,8 +45,17 @@ fun ArtistsScreen(
     // Group artists by first letter for A-Z index
     val grouped = remember(artists) {
         artists.groupBy { artist ->
-            val first = artist.name.firstOrNull()?.uppercase() ?: "#"
-            if (first[0] in 'A'..'Z') first else if (first[0] in 'a'..'z') first.uppercase() else "#"
+            val first = artist.name.firstOrNull()
+            if (first != null && first.code in 0x4E00..0x9FFF) {
+                // 中文字符转拼音首字母
+                val pinyinArray = PinyinHelper.toHanyuPinyinStringArray(first)
+                if (pinyinArray != null && pinyinArray.isNotEmpty()) {
+                    pinyinArray[0][0].uppercaseChar().toString()
+                } else "#"
+            } else {
+                val s = first?.uppercase() ?: "#"
+                if (s[0] in 'A'..'Z') s else "#"
+            }
         }.toSortedMap()
     }
     val letters = remember(grouped) { grouped.keys.toList() }

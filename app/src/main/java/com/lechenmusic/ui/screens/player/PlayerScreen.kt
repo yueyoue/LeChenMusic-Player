@@ -375,6 +375,25 @@ fun PlayerScreen(
                         else MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.clickable(enabled = !isRadioStation) {
+                        val currentPlaylist = playlist.toMutableList()
+                        if (currentPlaylist.none { it.id == song.id }) {
+                            currentPlaylist.add(song)
+                            playerManager.playSong(song, currentPlaylist)
+                            Toast.makeText(context, "已添加到播放列表", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(context, "歌曲已在播放列表中", Toast.LENGTH_SHORT).show()
+                        }
+                    }) {
+                    Icon(Icons.Default.QueueMusic, contentDescription = "添加到播放列表",
+                        tint = if (isRadioStation) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(24.dp))
+                    Text("入队", fontSize = 10.sp,
+                        color = if (isRadioStation) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                        else MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.clickable { showPlaylistSelectionDialog = true }) {
                     Icon(Icons.Default.PlaylistAdd, contentDescription = "添加到歌单", modifier = Modifier.size(24.dp))
                     Text("添加到", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)

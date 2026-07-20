@@ -99,6 +99,7 @@ fun SearchScreen(
                 Tab(selectedTab == 0, onClick = { selectedTab = 0 }) { Text("歌曲", modifier = Modifier.padding(12.dp)) }
                 Tab(selectedTab == 1, onClick = { selectedTab = 1 }) { Text("歌手", modifier = Modifier.padding(12.dp)) }
                 Tab(selectedTab == 2, onClick = { selectedTab = 2 }) { Text("专辑", modifier = Modifier.padding(12.dp)) }
+                Tab(selectedTab == 3, onClick = { selectedTab = 3 }) { Text("歌词", modifier = Modifier.padding(12.dp)) }
             }
         }
 
@@ -209,6 +210,17 @@ fun SearchScreen(
                                     )
                                 }
                             }
+                        }
+                    }
+                    3 -> {
+                        val rawSongs = searchResults?.song ?: emptyList()
+                        val q = query.lowercase()
+                        val lyricsSongs = rawSongs.filter { song ->
+                            song.lyrics?.lowercase()?.contains(q) == true
+                        }
+                        items(lyricsSongs) { song ->
+                            SongItem(song = song, serverUrl = serverUrl, username = username, password = password,
+                                onClick = { onSongClick(song, lyricsSongs) })
                         }
                     }
                 }
