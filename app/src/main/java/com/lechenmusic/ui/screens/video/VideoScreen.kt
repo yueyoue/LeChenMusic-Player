@@ -2,7 +2,6 @@ package com.lechenmusic.ui.screens.video
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -10,7 +9,6 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -52,11 +50,11 @@ fun VideoScreen(
     val tabs = listOf("推荐", "电影", "电视剧", "动漫", "综艺", "直播")
 
     // 分类数据
-    val categoryMovies by viewModel.categoryMovies.collectAsState()
-    val categoryTv by viewModel.categoryTv.collectAsState()
-    val categoryAnime by viewModel.categoryAnime.collectAsState()
-    val categoryVariety by viewModel.categoryVariety.collectAsState()
+    val categoryResults by viewModel.categoryResults.collectAsState()
     val categoryLoading by viewModel.categoryLoading.collectAsState()
+
+    // 当前分类关键词
+    var currentCategoryKeyword by remember { mutableStateOf("") }
 
     LaunchedEffect(isLoggedIn) {
         if (isLoggedIn) {
@@ -67,10 +65,10 @@ fun VideoScreen(
     LaunchedEffect(selectedTab, isLoggedIn) {
         if (!isLoggedIn) return@LaunchedEffect
         when (selectedTab) {
-            1 -> if (categoryMovies.isEmpty()) viewModel.loadCategory("movie")
-            2 -> if (categoryTv.isEmpty()) viewModel.loadCategory("tv")
-            3 -> if (categoryAnime.isEmpty()) viewModel.loadCategory("anime")
-            4 -> if (categoryVariety.isEmpty()) viewModel.loadCategory("variety")
+            1 -> if (currentCategoryKeyword != "电影") { currentCategoryKeyword = "电影"; viewModel.searchCategory("电影") }
+            2 -> if (currentCategoryKeyword != "电视剧") { currentCategoryKeyword = "电视剧"; viewModel.searchCategory("电视剧") }
+            3 -> if (currentCategoryKeyword != "动漫") { currentCategoryKeyword = "动漫"; viewModel.searchCategory("动漫") }
+            4 -> if (currentCategoryKeyword != "综艺") { currentCategoryKeyword = "综艺"; viewModel.searchCategory("综艺") }
         }
     }
 
@@ -160,10 +158,10 @@ fun VideoScreen(
                     onVideoClick = onVideoClick,
                     onRecordClick = onRecordClick
                 )
-                1 -> VideoCategoryList(categoryMovies, categoryLoading, onVideoClick)
-                2 -> VideoCategoryList(categoryTv, categoryLoading, onVideoClick)
-                3 -> VideoCategoryList(categoryAnime, categoryLoading, onVideoClick)
-                4 -> VideoCategoryList(categoryVariety, categoryLoading, onVideoClick)
+                1 -> VideoCategoryList(categoryResults, categoryLoading, onVideoClick)
+                2 -> VideoCategoryList(categoryResults, categoryLoading, onVideoClick)
+                3 -> VideoCategoryList(categoryResults, categoryLoading, onVideoClick)
+                4 -> VideoCategoryList(categoryResults, categoryLoading, onVideoClick)
             }
         }
     }

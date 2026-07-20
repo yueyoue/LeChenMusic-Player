@@ -72,18 +72,9 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
     private val _playRecords = MutableStateFlow<List<VideoPlayRecord>>(emptyList())
     val playRecords: StateFlow<List<VideoPlayRecord>> = _playRecords.asStateFlow()
 
-    // ===== 分类 =====
-    private val _categoryMovies = MutableStateFlow<List<VideoInfo>>(emptyList())
-    val categoryMovies: StateFlow<List<VideoInfo>> = _categoryMovies.asStateFlow()
-
-    private val _categoryTv = MutableStateFlow<List<VideoInfo>>(emptyList())
-    val categoryTv: StateFlow<List<VideoInfo>> = _categoryTv.asStateFlow()
-
-    private val _categoryAnime = MutableStateFlow<List<VideoInfo>>(emptyList())
-    val categoryAnime: StateFlow<List<VideoInfo>> = _categoryAnime.asStateFlow()
-
-    private val _categoryVariety = MutableStateFlow<List<VideoInfo>>(emptyList())
-    val categoryVariety: StateFlow<List<VideoInfo>> = _categoryVariety.asStateFlow()
+    // ===== 分类 (使用搜索实现) =====
+    private val _categoryResults = MutableStateFlow<List<VideoInfo>>(emptyList())
+    val categoryResults: StateFlow<List<VideoInfo>> = _categoryResults.asStateFlow()
 
     private val _categoryLoading = MutableStateFlow(false)
     val categoryLoading: StateFlow<Boolean> = _categoryLoading.asStateFlow()
@@ -397,26 +388,32 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // ==================== 分类 ====================
+    // ==================== 分类 (通过搜索实现) ====================
 
-    fun loadCategory(type: String, page: Int = 1) {
+    /**
+     * 通过搜索关键词获取分类内容
+     * LunaTV 没有 /api/category 接口，使用搜索方式获取
+     */
+    fun searchCategory(keyword: String) {
         viewModelScope.launch {
             _categoryLoading.value = true
             try {
                 val api = VideoApiClient.getApi(videoServerUrl.value)
-                val response = withContext(Dispatchers.IO) { api.getCategory(type, page) }
+                val response = withContext(Dispatchers.IO) { api.search(keyword) }
                 if (response.isSuccessful && response.body()?.code == 0) {
-                    val list = response.body()?.data?.list ?: emptyList()
-                    when (type) {
-                        "movie" -> _categoryMovies.value = list
-                        "tv" -> _categoryTv.value = list
-                        "anime" -> _categoryAnime.value = list
-                        "variety" -> _categoryVariety.value = list
-                    }
+                    _categoryResults.value = response.body()?.data ?: emptyList()
+                } else {
+                    _categoryResults.value = emptyList()
                 }
-            } catch (_: Exception) { }
+            } catch (_: Exception) {
+                _categoryResults.value = emptyList()
+            }
             _categoryLoading.value = false
         }
+    }
+
+    fun clearCategoryResults() {
+        _categoryResults.value = emptyList()
     }
 
     // ==================== 直播 ====================

@@ -52,5 +52,9 @@
 
 # Keep the API interface
 -keep class com.lechenmusic.data.api.SubsonicApi { *; }
+-keep class com.lechenmusic.data.api.LunaTvApi { *; }
+-keep class com.lechenmusic.data.api.DoubanApi { *; }
 -keep class com.lechenmusic.data.api.ApiClient { *; }
+-keep class com.lechenmusic.data.api.VideoApiClient { *; }
+-keep class com.lechenmusic.data.api.DoubanApiClient { *; }
 -keep class com.lechenmusic.data.api.SafeJsonConverterFactory { *; }
