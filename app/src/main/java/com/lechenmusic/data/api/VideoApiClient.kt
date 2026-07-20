@@ -152,7 +152,7 @@ object VideoApiClient {
  * 豆瓣 API 客户端
  */
 object DoubanApiClient {
-    private val api: DoubanApi by lazy {
+    private val _api: DoubanApi by lazy {
         val client = OkHttpClient.Builder()
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(15, TimeUnit.SECONDS)
@@ -173,5 +173,5 @@ object DoubanApiClient {
             .create(DoubanApi::class.java)
     }
 
-    fun getApi(): DoubanApi = api
+    fun getApi(): DoubanApi = _api
 }
