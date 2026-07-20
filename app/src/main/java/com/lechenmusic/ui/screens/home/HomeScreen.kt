@@ -81,6 +81,12 @@ fun HomeScreen(
     val musicSlides by viewModel.musicSlides.collectAsState()
     val audiobookSlides by viewModel.audiobookSlides.collectAsState()
 
+    // 影视状态
+    val isVideoLoggedIn = videoViewModel?.isLoggedIn?.collectAsState()?.value ?: false
+    val videoHomeData = videoViewModel?.homeData?.collectAsState()?.value
+    val videoHomeLoading = videoViewModel?.homeLoading?.collectAsState()?.value ?: false
+    val videoPlayRecords = videoViewModel?.playRecords?.collectAsState()?.value ?: emptyList()
+
     // Pull-to-refresh state
 
 
@@ -599,11 +605,6 @@ fun HomeScreen(
 
                 // ===== VIDEO MODE =====
                 if (homeMode == "video") {
-                    val isVideoLoggedIn = videoViewModel?.isLoggedIn?.collectAsState()?.value ?: false
-                    val homeData = videoViewModel?.homeData?.collectAsState()?.value
-                    val homeLoading = videoViewModel?.homeLoading?.collectAsState()?.value ?: false
-                    val playRecords = videoViewModel?.playRecords?.collectAsState()?.value ?: emptyList()
-
                     // 加载数据
                     LaunchedEffect(isVideoLoggedIn) {
                         if (isVideoLoggedIn) {
@@ -646,7 +647,7 @@ fun HomeScreen(
                         }
                     } else {
                         // 继续观看
-                        if (playRecords.isNotEmpty()) {
+                        if (videoPlayRecords.isNotEmpty()) {
                             item {
                                 SecHd("\u23F0 继续观看", "")
                             }
@@ -655,7 +656,7 @@ fun HomeScreen(
                                     contentPadding = PaddingValues(horizontal = 16.dp),
                                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                                 ) {
-                                    items(playRecords.take(10)) { record ->
+                                    items(videoPlayRecords.take(10)) { record ->
                                         com.lechenmusic.ui.screens.video.VideoHorizontalCard(
                                             video = com.lechenmusic.data.model.VideoInfo(
                                                 id = record.videoId,
@@ -677,9 +678,9 @@ fun HomeScreen(
 
                         // 热门推荐（3列网格）
                         val hotAll = buildList {
-                            homeData?.hotMovies?.let { addAll(it) }
-                            homeData?.hotTvShows?.let { addAll(it) }
-                            homeData?.hotAnime?.let { addAll(it) }
+                            videoHomeData?.hotMovies?.let { addAll(it) }
+                            videoHomeData?.hotTvShows?.let { addAll(it) }
+                            videoHomeData?.hotAnime?.let { addAll(it) }
                         }.distinctBy { it.id }.take(12)
 
                         if (hotAll.isNotEmpty()) {
@@ -705,7 +706,7 @@ fun HomeScreen(
                                     }
                                 }
                             }
-                        } else if (!homeLoading) {
+                        } else if (!videoHomeLoading) {
                             // 加载中或无数据
                             item {
                                 Box(
@@ -724,7 +725,7 @@ fun HomeScreen(
                         }
 
                         // 加载指示器
-                        if (homeLoading) {
+                        if (videoHomeLoading) {
                             item {
                                 Box(
                                     modifier = Modifier
