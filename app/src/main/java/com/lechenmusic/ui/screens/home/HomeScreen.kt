@@ -61,7 +61,8 @@ fun HomeScreen(
     onNavigateToAudiobook: (String?) -> Unit = {},
     onNavigateToAudiobookDetail: (String) -> Unit = {},
     onNavigateToNarrator: (String) -> Unit = {},
-    onNavigateToNarratorList: () -> Unit = {}
+    onNavigateToNarratorList: () -> Unit = {},
+    onNavigateToVideo: () -> Unit = {}
 ) {
     val newestAlbums by viewModel.newestAlbums.collectAsState()
     val randomAlbums by viewModel.randomAlbums.collectAsState()
@@ -153,7 +154,7 @@ fun HomeScreen(
                                 "\uD83C\uDFAC", "影视", homeMode == "video",
                                 modifier = Modifier.weight(1f)
                             ) {
-                                viewModel.setHomeMode("video")
+                                onNavigateToVideo()
                             }
                         }
                     }

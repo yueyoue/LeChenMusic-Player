@@ -6,6 +6,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
@@ -14,45 +16,43 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.lechenmusic.data.model.VideoInfo
+import com.lechenmusic.ui.VideoViewModel
 
 @Composable
 fun VideoSearchScreen(
+    viewModel: VideoViewModel,
     onBack: () -> Unit,
     onVideoClick: (VideoInfo) -> Unit
 ) {
     var query by remember { mutableStateOf("") }
-    var hasSearched by remember { mutableStateOf(false) }
-    var searchResults by remember { mutableStateOf<List<VideoInfo>>(emptyList()) }
-    val searchHistory = remember { mutableStateListOf("三体", "流浪地球", "庆余年", "狂飙") }
+    val searchResults by viewModel.searchResults.collectAsState()
+    val isLoading by viewModel.searchLoading.collectAsState()
+    val searchHistory by viewModel.searchHistory.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize()) {
         // 搜索栏
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+                .padding(horizontal = 8.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = onBack) {
+            IconButton(onClick = {
+                viewModel.clearSearchResults()
+                onBack()
+            }) {
                 Icon(Icons.Default.ArrowBack, "返回")
             }
             OutlinedTextField(
                 value = query,
-                onValueChange = {
-                    query = it
-                    if (it.length >= 2) {
-                        // TODO: 搜索API
-                        hasSearched = true
-                        searchResults = listOf(
-                            VideoInfo(id = "s1", title = "${it}相关电影", year = "2025", type = "movie", rate = "8.0"),
-                            VideoInfo(id = "s2", title = "${it}相关剧集", year = "2024", type = "tv", totalEpisodes = 24, rate = "7.5"),
-                        )
-                    }
-                },
+                onValueChange = { query = it },
                 modifier = Modifier.weight(1f),
                 placeholder = { Text("搜索电影、电视剧、动漫") },
                 shape = RoundedCornerShape(12.dp),
@@ -60,15 +60,26 @@ fun VideoSearchScreen(
                 leadingIcon = { Icon(Icons.Default.Search, null) },
                 trailingIcon = {
                     if (query.isNotEmpty()) {
-                        IconButton(onClick = { query = ""; hasSearched = false }) {
+                        IconButton(onClick = {
+                            query = ""
+                            viewModel.clearSearchResults()
+                        }) {
                             Icon(Icons.Default.Close, "清除")
                         }
                     }
-                }
+                },
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(
+                    onSearch = {
+                        if (query.isNotBlank()) {
+                            viewModel.search(query)
+                        }
+                    }
+                )
             )
         }
 
-        if (!hasSearched) {
+        if (searchResults.isEmpty() && !isLoading) {
             // 搜索历史
             if (searchHistory.isNotEmpty()) {
                 Row(
@@ -83,7 +94,7 @@ fun VideoSearchScreen(
                         "清除",
                         fontSize = 13.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.clickable { searchHistory.clear() }
+                        modifier = Modifier.clickable { viewModel.clearSearchHistory() }
                     )
                 }
                 LazyRow(
@@ -92,7 +103,10 @@ fun VideoSearchScreen(
                 ) {
                     items(searchHistory) { item ->
                         SuggestionChip(
-                            onClick = { query = item; hasSearched = true },
+                            onClick = {
+                                query = item
+                                viewModel.search(item)
+                            },
                             label = { Text(item, fontSize = 13.sp) }
                         )
                     }
@@ -113,30 +127,29 @@ fun VideoSearchScreen(
             ) {
                 items(hotTags) { tag ->
                     SuggestionChip(
-                        onClick = { query = tag; hasSearched = true },
+                        onClick = {
+                            query = tag
+                            viewModel.search(tag)
+                        },
                         label = { Text(tag, fontSize = 13.sp) }
                     )
                 }
             }
+        } else if (isLoading) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
         } else {
             // 搜索结果
-            if (searchResults.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(40.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("未找到相关影视", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(bottom = 100.dp)
-                ) {
-                    items(searchResults) { video ->
-                        VideoSearchResultItem(video = video, onClick = { onVideoClick(video) })
-                    }
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(bottom = 100.dp)
+            ) {
+                items(searchResults) { video ->
+                    VideoSearchResultItem(video = video, onClick = { onVideoClick(video) })
                 }
             }
         }
@@ -155,7 +168,7 @@ private fun VideoSearchResultItem(
             .padding(horizontal = 20.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // 封面占位
+        // 封面
         Surface(
             modifier = Modifier
                 .width(60.dp)
@@ -164,11 +177,11 @@ private fun VideoSearchResultItem(
             color = MaterialTheme.colorScheme.surfaceVariant
         ) {
             if (video.cover.isNotBlank()) {
-                coil.compose.AsyncImage(
+                AsyncImage(
                     model = video.cover,
                     contentDescription = null,
                     modifier = Modifier.fillMaxSize(),
-                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                    contentScale = ContentScale.Crop
                 )
             } else {
                 Box(contentAlignment = Alignment.Center) {
@@ -205,19 +218,22 @@ private fun VideoSearchResultItem(
                     buildString {
                         append(video.year)
                         append(" · ")
-                        append(
-                            when (video.type) {
-                                "movie" -> "电影"
-                                "tv" -> "电视剧"
-                                "show" -> "综艺"
-                                "anime" -> "动漫"
-                                else -> video.type
-                            }
-                        )
+                        append(categoryName(video.type))
+                        if (video.sourceName.isNotBlank()) append(" · ${video.sourceName}")
                         if (video.totalEpisodes > 1) append(" · ${video.totalEpisodes}集")
                     },
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            if (video.desc.isNotBlank()) {
+                Text(
+                    video.desc,
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 2.dp)
                 )
             }
         }

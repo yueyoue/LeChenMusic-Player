@@ -41,10 +41,11 @@ sealed class Screen(val route: String) {
     // 影视模块
     object Video : Screen("video")
     object VideoSearch : Screen("video_search")
-    object VideoDetail : Screen("video_detail/{videoId}") {
-        fun createRoute(videoId: String) = "video_detail/$videoId"
+    object VideoDetail : Screen("video_detail/{source}/{videoId}") {
+        fun createRoute(source: String, videoId: String) = "video_detail/$source/$videoId"
     }
-    object VideoPlayer : Screen("video_player/{source}/{episodeIndex}") {
-        fun createRoute(source: String, episodeIndex: Int) = "video_player/$source/$episodeIndex"
+    object VideoPlayer : Screen("video_player/{videoTitle}/{source}/{episodeIndex}") {
+        fun createRoute(videoTitle: String, source: String, episodeIndex: Int) = "video_player/$videoTitle/$source/$episodeIndex"
     }
+    object Live : Screen("live")
 }

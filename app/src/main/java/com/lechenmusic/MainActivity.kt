@@ -22,6 +22,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.lechenmusic.ui.MainViewModel
+import com.lechenmusic.ui.VideoViewModel
 import com.lechenmusic.ui.components.MiniPlayer
 import com.lechenmusic.ui.navi.Screen
 import com.lechenmusic.ui.screens.albums.AlbumDetailScreen
@@ -54,6 +55,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             val viewModel: MainViewModel = viewModel()
+            val videoViewModel: VideoViewModel = viewModel()
             val themeMode by viewModel.themeMode.collectAsState()
             val isDark = themeMode == "dark"
 
@@ -69,7 +71,7 @@ class MainActivity : ComponentActivity() {
                     onSkip = { viewModel.skipUpdate() }
                 )
 
-                LeChenMusicApp(viewModel)
+                LeChenMusicApp(viewModel, videoViewModel)
             }
         }
     }
@@ -141,7 +143,7 @@ fun UpdateDialog(
 }
 
 @Composable
-fun LeChenMusicApp(viewModel: MainViewModel) {
+fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
     val navController = rememberNavController()
     val isLoggedIn by viewModel.isLoggedIn.collectAsState()
     val currentSong by viewModel.playerManager.currentSong.collectAsState()
@@ -253,7 +255,8 @@ fun LeChenMusicApp(viewModel: MainViewModel) {
                             onNavigateToAudiobook = { genre -> navController.navigate(Screen.Audiobook.createRoute(genre)) },
                             onNavigateToAudiobookDetail = { id -> navController.navigate(Screen.AudiobookDetail.createRoute(id)) },
                             onNavigateToNarrator = { name -> navController.navigate(Screen.NarratorDetail.createRoute(name)) },
-                            onNavigateToNarratorList = { navController.navigate(Screen.NarratorList.route) }
+                            onNavigateToNarratorList = { navController.navigate(Screen.NarratorList.route) },
+                            onNavigateToVideo = { navController.navigate(Screen.Video.route) }
                         )
                     }
                     composable(Screen.Favorites.route) {
@@ -321,6 +324,7 @@ fun LeChenMusicApp(viewModel: MainViewModel) {
                     composable(Screen.Settings.route) {
                         SettingsScreen(
                             viewModel = viewModel,
+                            videoViewModel = videoViewModel,
                             onBack = {
                                 navController.popBackStack()
                             },
@@ -492,35 +496,68 @@ fun LeChenMusicApp(viewModel: MainViewModel) {
                     // ===== 影视模块路由 =====
                     composable(Screen.Video.route) {
                         com.lechenmusic.ui.screens.video.VideoScreen(
+                            viewModel = videoViewModel,
                             onSearchClick = { navController.navigate(Screen.VideoSearch.route) },
-                            onVideoClick = { video -> navController.navigate(Screen.VideoDetail.createRoute(video.id)) }
+                            onVideoClick = { video ->
+                                navController.navigate(Screen.VideoDetail.createRoute(video.source, video.id))
+                            },
+                            onLiveClick = { navController.navigate(Screen.Live.route) },
+                            onRecordClick = { record ->
+                                navController.navigate(Screen.VideoDetail.createRoute(record.source, record.videoId))
+                            }
                         )
                     }
                     composable(Screen.VideoSearch.route) {
                         com.lechenmusic.ui.screens.video.VideoSearchScreen(
+                            viewModel = videoViewModel,
                             onBack = { navController.popBackStack() },
-                            onVideoClick = { video -> navController.navigate(Screen.VideoDetail.createRoute(video.id)) }
+                            onVideoClick = { video ->
+                                navController.navigate(Screen.VideoDetail.createRoute(video.source, video.id))
+                            }
                         )
                     }
                     composable(Screen.VideoDetail.route) { backStackEntry ->
+                        val source = backStackEntry.arguments?.getString("source") ?: ""
                         val videoId = backStackEntry.arguments?.getString("videoId") ?: ""
+                        val detail by videoViewModel.videoDetail.collectAsState()
                         com.lechenmusic.ui.screens.video.VideoDetailScreen(
+                            viewModel = videoViewModel,
+                            source = source,
                             videoId = videoId,
                             onBack = { navController.popBackStack() },
-                            onPlay = { source, episodeIndex ->
-                                navController.navigate(Screen.VideoPlayer.createRoute(source, episodeIndex))
+                            onPlay = { playSource, episodeIndex ->
+                                navController.navigate(
+                                    Screen.VideoPlayer.createRoute(
+                                        detail?.title ?: "影视播放",
+                                        playSource,
+                                        episodeIndex
+                                    )
+                                )
+                            },
+                            onVideoClick = { video ->
+                                navController.navigate(Screen.VideoDetail.createRoute(video.source, video.id))
                             }
                         )
                     }
                     composable(Screen.VideoPlayer.route) { backStackEntry ->
+                        val videoTitle = backStackEntry.arguments?.getString("videoTitle") ?: "影视播放"
                         val source = backStackEntry.arguments?.getString("source") ?: ""
                         val episodeIndex = backStackEntry.arguments?.getString("episodeIndex")?.toIntOrNull() ?: 0
-                        // TODO: 从 ViewModel 获取 sources 数据
+                        val detail by videoViewModel.videoDetail.collectAsState()
+                        val sources = detail?.sources ?: emptyList()
+                        // 根据 source 名找到对应的 source index
+                        val sourceIndex = sources.indexOfFirst { it.source == source }.coerceAtLeast(0)
                         com.lechenmusic.ui.screens.video.VideoPlayerScreen(
-                            videoTitle = "影视播放",
-                            sources = emptyList(),
-                            initialSource = 0,
+                            videoTitle = videoTitle,
+                            sources = sources,
+                            initialSource = sourceIndex,
                             initialEpisode = episodeIndex,
+                            onBack = { navController.popBackStack() }
+                        )
+                    }
+                    composable(Screen.Live.route) {
+                        com.lechenmusic.ui.screens.video.LiveScreen(
+                            viewModel = videoViewModel,
                             onBack = { navController.popBackStack() }
                         )
                     }

@@ -2,14 +2,20 @@ package com.lechenmusic.ui.screens.video
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -22,94 +28,361 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.lechenmusic.data.model.VideoInfo
+import com.lechenmusic.data.model.*
+import com.lechenmusic.ui.VideoViewModel
 
 // ==================== 影视主页面 ====================
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VideoScreen(
+    viewModel: VideoViewModel,
     onSearchClick: () -> Unit = {},
-    onVideoClick: (VideoInfo) -> Unit = {}
+    onVideoClick: (VideoInfo) -> Unit = {},
+    onLiveClick: () -> Unit = {},
+    onRecordClick: (VideoPlayRecord) -> Unit = {}
 ) {
+    val isLoggedIn by viewModel.isLoggedIn.collectAsState()
+    val homeData by viewModel.homeData.collectAsState()
+    val homeLoading by viewModel.homeLoading.collectAsState()
+    val playRecords by viewModel.playRecords.collectAsState()
+
+    // Tab 状态
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("推荐", "电影", "电视剧", "综艺", "动漫")
+    val tabs = listOf("推荐", "电影", "电视剧", "动漫", "综艺", "直播")
+
+    // 分类数据
+    val categoryMovies by viewModel.categoryMovies.collectAsState()
+    val categoryTv by viewModel.categoryTv.collectAsState()
+    val categoryAnime by viewModel.categoryAnime.collectAsState()
+    val categoryVariety by viewModel.categoryVariety.collectAsState()
+    val categoryLoading by viewModel.categoryLoading.collectAsState()
+
+    LaunchedEffect(isLoggedIn) {
+        if (isLoggedIn) {
+            viewModel.loadPlayRecords()
+        }
+    }
+
+    LaunchedEffect(selectedTab, isLoggedIn) {
+        if (!isLoggedIn) return@LaunchedEffect
+        when (selectedTab) {
+            1 -> if (categoryMovies.isEmpty()) viewModel.loadCategory("movie")
+            2 -> if (categoryTv.isEmpty()) viewModel.loadCategory("tv")
+            3 -> if (categoryAnime.isEmpty()) viewModel.loadCategory("anime")
+            4 -> if (categoryVariety.isEmpty()) viewModel.loadCategory("variety")
+        }
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // 顶部标题 + 搜索
+        // 顶部搜索栏（无标题）
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 12.dp),
+                .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text("影视", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            // 空出左侧空间
+            Spacer(modifier = Modifier.weight(1f))
             IconButton(onClick = onSearchClick) {
                 Icon(Icons.Default.Search, contentDescription = "搜索影视")
             }
         }
 
-        // Tab 栏
-        TabRow(
+        // 紧凑胶囊 Tab 栏（横向滚动）
+        ScrollableTabRow(
             selectedTabIndex = selectedTab,
-            modifier = Modifier.padding(horizontal = 16.dp),
+            modifier = Modifier.fillMaxWidth(),
             containerColor = MaterialTheme.colorScheme.surface,
-            contentColor = MaterialTheme.colorScheme.primary
+            contentColor = MaterialTheme.colorScheme.primary,
+            edgePadding = 16.dp,
+            divider = {}
         ) {
             tabs.forEachIndexed { index, title ->
                 Tab(
                     selected = selectedTab == index,
-                    onClick = { selectedTab = index },
+                    onClick = {
+                        selectedTab = index
+                        if (title == "直播" && isLoggedIn) {
+                            onLiveClick()
+                        }
+                    },
                     text = {
                         Text(
                             title,
-                            fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal
+                            fontSize = 13.sp,
+                            fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(
+                                    if (selectedTab == index)
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                                    else Color.Transparent
+                                )
+                                .padding(horizontal = 14.dp, vertical = 6.dp)
                         )
                     }
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
         // 内容区
-        when (selectedTab) {
-            0 -> VideoRecommendTab(onVideoClick)
-            1 -> VideoCategoryTab("movie", onVideoClick)
-            2 -> VideoCategoryTab("tv", onVideoClick)
-            3 -> VideoCategoryTab("show", onVideoClick)
-            4 -> VideoCategoryTab("anime", onVideoClick)
+        if (!isLoggedIn) {
+            // 未登录提示
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        Icons.Default.Tv,
+                        null,
+                        modifier = Modifier.size(64.dp),
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        "请先在设置中配置影视服务器",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        } else {
+            when (selectedTab) {
+                0 -> VideoRecommendTab(
+                    homeData = homeData,
+                    playRecords = playRecords,
+                    isLoading = homeLoading,
+                    onRefresh = { viewModel.refreshHome() },
+                    onVideoClick = onVideoClick,
+                    onRecordClick = onRecordClick
+                )
+                1 -> VideoCategoryList(categoryMovies, categoryLoading, onVideoClick)
+                2 -> VideoCategoryList(categoryTv, categoryLoading, onVideoClick)
+                3 -> VideoCategoryList(categoryAnime, categoryLoading, onVideoClick)
+                4 -> VideoCategoryList(categoryVariety, categoryLoading, onVideoClick)
+            }
         }
     }
 }
 
 // ==================== 推荐Tab ====================
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun VideoRecommendTab(
+    homeData: HomeRecommendData?,
+    playRecords: List<VideoPlayRecord>,
+    isLoading: Boolean,
+    onRefresh: () -> Unit,
+    onVideoClick: (VideoInfo) -> Unit,
+    onRecordClick: (VideoPlayRecord) -> Unit
+) {
+    PullToRefreshBox(
+        isRefreshing = isLoading,
+        onRefresh = onRefresh
+    ) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(bottom = 100.dp)
+        ) {
+            // 继续观看
+            if (playRecords.isNotEmpty()) {
+                item {
+                    SectionHeader("继续观看")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        items(playRecords.take(10)) { record ->
+                            ContinueWatchCard(record = record, onClick = {
+                                onRecordClick(record)
+                            })
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+            }
+
+            // 即将上映
+            val comingSoon = homeData?.comingSoon
+            if (!comingSoon.isNullOrEmpty()) {
+                item {
+                    SectionHeader("即将上映")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        items(comingSoon) { video ->
+                            VideoHorizontalCard(video = video, onClick = { onVideoClick(video) })
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+            }
+
+            // 热门推荐（3列网格）
+            val hotAll = buildList {
+                homeData?.hotMovies?.let { addAll(it) }
+                homeData?.hotTvShows?.let { addAll(it) }
+            }.distinctBy { it.id }.take(12)
+
+            if (hotAll.isNotEmpty()) {
+                item {
+                    SectionHeader("🔥 热门推荐")
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+                item {
+                    // 使用固定高度的网格
+                    val chunked = hotAll.chunked(3)
+                    Column(
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        chunked.forEach { row ->
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                row.forEach { video ->
+                                    Box(modifier = Modifier.weight(1f)) {
+                                        VideoCard(video = video, onClick = { onVideoClick(video) })
+                                    }
+                                }
+                                repeat(3 - row.size) {
+                                    Spacer(modifier = Modifier.weight(1f))
+                                }
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+            }
+
+            // 热门电影（横向滚动）
+            val hotMovies = homeData?.hotMovies
+            if (!hotMovies.isNullOrEmpty()) {
+                item {
+                    SectionHeader("🎬 热门电影")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        items(hotMovies) { video ->
+                            VideoHorizontalCard(video = video, onClick = { onVideoClick(video) })
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+            }
+
+            // 热门剧集
+            val hotTv = homeData?.hotTvShows
+            if (!hotTv.isNullOrEmpty()) {
+                item {
+                    SectionHeader("📺 热门剧集")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        items(hotTv) { video ->
+                            VideoHorizontalCard(video = video, onClick = { onVideoClick(video) })
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+            }
+
+            // 热门综艺
+            val hotVariety = homeData?.hotVariety
+            if (!hotVariety.isNullOrEmpty()) {
+                item {
+                    SectionHeader("🎭 热门综艺")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        items(hotVariety) { video ->
+                            VideoHorizontalCard(video = video, onClick = { onVideoClick(video) })
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+            }
+
+            // 新番放送
+            val hotAnime = homeData?.hotAnime
+            if (!hotAnime.isNullOrEmpty()) {
+                item {
+                    SectionHeader("🌸 新番放送")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        items(hotAnime) { video ->
+                            VideoHorizontalCard(video = video, onClick = { onVideoClick(video) })
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+            }
+
+            // 热门短剧
+            val hotShort = homeData?.hotShortDrama
+            if (!hotShort.isNullOrEmpty()) {
+                item {
+                    SectionHeader("📱 热门短剧")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        items(hotShort) { video ->
+                            VideoHorizontalCard(video = video, onClick = { onVideoClick(video) })
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+            }
+
+            // 空状态
+            if (homeData == null && !isLoading) {
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(40.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("暂无数据，下拉刷新", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ==================== 分类列表 ====================
+
+@Composable
+private fun VideoCategoryList(
+    videos: List<VideoInfo>,
+    isLoading: Boolean,
     onVideoClick: (VideoInfo) -> Unit
 ) {
-    // 模拟数据，后续接入API
-    val hotMovies = remember {
-        listOf(
-            VideoInfo(id = "1", title = "流浪地球3", year = "2026", cover = "", rate = "8.5", type = "movie", totalEpisodes = 1),
-            VideoInfo(id = "2", title = "封神第三部", year = "2026", cover = "", rate = "7.8", type = "movie", totalEpisodes = 1),
-            VideoInfo(id = "3", title = "唐探4", year = "2025", cover = "", rate = "7.2", type = "movie", totalEpisodes = 1),
-            VideoInfo(id = "4", title = "哪吒之魔童闹海", year = "2025", cover = "", rate = "8.8", type = "movie", totalEpisodes = 1),
-            VideoInfo(id = "5", title = "满江红2", year = "2026", cover = "", rate = "7.5", type = "movie", totalEpisodes = 1),
-            VideoInfo(id = "6", title = "三体", year = "2024", cover = "", rate = "8.7", type = "tv", totalEpisodes = 30),
-        )
-    }
-
-    val hotTvShows = remember {
-        listOf(
-            VideoInfo(id = "7", title = "庆余年3", year = "2026", cover = "", rate = "8.2", type = "tv", totalEpisodes = 36),
-            VideoInfo(id = "8", title = "长相思3", year = "2026", cover = "", rate = "7.9", type = "tv", totalEpisodes = 40),
-            VideoInfo(id = "9", title = "繁花", year = "2024", cover = "", rate = "8.6", type = "tv", totalEpisodes = 30),
-            VideoInfo(id = "10", title = "狂飙2", year = "2026", cover = "", rate = "8.1", type = "tv", totalEpisodes = 39),
-            VideoInfo(id = "11", title = "漫长的季节2", year = "2026", cover = "", rate = "9.0", type = "tv", totalEpisodes = 12),
-            VideoInfo(id = "12", title = "隐秘的角落2", year = "2025", cover = "", rate = "8.4", type = "tv", totalEpisodes = 12),
-        )
+    if (isLoading && videos.isEmpty()) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+        return
     }
 
     LazyVerticalGrid(
@@ -118,101 +391,23 @@ private fun VideoRecommendTab(
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // 热门电影标题
-        item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(3) }) {
-            Text(
-                "🔥 热门电影",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(vertical = 4.dp)
-            )
-        }
-        items(hotMovies) { video ->
-            VideoCard(video = video, onClick = { onVideoClick(video) })
-        }
-
-        // 热门剧集标题
-        item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(3) }) {
-            Text(
-                "📺 热门剧集",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(top = 12.dp, bottom = 4.dp)
-            )
-        }
-        items(hotTvShows) { video ->
+        items(videos) { video ->
             VideoCard(video = video, onClick = { onVideoClick(video) })
         }
     }
 }
 
-// ==================== 分类Tab ====================
+// ==================== 组件 ====================
 
 @Composable
-private fun VideoCategoryTab(
-    category: String,
-    onVideoClick: (VideoInfo) -> Unit
-) {
-    // 模拟数据
-    val videos = remember(category) {
-        (1..18).map { i ->
-            VideoInfo(
-                id = "${category}_$i",
-                title = "${categoryName(category)}$i",
-                year = "${2020 + (i % 6)}",
-                cover = "",
-                rate = "${(6..9).random()}.${(0..9).random()}",
-                type = category,
-                totalEpisodes = if (category == "movie") 1 else (12..40).random()
-            )
-        }
-    }
-
-    // 筛选状态
-    var selectedType by remember { mutableStateOf("全部") }
-    var selectedRegion by remember { mutableStateOf("全部") }
-    var selectedYear by remember { mutableStateOf("全部") }
-
-    Column {
-        // 筛选栏
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            FilterChip(
-                selected = selectedType == "全部",
-                onClick = { selectedType = "全部" },
-                label = { Text("类型", fontSize = 12.sp) }
-            )
-            FilterChip(
-                selected = selectedRegion == "全部",
-                onClick = { selectedRegion = "全部" },
-                label = { Text("地区", fontSize = 12.sp) }
-            )
-            FilterChip(
-                selected = selectedYear == "全部",
-                onClick = { selectedYear = "全部" },
-                label = { Text("年份", fontSize = 12.sp) }
-            )
-        }
-
-        // 视频网格
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(3),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            items(videos) { video ->
-                VideoCard(video = video, onClick = { onVideoClick(video) })
-            }
-        }
-    }
+private fun SectionHeader(title: String) {
+    Text(
+        title,
+        fontSize = 16.sp,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.padding(start = 16.dp, top = 8.dp)
+    )
 }
-
-// ==================== 视频卡片组件 ====================
 
 @Composable
 fun VideoCard(
@@ -221,10 +416,8 @@ fun VideoCard(
     modifier: Modifier = Modifier
 ) {
     Column(
-        modifier = modifier
-            .clickable(onClick = onClick)
+        modifier = modifier.clickable(onClick = onClick)
     ) {
-        // 封面
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -247,7 +440,6 @@ fun VideoCard(
                     contentScale = ContentScale.Crop
                 )
             } else {
-                // 占位图
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -296,7 +488,7 @@ fun VideoCard(
                 }
             }
 
-            // 集数标签（电视剧/动漫）
+            // 集数标签
             if (video.totalEpisodes > 1) {
                 Surface(
                     shape = RoundedCornerShape(topStart = 10.dp, bottomEnd = 10.dp),
@@ -313,7 +505,6 @@ fun VideoCard(
             }
         }
 
-        // 标题
         Text(
             video.title,
             fontSize = 13.sp,
@@ -322,8 +513,6 @@ fun VideoCard(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(top = 6.dp)
         )
-
-        // 年份 + 类型
         Text(
             buildString {
                 append(video.year)
@@ -336,11 +525,214 @@ fun VideoCard(
     }
 }
 
-private fun categoryName(type: String): String = when (type) {
+@Composable
+fun VideoHorizontalCard(
+    video: VideoInfo,
+    onClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .width(120.dp)
+            .clickable(onClick = onClick)
+    ) {
+        Box(
+            modifier = Modifier
+                .width(120.dp)
+                .height(168.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(
+                    Brush.linearGradient(
+                        listOf(
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                            MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f)
+                        )
+                    )
+                )
+        ) {
+            if (video.cover.isNotBlank()) {
+                AsyncImage(
+                    model = video.cover,
+                    contentDescription = video.title,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        video.title.take(1),
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                    )
+                }
+            }
+
+            if (video.rate != null) {
+                Surface(
+                    shape = RoundedCornerShape(bottomStart = 8.dp, topEnd = 10.dp),
+                    color = Color(0xFFFF6B81).copy(alpha = 0.9f),
+                    modifier = Modifier.align(Alignment.TopEnd)
+                ) {
+                    Text(
+                        video.rate,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                    )
+                }
+            }
+
+            if (video.totalEpisodes > 1) {
+                Surface(
+                    shape = RoundedCornerShape(topStart = 10.dp, bottomEnd = 10.dp),
+                    color = Color.Black.copy(alpha = 0.6f),
+                    modifier = Modifier.align(Alignment.BottomStart)
+                ) {
+                    Text(
+                        "更新至${video.totalEpisodes}集",
+                        fontSize = 10.sp,
+                        color = Color.White,
+                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                    )
+                }
+            }
+        }
+
+        Text(
+            video.title,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Medium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(top = 6.dp)
+        )
+        Text(
+            video.year,
+            fontSize = 11.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1
+        )
+    }
+}
+
+@Composable
+private fun ContinueWatchCard(
+    record: VideoPlayRecord,
+    onClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .width(200.dp)
+            .clickable(onClick = onClick)
+    ) {
+        Box(
+            modifier = Modifier
+                .width(200.dp)
+                .height(112.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(
+                    Brush.linearGradient(
+                        listOf(
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                            MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f)
+                        )
+                    )
+                )
+        ) {
+            if (record.cover.isNotBlank()) {
+                AsyncImage(
+                    model = record.cover,
+                    contentDescription = record.title,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.PlayArrow,
+                        null,
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                        modifier = Modifier.size(36.dp)
+                    )
+                }
+            }
+
+            // 进度条
+            if (record.totalTime > 0) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(3.dp)
+                        .align(Alignment.BottomCenter)
+                        .background(Color.Black.copy(alpha = 0.3f))
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(fraction = record.progressPercent)
+                            .height(3.dp)
+                            .background(Color(0xFFE94560))
+                    )
+                }
+            }
+
+            // 播放图标
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                color = Color.Black.copy(alpha = 0.5f),
+                modifier = Modifier.align(Alignment.Center)
+            ) {
+                Icon(
+                    Icons.Default.PlayArrow,
+                    null,
+                    tint = Color.White,
+                    modifier = Modifier
+                        .size(32.dp)
+                        .padding(4.dp)
+                )
+            }
+
+            // 集数标签
+            if (record.totalEpisodes > 1) {
+                Surface(
+                    shape = RoundedCornerShape(topStart = 10.dp, bottomEnd = 10.dp),
+                    color = Color.Black.copy(alpha = 0.6f),
+                    modifier = Modifier.align(Alignment.BottomStart)
+                ) {
+                    Text(
+                        "看到第${record.episodeIndex + 1}集",
+                        fontSize = 10.sp,
+                        color = Color.White,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
+            }
+        }
+
+        Text(
+            record.title,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Medium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(top = 6.dp)
+        )
+    }
+}
+
+fun categoryName(type: String): String = when (type) {
     "movie" -> "电影"
     "tv" -> "电视剧"
     "show" -> "综艺"
+    "variety" -> "综艺"
     "anime" -> "动漫"
     "live" -> "直播"
+    "short" -> "短剧"
     else -> type
 }

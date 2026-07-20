@@ -24,6 +24,7 @@ import com.lechenmusic.ui.MainViewModel
 @Composable
 fun SettingsScreen(
     viewModel: MainViewModel,
+    videoViewModel: com.lechenmusic.ui.VideoViewModel? = null,
     onBack: () -> Unit,
     onLogout: () -> Unit
 ) {
@@ -154,6 +155,13 @@ fun SettingsScreen(
                         Text("切换服务器", color = MaterialTheme.colorScheme.primary, fontSize = 14.sp)
                     }
                 }
+            }
+        }
+
+        // 影视服务器设置
+        if (videoViewModel != null) {
+            item {
+                VideoServerSettings(videoViewModel)
             }
         }
 
@@ -328,4 +336,125 @@ private fun clearCache(context: Context, dirName: String) {
 
 private fun getCurrentVersionName(context: Context): String {
     return try { context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "1.0.0" } catch (_: Exception) { "1.0.0" }
+}
+
+// ==================== 影视服务器设置 ====================
+@Composable
+private fun VideoServerSettings(viewModel: com.lechenmusic.ui.VideoViewModel) {
+    val videoServerUrl by viewModel.videoServerUrl.collectAsState()
+    val videoUsername by viewModel.videoUsername.collectAsState()
+    val videoPassword by viewModel.videoPassword.collectAsState()
+    val isLoggedIn by viewModel.isLoggedIn.collectAsState()
+
+    var showVideoServerDialog by remember { mutableStateOf(false) }
+    var testResult by remember { mutableStateOf<Pair<Boolean, String>?>(null) }
+
+    SectionTitle("影视服务器")
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Column {
+            SettingsClickItem(
+                icon = Icons.Default.Tv,
+                iconBg = Color(0xFFE94560).copy(alpha = 0.15f),
+                label = "影视服务器",
+                value = if (isLoggedIn) "已连接" else if (videoServerUrl.isNotBlank()) "未连接" else "未配置",
+                onClick = { showVideoServerDialog = true }
+            )
+            if (videoServerUrl.isNotBlank()) {
+                InfoRow("服务器地址", videoServerUrl)
+                InfoRow("用户名", videoUsername)
+            }
+            if (isLoggedIn) {
+                Box(
+                    modifier = Modifier.fillMaxWidth().clickable { viewModel.logout() }.padding(vertical = 14.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("断开影视服务器", color = MaterialTheme.colorScheme.error, fontSize = 14.sp)
+                }
+            }
+        }
+    }
+
+    if (showVideoServerDialog) {
+        var url by remember { mutableStateOf(videoServerUrl.ifBlank { "http://j.tthsdd.top:3000" }) }
+        var user by remember { mutableStateOf(videoUsername) }
+        var pass by remember { mutableStateOf(videoPassword) }
+        var isTesting by remember { mutableStateOf(false) }
+
+        AlertDialog(
+            onDismissRequest = { showVideoServerDialog = false; testResult = null },
+            title = { Text("影视服务器配置", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        value = url,
+                        onValueChange = { url = it },
+                        label = { Text("服务器地址") },
+                        placeholder = { Text("http://j.tthsdd.top:3000") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = user,
+                        onValueChange = { user = it },
+                        label = { Text("用户名") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = pass,
+                        onValueChange = { pass = it },
+                        label = { Text("密码") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    // 测试结果
+                    testResult?.let { (success, message) ->
+                        Text(
+                            message,
+                            fontSize = 13.sp,
+                            color = if (success) Color(0xFF2ED573) else MaterialTheme.colorScheme.error
+                        )
+                    }
+                    // 测试连接按钮
+                    OutlinedButton(
+                        onClick = {
+                            isTesting = true
+                            testResult = null
+                            viewModel.testConnection(url, user, pass) { success, msg ->
+                                isTesting = false
+                                testResult = success to msg
+                            }
+                        },
+                        enabled = !isTesting && url.isNotBlank() && user.isNotBlank(),
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        if (isTesting) {
+                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                        Text(if (isTesting) "测试中..." else "测试连接")
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.login(url, user, pass)
+                    showVideoServerDialog = false
+                    testResult = null
+                }) {
+                    Text("保存并连接", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showVideoServerDialog = false; testResult = null }) {
+                    Text("取消")
+                }
+            }
+        )
+    }
 }

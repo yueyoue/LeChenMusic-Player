@@ -30,6 +30,10 @@ class SettingsRepository(private val context: Context) {
         val CACHED_RANDOM_ALBUMS_JSON = stringPreferencesKey("cached_random_albums_json")
         val CACHED_PLAYLISTS_JSON = stringPreferencesKey("cached_playlists_json")
         val CACHED_RADIO_STATIONS_JSON = stringPreferencesKey("cached_radio_stations_json")
+        // 影视服务器
+        val VIDEO_SERVER_URL = stringPreferencesKey("video_server_url")
+        val VIDEO_USERNAME = stringPreferencesKey("video_username")
+        val VIDEO_PASSWORD = stringPreferencesKey("video_password")
     }
 
     val serverUrl: Flow<String> = context.dataStore.data.map { it[SERVER_URL] ?: "" }
@@ -120,4 +124,25 @@ class SettingsRepository(private val context: Context) {
 
     val cachedRadioStationsJson: Flow<String> = context.dataStore.data.map { it[CACHED_RADIO_STATIONS_JSON] ?: "" }
     suspend fun saveCachedRadioStationsJson(json: String) { context.dataStore.edit { it[CACHED_RADIO_STATIONS_JSON] = json } }
+
+    // 影视服务器配置
+    val videoServerUrl: Flow<String> = context.dataStore.data.map { it[VIDEO_SERVER_URL] ?: "" }
+    val videoUsername: Flow<String> = context.dataStore.data.map { it[VIDEO_USERNAME] ?: "" }
+    val videoPassword: Flow<String> = context.dataStore.data.map { it[VIDEO_PASSWORD] ?: "" }
+
+    suspend fun saveVideoLogin(serverUrl: String, username: String, password: String) {
+        context.dataStore.edit { prefs ->
+            prefs[VIDEO_SERVER_URL] = serverUrl
+            prefs[VIDEO_USERNAME] = username
+            prefs[VIDEO_PASSWORD] = password
+        }
+    }
+
+    suspend fun clearVideoLogin() {
+        context.dataStore.edit { prefs ->
+            prefs.remove(VIDEO_SERVER_URL)
+            prefs.remove(VIDEO_USERNAME)
+            prefs.remove(VIDEO_PASSWORD)
+        }
+    }
 }
