@@ -271,7 +271,12 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                 val api = VideoApiClient.getApi(videoServerUrl.value)
                 val response = withContext(Dispatchers.IO) { api.getDetail(source, id) }
                 if (response.isSuccessful && response.body() != null) {
-                    _videoDetail.value = response.body()
+                    val detail = response.body()!!
+                    // 检查是否有可播放资源
+                    if (detail.episodes.isEmpty() && detail.sources.isEmpty()) {
+                        _toastMessage.value = "该源暂无播放资源"
+                    }
+                    _videoDetail.value = detail
                 } else {
                     _toastMessage.value = "加载详情失败"
                 }
@@ -289,25 +294,29 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
 
     /**
      * 先搜索 LunaTV 找到 source+id，再加载详情
-     * 用于豆瓣电影点击后跳转
+     * 优先选择有 episodes 的源
      */
     fun searchAndLoadDetail(title: String, doubanId: String) {
         viewModelScope.launch {
             _detailLoading.value = true
             try {
                 val api = VideoApiClient.getApi(videoServerUrl.value)
-                // 先搜索
                 val searchResp = withContext(Dispatchers.IO) { api.search(title) }
                 val results = searchResp.body()?.results ?: emptyList()
-                val matched = results.firstOrNull { it.title.contains(title, ignoreCase = true) }
-                    ?: results.firstOrNull()
 
-                if (matched != null && matched.source.isNotBlank()) {
-                    loadDetail(matched.source, matched.id)
-                } else {
-                    _toastMessage.value = "未找到可用播放源，请尝试搜索"
+                if (results.isEmpty()) {
+                    _toastMessage.value = "未找到可用播放源"
                     _detailLoading.value = false
+                    return@launch
                 }
+
+                // 优先选择标题完全匹配且有 episodes 的源
+                val matched = results.firstOrNull {
+                    it.title.contains(title, ignoreCase = true) && it.episodes.isNotEmpty()
+                } ?: results.firstOrNull { it.episodes.isNotEmpty() }
+                ?: results.first()
+
+                loadDetail(matched.source, matched.id)
             } catch (e: Exception) {
                 _toastMessage.value = "搜索失败: ${e.message}"
                 _detailLoading.value = false
