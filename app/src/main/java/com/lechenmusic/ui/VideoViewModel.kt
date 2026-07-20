@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.lechenmusic.data.api.VideoApiClient
 import com.lechenmusic.data.api.DoubanApiClient
 import com.lechenmusic.data.model.*
+import com.lechenmusic.ErrorReporter
 import com.lechenmusic.data.repository.SettingsRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
@@ -15,6 +16,16 @@ import kotlinx.coroutines.withContext
 class VideoViewModel(application: Application) : AndroidViewModel(application) {
 
     private val settings = SettingsRepository(application)
+
+    /** 影视模块错误上报到 WEB 管理端 */
+    private fun reportVideoError(screen: String, message: String, throwable: Throwable? = null) {
+        ErrorReporter.reportError(
+            level = "error",
+            message = "[影视] $message",
+            throwable = throwable,
+            screen = "video_$screen"
+        )
+    }
 
     // ===== 登录状态 =====
     private val _isLoggedIn = MutableStateFlow(false)
@@ -129,6 +140,7 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                 }
             } catch (e: Exception) {
                 _loginError.value = "连接失败: ${e.message}"
+                reportVideoError("login", "影视登录失败: $serverUrl", e)
             } finally {
                 _loginLoading.value = false
             }
@@ -208,6 +220,7 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                 )
             } catch (e: Exception) {
                 _homeError.value = "加载失败: ${e.message}"
+                reportVideoError("loadHomeData", "首页推荐加载失败", e)
             } finally {
                 _homeLoading.value = false
             }
@@ -287,6 +300,7 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                 }
             } catch (e: Exception) {
                 _toastMessage.value = "加载详情失败: ${e.message}"
+                reportVideoError("loadDetail", "加载详情失败: source=$source id=$id", e)
             } finally {
                 _detailLoading.value = false
             }
@@ -360,6 +374,7 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                 _needNavigateToPlayer.value = true
             } catch (e: Exception) {
                 _toastMessage.value = "搜索播放源失败: ${e.message}"
+                reportVideoError("searchAndPlay", "搜索播放源失败: $title", e)
             } finally {
                 _searchSourceLoading.value = false
                 _searchSourceMessage.value = ""
@@ -499,8 +514,9 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                 } else {
                     _categoryResults.value = emptyList()
                 }
-            } catch (_: Exception) {
+            } catch (e: Exception) {
                 _categoryResults.value = emptyList()
+                reportVideoError("searchCategory", "分类搜索失败: $keyword", e)
             }
             _categoryLoading.value = false
         }

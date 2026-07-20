@@ -1,6 +1,7 @@
 package com.lechenmusic.ui.screens.video
 
 import android.content.Intent
+import com.lechenmusic.ErrorReporter
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -201,6 +202,11 @@ fun VideoDetailScreen(
                             onPlay(src.source, 0)
                         } else {
                             // Bug修复：无播放资源时提示而不是闪退
+                            ErrorReporter.reportError(
+                                level = "warning",
+                                message = "[影视详情] 源无播放资源，自动换源: ${currentDetail.title}",
+                                screen = "video_detail"
+                            )
                             viewModel.searchAndPlay(currentDetail.title, currentDetail.doubanId)
                         }
                     },

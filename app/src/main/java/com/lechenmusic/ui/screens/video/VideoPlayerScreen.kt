@@ -1,6 +1,7 @@
 package com.lechenmusic.ui.screens.video
 
 import android.app.Activity
+import com.lechenmusic.ErrorReporter
 import android.content.pm.ActivityInfo
 import android.view.WindowManager
 import androidx.compose.foundation.background
@@ -30,6 +31,7 @@ import androidx.compose.ui.unit.sp
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
+import androidx.media3.common.PlaybackException
 import androidx.media3.exoplayer.ExoPlayer
 import com.lechenmusic.data.model.VideoEpisode
 import com.lechenmusic.data.model.VideoSource
@@ -149,6 +151,21 @@ fun VideoPlayerScreen(
                     if (selectedEpisode < maxEp - 1) {
                         selectedEpisode++
                     }
+                }
+            }
+
+            override fun onPlayerError(error: PlaybackException) {
+                // Bug修复: 播放器错误上报到 WEB 管理端
+                ErrorReporter.reportError(
+                    level = "error",
+                    message = "[影视播放] ${error.errorCodeName}: ${error.message}",
+                    throwable = error,
+                    screen = "video_player_${currentSource?.sourceName ?: "unknown"}"
+                )
+                // 尝试播放下一集
+                val maxEp = currentSource?.episodes?.size ?: 0
+                if (selectedEpisode < maxEp - 1) {
+                    selectedEpisode++
                 }
             }
 
