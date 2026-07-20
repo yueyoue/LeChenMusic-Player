@@ -310,11 +310,10 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                     return@launch
                 }
 
-                // 优先选择标题完全匹配且有 episodes 的源
+                // 优先选择标题匹配的源
                 val matched = results.firstOrNull {
-                    it.title.contains(title, ignoreCase = true) && it.episodes.isNotEmpty()
-                } ?: results.firstOrNull { it.episodes.isNotEmpty() }
-                ?: results.first()
+                    it.title.contains(title, ignoreCase = true)
+                } ?: results.first()
 
                 loadDetail(matched.source, matched.id)
             } catch (e: Exception) {
