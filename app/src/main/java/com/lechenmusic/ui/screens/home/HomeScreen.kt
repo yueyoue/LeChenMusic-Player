@@ -605,11 +605,13 @@ fun HomeScreen(
 
                 // ===== VIDEO MODE =====
                 if (homeMode == "video") {
-                    // 加载数据
-                    LaunchedEffect(isVideoLoggedIn) {
-                        if (isVideoLoggedIn) {
-                            videoViewModel?.loadHomeData()
-                            videoViewModel?.loadPlayRecords()
+                    // 加载数据（LaunchedEffect 不能在 LazyColumn 内调用，已在 item 中）
+                    item {
+                        androidx.compose.runtime.LaunchedEffect(isVideoLoggedIn) {
+                            if (isVideoLoggedIn) {
+                                videoViewModel?.loadHomeData()
+                                videoViewModel?.loadPlayRecords()
+                            }
                         }
                     }
 
