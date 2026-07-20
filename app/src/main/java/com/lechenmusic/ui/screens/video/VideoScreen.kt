@@ -15,7 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+// PullToRefreshBox not available in this BOM version
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -181,10 +181,8 @@ private fun VideoRecommendTab(
     onVideoClick: (VideoInfo) -> Unit,
     onRecordClick: (VideoPlayRecord) -> Unit
 ) {
-    PullToRefreshBox(
-        isRefreshing = isLoading,
-        onRefresh = onRefresh
-    ) {
+    // TODO: Add pull-to-refresh when BOM is updated
+    Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(bottom = 100.dp)
