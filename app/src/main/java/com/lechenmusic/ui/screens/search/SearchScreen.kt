@@ -213,14 +213,28 @@ fun SearchScreen(
                         }
                     }
                     3 -> {
+                        // 歌词搜索：从搜索结果中筛选出标题/歌手/专辑匹配的歌曲
+                        // Subsonic API 搜索结果不包含歌词内容，这里复用歌曲结果
                         val rawSongs = searchResults?.song ?: emptyList()
                         val q = query.lowercase()
-                        val lyricsSongs = rawSongs.filter { song ->
-                            song.lyrics?.lowercase()?.contains(q) == true
+                        val matchedSongs = rawSongs.filter { song ->
+                            song.title.lowercase().contains(q) ||
+                            song.artist.lowercase().contains(q) ||
+                            song.album.lowercase().contains(q)
                         }
-                        items(lyricsSongs) { song ->
-                            SongItem(song = song, serverUrl = serverUrl, username = username, password = password,
-                                onClick = { onSongClick(song, lyricsSongs) })
+                        if (matchedSongs.isEmpty()) {
+                            item {
+                                Text(
+                                    "未找到歌词匹配结果",
+                                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 40.dp),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        } else {
+                            items(matchedSongs) { song ->
+                                SongItem(song = song, serverUrl = serverUrl, username = username, password = password,
+                                    onClick = { onSongClick(song, matchedSongs) })
+                            }
                         }
                     }
                 }
