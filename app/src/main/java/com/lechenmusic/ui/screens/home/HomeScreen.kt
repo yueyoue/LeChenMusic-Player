@@ -688,7 +688,15 @@ fun HomeScreen(
                                     items(hotMovies) { video ->
                                         com.lechenmusic.ui.screens.video.VideoHorizontalCard(
                                             video = video,
-                                            onClick = { onNavigateToVideoDetail("", video.id) }
+                                            onClick = {
+                                                if (video.source.isNotBlank()) {
+                                                    onNavigateToVideoDetail(video.source, video.id)
+                                                } else {
+                                                    // 豆瓣电影：先搜索 LunaTV 找到源
+                                                    videoViewModel?.searchAndLoadDetail(video.title, video.id)
+                                                    onNavigateToVideoDetail("searching", video.id)
+                                                }
+                                            }
                                         )
                                     }
                                 }
@@ -707,7 +715,14 @@ fun HomeScreen(
                                     items(hotTv) { video ->
                                         com.lechenmusic.ui.screens.video.VideoHorizontalCard(
                                             video = video,
-                                            onClick = { onNavigateToVideoDetail("", video.id) }
+                                            onClick = {
+                                                if (video.source.isNotBlank()) {
+                                                    onNavigateToVideoDetail(video.source, video.id)
+                                                } else {
+                                                    videoViewModel?.searchAndLoadDetail(video.title, video.id)
+                                                    onNavigateToVideoDetail("searching", video.id)
+                                                }
+                                            }
                                         )
                                     }
                                 }
@@ -726,7 +741,14 @@ fun HomeScreen(
                                     items(hotVariety) { video ->
                                         com.lechenmusic.ui.screens.video.VideoHorizontalCard(
                                             video = video,
-                                            onClick = { onNavigateToVideoDetail("", video.id) }
+                                            onClick = {
+                                                if (video.source.isNotBlank()) {
+                                                    onNavigateToVideoDetail(video.source, video.id)
+                                                } else {
+                                                    videoViewModel?.searchAndLoadDetail(video.title, video.id)
+                                                    onNavigateToVideoDetail("searching", video.id)
+                                                }
+                                            }
                                         )
                                     }
                                 }
@@ -745,7 +767,14 @@ fun HomeScreen(
                                     items(hotAnime) { video ->
                                         com.lechenmusic.ui.screens.video.VideoHorizontalCard(
                                             video = video,
-                                            onClick = { onNavigateToVideoDetail("", video.id) }
+                                            onClick = {
+                                                if (video.source.isNotBlank()) {
+                                                    onNavigateToVideoDetail(video.source, video.id)
+                                                } else {
+                                                    videoViewModel?.searchAndLoadDetail(video.title, video.id)
+                                                    onNavigateToVideoDetail("searching", video.id)
+                                                }
+                                            }
                                         )
                                     }
                                 }

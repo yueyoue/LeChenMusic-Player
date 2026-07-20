@@ -287,6 +287,34 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
         _videoDetail.value = null
     }
 
+    /**
+     * 先搜索 LunaTV 找到 source+id，再加载详情
+     * 用于豆瓣电影点击后跳转
+     */
+    fun searchAndLoadDetail(title: String, doubanId: String) {
+        viewModelScope.launch {
+            _detailLoading.value = true
+            try {
+                val api = VideoApiClient.getApi(videoServerUrl.value)
+                // 先搜索
+                val searchResp = withContext(Dispatchers.IO) { api.search(title) }
+                val results = searchResp.body()?.results ?: emptyList()
+                val matched = results.firstOrNull { it.title.contains(title, ignoreCase = true) }
+                    ?: results.firstOrNull()
+
+                if (matched != null && matched.source.isNotBlank()) {
+                    loadDetail(matched.source, matched.id)
+                } else {
+                    _toastMessage.value = "未找到可用播放源，请尝试搜索"
+                    _detailLoading.value = false
+                }
+            } catch (e: Exception) {
+                _toastMessage.value = "搜索失败: ${e.message}"
+                _detailLoading.value = false
+            }
+        }
+    }
+
     // ==================== 收藏 ====================
 
     fun loadFavorites() {

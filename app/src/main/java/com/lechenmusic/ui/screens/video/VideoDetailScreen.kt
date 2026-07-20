@@ -47,7 +47,9 @@ fun VideoDetailScreen(
     var descExpanded by remember { mutableStateOf(false) }
 
     LaunchedEffect(source, videoId) {
-        viewModel.loadDetail(source, videoId)
+        if (source != "searching") {
+            viewModel.loadDetail(source, videoId)
+        }
         viewModel.loadFavorites()
     }
 
