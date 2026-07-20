@@ -62,7 +62,8 @@ fun HomeScreen(
     onNavigateToAudiobookDetail: (String) -> Unit = {},
     onNavigateToNarrator: (String) -> Unit = {},
     onNavigateToNarratorList: () -> Unit = {},
-    onNavigateToVideo: () -> Unit = {}
+    onNavigateToVideoDetail: (String, String) -> Unit = { _, _ -> },
+    videoViewModel: com.lechenmusic.ui.VideoViewModel? = null
 ) {
     val newestAlbums by viewModel.newestAlbums.collectAsState()
     val randomAlbums by viewModel.randomAlbums.collectAsState()
@@ -100,7 +101,13 @@ fun HomeScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 8.dp)
-                            .clickable { if (homeMode == "audiobook") onNavigateToAudiobook(null) else onNavigateToSearch() },
+                            .clickable {
+                                when (homeMode) {
+                                    "audiobook" -> onNavigateToAudiobook(null)
+                                    "video" -> { /* 视频搜索暂不跳转 */ }
+                                    else -> onNavigateToSearch()
+                                }
+                            },
                         shape = RoundedCornerShape(14.dp),
                         color = MaterialTheme.colorScheme.surface,
                         shadowElevation = 2.dp
@@ -117,7 +124,12 @@ fun HomeScreen(
                             )
                             Spacer(modifier = Modifier.width(10.dp))
                             Text(
-                                if (homeMode == "music") "搜索歌曲、专辑、歌手..." else "搜索有声书、演播者...",
+                                when (homeMode) {
+                                "music" -> "搜索歌曲、专辑、歌手..."
+                                "audiobook" -> "搜索有声书、演播者..."
+                                "video" -> "搜索影视..."
+                                else -> "搜索..."
+                            },
                                 fontSize = 14.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                             )
@@ -154,7 +166,7 @@ fun HomeScreen(
                                 "\uD83C\uDFAC", "影视", homeMode == "video",
                                 modifier = Modifier.weight(1f)
                             ) {
-                                onNavigateToVideo()
+                                viewModel.setHomeMode("video")
                             }
                         }
                     }
@@ -587,74 +599,141 @@ fun HomeScreen(
 
                 // ===== VIDEO MODE =====
                 if (homeMode == "video") {
-                    // 顶部标题 + 搜索
-                    item {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 20.dp, vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text("影视", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    val isVideoLoggedIn = videoViewModel?.isLoggedIn?.collectAsState()?.value ?: false
+                    val homeData = videoViewModel?.homeData?.collectAsState()?.value
+                    val homeLoading = videoViewModel?.homeLoading?.collectAsState()?.value ?: false
+                    val playRecords = videoViewModel?.playRecords?.collectAsState()?.value ?: emptyList()
+
+                    // 加载数据
+                    LaunchedEffect(isVideoLoggedIn) {
+                        if (isVideoLoggedIn) {
+                            videoViewModel?.loadHomeData()
+                            videoViewModel?.loadPlayRecords()
                         }
                     }
 
-                    // Tab 栏
-                    item {
-                        var selectedVideoTab by remember { mutableIntStateOf(0) }
-                        val videoTabs = listOf("推荐", "电影", "电视剧", "综艺", "动漫")
-                        ScrollableTabRow(
-                            selectedTabIndex = selectedVideoTab,
-                            modifier = Modifier.padding(horizontal = 16.dp),
-                            containerColor = MaterialTheme.colorScheme.surface,
-                            contentColor = MaterialTheme.colorScheme.primary
-                        ) {
-                            videoTabs.forEachIndexed { index, title ->
-                                Tab(
-                                    selected = selectedVideoTab == index,
-                                    onClick = { selectedVideoTab = index },
-                                    text = { Text(title, fontSize = 13.sp, fontWeight = if (selectedVideoTab == index) FontWeight.Bold else FontWeight.Normal) }
-                                )
+                    if (!isVideoLoggedIn) {
+                        // 未登录提示
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(40.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(
+                                        Icons.Default.Tv,
+                                        null,
+                                        modifier = Modifier.size(64.dp),
+                                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                                    )
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Text(
+                                        "请先配置影视服务器",
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        "前往 我的 → 影视服务器 配置",
+                                        fontSize = 13.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                    )
+                                }
                             }
                         }
-                    }
-
-                    // 热门影视
-                    item {
-                        Text(
-                            "\uD83D\uDD25 热门推荐",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
-                        )
-                    }
-
-                    // 影视网格（3列）
-                    val sampleVideos = listOf(
-                        com.lechenmusic.data.model.VideoInfo(id = "1", title = "流浪地球3", year = "2026", rate = "8.5", type = "movie"),
-                        com.lechenmusic.data.model.VideoInfo(id = "2", title = "封神第三部", year = "2026", rate = "7.8", type = "movie"),
-                        com.lechenmusic.data.model.VideoInfo(id = "3", title = "三体", year = "2024", rate = "8.7", type = "tv", totalEpisodes = 30),
-                        com.lechenmusic.data.model.VideoInfo(id = "4", title = "庆余年3", year = "2026", rate = "8.2", type = "tv", totalEpisodes = 36),
-                        com.lechenmusic.data.model.VideoInfo(id = "5", title = "哪吒之魔童闹海", year = "2025", rate = "8.8", type = "movie"),
-                        com.lechenmusic.data.model.VideoInfo(id = "6", title = "狂飙2", year = "2026", rate = "8.1", type = "tv", totalEpisodes = 39),
-                    )
-                    items(sampleVideos.chunked(3)) { row ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 4.dp),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            row.forEach { video ->
-                                com.lechenmusic.ui.screens.video.VideoCard(
-                                    video = video,
-                                    onClick = { /* TODO: navigate to video detail */ },
-                                    modifier = Modifier.weight(1f)
-                                )
+                    } else {
+                        // 继续观看
+                        if (playRecords.isNotEmpty()) {
+                            item {
+                                SecHd("\u23F0 继续观看", "")
                             }
-                            repeat(3 - row.size) {
-                                Spacer(modifier = Modifier.weight(1f))
+                            item {
+                                LazyRow(
+                                    contentPadding = PaddingValues(horizontal = 16.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    items(playRecords.take(10)) { record ->
+                                        com.lechenmusic.ui.screens.video.VideoHorizontalCard(
+                                            video = com.lechenmusic.data.model.VideoInfo(
+                                                id = record.videoId,
+                                                source = record.source,
+                                                title = record.title,
+                                                cover = record.cover,
+                                                year = record.year,
+                                                type = record.type,
+                                                totalEpisodes = record.totalEpisodes,
+                                                playTime = record.playTime,
+                                                totalTime = record.totalTime
+                                            ),
+                                            onClick = { onNavigateToVideoDetail(record.source, record.videoId) }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // 热门推荐（3列网格）
+                        val hotAll = buildList {
+                            homeData?.hotMovies?.let { addAll(it) }
+                            homeData?.hotTvShows?.let { addAll(it) }
+                            homeData?.hotAnime?.let { addAll(it) }
+                        }.distinctBy { it.id }.take(12)
+
+                        if (hotAll.isNotEmpty()) {
+                            item {
+                                SecHd("\uD83D\uDD25 热门推荐", "")
+                            }
+                            items(hotAll.chunked(3)) { row ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    row.forEach { video ->
+                                        com.lechenmusic.ui.screens.video.VideoCard(
+                                            video = video,
+                                            onClick = { onNavigateToVideoDetail(video.source, video.id) },
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                    }
+                                    repeat(3 - row.size) {
+                                        Spacer(modifier = Modifier.weight(1f))
+                                    }
+                                }
+                            }
+                        } else if (!homeLoading) {
+                            // 加载中或无数据
+                            item {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(40.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        "暂无推荐数据",
+                                        fontSize = 13.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+
+                        // 加载指示器
+                        if (homeLoading) {
+                            item {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(20.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(modifier = Modifier.size(32.dp))
+                                }
                             }
                         }
                     }

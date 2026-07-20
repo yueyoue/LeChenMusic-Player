@@ -256,7 +256,8 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                             onNavigateToAudiobookDetail = { id -> navController.navigate(Screen.AudiobookDetail.createRoute(id)) },
                             onNavigateToNarrator = { name -> navController.navigate(Screen.NarratorDetail.createRoute(name)) },
                             onNavigateToNarratorList = { navController.navigate(Screen.NarratorList.route) },
-                            onNavigateToVideo = { navController.navigate(Screen.Video.route) }
+                            onNavigateToVideoDetail = { source, videoId -> navController.navigate(Screen.VideoDetail.createRoute(source, videoId)) },
+                            videoViewModel = videoViewModel
                         )
                     }
                     composable(Screen.Favorites.route) {
@@ -494,19 +495,6 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                     }
 
                     // ===== 影视模块路由 =====
-                    composable(Screen.Video.route) {
-                        com.lechenmusic.ui.screens.video.VideoScreen(
-                            viewModel = videoViewModel,
-                            onSearchClick = { navController.navigate(Screen.VideoSearch.route) },
-                            onVideoClick = { video ->
-                                navController.navigate(Screen.VideoDetail.createRoute(video.source, video.id))
-                            },
-                            onLiveClick = { navController.navigate(Screen.Live.route) },
-                            onRecordClick = { record ->
-                                navController.navigate(Screen.VideoDetail.createRoute(record.source, record.videoId))
-                            }
-                        )
-                    }
                     composable(Screen.VideoSearch.route) {
                         com.lechenmusic.ui.screens.video.VideoSearchScreen(
                             viewModel = videoViewModel,
