@@ -9,6 +9,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import com.lechenmusic.data.repository.LyricsCache
 import com.lechenmusic.data.repository.MusicRepository
 import com.lechenmusic.data.repository.SettingsRepository
+import com.lechenmusic.data.api.NavidromeAuth
 import com.lechenmusic.player.MusicPlayerManager
 
 class LeChenApp : Application() {
