@@ -54,15 +54,22 @@ interface LunaTvApi {
     @GET("api/live/channels")
     suspend fun getLiveChannels(@Query("source") source: String): Response<LiveChannelsResponse>
 
-    @GET("api/home")
-    suspend fun getHomeRecommend(): Response<HomeRecommendResponse>
+    @GET("api/search/resources")
+    suspend fun getSearchResources(): Response<List<SearchResourceResponse>>
+}
 
-    @GET("api/category")
-    suspend fun getCategory(
-        @Query("type") type: String,
-        @Query("page") page: Int = 1,
-        @Query("pageSize") pageSize: Int = 20
-    ): Response<CategoryResponse>
+/**
+ * 豆瓣 API 接口
+ */
+interface DoubanApi {
+    @GET("v2/subject/recent_hot/{kind}")
+    suspend fun getRecentHot(
+        @Path("kind") kind: String,
+        @Query("start") start: Int = 0,
+        @Query("limit") limit: Int = 20,
+        @Query("category") category: String = "\u70ED\u95E8",
+        @Query("type") type: String = "\u5168\u90E8"
+    ): Response<DoubanHotResponse>
 }
 
 /**
@@ -139,4 +146,32 @@ object VideoApiClient {
     fun clearSession() {
         VideoCookieJar.clear()
     }
+}
+
+/**
+ * 豆瓣 API 客户端
+ */
+object DoubanApiClient {
+    private val api: DoubanApi by lazy {
+        val client = OkHttpClient.Builder()
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(15, TimeUnit.SECONDS)
+            .addInterceptor { chain ->
+                val request = chain.request().newBuilder()
+                    .addHeader("Referer", "https://movie.douban.com/")
+                    .addHeader("User-Agent", "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36")
+                    .build()
+                chain.proceed(request)
+            }
+            .build()
+
+        Retrofit.Builder()
+            .baseUrl("https://m.douban.com/rexxar/api/")
+            .client(client)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(DoubanApi::class.java)
+    }
+
+    fun getApi(): DoubanApi = api
 }

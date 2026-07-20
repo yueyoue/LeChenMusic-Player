@@ -228,6 +228,60 @@ data class HomeRecommendData(
     val hotShortDrama: List<VideoInfo> = emptyList()
 )
 
+// ==================== 豆瓣 ====================
+data class DoubanHotResponse(
+    val category: String = "",
+    val type: String = "",
+    val total: Int = 0,
+    val items: List<DoubanMovie> = emptyList()
+)
+
+data class DoubanMovie(
+    val id: String = "",
+    val title: String = "",
+    val year: String = "",
+    val cover: String = "",
+    val cover_url: String = "",
+    val is_new: Boolean = false,
+    val release_date: String = "",
+    val uri: String = "",
+    val rate: String = "",
+    val rating: DoubanRating? = null,
+    val episodes_info: String = "",
+    val rect_cover: String = "",
+    val cover_y: Int = 0,
+    val is_beetle_mailer: Boolean = false,
+    val null_rating_reason: String = ""
+) {
+    val displayCover: String get() = cover_url.ifBlank { cover }
+    val displayRate: String get() = rate.ifBlank { rating?.value?.toString() ?: "" }
+}
+
+data class DoubanRating(
+    val count: Int = 0,
+    val max: Int = 0,
+    val start_count: Int = 0,
+    val value: Double = 0.0
+)
+
+fun DoubanMovie.toVideoInfo(type: String): VideoInfo {
+    return VideoInfo(
+        id = id,
+        title = title,
+        year = year,
+        cover = displayCover,
+        rate = displayRate,
+        type = type
+    )
+}
+
+// ==================== 搜索资源 ====================
+data class SearchResourceResponse(
+    val key: String = "",
+    val name: String = "",
+    val disabled: Boolean = false
+)
+
 // ==================== 分类列表 ====================
 
 data class CategoryResponse(

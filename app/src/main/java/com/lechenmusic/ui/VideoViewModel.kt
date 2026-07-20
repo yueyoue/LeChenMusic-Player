@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.lechenmusic.data.api.VideoApiClient
+import com.lechenmusic.data.api.DoubanApiClient
 import com.lechenmusic.data.model.*
 import com.lechenmusic.data.repository.SettingsRepository
 import kotlinx.coroutines.Dispatchers
@@ -196,50 +197,36 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
     // ==================== 首页推荐 ====================
 
     fun loadHomeData() {
-        if (!_isLoggedIn.value) return
         viewModelScope.launch {
             _homeLoading.value = true
             _homeError.value = null
             try {
-                val api = VideoApiClient.getApi(videoServerUrl.value)
-                val response = withContext(Dispatchers.IO) { api.getHomeRecommend() }
-                if (response.isSuccessful && response.body()?.code == 0) {
-                    _homeData.value = response.body()?.data
-                } else {
-                    // 如果首页接口不存在，用分类接口组装
-                    loadHomeDataFallback()
+                val doubanApi = DoubanApiClient.getApi()
+                // 并行加载电影、电视剧、动漫
+                val moviesResp = withContext(Dispatchers.IO) {
+                    doubanApi.getRecentHot("movie", limit = 12)
                 }
-            } catch (_: Exception) {
-                loadHomeDataFallback()
+                val tvResp = withContext(Dispatchers.IO) {
+                    doubanApi.getRecentHot("tv", limit = 12)
+                }
+                val animeResp = withContext(Dispatchers.IO) {
+                    doubanApi.getRecentHot("anime", limit = 12)
+                }
+
+                val movies = moviesResp.body()?.items?.map { it.toVideoInfo("movie") } ?: emptyList()
+                val tv = tvResp.body()?.items?.map { it.toVideoInfo("tv") } ?: emptyList()
+                val anime = animeResp.body()?.items?.map { it.toVideoInfo("anime") } ?: emptyList()
+
+                _homeData.value = HomeRecommendData(
+                    hotMovies = movies,
+                    hotTvShows = tv,
+                    hotAnime = anime
+                )
+            } catch (e: Exception) {
+                _homeError.value = "加载失败: ${e.message}"
             } finally {
                 _homeLoading.value = false
             }
-        }
-    }
-
-    private suspend fun loadHomeDataFallback() {
-        try {
-            val api = VideoApiClient.getApi(videoServerUrl.value)
-            // 并行加载各类别
-            val moviesDef = withContext(Dispatchers.IO) { api.getCategory("movie", 1, 12) }
-            val tvDef = withContext(Dispatchers.IO) { api.getCategory("tv", 1, 12) }
-            val animeDef = withContext(Dispatchers.IO) { api.getCategory("anime", 1, 12) }
-            val varietyDef = withContext(Dispatchers.IO) { api.getCategory("variety", 1, 12) }
-
-            val movies = moviesDef.body()?.data?.list ?: emptyList()
-            val tv = tvDef.body()?.data?.list ?: emptyList()
-            val anime = animeDef.body()?.data?.list ?: emptyList()
-            val variety = varietyDef.body()?.data?.list ?: emptyList()
-
-            _homeData.value = HomeRecommendData(
-                hotMovies = movies,
-                hotTvShows = tv,
-                hotAnime = anime,
-                hotVariety = variety
-            )
-            _homeError.value = null
-        } catch (e: Exception) {
-            _homeError.value = "加载失败: ${e.message}"
         }
     }
 
