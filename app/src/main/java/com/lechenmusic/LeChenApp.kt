@@ -1,6 +1,8 @@
 package com.lechenmusic
 
 import android.app.Application
+import coil.Coil
+import coil.ImageLoader
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -26,10 +28,10 @@ class LeChenApp : Application() {
         playerManager.init(repository)
 
         // 配置 Coil 图片加载器，为豆瓣图片添加 Referer
-        coil.Coil.setImageLoader(
-            coil.ImageLoader.Builder(this)
+        Coil.setImageLoader(
+            ImageLoader.Builder(this)
                 .okHttpClient {
-                    okhttp3.OkHttpClient.Builder()
+                    OkHttpClient.Builder()
                         .addInterceptor { chain ->
                             val request = chain.request()
                             val url = request.url.toString()
