@@ -489,6 +489,42 @@ fun LeChenMusicApp(viewModel: MainViewModel) {
                         }
                     }
 
+                    // ===== 影视模块路由 =====
+                    composable(Screen.Video.route) {
+                        com.lechenmusic.ui.screens.video.VideoScreen(
+                            onSearchClick = { navController.navigate(Screen.VideoSearch.route) },
+                            onVideoClick = { video -> navController.navigate(Screen.VideoDetail.createRoute(video.id)) }
+                        )
+                    }
+                    composable(Screen.VideoSearch.route) {
+                        com.lechenmusic.ui.screens.video.VideoSearchScreen(
+                            onBack = { navController.popBackStack() },
+                            onVideoClick = { video -> navController.navigate(Screen.VideoDetail.createRoute(video.id)) }
+                        )
+                    }
+                    composable(Screen.VideoDetail.route) { backStackEntry ->
+                        val videoId = backStackEntry.arguments?.getString("videoId") ?: ""
+                        com.lechenmusic.ui.screens.video.VideoDetailScreen(
+                            videoId = videoId,
+                            onBack = { navController.popBackStack() },
+                            onPlay = { source, episodeIndex ->
+                                navController.navigate(Screen.VideoPlayer.createRoute(source, episodeIndex))
+                            }
+                        )
+                    }
+                    composable(Screen.VideoPlayer.route) { backStackEntry ->
+                        val source = backStackEntry.arguments?.getString("source") ?: ""
+                        val episodeIndex = backStackEntry.arguments?.getString("episodeIndex")?.toIntOrNull() ?: 0
+                        // TODO: 从 ViewModel 获取 sources 数据
+                        com.lechenmusic.ui.screens.video.VideoPlayerScreen(
+                            videoTitle = "影视播放",
+                            sources = emptyList(),
+                            initialSource = 0,
+                            initialEpisode = episodeIndex,
+                            onBack = { navController.popBackStack() }
+                        )
+                    }
+
                 }
             }
         }

@@ -149,6 +149,12 @@ fun HomeScreen(
                                 viewModel.setHomeMode("audiobook")
                                 viewModel.loadAudiobooks()
                             }
+                            ModeBtn(
+                                "\uD83C\uDFAC", "影视", homeMode == "video",
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                viewModel.setHomeMode("video")
+                            }
                         }
                     }
                 }
@@ -573,6 +579,81 @@ fun HomeScreen(
                         item {
                             Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
                                 Text("暂无收藏的有声书", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                }
+
+                // ===== VIDEO MODE =====
+                if (homeMode == "video") {
+                    // 顶部标题 + 搜索
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 20.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("影视", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    // Tab 栏
+                    item {
+                        var selectedVideoTab by remember { mutableIntStateOf(0) }
+                        val videoTabs = listOf("推荐", "电影", "电视剧", "综艺", "动漫")
+                        ScrollableTabRow(
+                            selectedTabIndex = selectedVideoTab,
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            contentColor = MaterialTheme.colorScheme.primary
+                        ) {
+                            videoTabs.forEachIndexed { index, title ->
+                                Tab(
+                                    selected = selectedVideoTab == index,
+                                    onClick = { selectedVideoTab = index },
+                                    text = { Text(title, fontSize = 13.sp, fontWeight = if (selectedVideoTab == index) FontWeight.Bold else FontWeight.Normal) }
+                                )
+                            }
+                        }
+                    }
+
+                    // 热门影视
+                    item {
+                        Text(
+                            "\uD83D\uDD25 热门推荐",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                        )
+                    }
+
+                    // 影视网格（3列）
+                    val sampleVideos = listOf(
+                        com.lechenmusic.data.model.VideoInfo(id = "1", title = "流浪地球3", year = "2026", rate = "8.5", type = "movie"),
+                        com.lechenmusic.data.model.VideoInfo(id = "2", title = "封神第三部", year = "2026", rate = "7.8", type = "movie"),
+                        com.lechenmusic.data.model.VideoInfo(id = "3", title = "三体", year = "2024", rate = "8.7", type = "tv", totalEpisodes = 30),
+                        com.lechenmusic.data.model.VideoInfo(id = "4", title = "庆余年3", year = "2026", rate = "8.2", type = "tv", totalEpisodes = 36),
+                        com.lechenmusic.data.model.VideoInfo(id = "5", title = "哪吒之魔童闹海", year = "2025", rate = "8.8", type = "movie"),
+                        com.lechenmusic.data.model.VideoInfo(id = "6", title = "狂飙2", year = "2026", rate = "8.1", type = "tv", totalEpisodes = 39),
+                    )
+                    items(sampleVideos.chunked(3)) { row ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            row.forEach { video ->
+                                com.lechenmusic.ui.screens.video.VideoCard(
+                                    video = video,
+                                    onClick = { /* TODO: navigate to video detail */ },
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                            repeat(3 - row.size) {
+                                Spacer(modifier = Modifier.weight(1f))
                             }
                         }
                     }
