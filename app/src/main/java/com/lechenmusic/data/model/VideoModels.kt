@@ -260,8 +260,8 @@ data class DoubanMovie(
     val displayCover: String get() {
         val raw = pic?.normal?.ifBlank { pic.large }
             ?: cover_url.ifBlank { cover }
-        // 豆瓣图片CDN代理：避免418/403
-        return raw.replace(Regex("img\\d+\\.doubanio\\.com"), "img.doubanio.cmliussss.com")
+        // 豆瓣图片CDN代理：统一用 img3.doubanio.com（带 Referer 可访问）
+        return raw.replace(Regex("img\\d+\\.doubanio\\.com"), "img3.doubanio.com")
     }
     val displayRate: String get() {
         val r = rate.ifBlank { rating?.value?.toString() ?: "" }
