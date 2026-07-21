@@ -45,6 +45,7 @@ import coil.compose.AsyncImage
 import com.lechenmusic.ErrorReporter
 import com.lechenmusic.R
 import com.lechenmusic.data.model.*
+import com.lechenmusic.dlna.*
 import com.lechenmusic.ui.VideoViewModel
 
 /**
@@ -81,6 +82,10 @@ fun VideoDetailScreen(
     var fsControlsVisible by remember { mutableStateOf(true) }
     var inlineInteractionCount by remember { mutableIntStateOf(0) }
     var fsInteractionCount by remember { mutableIntStateOf(0) }
+    // 投屏状态
+    var showCastSheet by remember { mutableStateOf(false) }
+    var castDevice by remember { mutableStateOf<DlnaDevice?>(null) }
+    var castController by remember { mutableStateOf<DlnaController?>(null) }
 
     LaunchedEffect(source, videoId) {
         if (source != "searching") {
@@ -369,6 +374,12 @@ fun VideoDetailScreen(
                             modifier = Modifier.align(Alignment.TopStart).statusBarsPadding().padding(4.dp)
                         ) {
                             Icon(Icons.Default.ArrowBack, "返回", tint = Color.White)
+                        }
+                        // 投屏 + 全屏按钮 (右上)
+                        Row(modifier = Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(4.dp)) {
+                            IconButton(onClick = { showCastSheet = true }) {
+                                Icon(Icons.Default.Cast, "投屏", tint = if (castDevice != null) MaterialTheme.colorScheme.primary else Color.White)
+                            }
                         }
                         // 全屏按钮 (右下)
                         IconButton(
@@ -869,6 +880,25 @@ fun VideoDetailScreen(
             }
         }
     }
+
+    // ===== 投屏设备选择弹窗 =====
+    DlnaCastSheet(
+        isVisible = showCastSheet,
+        onDismiss = { showCastSheet = false },
+        onDeviceSelected = { device ->
+            castDevice = device
+            val controller = DlnaController(device)
+            castController = controller
+            // 推送当前视频到投屏设备
+            val currentEpisodes = detail?.episodes ?: emptyList()
+            val url = currentEpisodes.getOrNull(0)
+            if (!url.isNullOrBlank()) {
+                kotlinx.coroutines.GlobalScope.launch {
+                    controller.setUriAndPlay(url, detail?.title ?: "LeChenMusic")
+                }
+            }
+        }
+    )
 }
 
 private fun formatTime(ms: Long): String {
