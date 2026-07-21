@@ -190,12 +190,19 @@ fun VideoPlayerScreen(
 
             override fun onIsPlayingChanged(playing: Boolean) {
                 isPlaying = playing
+                // 播放时保持屏幕常亮，暂停时恢复
+                if (playing) {
+                    activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                } else {
+                    activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                }
             }
         }
         exoPlayer.addListener(listener)
         onDispose {
             exoPlayer.removeListener(listener)
             exoPlayer.release()
+            activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         }
     }
 
@@ -241,9 +248,6 @@ fun VideoPlayerScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .clickable {
-                    if (!isLocked) showControls = !showControls
-                }
                 .pointerInput(isLocked) {
                     if (isLocked) return@pointerInput
                     detectHorizontalDragGestures(
@@ -253,7 +257,7 @@ fun VideoPlayerScreen(
                             seekOffset = 0L
                         },
                         onHorizontalDrag = { _, dragAmount ->
-                            seekOffset += (dragAmount * 200).toLong()
+                            seekOffset += (dragAmount * 500).toLong()
                         },
                         onDragEnd = {
                             if (gestureType == "seek") {
@@ -288,6 +292,9 @@ fun VideoPlayerScreen(
                             gestureType = ""
                         }
                     )
+                }
+                .clickable {
+                    if (!isLocked) showControls = !showControls
                 }
         ) {
             // ExoPlayer 的实际渲染需要 AndroidView，这里用纯 Compose 占位

@@ -18,7 +18,7 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
     private val settings = SettingsRepository(application)
 
     /** 写入本地文件日志（调试用，闪退后可查看） */
-    private fun logDebug(tag: String, msg: String) {
+    fun logDebug(tag: String, msg: String) {
         try {
             val ctx = getApplication<Application>()
             val logFile = java.io.File(ctx.getExternalFilesDir(null), "video_debug.log")

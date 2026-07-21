@@ -94,7 +94,8 @@ fun VideoDetailScreen(
 
     // 当 source/episode 变化时加载视频
     LaunchedEffect(selectedSource, selectedEpisode, currentDetail) {
-        val src = currentDetail?.toSources()?.getOrNull(selectedSource)
+        // currentDetail.toSources() 通常只有1项（当前源），直接取第一项
+        val src = currentDetail?.toSources()?.firstOrNull()
         val ep = src?.episodes?.getOrNull(selectedEpisode)
         if (ep != null && ep.url.isNotBlank()) {
             exoPlayer.setMediaItem(MediaItem.fromUri(ep.url))
@@ -120,7 +121,11 @@ fun VideoDetailScreen(
         } else {
             activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
         }
-        onDispose {}
+        // 播放时保持屏幕常亮
+        activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        onDispose {
+            activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
     }
 
     // 全屏模式下显示纯播放器
@@ -453,10 +458,11 @@ fun VideoDetailScreen(
                                 FilterChip(
                                     selected = selectedSource == index,
                                     onClick = {
+                                        viewModel.logDebug("片源切换", "点击: index=$index, source=${src.source}, name=${src.sourceName}, eps=${src.episodes.size}")
                                         selectedSource = index
                                         selectedEpisode = 0
-                                        // 找到 allSearchSources 中对应的源并切换
                                         val info = allSearchSources.firstOrNull { it.source == src.source }
+                                        viewModel.logDebug("片源切换", "匹配info: ${info != null}, source=${info?.source}, eps=${info?.episodes?.size}")
                                         if (info != null) {
                                             viewModel.switchSource(info)
                                         }
