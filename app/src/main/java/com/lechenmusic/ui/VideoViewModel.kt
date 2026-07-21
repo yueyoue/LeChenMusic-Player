@@ -109,37 +109,34 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
     private val _playRecords = MutableStateFlow<List<VideoPlayRecord>>(emptyList())
     val playRecords: StateFlow<List<VideoPlayRecord>> = _playRecords.asStateFlow()
 
-    // ===== 分类搜索(带缓存+分页) =====
+    // ===== 分类搜索(豆瓣API筛选+分页) =====
+    // 参考 Selene-Source: 用豆瓣 API 做筛选浏览,点击影片时搜索 LunaTV 播放
     private val _categoryResults = MutableStateFlow<List<VideoInfo>>(emptyList())
     val categoryResults: StateFlow<List<VideoInfo>> = _categoryResults.asStateFlow()
 
     private val _categoryLoading = MutableStateFlow(false)
     val categoryLoading: StateFlow<Boolean> = _categoryLoading.asStateFlow()
 
-    // 分类缓存: keyword -> (timestamp, fullList)
-    private val categoryCache = mutableMapOf<String, Pair<Long, List<VideoInfo>>>()
-    private val CACHE_TTL = 10 * 60 * 1000L  // 10分钟缓存
-    private val PAGE_SIZE = 20
-    private var categoryFullList = listOf<VideoInfo>()
-    private var categoryFiltered = listOf<VideoInfo>()  // 筛选后的列表
-    private var categoryCurrentPage = 0
     private val _categoryHasMore = MutableStateFlow(true)
     val categoryHasMore: StateFlow<Boolean> = _categoryHasMore.asStateFlow()
+
     private val _categoryTotalCount = MutableStateFlow(0)
     val categoryTotalCount: StateFlow<Int> = _categoryTotalCount.asStateFlow()
 
-    // ===== 分类筛选 =====
+    private val PAGE_SIZE = 25  // 参考 Selene-Source: pageLimit=25
+    private var categoryPage = 0
+    private var categoryCurrentKind = "movie"  // 当前分类: movie/tv/anime/show
+    private var categoryIsLoadingMore = false
+
+    // ===== 分类筛选(参考 Selene-Source) =====
     data class CategoryFilters(
-        val year: String = "全部",      // 全部/2026/2025/2024/2023/更早
-        val area: String = "全部",      // 全部/中国大陆/美国/韩国/日本/...
-        val source: String = "全部"     // 全部/各来源
+        val category: String = "\u70ED\u95E8",   // 热门/最新/豆瓣高分/冷门佳片/喜剧/爱情/...
+        val region: String = "\u5168\u90E8",     // 全部/华语/欧美/韩国/日本/中国大陆/美国/...
+        val year: String = "\u5168\u90E8",       // 全部/2026/2025/2024/2023/2020年代/2010年代/更早
+        val sort: String = "T"           // T(综合)/U(近期热度)/R(首映时间)/S(高分优先)
     )
     private val _categoryFilters = MutableStateFlow(CategoryFilters())
     val categoryFilters: StateFlow<CategoryFilters> = _categoryFilters.asStateFlow()
-    private val _categoryAreas = MutableStateFlow<List<String>>(emptyList())
-    val categoryAreas: StateFlow<List<String>> = _categoryAreas.asStateFlow()
-    private val _categorySources = MutableStateFlow<List<String>>(emptyList())
-    val categorySources: StateFlow<List<String>> = _categorySources.asStateFlow()
 
     // ===== 直播 =====
     private val _liveSources = MutableStateFlow<List<LiveSource>>(emptyList())
@@ -620,132 +617,127 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
     // ==================== 分类搜索(缓存+分页) ====================
 
     /**
-     * 搜索分类，优先使用缓存(10分钟有效)
-     * LunaTV 搜索不支持服务端分页，客户端分页: 每次显示 PAGE_SIZE 条
+     * 分类搜索 - 用豆瓣 API 做筛选浏览(参考 Selene-Source)
+     * @param kind movie/tv/anime/show
+     * @param forceRefresh 强制刷新(忽略筛选条件变化时的重复请求检测)
      */
-    fun searchCategory(keyword: String, forceRefresh: Boolean = false) {
+    fun fetchDoubanCategory(kind: String, isRefresh: Boolean = true) {
+        categoryCurrentKind = kind
+        val kindMap = mapOf("movie" to "movie", "tv" to "tv", "anime" to "anime", "variety" to "show")
+        val doubanKind = kindMap[kind] ?: "movie"
+
         viewModelScope.launch {
-            // 检查缓存
-            val cached = categoryCache[keyword]
-            if (!forceRefresh && cached != null && System.currentTimeMillis() - cached.first < CACHE_TTL) {
-                logDebug("searchCategory", "使用缓存: $keyword, ${cached.second.size} 条")
-                categoryFullList = cached.second
-                extractFilterOptions(cached.second)
-                applyCategoryFilters()
-                return@launch
+            if (isRefresh) {
+                _categoryLoading.value = true
+                categoryPage = 0
+                _categoryHasMore.value = true
             }
 
-            _categoryLoading.value = true
+            val filters = _categoryFilters.value
+            // 记录发起请求时的筛选状态(参考 Selene-Source 的 requestFilterState)
+            val requestFilterKey = "${doubanKind}_${filters.category}_${filters.region}_${filters.year}_${filters.sort}_${categoryPage}"
+
             try {
-                val api = VideoApiClient.getApi(videoServerUrl.value)
-                val response = withContext(Dispatchers.IO) { api.search(keyword) }
+                val doubanApi = DoubanApiClient.getApi()
+                val response = withContext(Dispatchers.IO) {
+                    doubanApi.getRecommendations(
+                        kind = doubanKind,
+                        category = filters.category,
+                        region = if (filters.region != "\u5168\u90E8") filters.region else "\u5168\u90E8",
+                        year = if (filters.year != "\u5168\u90E8") filters.year else "\u5168\u90E8",
+                        sort = filters.sort,
+                        start = categoryPage * PAGE_SIZE,
+                        limit = PAGE_SIZE
+                    )
+                }
+
+                // 检查筛选状态是否已变化(参考 Selene-Source)
+                val currentFilterKey = "${doubanKind}_${_categoryFilters.value.category}_${_categoryFilters.value.region}_${_categoryFilters.value.year}_${_categoryFilters.value.sort}_${categoryPage}"
+                if (requestFilterKey != currentFilterKey) {
+                    logDebug("fetchDoubanCategory", "筛选状态已变化,忽略过期响应")
+                    return@launch
+                }
+
                 if (response.isSuccessful) {
-                    val results = response.body()?.results ?: emptyList()
-                    // 去重(按 source+id)
-                    val deduped = results.distinctBy { "${it.source}+${it.id}" }
-                    // 写入缓存
-                    categoryCache[keyword] = System.currentTimeMillis() to deduped
-                    categoryFullList = deduped
-                    extractFilterOptions(deduped)
-                    applyCategoryFilters()
-                    logDebug("searchCategory", "搜索完成: $keyword, ${deduped.size} 条, 首页显示 ${_categoryResults.value.size} 条")
+                    val items = response.body()?.items ?: emptyList()
+                    val mapped = items.map { it.toVideoInfo(doubanKind) }
+
+                    if (isRefresh) {
+                        _categoryResults.value = mapped
+                    } else {
+                        _categoryResults.value = _categoryResults.value + mapped
+                    }
+
+                    categoryPage++
+                    _categoryHasMore.value = items.size >= PAGE_SIZE
+                    _categoryTotalCount.value = response.body()?.total ?: _categoryResults.value.size
+                    logDebug("fetchDoubanCategory", "完成: kind=$doubanKind, page=${categoryPage-1}, got=${items.size}, total=${_categoryTotalCount.value}")
                 } else {
-                    _categoryResults.value = emptyList()
+                    logDebug("fetchDoubanCategory", "请求失败: ${response.code()}")
+                    if (isRefresh) _categoryResults.value = emptyList()
                     _categoryHasMore.value = false
                 }
             } catch (e: Exception) {
-                _categoryResults.value = emptyList()
+                logDebug("fetchDoubanCategory", "异常: ${e.message}")
+                if (isRefresh) _categoryResults.value = emptyList()
                 _categoryHasMore.value = false
-                reportVideoError("searchCategory", "分类搜索失败: $keyword", e)
+                reportVideoError("fetchDoubanCategory", "分类加载失败: $kind", e)
             }
             _categoryLoading.value = false
         }
     }
 
-    /** 加载更多(客户端分页) */
+    /** 加载更多(豆瓣 API 分页) */
     fun loadMoreCategory() {
-        if (!_categoryHasMore.value) return
-        categoryCurrentPage++
-        val end = (categoryCurrentPage + 1) * PAGE_SIZE
-        val newItems = categoryFiltered.take(end)
-        _categoryResults.value = newItems
-        _categoryHasMore.value = newItems.size < categoryFiltered.size
-        logDebug("loadMoreCategory", "加载更多: 显示 ${newItems.size}/${categoryFiltered.size}")
+        if (!_categoryHasMore.value || categoryIsLoadingMore) return
+        categoryIsLoadingMore = true
+        viewModelScope.launch {
+            try {
+                val doubanApi = DoubanApiClient.getApi()
+                val filters = _categoryFilters.value
+                val kindMap = mapOf("movie" to "movie", "tv" to "tv", "anime" to "anime", "variety" to "show")
+                val doubanKind = kindMap[categoryCurrentKind] ?: "movie"
+
+                val response = withContext(Dispatchers.IO) {
+                    doubanApi.getRecommendations(
+                        kind = doubanKind,
+                        category = filters.category,
+                        region = if (filters.region != "\u5168\u90E8") filters.region else "\u5168\u90E8",
+                        year = if (filters.year != "\u5168\u90E8") filters.year else "\u5168\u90E8",
+                        sort = filters.sort,
+                        start = categoryPage * PAGE_SIZE,
+                        limit = PAGE_SIZE
+                    )
+                }
+
+                if (response.isSuccessful) {
+                    val items = response.body()?.items ?: emptyList()
+                    val mapped = items.map { it.toVideoInfo(doubanKind) }
+                    _categoryResults.value = _categoryResults.value + mapped
+                    categoryPage++
+                    _categoryHasMore.value = items.size >= PAGE_SIZE
+                    logDebug("loadMoreCategory", "加载更多: page=${categoryPage-1}, got=${items.size}")
+                } else {
+                    _categoryHasMore.value = false
+                }
+            } catch (e: Exception) {
+                _categoryHasMore.value = false
+                logDebug("loadMoreCategory", "异常: ${e.message}")
+            }
+            categoryIsLoadingMore = false
+        }
     }
 
-    /** 更新筛选条件并重新过滤 */
+    /** 更新筛选条件并重新请求(参考 Selene-Source) */
     fun updateCategoryFilters(filters: CategoryFilters) {
         _categoryFilters.value = filters
-        applyCategoryFilters()
+        fetchDoubanCategory(categoryCurrentKind, isRefresh = true)
     }
 
-    /** 应用筛选(客户端过滤) */
-    private fun applyCategoryFilters() {
-        val filters = _categoryFilters.value
-        var filtered = categoryFullList
-
-        // 按年份筛选
-        if (filters.year != "全部") {
-            filtered = when (filters.year) {
-                "更早" -> filtered.filter { it.year.isNotBlank() && it.year.toIntOrNull()?.let { y -> y < 2023 } == true }
-                else -> filtered.filter { it.year == filters.year }
-            }
-        }
-
-        // 按地区筛选
-        if (filters.area != "全部") {
-            filtered = filtered.filter {
-                it.area.contains(filters.area, ignoreCase = true) ||
-                it.sourceName.contains(filters.area, ignoreCase = true) ||
-                it.sourceNameAlt.contains(filters.area, ignoreCase = true)
-            }
-        }
-
-        // 按来源筛选
-        if (filters.source != "全部") {
-            filtered = filtered.filter { it.displaySourceName == filters.source }
-        }
-
-        categoryFiltered = filtered
-        _categoryTotalCount.value = filtered.size
-        categoryCurrentPage = 0
-        _categoryResults.value = filtered.take(PAGE_SIZE)
-        _categoryHasMore.value = filtered.size > PAGE_SIZE
-        logDebug("applyCategoryFilters", "筛选完成: ${categoryFullList.size} -> ${filtered.size} 条")
-    }
-
-    /** 提取可选的筛选项(从全量数据中) */
-    private fun extractFilterOptions(list: List<VideoInfo>) {
-        // 提取地区
-        val areas = list.mapNotNull { v ->
-            when {
-                v.area.isNotBlank() -> v.area
-                v.sourceName.contains("爱奇艺") || v.sourceNameAlt.contains("爱奇艺") -> "中国大陆"
-                v.sourceName.contains("优酷") || v.sourceNameAlt.contains("优酷") -> "中国大陆"
-                v.sourceName.contains("腾讯") || v.sourceNameAlt.contains("腾讯") -> "中国大陆"
-                v.sourceName.contains("芒果") || v.sourceNameAlt.contains("芒果") -> "中国大陆"
-                v.sourceName.contains("Netflix") || v.sourceNameAlt.contains("Netflix") -> "欧美"
-                else -> null
-            }
-        }.distinct().sorted()
-        _categoryAreas.value = listOf("全部") + areas
-
-        // 提取来源
-        val sources = list.map { it.displaySourceName }.filter { it.isNotBlank() }.distinct().sorted()
-        _categorySources.value = listOf("全部") + sources
-    }
-
-    /** 清除分类缓存 */
-    fun clearCategoryCache() {
-        categoryCache.clear()
-    }
-
-    /** 重置分类筛选 */
+    /** 重置筛选 */
     fun resetCategoryFilters() {
         _categoryFilters.value = CategoryFilters()
-        if (categoryFullList.isNotEmpty()) {
-            applyCategoryFilters()
-        }
+        fetchDoubanCategory(categoryCurrentKind, isRefresh = true)
     }
 
     /**

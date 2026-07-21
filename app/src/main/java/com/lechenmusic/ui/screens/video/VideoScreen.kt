@@ -65,10 +65,10 @@ fun VideoScreen(
     LaunchedEffect(selectedTab, isLoggedIn) {
         if (!isLoggedIn) return@LaunchedEffect
         when (selectedTab) {
-            1 -> if (currentCategoryKeyword != "电影") { currentCategoryKeyword = "电影"; viewModel.searchCategory("电影") }
-            2 -> if (currentCategoryKeyword != "电视剧") { currentCategoryKeyword = "电视剧"; viewModel.searchCategory("电视剧") }
-            3 -> if (currentCategoryKeyword != "动漫") { currentCategoryKeyword = "动漫"; viewModel.searchCategory("动漫") }
-            4 -> if (currentCategoryKeyword != "综艺") { currentCategoryKeyword = "综艺"; viewModel.searchCategory("综艺") }
+            1 -> if (currentCategoryKeyword != "movie") { currentCategoryKeyword = "movie"; viewModel.fetchDoubanCategory("movie") }
+            2 -> if (currentCategoryKeyword != "tv") { currentCategoryKeyword = "tv"; viewModel.fetchDoubanCategory("tv") }
+            3 -> if (currentCategoryKeyword != "anime") { currentCategoryKeyword = "anime"; viewModel.fetchDoubanCategory("anime") }
+            4 -> if (currentCategoryKeyword != "variety") { currentCategoryKeyword = "variety"; viewModel.fetchDoubanCategory("variety") }
         }
     }
 
@@ -348,7 +348,7 @@ private fun VideoRecommendTab(
     }
 }
 
-// ==================== 分类列表(带分页) ====================
+// ==================== 分类列表(豆瓣API分页) ====================
 
 @Composable
 private fun VideoCategoryList(
@@ -358,7 +358,6 @@ private fun VideoCategoryList(
     onVideoClick: (VideoInfo) -> Unit
 ) {
     val hasMore by viewModel.categoryHasMore.collectAsState()
-    val totalCount by viewModel.categoryTotalCount.collectAsState()
     val gridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
 
     // 滚动到底部时自动加载更多
@@ -366,7 +365,7 @@ private fun VideoCategoryList(
         derivedStateOf {
             val lastVisibleIndex = gridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
             val totalItems = gridState.layoutInfo.totalItemsCount
-            lastVisibleIndex >= totalItems - 3 && hasMore && !isLoading
+            lastVisibleIndex >= totalItems - 6 && hasMore && !isLoading
         }
     }
 
@@ -393,9 +392,8 @@ private fun VideoCategoryList(
         items(videos) { video ->
             VideoCard(video = video, onClick = { onVideoClick(video) })
         }
-        // 底部加载更多指示器
         if (hasMore) {
-            item {
+            item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(3) }) {
                 Box(
                     modifier = Modifier.fillMaxWidth().padding(16.dp),
                     contentAlignment = Alignment.Center
