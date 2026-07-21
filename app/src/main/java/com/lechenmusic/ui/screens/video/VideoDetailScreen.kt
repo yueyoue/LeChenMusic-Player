@@ -7,11 +7,14 @@ import android.widget.FrameLayout
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -22,11 +25,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -95,35 +101,42 @@ fun VideoDetailScreen(
     // 当视频详情变化时加载视频（包括初始加载和切换源）
     val switchVersion = viewModel.switchSourceVersion.collectAsState().value
 
-    // 初始加载：当 currentDetail 首次有数据时播放
-    LaunchedEffect(currentDetail?.source, currentDetail?.id) {
-        if (switchVersion > 0) return@LaunchedEffect // 切换源由下面的 effect 处理
-        val detail = currentDetail ?: return@LaunchedEffect
-        val src = detail.toSources().firstOrNull()
-        val ep = src?.episodes?.getOrNull(0)
-        if (ep != null && ep.url.isNotBlank()) {
-            exoPlayer.setMediaItem(MediaItem.fromUri(ep.url))
-            exoPlayer.prepare()
-            exoPlayer.playWhenReady = true
-        }
-    }
-
-    // 切换源时加载新视频并恢复播放位置
+    // 统一处理：初始加载 + 切换源
+    // 用 switchVersion 作为 key，每次切换源都会触发
     LaunchedEffect(switchVersion) {
-        if (switchVersion == 0) return@LaunchedEffect // 初始不触发
         val detail = currentDetail ?: return@LaunchedEffect
         val src = detail.toSources().firstOrNull()
         val ep = src?.episodes?.getOrNull(selectedEpisode)
         if (ep != null && ep.url.isNotBlank()) {
-            // 保存当前位置（用于切换源后恢复）
-            val savedPosition = exoPlayer.currentPosition.coerceAtLeast(0L)
+            // 保存当前位置（切换源时恢复）
+            val savedPosition = if (switchVersion > 0) exoPlayer.currentPosition.coerceAtLeast(0L) else 0L
+            // 停止当前播放
+            exoPlayer.stop()
             exoPlayer.setMediaItem(MediaItem.fromUri(ep.url))
             exoPlayer.prepare()
             exoPlayer.playWhenReady = true
             // 恢复播放位置
             if (savedPosition > 0) {
                 kotlinx.coroutines.delay(500)
-                exoPlayer.seekTo(savedPosition)
+                if (exoPlayer.playbackState == Player.STATE_READY || exoPlayer.playbackState == Player.STATE_BUFFERING) {
+                    exoPlayer.seekTo(savedPosition)
+                }
+            }
+        }
+    }
+
+    // 当 currentDetail 首次有数据时触发加载（searchAndPlay 完成后）
+    LaunchedEffect(currentDetail) {
+        if (currentDetail != null && switchVersion == 0) {
+            // 模拟 switchVersion=1 来触发上面的 effect
+            viewModel.switchSourceVersion.let { /* 不需要额外操作，currentDetail 变化会自动触发 */ }
+            val detail = currentDetail ?: return@LaunchedEffect
+            val src = detail.toSources().firstOrNull()
+            val ep = src?.episodes?.getOrNull(0)
+            if (ep != null && ep.url.isNotBlank()) {
+                exoPlayer.setMediaItem(MediaItem.fromUri(ep.url))
+                exoPlayer.prepare()
+                exoPlayer.playWhenReady = true
             }
         }
     }
@@ -318,11 +331,12 @@ fun VideoDetailScreen(
                             modifier = Modifier.size(40.dp)
                         )
                     }
-                    // 底部进度条（可拖动）
+                    // 底部进度条（自定义手势，绕过 Slider 开销）
                     var progress by remember { mutableFloatStateOf(0f) }
                     var durationMs by remember { mutableLongStateOf(0L) }
                     var positionMs by remember { mutableLongStateOf(0L) }
                     var isDragging by remember { mutableStateOf(false) }
+                    var barWidthPx by remember { mutableFloatStateOf(1f) }
                     LaunchedEffect(exoPlayer) {
                         while (true) {
                             if (!isDragging) {
@@ -330,7 +344,7 @@ fun VideoDetailScreen(
                                 positionMs = exoPlayer.currentPosition.coerceAtLeast(0L)
                                 progress = if (durationMs > 0) positionMs.toFloat() / durationMs else 0f
                             }
-                            kotlinx.coroutines.delay(300)
+                            kotlinx.coroutines.delay(500)
                         }
                     }
                     Box(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(start = 8.dp, end = 8.dp, bottom = 4.dp)) {
@@ -344,24 +358,64 @@ fun VideoDetailScreen(
                                 fontSize = 10.sp,
                                 modifier = Modifier.width(40.dp)
                             )
-                            Slider(
-                                value = progress,
-                                onValueChange = { newValue ->
-                                    isDragging = true
-                                    progress = newValue
-                                },
-                                onValueChangeFinished = {
-                                    val seekTo = (progress * durationMs).toLong()
-                                    exoPlayer.seekTo(seekTo)
-                                    isDragging = false
-                                },
-                                modifier = Modifier.weight(1f).height(20.dp),
-                                colors = SliderDefaults.colors(
-                                    thumbColor = MaterialTheme.colorScheme.primary,
-                                    activeTrackColor = MaterialTheme.colorScheme.primary,
-                                    inactiveTrackColor = Color.White.copy(alpha = 0.3f)
+                            // 自定义进度条（pointerInput 手势，极致跟手）
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(32.dp)
+                                    .onGloballyPositioned { barWidthPx = it.size.width.toFloat() }
+                                    .pointerInput(Unit) {
+                                        detectDragGestures(
+                                            onDragStart = { offset ->
+                                                isDragging = true
+                                                progress = (offset.x / barWidthPx).coerceIn(0f, 1f)
+                                            },
+                                            onDragEnd = {
+                                                exoPlayer.seekTo((progress * durationMs).toLong())
+                                                isDragging = false
+                                            },
+                                            onDragCancel = { isDragging = false }
+                                        ) { change, dragAmount ->
+                                            change.consume()
+                                            val newOffset = (progress * barWidthPx) + dragAmount.x
+                                            progress = (newOffset / barWidthPx).coerceIn(0f, 1f)
+                                        }
+                                    }
+                                    .pointerInput(Unit) {
+                                        detectTapGestures(
+                                            onPress = { offset ->
+                                                isDragging = true
+                                                progress = (offset.x / barWidthPx).coerceIn(0f, 1f)
+                                                val success = tryAwaitRelease()
+                                                if (success) {
+                                                    exoPlayer.seekTo((progress * durationMs).toLong())
+                                                }
+                                                isDragging = false
+                                            }
+                                        )
+                                    },
+                                contentAlignment = Alignment.CenterStart
+                            ) {
+                                // 背景轨道
+                                Box(
+                                    modifier = Modifier.fillMaxWidth().height(4.dp)
+                                        .clip(RoundedCornerShape(2.dp))
+                                        .background(Color.White.copy(alpha = 0.3f))
                                 )
-                            )
+                                // 已播放轨道
+                                Box(
+                                    modifier = Modifier.fillMaxWidth(fraction = progress).height(4.dp)
+                                        .clip(RoundedCornerShape(2.dp))
+                                        .background(MaterialTheme.colorScheme.primary)
+                                )
+                                // 拖动手柄
+                                Box(
+                                    modifier = Modifier
+                                        .offset { IntOffset((progress * barWidthPx - 8).toInt(), 0) }
+                                        .size(16.dp)
+                                        .background(MaterialTheme.colorScheme.primary, CircleShape)
+                                )
+                            }
                             Text(
                                 formatTime(durationMs),
                                 color = Color.White.copy(alpha = 0.7f),
