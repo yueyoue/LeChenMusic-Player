@@ -436,6 +436,7 @@ private fun FilterPill(
 
 // ==================== 筛选底部弹窗(参考 Selene-Source showFilterOptionsSelector) ====================
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun FilterBottomSheet(
     title: String,
