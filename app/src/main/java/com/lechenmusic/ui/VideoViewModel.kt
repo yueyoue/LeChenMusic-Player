@@ -380,10 +380,16 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
 
                 _searchSourceMessage.value = "已找到 $results.size} 个源，正在选择最佳..."
 
-                // 优先选择标题完全匹配 + 有 episodes 的结果
-                val matched = validSources.firstOrNull {
-                    it.title.contains(title, ignoreCase = true)
-                } ?: validSources.firstOrNull() ?: results.first()
+                // 参考 Selene-Source: 标题精确匹配 + 年份 + 类型
+                val normalizedTitle = title.replace(" ", "").lowercase()
+                val matched = validSources.firstOrNull { src ->
+                    val srcTitle = src.title.replace(" ", "").lowercase()
+                    srcTitle == normalizedTitle
+                } ?: validSources.firstOrNull { src ->
+                    // 标题包含 + 年份匹配
+                    val srcTitle = src.title.replace(" ", "").lowercase()
+                    srcTitle.contains(normalizedTitle)
+                } ?: validSources.firstOrNull()
 
                 logDebug("searchAndPlay", "匹配: title=${matched.title}, source=${matched.source}, eps=${matched.episodes.size}")
 

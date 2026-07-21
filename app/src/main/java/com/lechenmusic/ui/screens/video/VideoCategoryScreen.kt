@@ -94,7 +94,8 @@ fun VideoCategoryScreen(
                 IconButton(onClick = onBack) {
                     Icon(Icons.Default.ArrowBack, "返回")
                 }
-            }
+            },
+            windowInsets = WindowInsets(0, 0, 0, 0)
         )
 
         if (isLoading) {

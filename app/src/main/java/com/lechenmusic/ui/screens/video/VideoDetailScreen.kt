@@ -114,6 +114,30 @@ fun VideoDetailScreen(
         onDispose { exoPlayer.release() }
     }
 
+    // 定期保存播放记录（参考 Selene-Source 每10秒保存）
+    LaunchedEffect(currentDetail) {
+        val detail = currentDetail ?: return@LaunchedEffect
+        while (true) {
+            kotlinx.coroutines.delay(10000)
+            if (exoPlayer.isPlaying && exoPlayer.duration > 0) {
+                viewModel.savePlayRecord(
+                    com.lechenmusic.data.model.PlayRecordRequest(
+                        source = detail.source,
+                        id = detail.id,
+                        title = detail.title,
+                        cover = detail.displayCover,
+                        year = detail.year,
+                        episode_index = 0,
+                        total_episodes = detail.episodes.size,
+                        play_time = (exoPlayer.currentPosition / 1000).toInt(),
+                        total_time = (exoPlayer.duration / 1000).toInt(),
+                        type = detail.typeName
+                    )
+                )
+            }
+        }
+    }
+
     // 全屏模式处理 - 用 SideEffect 避免 LaunchedEffect 重组问题
     val activity = context as? android.app.Activity
     DisposableEffect(isPlayerFullscreen) {
