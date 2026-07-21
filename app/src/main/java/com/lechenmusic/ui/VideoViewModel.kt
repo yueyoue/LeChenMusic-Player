@@ -109,12 +109,23 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
     private val _playRecords = MutableStateFlow<List<VideoPlayRecord>>(emptyList())
     val playRecords: StateFlow<List<VideoPlayRecord>> = _playRecords.asStateFlow()
 
-    // ===== 分类搜索 =====
+    // ===== 分类搜索(带缓存+分页) =====
     private val _categoryResults = MutableStateFlow<List<VideoInfo>>(emptyList())
     val categoryResults: StateFlow<List<VideoInfo>> = _categoryResults.asStateFlow()
 
     private val _categoryLoading = MutableStateFlow(false)
     val categoryLoading: StateFlow<Boolean> = _categoryLoading.asStateFlow()
+
+    // 分类缓存: keyword -> (timestamp, fullList)
+    private val categoryCache = mutableMapOf<String, Pair<Long, List<VideoInfo>>>()
+    private val CACHE_TTL = 10 * 60 * 1000L  // 10分钟缓存
+    private val PAGE_SIZE = 20
+    private var categoryFullList = listOf<VideoInfo>()
+    private var categoryCurrentPage = 0
+    private val _categoryHasMore = MutableStateFlow(true)
+    val categoryHasMore: StateFlow<Boolean> = _categoryHasMore.asStateFlow()
+    private val _categoryTotalCount = MutableStateFlow(0)
+    val categoryTotalCount: StateFlow<Int> = _categoryTotalCount.asStateFlow()
 
     // ===== 直播 =====
     private val _liveSources = MutableStateFlow<List<LiveSource>>(emptyList())
@@ -592,25 +603,69 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // ==================== 分类搜索 ====================
+    // ==================== 分类搜索(缓存+分页) ====================
 
-    fun searchCategory(keyword: String) {
+    /**
+     * 搜索分类，优先使用缓存(10分钟有效)
+     * LunaTV 搜索不支持服务端分页，客户端分页: 每次显示 PAGE_SIZE 条
+     */
+    fun searchCategory(keyword: String, forceRefresh: Boolean = false) {
         viewModelScope.launch {
+            // 检查缓存
+            val cached = categoryCache[keyword]
+            if (!forceRefresh && cached != null && System.currentTimeMillis() - cached.first < CACHE_TTL) {
+                logDebug("searchCategory", "使用缓存: $keyword, ${cached.second.size} 条")
+                categoryFullList = cached.second
+                _categoryTotalCount.value = categoryFullList.size
+                categoryCurrentPage = 0
+                _categoryResults.value = categoryFullList.take(PAGE_SIZE)
+                _categoryHasMore.value = categoryFullList.size > PAGE_SIZE
+                return@launch
+            }
+
             _categoryLoading.value = true
             try {
                 val api = VideoApiClient.getApi(videoServerUrl.value)
                 val response = withContext(Dispatchers.IO) { api.search(keyword) }
                 if (response.isSuccessful) {
-                    _categoryResults.value = response.body()?.results ?: emptyList()
+                    val results = response.body()?.results ?: emptyList()
+                    // 去重(按 source+id)
+                    val deduped = results.distinctBy { "${it.source}+${it.id}" }
+                    // 写入缓存
+                    categoryCache[keyword] = System.currentTimeMillis() to deduped
+                    categoryFullList = deduped
+                    _categoryTotalCount.value = deduped.size
+                    categoryCurrentPage = 0
+                    _categoryResults.value = deduped.take(PAGE_SIZE)
+                    _categoryHasMore.value = deduped.size > PAGE_SIZE
+                    logDebug("searchCategory", "搜索完成: $keyword, ${deduped.size} 条, 首页显示 ${_categoryResults.value.size} 条")
                 } else {
                     _categoryResults.value = emptyList()
+                    _categoryHasMore.value = false
                 }
             } catch (e: Exception) {
                 _categoryResults.value = emptyList()
+                _categoryHasMore.value = false
                 reportVideoError("searchCategory", "分类搜索失败: $keyword", e)
             }
             _categoryLoading.value = false
         }
+    }
+
+    /** 加载更多(客户端分页) */
+    fun loadMoreCategory() {
+        if (!_categoryHasMore.value) return
+        categoryCurrentPage++
+        val end = (categoryCurrentPage + 1) * PAGE_SIZE
+        val newItems = categoryFullList.take(end)
+        _categoryResults.value = newItems
+        _categoryHasMore.value = newItems.size < categoryFullList.size
+        logDebug("loadMoreCategory", "加载更多: 显示 ${newItems.size}/${categoryFullList.size}")
+    }
+
+    /** 清除分类缓存 */
+    fun clearCategoryCache() {
+        categoryCache.clear()
     }
 
     /**

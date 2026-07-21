@@ -158,10 +158,10 @@ fun VideoScreen(
                     onVideoClick = onVideoClick,
                     onRecordClick = onRecordClick
                 )
-                1 -> VideoCategoryList(categoryResults, categoryLoading, onVideoClick)
-                2 -> VideoCategoryList(categoryResults, categoryLoading, onVideoClick)
-                3 -> VideoCategoryList(categoryResults, categoryLoading, onVideoClick)
-                4 -> VideoCategoryList(categoryResults, categoryLoading, onVideoClick)
+                1 -> VideoCategoryList(viewModel, categoryResults, categoryLoading, onVideoClick)
+                2 -> VideoCategoryList(viewModel, categoryResults, categoryLoading, onVideoClick)
+                3 -> VideoCategoryList(viewModel, categoryResults, categoryLoading, onVideoClick)
+                4 -> VideoCategoryList(viewModel, categoryResults, categoryLoading, onVideoClick)
             }
         }
     }
@@ -348,14 +348,34 @@ private fun VideoRecommendTab(
     }
 }
 
-// ==================== 分类列表 ====================
+// ==================== 分类列表(带分页) ====================
 
 @Composable
 private fun VideoCategoryList(
+    viewModel: VideoViewModel,
     videos: List<VideoInfo>,
     isLoading: Boolean,
     onVideoClick: (VideoInfo) -> Unit
 ) {
+    val hasMore by viewModel.categoryHasMore.collectAsState()
+    val totalCount by viewModel.categoryTotalCount.collectAsState()
+    val gridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
+
+    // 滚动到底部时自动加载更多
+    val shouldLoadMore by remember {
+        derivedStateOf {
+            val lastVisibleIndex = gridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            val totalItems = gridState.layoutInfo.totalItemsCount
+            lastVisibleIndex >= totalItems - 3 && hasMore && !isLoading
+        }
+    }
+
+    LaunchedEffect(shouldLoadMore) {
+        if (shouldLoadMore) {
+            viewModel.loadMoreCategory()
+        }
+    }
+
     if (isLoading && videos.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
@@ -364,6 +384,7 @@ private fun VideoCategoryList(
     }
 
     LazyVerticalGrid(
+        state = gridState,
         columns = GridCells.Fixed(3),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -371,6 +392,17 @@ private fun VideoCategoryList(
     ) {
         items(videos) { video ->
             VideoCard(video = video, onClick = { onVideoClick(video) })
+        }
+        // 底部加载更多指示器
+        if (hasMore) {
+            item {
+                Box(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                }
+            }
         }
     }
 }

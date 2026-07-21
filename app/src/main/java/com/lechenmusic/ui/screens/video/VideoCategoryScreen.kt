@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -26,7 +27,7 @@ import com.lechenmusic.data.model.VideoInfo
 import com.lechenmusic.ui.VideoViewModel
 
 /**
- * 分类页面 - 搜索并展示某类影视内容
+ * 分类页面 - 搜索并展示某类影视内容(带缓存+分页)
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,6 +39,8 @@ fun VideoCategoryScreen(
 ) {
     val categoryResults by viewModel.categoryResults.collectAsState()
     val isLoading by viewModel.categoryLoading.collectAsState()
+    val hasMore by viewModel.categoryHasMore.collectAsState()
+    val totalCount by viewModel.categoryTotalCount.collectAsState()
     val searchSourceLoading by viewModel.searchSourceLoading.collectAsState()
     val searchSourceMsg by viewModel.searchSourceMessage.collectAsState()
 
@@ -57,8 +60,25 @@ fun VideoCategoryScreen(
         else -> categoryType
     }
 
+    val listState = rememberLazyListState()
+
     LaunchedEffect(categoryType) {
         viewModel.searchCategory(searchKeyword)
+    }
+
+    // 滚动到底部时自动加载更多
+    val shouldLoadMore by remember {
+        derivedStateOf {
+            val lastVisibleIndex = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            val totalItems = listState.layoutInfo.totalItemsCount
+            lastVisibleIndex >= totalItems - 3 && hasMore && !isLoading
+        }
+    }
+
+    LaunchedEffect(shouldLoadMore) {
+        if (shouldLoadMore) {
+            viewModel.loadMoreCategory()
+        }
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -89,7 +109,18 @@ fun VideoCategoryScreen(
 
         // 顶部栏
         TopAppBar(
-            title = { Text(title, fontWeight = FontWeight.Bold) },
+            title = {
+                Column {
+                    Text(title, fontWeight = FontWeight.Bold)
+                    if (totalCount > 0) {
+                        Text(
+                            "共 $totalCount 部",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            },
             navigationIcon = {
                 IconButton(onClick = onBack) {
                     Icon(Icons.Default.ArrowBack, "返回")
@@ -98,7 +129,7 @@ fun VideoCategoryScreen(
             windowInsets = WindowInsets(0, 0, 0, 0)
         )
 
-        if (isLoading) {
+        if (isLoading && categoryResults.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
@@ -125,6 +156,7 @@ fun VideoCategoryScreen(
             }
         } else {
             LazyColumn(
+                state = listState,
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -140,6 +172,41 @@ fun VideoCategoryScreen(
                         }
                         repeat(3 - row.size) {
                             Spacer(modifier = Modifier.weight(1f))
+                        }
+                    }
+                }
+
+                // 底部加载更多指示器
+                if (hasMore) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                strokeWidth = 2.dp
+                            )
+                        }
+                    }
+                }
+
+                // 已加载全部提示
+                if (!hasMore && categoryResults.size > 20) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                "已显示全部 $totalCount 部",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                            )
                         }
                     }
                 }
