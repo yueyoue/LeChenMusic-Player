@@ -436,6 +436,10 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /** 切换播放源（详情页片源选择用） */
+    // 源切换版本号（每次切换+1，强制 LaunchedEffect 重新触发）
+    private val _switchSourceVersion = MutableStateFlow(0)
+    val switchSourceVersion: StateFlow<Int> = _switchSourceVersion.asStateFlow()
+
     fun switchSource(sourceInfo: VideoInfo) {
         val detail = VideoDetail(
             id = sourceInfo.id,
@@ -451,7 +455,8 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
             episodesTitles = sourceInfo.episodesTitles
         )
         _videoDetail.value = detail
-        logDebug("switchSource", "切换到: ${sourceInfo.displaySourceName}, eps=${sourceInfo.episodes.size}")
+        _switchSourceVersion.value++
+        logDebug("switchSource", "切换到: ${sourceInfo.displaySourceName}, eps=${sourceInfo.episodes.size}, version=${_switchSourceVersion.value}")
     }
 
     // 搜索播放源的加载状态（用于 UI 弹窗提示）

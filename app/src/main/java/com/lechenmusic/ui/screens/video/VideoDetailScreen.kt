@@ -93,14 +93,38 @@ fun VideoDetailScreen(
     }
 
     // 当视频详情变化时加载视频（包括初始加载和切换源）
-    LaunchedEffect(currentDetail?.source, currentDetail?.id, selectedEpisode) {
+    val switchVersion = viewModel.switchSourceVersion.collectAsState().value
+
+    // 初始加载：当 currentDetail 首次有数据时播放
+    LaunchedEffect(currentDetail?.source, currentDetail?.id) {
+        if (switchVersion > 0) return@LaunchedEffect // 切换源由下面的 effect 处理
         val detail = currentDetail ?: return@LaunchedEffect
         val src = detail.toSources().firstOrNull()
-        val ep = src?.episodes?.getOrNull(selectedEpisode)
+        val ep = src?.episodes?.getOrNull(0)
         if (ep != null && ep.url.isNotBlank()) {
             exoPlayer.setMediaItem(MediaItem.fromUri(ep.url))
             exoPlayer.prepare()
             exoPlayer.playWhenReady = true
+        }
+    }
+
+    // 切换源时加载新视频并恢复播放位置
+    LaunchedEffect(switchVersion) {
+        if (switchVersion == 0) return@LaunchedEffect // 初始不触发
+        val detail = currentDetail ?: return@LaunchedEffect
+        val src = detail.toSources().firstOrNull()
+        val ep = src?.episodes?.getOrNull(selectedEpisode)
+        if (ep != null && ep.url.isNotBlank()) {
+            // 保存当前位置（用于切换源后恢复）
+            val savedPosition = exoPlayer.currentPosition.coerceAtLeast(0L)
+            exoPlayer.setMediaItem(MediaItem.fromUri(ep.url))
+            exoPlayer.prepare()
+            exoPlayer.playWhenReady = true
+            // 恢复播放位置
+            if (savedPosition > 0) {
+                kotlinx.coroutines.delay(500)
+                exoPlayer.seekTo(savedPosition)
+            }
         }
     }
 
@@ -309,25 +333,43 @@ fun VideoDetailScreen(
                             kotlinx.coroutines.delay(300)
                         }
                     }
-                    Box(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(start = 48.dp, end = 48.dp, bottom = 4.dp)) {
-                        Slider(
-                            value = progress,
-                            onValueChange = { newValue ->
-                                isDragging = true
-                                progress = newValue
-                            },
-                            onValueChangeFinished = {
-                                val seekTo = (progress * durationMs).toLong()
-                                exoPlayer.seekTo(seekTo)
-                                isDragging = false
-                            },
-                            modifier = Modifier.fillMaxWidth().height(20.dp),
-                            colors = SliderDefaults.colors(
-                                thumbColor = MaterialTheme.colorScheme.primary,
-                                activeTrackColor = MaterialTheme.colorScheme.primary,
-                                inactiveTrackColor = Color.White.copy(alpha = 0.3f)
+                    Box(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(start = 8.dp, end = 8.dp, bottom = 4.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                formatTime(positionMs),
+                                color = Color.White.copy(alpha = 0.7f),
+                                fontSize = 10.sp,
+                                modifier = Modifier.width(40.dp)
                             )
-                        )
+                            Slider(
+                                value = progress,
+                                onValueChange = { newValue ->
+                                    isDragging = true
+                                    progress = newValue
+                                },
+                                onValueChangeFinished = {
+                                    val seekTo = (progress * durationMs).toLong()
+                                    exoPlayer.seekTo(seekTo)
+                                    isDragging = false
+                                },
+                                modifier = Modifier.weight(1f).height(20.dp),
+                                colors = SliderDefaults.colors(
+                                    thumbColor = MaterialTheme.colorScheme.primary,
+                                    activeTrackColor = MaterialTheme.colorScheme.primary,
+                                    inactiveTrackColor = Color.White.copy(alpha = 0.3f)
+                                )
+                            )
+                            Text(
+                                formatTime(durationMs),
+                                color = Color.White.copy(alpha = 0.7f),
+                                fontSize = 10.sp,
+                                modifier = Modifier.width(40.dp),
+                                textAlign = TextAlign.End
+                            )
+                        }
                     }
                 }
             }
