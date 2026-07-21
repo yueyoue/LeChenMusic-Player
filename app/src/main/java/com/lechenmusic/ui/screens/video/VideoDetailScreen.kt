@@ -275,6 +275,34 @@ fun VideoDetailScreen(
                 ) {
                     Icon(Icons.Default.ArrowBack, "退出全屏", tint = Color.White)
                 }
+                // 投屏按钮 (右上)
+                IconButton(
+                    onClick = { showCastSheet = true },
+                    modifier = Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(4.dp)
+                ) {
+                    Icon(
+                        if (castDevice != null) Icons.Default.CastConnected else Icons.Default.Cast,
+                        "投屏",
+                        tint = if (castDevice != null) MaterialTheme.colorScheme.primary else Color.White
+                    )
+                }
+                // 投屏设备选择弹窗
+                com.lechenmusic.dlna.DlnaCastSheet(
+                    isVisible = showCastSheet,
+                    onDismiss = { showCastSheet = false },
+                    onDeviceSelected = { device ->
+                        castDevice = device
+                        castController = com.lechenmusic.dlna.DlnaController(device)
+                        // 投屏当前视频
+                        val detail = currentDetail
+                        val ep = detail?.toSources()?.firstOrNull()?.episodes?.firstOrNull()
+                        if (detail != null && ep != null && ep.url.isNotBlank()) {
+                            kotlinx.coroutines.GlobalScope.launch {
+                                castController?.setUriAndPlay(ep.url, detail.title)
+                            }
+                        }
+                    }
+                )
                 // 播放/暂停 (居中)
                 var fsIsPlaying by remember { mutableStateOf(false) }
                 LaunchedEffect(exoPlayer) {
