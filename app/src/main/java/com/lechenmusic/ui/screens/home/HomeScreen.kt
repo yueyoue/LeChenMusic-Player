@@ -738,7 +738,7 @@ fun HomeScreen(
                                                     onNavigateToVideoDetail(video.source, video.id)
                                                 } else {
                                                     // 豆瓣电影：先搜索 LunaTV 找到源
-                                                    videoViewModel?.searchAndPlay(video.title, video.id)
+                                                    videoViewModel?.searchAndPlay(video.title, video.id, video.year)
                                                     
                                                 }
                                             }
@@ -764,7 +764,7 @@ fun HomeScreen(
                                                 if (video.source.isNotBlank()) {
                                                     onNavigateToVideoDetail(video.source, video.id)
                                                 } else {
-                                                    videoViewModel?.searchAndPlay(video.title, video.id)
+                                                    videoViewModel?.searchAndPlay(video.title, video.id, video.year)
                                                     
                                                 }
                                             }
@@ -790,7 +790,7 @@ fun HomeScreen(
                                                 if (video.source.isNotBlank()) {
                                                     onNavigateToVideoDetail(video.source, video.id)
                                                 } else {
-                                                    videoViewModel?.searchAndPlay(video.title, video.id)
+                                                    videoViewModel?.searchAndPlay(video.title, video.id, video.year)
                                                     
                                                 }
                                             }
@@ -816,7 +816,7 @@ fun HomeScreen(
                                                 if (video.source.isNotBlank()) {
                                                     onNavigateToVideoDetail(video.source, video.id)
                                                 } else {
-                                                    videoViewModel?.searchAndPlay(video.title, video.id)
+                                                    videoViewModel?.searchAndPlay(video.title, video.id, video.year)
                                                     
                                                 }
                                             }

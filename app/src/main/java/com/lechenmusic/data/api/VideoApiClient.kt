@@ -73,20 +73,6 @@ interface DoubanApi {
         @Query("type") type: String = "\u5168\u90E8"
     ): Response<DoubanHotResponse>
 
-    /**
-     * 豆瓣推荐接口(带完整筛选参数)
-     * 参考 Selene-Source DoubanService.fetchDoubanRecommends
-     */
-    @GET("v2/subject/recommend/{kind}")
-    suspend fun getRecommendations(
-        @Path("kind") kind: String,
-        @Query("category") category: String = "\u70ED\u95E8",
-        @Query("region") region: String = "\u5168\u90E8",
-        @Query("year") year: String = "\u5168\u90E8",
-        @Query("sort") sort: String = "T",
-        @Query("start") start: Int = 0,
-        @Query("limit") limit: Int = 20
-    ): Response<DoubanHotResponse>
 }
 
 /**

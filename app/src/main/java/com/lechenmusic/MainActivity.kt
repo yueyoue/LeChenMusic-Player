@@ -658,7 +658,7 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                             onBack = { navController.popBackStack() },
                             onVideoClick = { video ->
                                 // 统一走 searchAndPlay：构造 VideoDetail 后导航
-                                videoViewModel.searchAndPlay(video.title, video.id)
+                                videoViewModel.searchAndPlay(video.title, video.id, video.year)
                             }
                         )
                     }

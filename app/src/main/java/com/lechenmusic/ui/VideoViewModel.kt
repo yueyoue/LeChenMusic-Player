@@ -254,10 +254,11 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
             _homeError.value = null
             try {
                 val doubanApi = DoubanApiClient.getApi()
-                val moviesResp = withContext(Dispatchers.IO) { doubanApi.getRecentHot("movie", limit = 12) }
-                val tvResp = withContext(Dispatchers.IO) { doubanApi.getRecentHot("tv", limit = 12) }
-                val animeResp = withContext(Dispatchers.IO) { doubanApi.getRecentHot("anime", limit = 12) }
-                val showResp = withContext(Dispatchers.IO) { doubanApi.getRecentHot("show", limit = 12) }
+                // 参考 Selene-Source: 各分类使用正确的 category+type 参数
+                val moviesResp = withContext(Dispatchers.IO) { doubanApi.getRecentHot("movie", limit = 12, category = "\u70ED\u95E8", type = "\u5168\u90E8") }
+                val tvResp = withContext(Dispatchers.IO) { doubanApi.getRecentHot("tv", limit = 12, category = "\u6700\u8FD1\u70ED\u95E8", type = "tv") }
+                val animeResp = withContext(Dispatchers.IO) { doubanApi.getRecentHot("movie", limit = 12, category = "\u70ED\u95E8", type = "\u65E5\u672C") }
+                val showResp = withContext(Dispatchers.IO) { doubanApi.getRecentHot("tv", limit = 12, category = "show", type = "show") }
 
                 _homeData.value = HomeRecommendData(
                     continueWatch = _playRecords.value,
@@ -347,7 +348,7 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                         _toastMessage.value = "该源暂无播放资源，正在尝试其他源..."
                         // 尝试用标题搜索其他源
                         if (detail.title.isNotBlank()) {
-                            searchAndPlay(detail.title, detail.doubanId)
+                            searchAndPlay(detail.title, detail.doubanId, detail.year)
                             return@launch
                         }
                     }
@@ -377,7 +378,7 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
      * 2. 搜索结果为空或episodes为空时提示而不是闪退
      * 3. 优先选择标题完全匹配+有episodes的结果
      */
-    fun searchAndPlay(title: String, doubanId: String) {
+    fun searchAndPlay(title: String, doubanId: String, year: String = "") {
         viewModelScope.launch {
             _searchSourceLoading.value = true
             _searchSourceMessage.value = "正在搜索播放源：$title"
@@ -402,16 +403,23 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
 
                 _searchSourceMessage.value = "已找到 $results.size} 个源，正在选择最佳..."
 
-                // 参考 Selene-Source: 标题精确匹配 + 年份 + 类型
+                // 参考 Selene-Source: 精确标题匹配 + 年份匹配 + 类型匹配
                 val normalizedTitle = title.replace(" ", "").lowercase()
                 val matched = validSources.firstOrNull { src ->
                     val srcTitle = src.title.replace(" ", "").lowercase()
-                    srcTitle == normalizedTitle
+                    val titleMatch = srcTitle == normalizedTitle
+                    val yearMatch = year.isBlank() || src.year == year
+                    titleMatch && yearMatch
                 } ?: validSources.firstOrNull { src ->
-                    // 标题包含 + 年份匹配
+                    // 包含匹配 + 年份必须一致(避免 "晚餐" 匹配 "最后的猪肉晚餐")
                     val srcTitle = src.title.replace(" ", "").lowercase()
-                    srcTitle.contains(normalizedTitle)
-                } ?: validSources.firstOrNull()
+                    val containsMatch = srcTitle.contains(normalizedTitle) || normalizedTitle.contains(srcTitle)
+                    val yearMatch = year.isBlank() || src.year == year
+                    containsMatch && yearMatch
+                } ?: validSources.firstOrNull { src ->
+                    // 最后兜底: 标题精确匹配(忽略年份)
+                    src.title.replace(" ", "").lowercase() == normalizedTitle
+                }
 
                 if (matched == null) {
                     _toastMessage.value = "未找到「$title」的播放源"
@@ -617,14 +625,28 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
     // ==================== 分类搜索(缓存+分页) ====================
 
     /**
-     * 分类搜索 - 用豆瓣 API 做筛选浏览(参考 Selene-Source)
+     * 分类搜索 - 用豆瓣 recent_hot API(参考 Selene-Source getCategoryData)
      * @param kind movie/tv/anime/show
-     * @param forceRefresh 强制刷新(忽略筛选条件变化时的重复请求检测)
+     * @param isRefresh 是否刷新(首次或筛选变化)
+     *
+     * 参考 Selene-Source:
+     * - movie: kind=movie, category=热门, type=全部
+     * - tv: kind=tv, category=最近热门, type=tv
+     * - anime: kind=movie, category=热门, type=日本 (anime 用 movie kind)
+     * - variety(show): kind=tv, category=show, type=show
      */
     fun fetchDoubanCategory(kind: String, isRefresh: Boolean = true) {
         categoryCurrentKind = kind
-        val kindMap = mapOf("movie" to "movie", "tv" to "tv", "anime" to "anime", "variety" to "show")
-        val doubanKind = kindMap[kind] ?: "movie"
+
+        // 参考 Selene-Source 的参数映射
+        val apiParams = when (kind) {
+            "movie" -> Triple("movie", "\u70ED\u95E8", "\u5168\u90E8")
+            "tv" -> Triple("tv", "\u6700\u8FD1\u70ED\u95E8", "tv")
+            "anime" -> Triple("movie", "\u70ED\u95E8", "\u65E5\u672C")
+            "variety" -> Triple("tv", "show", "show")
+            else -> Triple("movie", "\u70ED\u95E8", "\u5168\u90E8")
+        }
+        val (doubanKind, defaultCategory, defaultType) = apiParams
 
         viewModelScope.launch {
             if (isRefresh) {
@@ -634,24 +656,27 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             val filters = _categoryFilters.value
-            // 记录发起请求时的筛选状态(参考 Selene-Source 的 requestFilterState)
-            val requestFilterKey = "${doubanKind}_${filters.category}_${filters.region}_${filters.year}_${filters.sort}_${categoryPage}"
+            // 根据筛选条件决定 category 和 type
+            // 如果用户选了筛选，用筛选值；否则用默认值
+            val useCategory = if (filters.category != "\u70ED\u95E8" && filters.category != defaultCategory) filters.category else defaultCategory
+            val useType = if (filters.region != "\u5168\u90E8") filters.region else defaultType
+
+            // 记录请求时的筛选状态(参考 Selene-Source requestFilterState)
+            val requestFilterKey = "${doubanKind}_${useCategory}_${useType}_${filters.year}_${filters.sort}_${categoryPage}"
 
             try {
                 val doubanApi = DoubanApiClient.getApi()
                 val response = withContext(Dispatchers.IO) {
-                    doubanApi.getRecommendations(
+                    doubanApi.getRecentHot(
                         kind = doubanKind,
-                        category = filters.category,
-                        region = if (filters.region != "\u5168\u90E8") filters.region else "\u5168\u90E8",
-                        year = if (filters.year != "\u5168\u90E8") filters.year else "\u5168\u90E8",
-                        sort = filters.sort,
                         start = categoryPage * PAGE_SIZE,
-                        limit = PAGE_SIZE
+                        limit = PAGE_SIZE,
+                        category = useCategory,
+                        type = useType
                     )
                 }
 
-                // 检查筛选状态是否已变化(参考 Selene-Source)
+                // 检查筛选状态是否已变化
                 val currentFilterKey = "${doubanKind}_${_categoryFilters.value.category}_${_categoryFilters.value.region}_${_categoryFilters.value.year}_${_categoryFilters.value.sort}_${categoryPage}"
                 if (requestFilterKey != currentFilterKey) {
                     logDebug("fetchDoubanCategory", "筛选状态已变化,忽略过期响应")
@@ -671,7 +696,7 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                     categoryPage++
                     _categoryHasMore.value = items.size >= PAGE_SIZE
                     _categoryTotalCount.value = response.body()?.total ?: _categoryResults.value.size
-                    logDebug("fetchDoubanCategory", "完成: kind=$doubanKind, page=${categoryPage-1}, got=${items.size}, total=${_categoryTotalCount.value}")
+                    logDebug("fetchDoubanCategory", "完成: kind=$doubanKind, cat=$useCategory, type=$useType, page=${categoryPage-1}, got=${items.size}")
                 } else {
                     logDebug("fetchDoubanCategory", "请求失败: ${response.code()}")
                     if (isRefresh) _categoryResults.value = emptyList()
@@ -687,7 +712,7 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /** 加载更多(豆瓣 API 分页) */
+    /** 加载更多(豆瓣 recent_hot API 分页) */
     fun loadMoreCategory() {
         if (!_categoryHasMore.value || categoryIsLoadingMore) return
         categoryIsLoadingMore = true
@@ -695,18 +720,24 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 val doubanApi = DoubanApiClient.getApi()
                 val filters = _categoryFilters.value
-                val kindMap = mapOf("movie" to "movie", "tv" to "tv", "anime" to "anime", "variety" to "show")
-                val doubanKind = kindMap[categoryCurrentKind] ?: "movie"
+                val apiParams = when (categoryCurrentKind) {
+                    "movie" -> Triple("movie", "\u70ED\u95E8", "\u5168\u90E8")
+                    "tv" -> Triple("tv", "\u6700\u8FD1\u70ED\u95E8", "tv")
+                    "anime" -> Triple("movie", "\u70ED\u95E8", "\u65E5\u672C")
+                    "variety" -> Triple("tv", "show", "show")
+                    else -> Triple("movie", "\u70ED\u95E8", "\u5168\u90E8")
+                }
+                val (doubanKind, defaultCategory, defaultType) = apiParams
+                val useCategory = if (filters.category != "\u70ED\u95E8" && filters.category != defaultCategory) filters.category else defaultCategory
+                val useType = if (filters.region != "\u5168\u90E8") filters.region else defaultType
 
                 val response = withContext(Dispatchers.IO) {
-                    doubanApi.getRecommendations(
+                    doubanApi.getRecentHot(
                         kind = doubanKind,
-                        category = filters.category,
-                        region = if (filters.region != "\u5168\u90E8") filters.region else "\u5168\u90E8",
-                        year = if (filters.year != "\u5168\u90E8") filters.year else "\u5168\u90E8",
-                        sort = filters.sort,
                         start = categoryPage * PAGE_SIZE,
-                        limit = PAGE_SIZE
+                        limit = PAGE_SIZE,
+                        category = useCategory,
+                        type = useType
                     )
                 }
 
