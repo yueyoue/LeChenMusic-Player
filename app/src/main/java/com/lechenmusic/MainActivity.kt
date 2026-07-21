@@ -657,13 +657,8 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                             categoryType = type,
                             onBack = { navController.popBackStack() },
                             onVideoClick = { video ->
-                                if (video.source.isNotBlank()) {
-                                    // 有 source 的直接加载详情播放
-                                    navController.navigate(Screen.VideoDetail.createRoute(video.source, video.id))
-                                } else {
-                                    // 豆瓣电影：搜索后直接播放
-                                    videoViewModel.searchAndPlay(video.title, video.id)
-                                }
+                                // 统一走 searchAndPlay：构造 VideoDetail 后导航
+                                videoViewModel.searchAndPlay(video.title, video.id)
                             }
                         )
                     }
