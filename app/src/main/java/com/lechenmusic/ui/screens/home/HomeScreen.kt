@@ -615,41 +615,6 @@ fun HomeScreen(
                                 videoViewModel?.loadPlayRecords()
                             }
                         }
-                        // searchAndPlay 完成后跳转详情页（而非直接播放）
-                        val navigateToDetail = videoViewModel?.navigateToDetail?.collectAsState()?.value ?: false
-                        val searchDetail = videoViewModel?.videoDetail?.collectAsState()?.value
-                        androidx.compose.runtime.LaunchedEffect(navigateToDetail) {
-                            if (navigateToDetail && searchDetail != null) {
-                                videoViewModel?.consumeNavigateToDetail()
-                                onNavigateToVideoDetail(searchDetail.source, searchDetail.id)
-                            }
-                        }
-                        // Bug修复：搜索播放源时显示加载弹窗
-                        val searchSourceLoading = videoViewModel?.searchSourceLoading?.collectAsState()?.value ?: false
-                        val searchSourceMsg = videoViewModel?.searchSourceMessage?.collectAsState()?.value ?: ""
-                        if (searchSourceLoading) {
-                            AlertDialog(
-                                onDismissRequest = { /* 不允许关闭 */ },
-                                title = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        CircularProgressIndicator(
-                                            modifier = Modifier.size(20.dp),
-                                            strokeWidth = 2.dp
-                                        )
-                                        Spacer(modifier = Modifier.width(12.dp))
-                                        Text("搜索播放源", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                                    }
-                                },
-                                text = {
-                                    Text(
-                                        searchSourceMsg.ifBlank { "正在搜索，请稍候..." },
-                                        fontSize = 14.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                },
-                                confirmButton = {}
-                            )
-                        }
                     }
 
                     if (!isVideoLoggedIn) {
@@ -894,6 +859,44 @@ fun HomeScreen(
                         }
                     }
                 }
+            }
+        }
+
+        // ===== 影视导航逻辑（放在 LazyColumn 外面，避免滚动时被回收） =====
+        if (homeMode == "video") {
+            val navigateToDetail = videoViewModel?.navigateToDetail?.collectAsState()?.value ?: false
+            val searchDetail = videoViewModel?.videoDetail?.collectAsState()?.value
+            androidx.compose.runtime.LaunchedEffect(navigateToDetail) {
+                if (navigateToDetail && searchDetail != null) {
+                    videoViewModel?.consumeNavigateToDetail()
+                    onNavigateToVideoDetail(searchDetail.source, searchDetail.id)
+                }
+            }
+            // 搜索播放源时显示加载弹窗
+            val searchSourceLoading = videoViewModel?.searchSourceLoading?.collectAsState()?.value ?: false
+            val searchSourceMsg = videoViewModel?.searchSourceMessage?.collectAsState()?.value ?: ""
+            if (searchSourceLoading) {
+                AlertDialog(
+                    onDismissRequest = { /* 不允许关闭 */ },
+                    title = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text("搜索播放源", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        }
+                    },
+                    text = {
+                        Text(
+                            searchSourceMsg.ifBlank { "正在搜索，请稍候..." },
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    },
+                    confirmButton = {}
+                )
             }
         }
 

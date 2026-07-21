@@ -354,11 +354,11 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
             _searchSourceMessage.value = "正在搜索播放源：$title"
             _detailLoading.value = true
             try {
-                logDebug("searchAndPlay", "开始搜索: $title, server=${'$'}{videoServerUrl.value}")
+                logDebug("searchAndPlay", "开始搜索: $title, server=${videoServerUrl.value}")
                 val api = VideoApiClient.getApi(videoServerUrl.value)
                 val searchResp = withContext(Dispatchers.IO) { api.search(title) }
                 val results = searchResp.body()?.results ?: emptyList()
-                logDebug("searchAndPlay", "搜索返回: ${'$'}{results.size} 个源")
+                logDebug("searchAndPlay", "搜索返回: ${results.size} 个源")
 
                 // 保存所有有 episodes 的源（用于片源切换）
                 val validSources = results.filter { it.episodes.isNotEmpty() }
@@ -371,23 +371,23 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                     return@launch
                 }
 
-                _searchSourceMessage.value = "已找到 ${'$'}{results.size} 个源，正在选择最佳..."
+                _searchSourceMessage.value = "已找到 $results.size} 个源，正在选择最佳..."
 
                 // 优先选择标题完全匹配 + 有 episodes 的结果
                 val matched = validSources.firstOrNull {
                     it.title.contains(title, ignoreCase = true)
                 } ?: validSources.firstOrNull() ?: results.first()
 
-                logDebug("searchAndPlay", "匹配: title=${'$'}{matched.title}, source=${'$'}{matched.source}, eps=${'$'}{matched.episodes.size}")
+                logDebug("searchAndPlay", "匹配: title=${matched.title}, source=${matched.source}, eps=${matched.episodes.size}")
 
                 if (matched.episodes.isEmpty()) {
-                    _toastMessage.value = "「${'$'}{matched.title}」暂无可播放资源"
+                    _toastMessage.value = "「$matched.title}」暂无可播放资源"
                     _searchSourceLoading.value = false
                     _detailLoading.value = false
                     return@launch
                 }
 
-                _searchSourceMessage.value = "已找到播放源：${'$'}{matched.displaySourceName}，共 ${'$'}{matched.episodes.size} 集"
+                _searchSourceMessage.value = "已找到播放源：$matched.displaySourceName}，共 $matched.episodes.size} 集"
 
                 // 构造 VideoDetail
                 val detail = VideoDetail(
@@ -403,14 +403,14 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                     episodes = matched.episodes,
                     episodesTitles = matched.episodesTitles
                 )
-                logDebug("searchAndPlay", "VideoDetail OK, episodes=${'$'}{detail.episodes.size}, sources=${'$'}{validSources.size}")
+                logDebug("searchAndPlay", "VideoDetail OK, episodes=${detail.episodes.size}, sources=${validSources.size}")
                 _videoDetail.value = detail
                 // 先设置导航，再关闭加载（保证弹窗显示到导航完成）
                 _navigateToDetail.value = true
                 logDebug("searchAndPlay", "完成, navigateToDetail=true")
             } catch (e: Exception) {
-                logDebug("searchAndPlay", "异常: ${'$'}{e.javaClass.simpleName}: ${'$'}{e.message}")
-                _toastMessage.value = "搜索播放源失败: ${'$'}{e.message}"
+                logDebug("searchAndPlay", "异常: ${e.javaClass.simpleName}: ${e.message}")
+                _toastMessage.value = "搜索播放源失败: $e.message}"
                 reportVideoError("searchAndPlay", "搜索播放源失败: $title", e)
                 _searchSourceLoading.value = false
                 _detailLoading.value = false
