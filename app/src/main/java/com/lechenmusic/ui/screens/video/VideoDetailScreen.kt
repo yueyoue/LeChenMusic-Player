@@ -98,46 +98,15 @@ fun VideoDetailScreen(
             }
     }
 
-    // 当视频详情变化时加载视频（包括初始加载和切换源）
-    val switchVersion = viewModel.switchSourceVersion.collectAsState().value
-
-    // 统一处理：初始加载 + 切换源
-    // 用 switchVersion 作为 key，每次切换源都会触发
-    LaunchedEffect(switchVersion) {
+    // 当视频详情变化时加载视频（包括初始加载）
+    LaunchedEffect(currentDetail) {
         val detail = currentDetail ?: return@LaunchedEffect
         val src = detail.toSources().firstOrNull()
-        val ep = src?.episodes?.getOrNull(selectedEpisode)
+        val ep = src?.episodes?.getOrNull(0)
         if (ep != null && ep.url.isNotBlank()) {
-            // 保存当前位置（切换源时恢复）
-            val savedPosition = if (switchVersion > 0) exoPlayer.currentPosition.coerceAtLeast(0L) else 0L
-            // 停止当前播放
-            exoPlayer.stop()
             exoPlayer.setMediaItem(MediaItem.fromUri(ep.url))
             exoPlayer.prepare()
             exoPlayer.playWhenReady = true
-            // 恢复播放位置
-            if (savedPosition > 0) {
-                kotlinx.coroutines.delay(500)
-                if (exoPlayer.playbackState == Player.STATE_READY || exoPlayer.playbackState == Player.STATE_BUFFERING) {
-                    exoPlayer.seekTo(savedPosition)
-                }
-            }
-        }
-    }
-
-    // 当 currentDetail 首次有数据时触发加载（searchAndPlay 完成后）
-    LaunchedEffect(currentDetail) {
-        if (currentDetail != null && switchVersion == 0) {
-            // 模拟 switchVersion=1 来触发上面的 effect
-            viewModel.switchSourceVersion.let { /* 不需要额外操作，currentDetail 变化会自动触发 */ }
-            val detail = currentDetail ?: return@LaunchedEffect
-            val src = detail.toSources().firstOrNull()
-            val ep = src?.episodes?.getOrNull(0)
-            if (ep != null && ep.url.isNotBlank()) {
-                exoPlayer.setMediaItem(MediaItem.fromUri(ep.url))
-                exoPlayer.prepare()
-                exoPlayer.playWhenReady = true
-            }
         }
     }
 
@@ -554,13 +523,27 @@ fun VideoDetailScreen(
                                 FilterChip(
                                     selected = selectedSource == index,
                                     onClick = {
-                                        viewModel.logDebug("片源切换", "点击: index=$index, source=${src.source}, name=${src.sourceName}, eps=${src.episodes.size}")
+                                        viewModel.logDebug("片源切换", "点击: index=$index, source=${src.source}, eps=${src.episodes.size}")
                                         selectedSource = index
                                         selectedEpisode = 0
                                         val info = allSearchSources.firstOrNull { it.source == src.source }
-                                        viewModel.logDebug("片源切换", "匹配info: ${info != null}, source=${info?.source}, eps=${info?.episodes?.size}")
-                                        if (info != null) {
+                                        if (info != null && info.episodes.isNotEmpty()) {
+                                            // 保存当前位置
+                                            val savedPosition = exoPlayer.currentPosition.coerceAtLeast(0L)
+                                            // 更新 ViewModel（UI 刷新）
                                             viewModel.switchSource(info)
+                                            // 直接加载视频（参考 Selene-Source startPlay）
+                                            val url = info.episodes[0]
+                                            if (url.isNotBlank()) {
+                                                exoPlayer.stop()
+                                                exoPlayer.setMediaItem(MediaItem.fromUri(url))
+                                                exoPlayer.prepare()
+                                                exoPlayer.playWhenReady = true
+                                                // 恢复播放位置
+                                                if (savedPosition > 0) {
+                                                    exoPlayer.seekTo(savedPosition)
+                                                }
+                                            }
                                         }
                                     },
                                     label = { Text("${src.sourceName} (${src.episodes.size}集)", fontSize = 12.sp) }
@@ -587,7 +570,15 @@ fun VideoDetailScreen(
                 if (currentEpisodes.size == 1) {
                     item {
                         Surface(
-                            modifier = Modifier.padding(horizontal = 16.dp).clickable { selectedEpisode = 0 },
+                            modifier = Modifier.padding(horizontal = 16.dp).clickable {
+                                selectedEpisode = 0
+                                val url = currentEpisodes[0]
+                                if (url.isNotBlank()) {
+                                    exoPlayer.setMediaItem(MediaItem.fromUri(url))
+                                    exoPlayer.prepare()
+                                    exoPlayer.playWhenReady = true
+                                }
+                            },
                             shape = RoundedCornerShape(8.dp),
                             color = if (selectedEpisode == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
                         ) {
@@ -605,7 +596,14 @@ fun VideoDetailScreen(
                             rowEpisodes.forEachIndexed { colIndex, ep ->
                                 val globalIndex = rowIndex * 6 + colIndex
                                 Surface(
-                                    modifier = Modifier.weight(1f).clickable { selectedEpisode = globalIndex },
+                                    modifier = Modifier.weight(1f).clickable {
+                                        selectedEpisode = globalIndex
+                                        if (ep.isNotBlank()) {
+                                            exoPlayer.setMediaItem(MediaItem.fromUri(ep))
+                                            exoPlayer.prepare()
+                                            exoPlayer.playWhenReady = true
+                                        }
+                                    },
                                     shape = RoundedCornerShape(6.dp),
                                     color = if (selectedEpisode == globalIndex) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
                                 ) {
