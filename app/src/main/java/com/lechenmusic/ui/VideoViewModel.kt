@@ -78,6 +78,13 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
     private val _allSearchSources = MutableStateFlow<List<VideoInfo>>(emptyList())
     val allSearchSources: StateFlow<List<VideoInfo>> = _allSearchSources.asStateFlow()
 
+    // 源测速结果: source key -> ping ms (-1 = 超时, 0 = 未测试)
+    private val _sourceSpeeds = MutableStateFlow<Map<String, Long>>(emptyMap())
+    val sourceSpeeds: StateFlow<Map<String, Long>> = _sourceSpeeds.asStateFlow()
+
+    private val _speedTesting = MutableStateFlow(false)
+    val speedTesting: StateFlow<Boolean> = _speedTesting.asStateFlow()
+
     private val _searchLoading = MutableStateFlow(false)
     val searchLoading: StateFlow<Boolean> = _searchLoading.asStateFlow()
 
@@ -590,6 +597,43 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                 reportVideoError("searchCategory", "分类搜索失败: $keyword", e)
             }
             _categoryLoading.value = false
+        }
+    }
+
+    /**
+     * 测试所有源的响应速度（ping m3u8 URL）
+     * 按速度排序后更新 allSearchSources
+     */
+    fun testSourceSpeeds() {
+        val sources = _allSearchSources.value
+        if (sources.isEmpty()) return
+        viewModelScope.launch {
+            _speedTesting.value = true
+            val speeds = mutableMapOf<String, Long>()
+            val client = okhttp3.OkHttpClient.Builder()
+                .connectTimeout(5, java.util.concurrent.TimeUnit.SECONDS)
+                .readTimeout(5, java.util.concurrent.TimeUnit.SECONDS)
+                .build()
+
+            sources.forEach { source ->
+                val url = source.episodes.firstOrNull()
+                if (url != null && url.isNotBlank()) {
+                    val ping = withContext(Dispatchers.IO) {
+                        try {
+                            val start = System.currentTimeMillis()
+                            val request = okhttp3.Request.Builder().url(url).head().build()
+                            client.newCall(request).execute().use { resp }
+                            System.currentTimeMillis() - start
+                        } catch (_: Exception) { -1L }
+                    }
+                    speeds[source.source] = ping
+                    _sourceSpeeds.value = speeds.toMap()
+                }
+            }
+            _speedTesting.value = false
+            // 按速度排序（快的在前，超时的排最后）
+            val sorted = sources.sortedBy { speeds[it.source] ?: Long.MAX_VALUE }
+            _allSearchSources.value = sorted
         }
     }
 

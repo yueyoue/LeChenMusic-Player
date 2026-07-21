@@ -494,9 +494,12 @@ fun VideoDetailScreen(
                 }
             }
 
-            // ===== 片源选择（去重+限制数量） =====
+            // ===== 片源选择 =====
+            val sourceSpeeds by viewModel.sourceSpeeds.collectAsState()
+            val speedTesting by viewModel.speedTesting.collectAsState()
+            var showSourcePanel by remember { mutableStateOf(false) }
+
             val displaySources = if (allSearchSources.size > 1) {
-                // 去重：同名源只保留第一个，限制最多20个
                 allSearchSources
                     .groupBy { it.source }
                     .values.map { group -> group.first() }
@@ -516,38 +519,182 @@ fun VideoDetailScreen(
             if (displaySources.size > 1) {
                 item {
                     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                        Text("片源 (${displaySources.size})", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("片源 (${allSearchSources.size})", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                            Row {
+                                // 测速按钮
+                                TextButton(
+                                    onClick = { viewModel.testSourceSpeeds() },
+                                    enabled = !speedTesting
+                                ) {
+                                    if (speedTesting) {
+                                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                    }
+                                    Text(if (speedTesting) "测速中..." else "\u26A1 测速", fontSize = 12.sp)
+                                }
+                                // 展开按钮
+                                TextButton(onClick = { showSourcePanel = true }) {
+                                    Text("展开 \u25B6", fontSize = 12.sp)
+                                }
+                            }
+                        }
                         Spacer(modifier = Modifier.height(6.dp))
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             itemsIndexed(displaySources) { index, src ->
+                                val speed = sourceSpeeds[src.source]
                                 FilterChip(
                                     selected = selectedSource == index,
                                     onClick = {
-                                        viewModel.logDebug("片源切换", "点击: index=$index, source=${src.source}, eps=${src.episodes.size}")
-                                        selectedSource = index
-                                        selectedEpisode = 0
                                         val info = allSearchSources.firstOrNull { it.source == src.source }
                                         if (info != null && info.episodes.isNotEmpty()) {
-                                            // 保存当前位置
                                             val savedPosition = exoPlayer.currentPosition.coerceAtLeast(0L)
-                                            // 更新 ViewModel（UI 刷新）
+                                            selectedSource = index
+                                            selectedEpisode = 0
                                             viewModel.switchSource(info)
-                                            // 直接加载视频（参考 Selene-Source startPlay）
                                             val url = info.episodes[0]
                                             if (url.isNotBlank()) {
                                                 exoPlayer.stop()
                                                 exoPlayer.setMediaItem(MediaItem.fromUri(url))
                                                 exoPlayer.prepare()
                                                 exoPlayer.playWhenReady = true
-                                                // 恢复播放位置
                                                 if (savedPosition > 0) {
-                                                    exoPlayer.seekTo(savedPosition)
+                                                    val seekPos = savedPosition
+                                                    exoPlayer.addListener(object : Player.Listener {
+                                                        override fun onPlaybackStateChanged(state: Int) {
+                                                            if (state == Player.STATE_READY) {
+                                                                exoPlayer.seekTo(seekPos)
+                                                                exoPlayer.removeListener(this)
+                                                            }
+                                                        }
+                                                    })
                                                 }
                                             }
                                         }
                                     },
-                                    label = { Text("${src.sourceName} (${src.episodes.size}集)", fontSize = 12.sp) }
+                                    label = {
+                                        Text(
+                                            buildString {
+                                                append("${src.sourceName}")
+                                                if (speed != null && speed > 0) append(" ${speed}ms")
+                                                else if (speed == -1L) append(" 超时")
+                                            },
+                                            fontSize = 11.sp
+                                        )
+                                    }
                                 )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ===== 源列表弹窗（展开按钮触发） =====
+            if (showSourcePanel) {
+                ModalBottomSheet(
+                    onDismissRequest = { showSourcePanel = false },
+                    containerColor = MaterialTheme.colorScheme.surface
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("全部源 (${allSearchSources.size})", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                            Row {
+                                TextButton(
+                                    onClick = { viewModel.testSourceSpeeds() },
+                                    enabled = !speedTesting
+                                ) {
+                                    Text(if (speedTesting) "测速中..." else "\u26A1 测速排序")
+                                }
+                                IconButton(onClick = { showSourcePanel = false }) {
+                                    Icon(Icons.Default.Close, "关闭")
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        LazyColumn(
+                            modifier = Modifier.heightIn(max = 400.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            items(allSearchSources.size) { index ->
+                                val info = allSearchSources[index]
+                                val speed = sourceSpeeds[info.source]
+                                val isCurrent = currentDetail?.source == info.source
+                                Surface(
+                                    onClick = {
+                                        if (info.episodes.isNotEmpty()) {
+                                            val savedPosition = exoPlayer.currentPosition.coerceAtLeast(0L)
+                                            selectedEpisode = 0
+                                            viewModel.switchSource(info)
+                                            val url = info.episodes[0]
+                                            if (url.isNotBlank()) {
+                                                exoPlayer.stop()
+                                                exoPlayer.setMediaItem(MediaItem.fromUri(url))
+                                                exoPlayer.prepare()
+                                                exoPlayer.playWhenReady = true
+                                                if (savedPosition > 0) {
+                                                    val seekPos = savedPosition
+                                                    exoPlayer.addListener(object : Player.Listener {
+                                                        override fun onPlaybackStateChanged(state: Int) {
+                                                            if (state == Player.STATE_READY) {
+                                                                exoPlayer.seekTo(seekPos)
+                                                                exoPlayer.removeListener(this)
+                                                            }
+                                                        }
+                                                    })
+                                                }
+                                            }
+                                            showSourcePanel = false
+                                        }
+                                    },
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (isCurrent) MaterialTheme.colorScheme.primaryContainer
+                                    else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        // 源名
+                                        Text(
+                                            info.displaySourceName.ifBlank { info.source },
+                                            fontSize = 14.sp,
+                                            fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        // 集数
+                                        Text(
+                                            "${info.episodes.size}集",
+                                            fontSize = 12.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        // 速度
+                                        Text(
+                                            when {
+                                                speed == null -> "-"
+                                                speed < 0 -> "超时"
+                                                else -> "${speed}ms"
+                                            },
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            color = when {
+                                                speed == null -> MaterialTheme.colorScheme.onSurfaceVariant
+                                                speed < 0 -> Color.Red
+                                                speed < 500 -> Color(0xFF4CAF50)
+                                                speed < 1000 -> Color(0xFFFF9800)
+                                                else -> Color.Red
+                                            }
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
