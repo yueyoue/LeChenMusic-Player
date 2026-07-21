@@ -104,8 +104,9 @@ fun VideoDetailScreen(
     }
 
     // 内联播放器控件自动隐藏(3秒无操作)
+    // 初始不隐藏，用户交互后开始计时
     LaunchedEffect(inlineInteractionCount) {
-        if (exoPlayer.isPlaying) {
+        if (inlineInteractionCount > 0 && exoPlayer.isPlaying) {
             inlineControlsVisible = true
             kotlinx.coroutines.delay(3000)
             if (exoPlayer.isPlaying) inlineControlsVisible = false
@@ -113,7 +114,7 @@ fun VideoDetailScreen(
     }
     // 全屏播放器控件自动隐藏(3秒无操作)
     LaunchedEffect(fsInteractionCount) {
-        if (exoPlayer.isPlaying) {
+        if (fsInteractionCount > 0 && exoPlayer.isPlaying) {
             fsControlsVisible = true
             kotlinx.coroutines.delay(3000)
             if (exoPlayer.isPlaying) fsControlsVisible = false
@@ -163,8 +164,10 @@ fun VideoDetailScreen(
         }
     }
 
-    // 返回时立即停止播放(避免返回首页后小屏播放器残留)
+    // 返回时立即停止播放+隐藏画面(避免返回首页后小屏播放器残留)
+    var isNavigatingBack by remember { mutableStateOf(false) }
     BackHandler {
+        isNavigatingBack = true
         exoPlayer.stop()
         onBack()
     }
@@ -328,6 +331,11 @@ fun VideoDetailScreen(
                         .aspectRatio(16f / 9f)
                         .background(Color.Black)
                 ) {
+                    if (isNavigatingBack) {
+                        // 返回时显示黑色遮罩，避免残影
+                        Box(modifier = Modifier.fillMaxSize().background(Color.Black))
+                        return@item
+                    }
                     // 视频画面（无内置控制器）
                     AndroidView(
                         factory = { ctx ->

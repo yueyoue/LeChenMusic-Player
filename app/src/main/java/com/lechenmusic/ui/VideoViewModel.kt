@@ -626,23 +626,17 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // ==================== 分类搜索(缓存+分页) ====================
+    // ==================== 分类搜索(豆瓣 recommend API + recent_hot) ====================
 
     /**
-     * 分类搜索 - 用豆瓣 recent_hot API(参考 Selene-Source)
+     * 分类搜索 - 参考 Selene-Source
+     * - 无筛选时用 recent_hot API(快，简单)
+     * - 有筛选时用 recommend API(支持类型/地区/年份/排序组合)
      *
-     * 各分类参数映射(参考 Selene-Source getCategoryData):
-     * - 电影: kind=movie, 默认 category=热门, type=全部
-     *   - 一级分类: category=热门/最新/豆瓣高分/冷门佳片
-     *   - 类型筛选: category=喜剧/爱情/动作/科幻/... (覆盖一级)
-     *   - 地区筛选: type=华语/欧美/韩国/日本/中国大陆/美国/...
-     *   - 年份筛选: category=2025/2024/2023/2020年代/... (覆盖一级)
-     * - 剧集: kind=tv, 默认 category=最近热门, type=tv
-     *   - 地区筛选: type=tv(国产剧)/美剧/日剧/韩剧/...
-     * - 动漫: kind=movie, 默认 category=热门, type=日本
-     *   - 地区筛选: type=日本/美国/中国大陆/...
-     * - 综艺: kind=tv, 默认 category=show, type=show
-     *   - 地区筛选: type=show(内地综艺)/港台综艺/...
+     * recommend API 参数(参考 Selene-Source fetchDoubanRecommends):
+     * - selected_categories: JSON, 如 {"\u7C7B\u578B":"\u559C\u5267"}
+     * - tags: 逗号分隔, 如 "\u559C\u5267,\u97E9\u56FD,2025"
+     * - sort: T/U/R/S
      */
     fun fetchDoubanCategory(kind: String, isRefresh: Boolean = true) {
         categoryCurrentKind = kind
@@ -655,29 +649,49 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             val filters = _categoryFilters.value
-            val params = buildDoubanParams(kind, filters)
-            val (doubanKind, useCategory, useType) = params
+            val hasFilters = filters.category != "\u70ED\u95E8" || filters.region != "\u5168\u90E8" ||
+                    filters.year != "\u5168\u90E8" || filters.sort != "T"
 
             // 记录请求时的筛选状态
-            val requestFilterKey = "${doubanKind}_${useCategory}_${useType}_${categoryPage}"
+            val requestFilterKey = "${kind}_${filters.category}_${filters.region}_${filters.year}_${filters.sort}_${categoryPage}"
 
             try {
                 val doubanApi = DoubanApiClient.getApi()
+                val doubanKind = when (kind) {
+                    "anime" -> "movie"
+                    "variety" -> "tv"
+                    else -> kind
+                }
+
                 val response = withContext(Dispatchers.IO) {
-                    doubanApi.getRecentHot(
-                        kind = doubanKind,
-                        start = categoryPage * PAGE_SIZE,
-                        limit = PAGE_SIZE,
-                        category = useCategory,
-                        type = useType
-                    )
+                    if (!hasFilters) {
+                        // 无筛选: 用 recent_hot(快)
+                        val (defCat, defType) = getDefaultParams(kind)
+                        doubanApi.getRecentHot(
+                            kind = doubanKind,
+                            start = categoryPage * PAGE_SIZE,
+                            limit = PAGE_SIZE,
+                            category = defCat,
+                            type = defType
+                        )
+                    } else {
+                        // 有筛选: 用 recommend API(支持组合筛选)
+                        val (tags, selectedCategories) = buildRecommendParams(kind, filters)
+                        doubanApi.getRecommendations(
+                            kind = doubanKind,
+                            start = categoryPage * PAGE_SIZE,
+                            count = PAGE_SIZE,
+                            selectedCategories = selectedCategories,
+                            tags = tags,
+                            sort = if (filters.sort != "T") filters.sort else ""
+                        )
+                    }
                 }
 
                 // 检查筛选状态是否已变化
-                val currentFilters = _categoryFilters.value
-                val currentParams = buildDoubanParams(categoryCurrentKind, currentFilters)
-                val currentFilterKey = "${currentParams.first}_${currentParams.second}_${currentParams.third}_${categoryPage}"
-                if (requestFilterKey != currentFilterKey) {
+                val curFilters = _categoryFilters.value
+                val curKey = "${kind}_${curFilters.category}_${curFilters.region}_${curFilters.year}_${curFilters.sort}_${categoryPage}"
+                if (requestFilterKey != curKey) {
                     logDebug("fetchDoubanCategory", "筛选状态已变化,忽略过期响应")
                     return@launch
                 }
@@ -695,7 +709,7 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                     categoryPage++
                     _categoryHasMore.value = items.size >= PAGE_SIZE
                     _categoryTotalCount.value = response.body()?.total ?: _categoryResults.value.size
-                    logDebug("fetchDoubanCategory", "完成: kind=$doubanKind, cat=$useCategory, type=$useType, page=${categoryPage-1}, got=${items.size}")
+                    logDebug("fetchDoubanCategory", "完成: kind=$doubanKind, filters=$hasFilters, page=${categoryPage-1}, got=${items.size}")
                 } else {
                     logDebug("fetchDoubanCategory", "请求失败: ${response.code()}")
                     if (isRefresh) _categoryResults.value = emptyList()
@@ -711,47 +725,75 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /**
-     * 根据分类类型和筛选条件构建豆瓣API参数(参考 Selene-Source)
-     * @return Triple(doubanKind, category, type)
-     */
-    private fun buildDoubanParams(kind: String, filters: CategoryFilters): Triple<String, String, String> {
-        return when (kind) {
-            "movie" -> {
-                // 年份优先级最高(覆盖一级分类)
-                val cat = when {
-                    filters.year != "\u5168\u90E8" -> filters.year
-                    filters.category != "\u70ED\u95E8" -> filters.category
-                    else -> "\u70ED\u95E8"
-                }
-                val type = if (filters.region != "\u5168\u90E8") filters.region else "\u5168\u90E8"
-                Triple("movie", cat, type)
-            }
-            "tv" -> {
-                // 剧集: 最近热门, type=tv/美剧/日剧/韩剧/...
-                val type = when {
-                    filters.region != "\u5168\u90E8" -> filters.region
-                    else -> "tv"
-                }
-                Triple("tv", "\u6700\u8FD1\u70ED\u95E8", type)
-            }
-            "anime" -> {
-                // 动漫: 热门, type=日本/美国/中国大陆/...
-                val type = when {
-                    filters.region != "\u5168\u90E8" -> filters.region
-                    else -> "\u65E5\u672C"
-                }
-                Triple("movie", "\u70ED\u95E8", type)
-            }
-            "variety" -> {
-                // 综艺: show, type=show
-                Triple("tv", "show", "show")
-            }
-            else -> Triple("movie", "\u70ED\u95E8", "\u5168\u90E8")
-        }
+    /** 无筛选时的默认参数 */
+    private fun getDefaultParams(kind: String): Pair<String, String> = when (kind) {
+        "movie" -> "\u70ED\u95E8" to "\u5168\u90E8"
+        "tv" -> "\u6700\u8FD1\u70ED\u95E8" to "tv"
+        "anime" -> "\u70ED\u95E8" to "\u65E5\u672C"
+        "variety" -> "show" to "show"
+        else -> "\u70ED\u95E8" to "\u5168\u90E8"
     }
 
-    /** 加载更多(豆瓣 recent_hot API 分页) */
+    /**
+     * 构建 recommend API 参数(参考 Selene-Source)
+     * @return Pair(tags, selectedCategoriesJson)
+     */
+    private fun buildRecommendParams(kind: String, filters: CategoryFilters): Pair<String, String> {
+        val tags = mutableListOf<String>()
+        val categories = mutableMapOf<String, String>()
+
+        when (kind) {
+            "movie" -> {
+                // 类型(如喜剧/动作)
+                if (filters.category != "\u70ED\u95E8") {
+                    categories["\u7C7B\u578B"] = filters.category
+                    tags.add(filters.category)
+                }
+                // 地区
+                if (filters.region != "\u5168\u90E8") {
+                    categories["\u5730\u533A"] = filters.region
+                    tags.add(filters.region)
+                }
+                // 年份
+                if (filters.year != "\u5168\u90E8") {
+                    tags.add(filters.year)
+                }
+            }
+            "tv" -> {
+                // 剧集: tags 包含地区
+                if (filters.region != "\u5168\u90E8") {
+                    tags.add(filters.region)
+                }
+                if (filters.year != "\u5168\u90E8") {
+                    tags.add(filters.year)
+                }
+            }
+            "anime" -> {
+                tags.add("\u52A8\u6F2B")
+                if (filters.region != "\u5168\u90E8") {
+                    tags.add(filters.region)
+                }
+                if (filters.year != "\u5168\u90E8") {
+                    tags.add(filters.year)
+                }
+            }
+            "variety" -> {
+                tags.add("\u7EFC\u827A")
+                if (filters.year != "\u5168\u90E8") {
+                    tags.add(filters.year)
+                }
+            }
+        }
+
+        val selectedJson = if (categories.isNotEmpty()) {
+            categories.entries.joinToString(",") { "\"${it.key}\":\"${it.value}\"" }
+                .let { "{$it}" }
+        } else "{}"
+
+        return tags.joinToString(",") to selectedJson
+    }
+
+    /** 加载更多(豆瓣 API 分页) */
     fun loadMoreCategory() {
         if (!_categoryHasMore.value || categoryIsLoadingMore) return
         categoryIsLoadingMore = true
@@ -759,17 +801,35 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 val doubanApi = DoubanApiClient.getApi()
                 val filters = _categoryFilters.value
-                val params = buildDoubanParams(categoryCurrentKind, filters)
-                val (doubanKind, useCategory, useType) = params
+                val hasFilters = filters.category != "\u70ED\u95E8" || filters.region != "\u5168\u90E8" ||
+                        filters.year != "\u5168\u90E8" || filters.sort != "T"
+                val doubanKind = when (categoryCurrentKind) {
+                    "anime" -> "movie"
+                    "variety" -> "tv"
+                    else -> categoryCurrentKind
+                }
 
                 val response = withContext(Dispatchers.IO) {
-                    doubanApi.getRecentHot(
-                        kind = doubanKind,
-                        start = categoryPage * PAGE_SIZE,
-                        limit = PAGE_SIZE,
-                        category = useCategory,
-                        type = useType
-                    )
+                    if (!hasFilters) {
+                        val (defCat, defType) = getDefaultParams(categoryCurrentKind)
+                        doubanApi.getRecentHot(
+                            kind = doubanKind,
+                            start = categoryPage * PAGE_SIZE,
+                            limit = PAGE_SIZE,
+                            category = defCat,
+                            type = defType
+                        )
+                    } else {
+                        val (tags, selectedCategories) = buildRecommendParams(categoryCurrentKind, filters)
+                        doubanApi.getRecommendations(
+                            kind = doubanKind,
+                            start = categoryPage * PAGE_SIZE,
+                            count = PAGE_SIZE,
+                            selectedCategories = selectedCategories,
+                            tags = tags,
+                            sort = if (filters.sort != "T") filters.sort else ""
+                        )
+                    }
                 }
 
                 if (response.isSuccessful) {

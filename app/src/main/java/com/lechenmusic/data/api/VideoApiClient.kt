@@ -74,20 +74,22 @@ interface DoubanApi {
     ): Response<DoubanHotResponse>
 
     /**
-     * 豆瓣 recent_hot 带完整筛选(参考 Selene-Source)
-     * type 参数同时承担地区和年份筛选:
-     *   - 电影: type=全部/华语/欧美/韩国/日本/中国大陆/美国/中国香港/中国台湾/英国/法国/德国/印度
-     *   - 年份通过 category 参数传递(如 category=2025)
+     * 豆瓣推荐接口(带完整筛选) - 参考 Selene-Source fetchDoubanRecommends
+     * URL: /v2/{kind}/recommend
+     * selected_categories: JSON字符串，如 {"\u7C7B\u578B":"\u559C\u5267"}
+     * tags: 逗号分隔，如 "\u559C\u5267,\u97E9\u56FD,2025"
+     * sort: T(综合)/U(近期热度)/R(首映时间)/S(高分优先)
      */
-    @GET("v2/subject/recent_hot/{kind}")
-    suspend fun getRecentHotFiltered(
+    @GET("v2/{kind}/recommend")
+    suspend fun getRecommendations(
         @Path("kind") kind: String,
+        @Query("refresh") refresh: Int = 0,
         @Query("start") start: Int = 0,
-        @Query("limit") limit: Int = 20,
-        @Query("category") category: String = "\u70ED\u95E8",
-        @Query("type") type: String = "\u5168\u90E8"
+        @Query("count") count: Int = 25,
+        @Query("selected_categories") selectedCategories: String = "{}",
+        @Query("tags") tags: String = "",
+        @Query("sort") sort: String = "T"
     ): Response<DoubanHotResponse>
-
 }
 
 /**
