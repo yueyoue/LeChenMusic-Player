@@ -63,6 +63,7 @@ fun VideoDetailScreen(
     val detail by viewModel.videoDetail.collectAsState()
     val isLoading by viewModel.detailLoading.collectAsState()
     val favorites by viewModel.favorites.collectAsState()
+    val allSearchSources by viewModel.allSearchSources.collectAsState()
     val context = LocalContext.current
 
     var selectedSource by remember { mutableIntStateOf(0) }
@@ -106,9 +107,9 @@ fun VideoDetailScreen(
         onDispose { exoPlayer.release() }
     }
 
-    // 全屏模式处理
+    // 全屏模式处理 - 用 SideEffect 避免 LaunchedEffect 重组问题
     val activity = context as? android.app.Activity
-    LaunchedEffect(isPlayerFullscreen) {
+    DisposableEffect(isPlayerFullscreen) {
         activity?.requestedOrientation = if (isPlayerFullscreen) {
             ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
         } else {
@@ -119,6 +120,7 @@ fun VideoDetailScreen(
         } else {
             activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
         }
+        onDispose {}
     }
 
     // 全屏模式下显示纯播放器
@@ -165,29 +167,42 @@ fun VideoDetailScreen(
                     modifier = Modifier.size(48.dp)
                 )
             }
-            // 底部进度条 + 时间
+            // 底部进度条 + 时间（可拖动）
             var fsProgress by remember { mutableFloatStateOf(0f) }
             var fsDuration by remember { mutableLongStateOf(0L) }
             var fsPosition by remember { mutableLongStateOf(0L) }
+            var fsDragging by remember { mutableStateOf(false) }
             LaunchedEffect(exoPlayer) {
                 while (true) {
-                    fsDuration = exoPlayer.duration.coerceAtLeast(0L)
-                    fsPosition = exoPlayer.currentPosition.coerceAtLeast(0L)
-                    fsProgress = if (fsDuration > 0) fsPosition.toFloat() / fsDuration else 0f
-                    kotlinx.coroutines.delay(500)
+                    if (!fsDragging) {
+                        fsDuration = exoPlayer.duration.coerceAtLeast(0L)
+                        fsPosition = exoPlayer.currentPosition.coerceAtLeast(0L)
+                        fsProgress = if (fsDuration > 0) fsPosition.toFloat() / fsDuration else 0f
+                    }
+                    kotlinx.coroutines.delay(300)
                 }
             }
             Column(
-                modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+                modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)
             ) {
-                LinearProgressIndicator(
-                    progress = { fsProgress },
-                    modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)),
-                    color = MaterialTheme.colorScheme.primary,
-                    trackColor = Color.White.copy(alpha = 0.3f)
+                Slider(
+                    value = fsProgress,
+                    onValueChange = { newValue ->
+                        fsDragging = true
+                        fsProgress = newValue
+                    },
+                    onValueChangeFinished = {
+                        exoPlayer.seekTo((fsProgress * fsDuration).toLong())
+                        fsDragging = false
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = SliderDefaults.colors(
+                        thumbColor = MaterialTheme.colorScheme.primary,
+                        activeTrackColor = MaterialTheme.colorScheme.primary,
+                        inactiveTrackColor = Color.White.copy(alpha = 0.3f)
+                    )
                 )
-                Spacer(modifier = Modifier.height(4.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(formatTime(fsPosition), color = Color.White, fontSize = 11.sp)
                     Text(formatTime(fsDuration), color = Color.White, fontSize = 11.sp)
                 }
@@ -274,24 +289,39 @@ fun VideoDetailScreen(
                             modifier = Modifier.size(40.dp)
                         )
                     }
-                    // 底部进度条
+                    // 底部进度条（可拖动）
                     var progress by remember { mutableFloatStateOf(0f) }
                     var durationMs by remember { mutableLongStateOf(0L) }
                     var positionMs by remember { mutableLongStateOf(0L) }
+                    var isDragging by remember { mutableStateOf(false) }
                     LaunchedEffect(exoPlayer) {
                         while (true) {
-                            durationMs = exoPlayer.duration.coerceAtLeast(0L)
-                            positionMs = exoPlayer.currentPosition.coerceAtLeast(0L)
-                            progress = if (durationMs > 0) positionMs.toFloat() / durationMs else 0f
-                            kotlinx.coroutines.delay(500)
+                            if (!isDragging) {
+                                durationMs = exoPlayer.duration.coerceAtLeast(0L)
+                                positionMs = exoPlayer.currentPosition.coerceAtLeast(0L)
+                                progress = if (durationMs > 0) positionMs.toFloat() / durationMs else 0f
+                            }
+                            kotlinx.coroutines.delay(300)
                         }
                     }
-                    Box(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(start = 48.dp, end = 48.dp, bottom = 8.dp)) {
-                        LinearProgressIndicator(
-                            progress = { progress },
-                            modifier = Modifier.fillMaxWidth().height(3.dp).clip(RoundedCornerShape(2.dp)),
-                            color = MaterialTheme.colorScheme.primary,
-                            trackColor = Color.White.copy(alpha = 0.3f)
+                    Box(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(start = 48.dp, end = 48.dp, bottom = 4.dp)) {
+                        Slider(
+                            value = progress,
+                            onValueChange = { newValue ->
+                                isDragging = true
+                                progress = newValue
+                            },
+                            onValueChangeFinished = {
+                                val seekTo = (progress * durationMs).toLong()
+                                exoPlayer.seekTo(seekTo)
+                                isDragging = false
+                            },
+                            modifier = Modifier.fillMaxWidth().height(20.dp),
+                            colors = SliderDefaults.colors(
+                                thumbColor = MaterialTheme.colorScheme.primary,
+                                activeTrackColor = MaterialTheme.colorScheme.primary,
+                                inactiveTrackColor = Color.White.copy(alpha = 0.3f)
+                            )
                         )
                     }
                 }
@@ -394,19 +424,38 @@ fun VideoDetailScreen(
                 }
             }
 
-            // ===== 片源选择 =====
-            if (sources.size > 1) {
+            // ===== 片源选择（显示所有搜索到的源） =====
+            val displaySources = if (allSearchSources.size > 1) {
+                // 用所有搜索结果构造 VideoSource 列表
+                allSearchSources.map { info ->
+                    VideoSource(
+                        sourceName = info.displaySourceName.ifBlank { info.source },
+                        source = info.source,
+                        episodes = info.episodes.mapIndexed { idx, url ->
+                            VideoEpisode(index = idx, title = info.episodesTitles.getOrNull(idx) ?: "第${idx + 1}集", url = url)
+                        }
+                    )
+                }
+            } else {
+                sources
+            }
+            if (displaySources.size > 1) {
                 item {
                     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                        Text("片源 (${sources.size})", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                        Text("片源 (${displaySources.size})", fontSize = 15.sp, fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.height(6.dp))
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            itemsIndexed(sources) { index, src ->
+                            itemsIndexed(displaySources) { index, src ->
                                 FilterChip(
                                     selected = selectedSource == index,
                                     onClick = {
                                         selectedSource = index
                                         selectedEpisode = 0
+                                        // 切换源时更新 videoDetail
+                                        val info = allSearchSources.getOrNull(index)
+                                        if (info != null) {
+                                            viewModel.switchSource(info)
+                                        }
                                     },
                                     label = { Text("${src.sourceName} (${src.episodes.size}集)", fontSize = 12.sp) }
                                 )
