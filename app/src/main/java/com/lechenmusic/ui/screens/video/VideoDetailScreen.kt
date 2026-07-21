@@ -47,6 +47,7 @@ import com.lechenmusic.R
 import com.lechenmusic.data.model.*
 import com.lechenmusic.dlna.*
 import com.lechenmusic.ui.VideoViewModel
+import kotlinx.coroutines.launch
 
 /**
  * 影视详情页 - 带内联播放器
@@ -882,6 +883,7 @@ fun VideoDetailScreen(
     }
 
     // ===== 投屏设备选择弹窗 =====
+    val castScope = rememberCoroutineScope()
     DlnaCastSheet(
         isVisible = showCastSheet,
         onDismiss = { showCastSheet = false },
@@ -893,7 +895,7 @@ fun VideoDetailScreen(
             val currentEpisodes = detail?.episodes ?: emptyList()
             val url = currentEpisodes.getOrNull(0)
             if (!url.isNullOrBlank()) {
-                kotlinx.coroutines.GlobalScope.launch {
+                castScope.launch {
                     controller.setUriAndPlay(url, detail?.title ?: "LeChenMusic")
                 }
             }

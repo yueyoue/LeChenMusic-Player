@@ -71,9 +71,9 @@ object DlnaDiscovery {
                     val usn = extractHeader(response, "USN")
                     val server = extractHeader(response, "SERVER")
 
-                    if (location != null && usn != null && usn !in discoveredDevices) {
+                    if (location != null && usn != null && !discoveredDevices.containsKey(usn)) {
                         // 获取设备描述
-                        val device = fetchDeviceDescription(location, usn, server)
+                        val device = fetchDeviceDescription(location, usn, server ?: "")
                         if (device != null) {
                             discoveredDevices[usn] = device
                             devices.add(device)
