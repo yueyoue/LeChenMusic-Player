@@ -92,20 +92,10 @@ fun VideoDetailScreen(
             }
     }
 
-    // 用计数器强制 LaunchedEffect 重新触发
-    var sourceChangeCount by remember { mutableIntStateOf(0) }
-
-    // 初始加载：当 currentDetail 首次有数据时播放
-    LaunchedEffect(currentDetail) {
-        if (currentDetail != null && sourceChangeCount == 0) {
-            sourceChangeCount = 1
-        }
-    }
-
-    // 当 source/episode 变化时加载视频
-    LaunchedEffect(sourceChangeCount, selectedEpisode) {
-        if (sourceChangeCount == 0) return@LaunchedEffect // 初始不加载
-        val src = currentDetail?.toSources()?.firstOrNull()
+    // 当视频详情变化时加载视频（包括初始加载和切换源）
+    LaunchedEffect(currentDetail?.source, currentDetail?.id, selectedEpisode) {
+        val detail = currentDetail ?: return@LaunchedEffect
+        val src = detail.toSources().firstOrNull()
         val ep = src?.episodes?.getOrNull(selectedEpisode)
         if (ep != null && ep.url.isNotBlank()) {
             exoPlayer.setMediaItem(MediaItem.fromUri(ep.url))
@@ -475,7 +465,6 @@ fun VideoDetailScreen(
                                         viewModel.logDebug("片源切换", "匹配info: ${info != null}, source=${info?.source}, eps=${info?.episodes?.size}")
                                         if (info != null) {
                                             viewModel.switchSource(info)
-                                            sourceChangeCount++
                                         }
                                     },
                                     label = { Text("${src.sourceName} (${src.episodes.size}集)", fontSize = 12.sp) }
