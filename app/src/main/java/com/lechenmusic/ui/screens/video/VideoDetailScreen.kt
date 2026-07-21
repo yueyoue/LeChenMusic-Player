@@ -87,6 +87,20 @@ fun VideoDetailScreen(
         viewModel.loadFavorites()
     }
 
+    val currentDetail = detail
+    val isStarred = favorites.any { it.id == videoId }
+
+    // ExoPlayer - 内联播放器
+    val exoPlayer = remember {
+        val factory = DefaultMediaSourceFactory(context)
+        ExoPlayer.Builder(context)
+            .setMediaSourceFactory(factory)
+            .build().apply {
+                playWhenReady = false
+                repeatMode = Player.REPEAT_MODE_OFF
+            }
+    }
+
     // 内联播放器控件自动隐藏(3秒无操作)
     LaunchedEffect(inlineControlsVisible) {
         if (inlineControlsVisible && exoPlayer.isPlaying) {
@@ -100,20 +114,6 @@ fun VideoDetailScreen(
             kotlinx.coroutines.delay(3000)
             fsControlsVisible = false
         }
-    }
-
-    val currentDetail = detail
-    val isStarred = favorites.any { it.id == videoId }
-
-    // ExoPlayer - 内联播放器
-    val exoPlayer = remember {
-        val factory = DefaultMediaSourceFactory(context)
-        ExoPlayer.Builder(context)
-            .setMediaSourceFactory(factory)
-            .build().apply {
-                playWhenReady = false
-                repeatMode = Player.REPEAT_MODE_OFF
-            }
     }
 
     // 当视频详情变化时加载视频（包括初始加载）
