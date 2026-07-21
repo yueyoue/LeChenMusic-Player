@@ -184,7 +184,7 @@ fun VideoDetailScreen(
         activity?.requestedOrientation = if (isPlayerFullscreen) {
             ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
         } else {
-            ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         }
         if (isPlayerFullscreen) {
             activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
