@@ -108,12 +108,15 @@ fun VideoPlayerScreen(
     val currentEpisode = currentSource?.episodes?.getOrNull(selectedEpisode)
     val episodeTitle = currentEpisode?.title ?: "第${selectedEpisode + 1}集"
 
-    // ExoPlayer
+    // ExoPlayer - 使用 DefaultMediaSourceFactory 支持 HLS/DASH/RTSP 等格式
     val exoPlayer = remember {
-        ExoPlayer.Builder(context).build().apply {
-            playWhenReady = true
-            repeatMode = Player.REPEAT_MODE_OFF
-        }
+        val mediaSourceFactory = androidx.media3.exoplayer.source.DefaultMediaSourceFactory(context)
+        ExoPlayer.Builder(context)
+            .setMediaSourceFactory(mediaSourceFactory)
+            .build().apply {
+                playWhenReady = true
+                repeatMode = Player.REPEAT_MODE_OFF
+            }
     }
 
     // 加载视频
