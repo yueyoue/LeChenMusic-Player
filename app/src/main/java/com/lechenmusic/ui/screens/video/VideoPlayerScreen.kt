@@ -108,6 +108,9 @@ fun VideoPlayerScreen(
     val currentEpisode = currentSource?.episodes?.getOrNull(selectedEpisode)
     val episodeTitle = currentEpisode?.title ?: "第${selectedEpisode + 1}集"
 
+    // 调试日志文件
+    val logFile = remember { java.io.File(context.getExternalFilesDir(null), "video_debug.log") }
+
     // ExoPlayer - 使用 DefaultMediaSourceFactory 支持 HLS/DASH/RTSP 等格式
     val exoPlayer = remember {
         val mediaSourceFactory = androidx.media3.exoplayer.source.DefaultMediaSourceFactory(context)
