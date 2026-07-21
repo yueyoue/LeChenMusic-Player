@@ -622,7 +622,7 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                         try {
                             val start = System.currentTimeMillis()
                             val request = okhttp3.Request.Builder().url(url).head().build()
-                            client.newCall(request).execute().use { resp }
+                            client.newCall(request).execute().use { _ -> }
                             System.currentTimeMillis() - start
                         } catch (_: Exception) { -1L }
                     }

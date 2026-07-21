@@ -238,6 +238,9 @@ fun VideoDetailScreen(
     }
 
     val sources = currentDetail.toSources()
+    val sourceSpeeds by viewModel.sourceSpeeds.collectAsState()
+    val speedTesting by viewModel.speedTesting.collectAsState()
+    var showSourcePanel by remember { mutableStateOf(false) }
 
     Scaffold { padding ->
         LazyColumn(
@@ -495,10 +498,6 @@ fun VideoDetailScreen(
             }
 
             // ===== 片源选择 =====
-            val sourceSpeeds by viewModel.sourceSpeeds.collectAsState()
-            val speedTesting by viewModel.speedTesting.collectAsState()
-            var showSourcePanel by remember { mutableStateOf(false) }
-
             val displaySources = if (allSearchSources.size > 1) {
                 allSearchSources
                     .groupBy { it.source }
@@ -594,113 +593,6 @@ fun VideoDetailScreen(
             }
 
             // ===== 源列表弹窗（展开按钮触发） =====
-            if (showSourcePanel) {
-                ModalBottomSheet(
-                    onDismissRequest = { showSourcePanel = false },
-                    containerColor = MaterialTheme.colorScheme.surface
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("全部源 (${allSearchSources.size})", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                            Row {
-                                TextButton(
-                                    onClick = { viewModel.testSourceSpeeds() },
-                                    enabled = !speedTesting
-                                ) {
-                                    Text(if (speedTesting) "测速中..." else "\u26A1 测速排序")
-                                }
-                                IconButton(onClick = { showSourcePanel = false }) {
-                                    Icon(Icons.Default.Close, "关闭")
-                                }
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        LazyColumn(
-                            modifier = Modifier.heightIn(max = 400.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            items(allSearchSources.size) { index ->
-                                val info = allSearchSources[index]
-                                val speed = sourceSpeeds[info.source]
-                                val isCurrent = currentDetail?.source == info.source
-                                Surface(
-                                    onClick = {
-                                        if (info.episodes.isNotEmpty()) {
-                                            val savedPosition = exoPlayer.currentPosition.coerceAtLeast(0L)
-                                            selectedEpisode = 0
-                                            viewModel.switchSource(info)
-                                            val url = info.episodes[0]
-                                            if (url.isNotBlank()) {
-                                                exoPlayer.stop()
-                                                exoPlayer.setMediaItem(MediaItem.fromUri(url))
-                                                exoPlayer.prepare()
-                                                exoPlayer.playWhenReady = true
-                                                if (savedPosition > 0) {
-                                                    val seekPos = savedPosition
-                                                    exoPlayer.addListener(object : Player.Listener {
-                                                        override fun onPlaybackStateChanged(state: Int) {
-                                                            if (state == Player.STATE_READY) {
-                                                                exoPlayer.seekTo(seekPos)
-                                                                exoPlayer.removeListener(this)
-                                                            }
-                                                        }
-                                                    })
-                                                }
-                                            }
-                                            showSourcePanel = false
-                                        }
-                                    },
-                                    shape = RoundedCornerShape(8.dp),
-                                    color = if (isCurrent) MaterialTheme.colorScheme.primaryContainer
-                                    else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                                ) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        // 源名
-                                        Text(
-                                            info.displaySourceName.ifBlank { info.source },
-                                            fontSize = 14.sp,
-                                            fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
-                                            modifier = Modifier.weight(1f)
-                                        )
-                                        // 集数
-                                        Text(
-                                            "${info.episodes.size}集",
-                                            fontSize = 12.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        // 速度
-                                        Text(
-                                            when {
-                                                speed == null -> "-"
-                                                speed < 0 -> "超时"
-                                                else -> "${speed}ms"
-                                            },
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.Medium,
-                                            color = when {
-                                                speed == null -> MaterialTheme.colorScheme.onSurfaceVariant
-                                                speed < 0 -> Color.Red
-                                                speed < 500 -> Color(0xFF4CAF50)
-                                                speed < 1000 -> Color(0xFFFF9800)
-                                                else -> Color.Red
-                                            }
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
             // ===== 选集（直接用当前 VideoDetail 的 episodes） =====
             val currentEpisodes = detail?.episodes ?: emptyList()
             val currentEpisodesTitles = detail?.episodesTitles ?: emptyList()
@@ -766,6 +658,111 @@ fun VideoDetailScreen(
                             // 填充空位
                             repeat(6 - rowEpisodes.size) {
                                 Spacer(modifier = Modifier.weight(1f))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // ===== 源列表弹窗（展开按钮触发） =====
+        if (showSourcePanel) {
+            ModalBottomSheet(
+                onDismissRequest = { showSourcePanel = false },
+                containerColor = MaterialTheme.colorScheme.surface
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("全部源 (${allSearchSources.size})", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        Row {
+                            TextButton(
+                                onClick = { viewModel.testSourceSpeeds() },
+                                enabled = !speedTesting
+                            ) {
+                                Text(if (speedTesting) "测速中..." else "\u26A1 测速排序")
+                            }
+                            IconButton(onClick = { showSourcePanel = false }) {
+                                Icon(Icons.Default.Close, "关闭")
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    LazyColumn(
+                        modifier = Modifier.heightIn(max = 400.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        items(allSearchSources.size) { index ->
+                            val info = allSearchSources[index]
+                            val speed = sourceSpeeds[info.source]
+                            val isCurrent = currentDetail?.source == info.source
+                            Surface(
+                                onClick = {
+                                    if (info.episodes.isNotEmpty()) {
+                                        val savedPosition = exoPlayer.currentPosition.coerceAtLeast(0L)
+                                        selectedEpisode = 0
+                                        viewModel.switchSource(info)
+                                        val url = info.episodes[0]
+                                        if (url.isNotBlank()) {
+                                            exoPlayer.stop()
+                                            exoPlayer.setMediaItem(MediaItem.fromUri(url))
+                                            exoPlayer.prepare()
+                                            exoPlayer.playWhenReady = true
+                                            if (savedPosition > 0) {
+                                                val seekPos = savedPosition
+                                                exoPlayer.addListener(object : Player.Listener {
+                                                    override fun onPlaybackStateChanged(state: Int) {
+                                                        if (state == Player.STATE_READY) {
+                                                            exoPlayer.seekTo(seekPos)
+                                                            exoPlayer.removeListener(this)
+                                                        }
+                                                    }
+                                                })
+                                            }
+                                        }
+                                        showSourcePanel = false
+                                    }
+                                },
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (isCurrent) MaterialTheme.colorScheme.primaryContainer
+                                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        info.displaySourceName.ifBlank { info.source },
+                                        fontSize = 14.sp,
+                                        fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    Text(
+                                        "${info.episodes.size}集",
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        when {
+                                            speed == null -> "-"
+                                            speed < 0 -> "超时"
+                                            else -> "${speed}ms"
+                                        },
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = when {
+                                            speed == null -> MaterialTheme.colorScheme.onSurfaceVariant
+                                            speed < 0 -> Color.Red
+                                            speed < 500 -> Color(0xFF4CAF50)
+                                            speed < 1000 -> Color(0xFFFF9800)
+                                            else -> Color.Red
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
