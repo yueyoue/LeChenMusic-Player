@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
@@ -179,6 +180,10 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
         if (!isLoggedIn) {
             LoginScreen(viewModel = viewModel, onLoginSuccess = { })
         } else {
+            @OptIn(androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi::class)
+            val windowSizeClass = androidx.compose.material3.windowsizeclass.calculateWindowSizeClass(
+                LocalContext.current as android.app.Activity
+            )
             Scaffold(
                 bottomBar = {
                     AnimatedVisibility(
@@ -240,10 +245,6 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                         .fillMaxSize()
                         .padding(paddingValues)
                 ) {
-                    // 响应式窗口大小(用于子页面)
-                    val windowSizeClass = androidx.compose.material3.windowsizeclass.calculateWindowSizeClass(
-                        LocalContext.current as android.app.Activity
-                    )
                     composable(Screen.Home.route) {
                         HomeScreen(
                             viewModel = viewModel,
