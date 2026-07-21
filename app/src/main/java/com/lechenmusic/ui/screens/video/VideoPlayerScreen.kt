@@ -149,7 +149,7 @@ fun VideoPlayerScreen(
     // 更新进度
     LaunchedEffect(Unit) {
         while (true) {
-            delay(200)
+            delay(500)
             if (exoPlayer.isPlaying) {
                 currentPosition = exoPlayer.currentPosition
                 duration = exoPlayer.duration.coerceAtLeast(0L)

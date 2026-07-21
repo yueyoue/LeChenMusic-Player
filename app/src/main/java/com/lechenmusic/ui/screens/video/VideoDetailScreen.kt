@@ -275,7 +275,7 @@ fun VideoDetailScreen(
                     LaunchedEffect(exoPlayer) {
                         while (true) {
                             isPlaying = exoPlayer.isPlaying
-                            kotlinx.coroutines.delay(200)
+                            kotlinx.coroutines.delay(500)
                         }
                     }
                     IconButton(
@@ -424,18 +424,22 @@ fun VideoDetailScreen(
                 }
             }
 
-            // ===== 片源选择（显示所有搜索到的源） =====
+            // ===== 片源选择（去重+限制数量） =====
             val displaySources = if (allSearchSources.size > 1) {
-                // 用所有搜索结果构造 VideoSource 列表
-                allSearchSources.map { info ->
-                    VideoSource(
-                        sourceName = info.displaySourceName.ifBlank { info.source },
-                        source = info.source,
-                        episodes = info.episodes.mapIndexed { idx, url ->
-                            VideoEpisode(index = idx, title = info.episodesTitles.getOrNull(idx) ?: "第${idx + 1}集", url = url)
-                        }
-                    )
-                }
+                // 去重：同名源只保留第一个，限制最多20个
+                allSearchSources
+                    .groupBy { it.source }
+                    .values.map { group -> group.first() }
+                    .take(20)
+                    .map { info ->
+                        VideoSource(
+                            sourceName = info.displaySourceName.ifBlank { info.source },
+                            source = info.source,
+                            episodes = info.episodes.mapIndexed { idx, url ->
+                                VideoEpisode(index = idx, title = info.episodesTitles.getOrNull(idx) ?: "第${idx + 1}集", url = url)
+                            }
+                        )
+                    }
             } else {
                 sources
             }
@@ -451,8 +455,8 @@ fun VideoDetailScreen(
                                     onClick = {
                                         selectedSource = index
                                         selectedEpisode = 0
-                                        // 切换源时更新 videoDetail
-                                        val info = allSearchSources.getOrNull(index)
+                                        // 找到 allSearchSources 中对应的源并切换
+                                        val info = allSearchSources.firstOrNull { it.source == src.source }
                                         if (info != null) {
                                             viewModel.switchSource(info)
                                         }
@@ -465,9 +469,10 @@ fun VideoDetailScreen(
                 }
             }
 
-            // ===== 选集 =====
-            val currentSrc = sources.getOrNull(selectedSource)
-            if (currentSrc != null && currentSrc.episodes.isNotEmpty()) {
+            // ===== 选集（直接用当前 VideoDetail 的 episodes） =====
+            val currentEpisodes = detail?.episodes ?: emptyList()
+            val currentEpisodesTitles = detail?.episodesTitles ?: emptyList()
+            if (currentEpisodes.isNotEmpty()) {
                 item {
                     Text(
                         "选集 (${currentSrc.episodes.size})",
@@ -477,7 +482,7 @@ fun VideoDetailScreen(
                     )
                 }
 
-                if (currentSrc.episodes.size == 1) {
+                if (currentEpisodes.size == 1) {
                     item {
                         Surface(
                             modifier = Modifier.padding(horizontal = 16.dp).clickable { selectedEpisode = 0 },
@@ -489,7 +494,7 @@ fun VideoDetailScreen(
                     }
                 } else {
                     // 网格选集
-                    val rows = currentSrc.episodes.chunked(6)
+                    val rows = currentEpisodes.chunked(6)
                     itemsIndexed(rows) { rowIndex, rowEpisodes ->
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp),

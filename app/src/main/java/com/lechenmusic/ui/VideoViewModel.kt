@@ -451,7 +451,7 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
             episodesTitles = sourceInfo.episodesTitles
         )
         _videoDetail.value = detail
-        logDebug("switchSource", "切换到: ${sourceInfo.sourceName}, eps=${sourceInfo.episodes.size}")
+        logDebug("switchSource", "切换到: ${sourceInfo.displaySourceName}, eps=${sourceInfo.episodes.size}")
     }
 
     // 搜索播放源的加载状态（用于 UI 弹窗提示）
