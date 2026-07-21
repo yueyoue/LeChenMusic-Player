@@ -4,25 +4,19 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -33,96 +27,94 @@ import com.lechenmusic.ui.VideoViewModel
 
 /**
  * 分类页面 - 参考 Selene-Source MovieScreen
- * 使用豆瓣 API 做筛选浏览，点击影片时搜索 LunaTV 播放
- *
- * 布局:
- * - 顶部栏(标题+总数)
- * - 筛选区域(分类选择 + 高级筛选 pills)
- * - 内容网格(3列)
+ * 各分类有独立的筛选选项
  */
 
-// ==================== 筛选选项定义(参考 Selene-Source) ====================
-
 data class FilterOption(val label: String, val value: String)
+data class FilterPillDef(val title: String, val options: List<FilterOption>)
 
-// 分类(一级选择器)
-private val categoryOptions = listOf(
-    FilterOption("全部", "热门"),
-    FilterOption("热门电影", "热门"),
-    FilterOption("最新电影", "最新"),
-    FilterOption("豆瓣高分", "豆瓣高分"),
-    FilterOption("冷门佳片", "冷门佳片"),
+// ===== 电影筛选 =====
+private val movieCategoryOptions = listOf(
+    FilterOption("热门", "热门"), FilterOption("最新", "最新"),
+    FilterOption("豆瓣高分", "豆瓣高分"), FilterOption("冷门佳片", "冷门佳片"),
+)
+private val movieTypeOptions = listOf(
+    FilterOption("全部", "全部"), FilterOption("喜剧", "喜剧"), FilterOption("爱情", "爱情"),
+    FilterOption("动作", "动作"), FilterOption("科幻", "科幻"), FilterOption("悬疑", "悬疑"),
+    FilterOption("犯罪", "犯罪"), FilterOption("惊悚", "惊悚"), FilterOption("冒险", "冒险"),
+    FilterOption("音乐", "音乐"), FilterOption("历史", "历史"), FilterOption("奇幻", "奇幻"),
+    FilterOption("恐怖", "恐怖"), FilterOption("战争", "战争"), FilterOption("传记", "传记"),
+    FilterOption("歌舞", "歌舞"), FilterOption("武侠", "武侠"), FilterOption("灾难", "灾难"),
+    FilterOption("纪录片", "纪录片"), FilterOption("短片", "短片"),
+)
+private val movieRegionOptions = listOf(
+    FilterOption("全部", "全部"), FilterOption("华语", "华语"), FilterOption("欧美", "欧美"),
+    FilterOption("韩国", "韩国"), FilterOption("日本", "日本"), FilterOption("中国大陆", "中国大陆"),
+    FilterOption("美国", "美国"), FilterOption("中国香港", "中国香港"), FilterOption("中国台湾", "中国台湾"),
+    FilterOption("英国", "英国"), FilterOption("法国", "法国"), FilterOption("德国", "德国"),
+    FilterOption("印度", "印度"), FilterOption("泰国", "泰国"),
 )
 
-// 类型(二级筛选 pill)
-private val typeOptions = listOf(
-    FilterOption("全部", "全部"),
-    FilterOption("喜剧", "喜剧"),
-    FilterOption("爱情", "爱情"),
-    FilterOption("动作", "动作"),
-    FilterOption("科幻", "科幻"),
-    FilterOption("悬疑", "悬疑"),
-    FilterOption("犯罪", "犯罪"),
-    FilterOption("惊悚", "惊悚"),
-    FilterOption("冒险", "冒险"),
-    FilterOption("音乐", "音乐"),
-    FilterOption("历史", "历史"),
-    FilterOption("奇幻", "奇幻"),
-    FilterOption("恐怖", "恐怖"),
-    FilterOption("战争", "战争"),
-    FilterOption("传记", "传记"),
-    FilterOption("歌舞", "歌舞"),
-    FilterOption("武侠", "武侠"),
-    FilterOption("灾难", "灾难"),
-    FilterOption("纪录片", "纪录片"),
-    FilterOption("短片", "短片"),
+// ===== 剧集筛选 =====
+private val tvRegionOptions = listOf(
+    FilterOption("全部", "tv"), FilterOption("国产剧", "tv"), FilterOption("美剧", "美剧"),
+    FilterOption("日剧", "日剧"), FilterOption("韩剧", "韩剧"),
+    FilterOption("港剧", "港剧"), FilterOption("台剧", "台剧"),
+    FilterOption("英剧", "英剧"), FilterOption("法剧", "法剧"),
 )
 
-// 地区
-private val regionOptions = listOf(
-    FilterOption("全部", "全部"),
-    FilterOption("华语", "华语"),
-    FilterOption("欧美", "欧美"),
-    FilterOption("韩国", "韩国"),
-    FilterOption("日本", "日本"),
-    FilterOption("中国大陆", "中国大陆"),
-    FilterOption("美国", "美国"),
-    FilterOption("中国香港", "中国香港"),
-    FilterOption("中国台湾", "中国台湾"),
-    FilterOption("英国", "英国"),
-    FilterOption("法国", "法国"),
-    FilterOption("德国", "德国"),
-    FilterOption("印度", "印度"),
-    FilterOption("泰国", "泰国"),
-    FilterOption("俄罗斯", "俄罗斯"),
-    FilterOption("加拿大", "加拿大"),
-    FilterOption("澳大利亚", "澳大利亚"),
+// ===== 动漫筛选 =====
+private val animeRegionOptions = listOf(
+    FilterOption("全部", "日本"), FilterOption("日本", "日本"),
+    FilterOption("美国", "美国"), FilterOption("中国大陆", "中国大陆"),
+    FilterOption("欧美", "欧美"), FilterOption("韩国", "韩国"),
 )
 
-// 年份
+// ===== 通用筛选 =====
 private val yearOptions = listOf(
-    FilterOption("全部", "全部"),
-    FilterOption("2026", "2026"),
-    FilterOption("2025", "2025"),
-    FilterOption("2024", "2024"),
-    FilterOption("2023", "2023"),
-    FilterOption("2022", "2022"),
-    FilterOption("2021", "2021"),
-    FilterOption("2020", "2020"),
-    FilterOption("2020年代", "2020年代"),
-    FilterOption("2010年代", "2010年代"),
-    FilterOption("2000年代", "2000年代"),
-    FilterOption("90年代", "90年代"),
+    FilterOption("全部", "全部"), FilterOption("2026", "2026"), FilterOption("2025", "2025"),
+    FilterOption("2024", "2024"), FilterOption("2023", "2023"), FilterOption("2022", "2022"),
+    FilterOption("2021", "2021"), FilterOption("2020", "2020"),
+    FilterOption("2020年代", "2020年代"), FilterOption("2010年代", "2010年代"),
+    FilterOption("2000年代", "2000年代"), FilterOption("90年代", "90年代"),
     FilterOption("更早", "更早"),
 )
-
-// 排序
 private val sortOptions = listOf(
-    FilterOption("综合排序", "T"),
-    FilterOption("近期热度", "U"),
-    FilterOption("首映时间", "R"),
-    FilterOption("高分优先", "S"),
+    FilterOption("综合排序", "T"), FilterOption("近期热度", "U"),
+    FilterOption("首映时间", "R"), FilterOption("高分优先", "S"),
 )
+
+/** 根据分类类型返回对应的筛选 pills */
+private fun getFilterPills(categoryType: String): List<FilterPillDef> {
+    return when (categoryType) {
+        "movie" -> listOf(
+            FilterPillDef("类型", movieTypeOptions),
+            FilterPillDef("地区", movieRegionOptions),
+            FilterPillDef("年代", yearOptions),
+            FilterPillDef("排序", sortOptions),
+        )
+        "tv" -> listOf(
+            FilterPillDef("地区", tvRegionOptions),
+            FilterPillDef("年代", yearOptions),
+        )
+        "anime" -> listOf(
+            FilterPillDef("地区", animeRegionOptions),
+            FilterPillDef("年代", yearOptions),
+        )
+        "variety" -> listOf(
+            FilterPillDef("年代", yearOptions),
+        )
+        else -> emptyList()
+    }
+}
+
+/** 获取一级分类选项(仅电影有) */
+private fun getCategoryOptions(categoryType: String): List<FilterOption> {
+    return when (categoryType) {
+        "movie" -> movieCategoryOptions
+        else -> emptyList()
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -148,12 +140,10 @@ fun VideoCategoryScreen(
         else -> categoryType
     }
 
-    // 筛选面板展开状态
-    var showTypeFilter by remember { mutableStateOf(false) }
-    var showRegionFilter by remember { mutableStateOf(false) }
-    var showYearFilter by remember { mutableStateOf(false) }
-    var showSortFilter by remember { mutableStateOf(false) }
+    val filterPills = remember(categoryType) { getFilterPills(categoryType) }
+    val categoryOpts = remember(categoryType) { getCategoryOptions(categoryType) }
 
+    var activeFilterIndex by remember { mutableIntStateOf(-1) } // 当前展开的筛选
     val gridState = rememberLazyGridState()
 
     LaunchedEffect(categoryType) {
@@ -170,9 +160,7 @@ fun VideoCategoryScreen(
     }
 
     LaunchedEffect(shouldLoadMore) {
-        if (shouldLoadMore) {
-            viewModel.loadMoreCategory()
-        }
+        if (shouldLoadMore) viewModel.loadMoreCategory()
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -187,10 +175,7 @@ fun VideoCategoryScreen(
                         Text("搜索播放源", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                     }
                 },
-                text = {
-                    Text(searchSourceMsg.ifBlank { "正在搜索，请稍候..." },
-                        fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                },
+                text = { Text(searchSourceMsg.ifBlank { "正在搜索，请稍候..." }, fontSize = 14.sp) },
                 confirmButton = {}
             )
         }
@@ -201,96 +186,67 @@ fun VideoCategoryScreen(
                 Column {
                     Text(title, fontWeight = FontWeight.Bold)
                     if (totalCount > 0) {
-                        Text("来自豆瓣的精选内容",
-                            fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("来自豆瓣的精选内容", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             },
-            navigationIcon = {
-                IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "返回") }
-            },
+            navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "返回") } },
             windowInsets = WindowInsets(0, 0, 0, 0)
         )
 
-        // ========== 筛选区域(参考 Selene-Source) ==========
+        // ========== 筛选区域 ==========
         Surface(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
             shape = RoundedCornerShape(12.dp),
             tonalElevation = 1.dp
         ) {
             Column(modifier = Modifier.padding(vertical = 12.dp, horizontal = 16.dp)) {
-                // 一级: 分类选择(横向滚动胶囊)
-                Row(
-                    modifier = Modifier.horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    categoryOptions.forEach { option ->
-                        val isSelected = filters.category == option.value && option.label != "全部"
-                        val isDefault = filters.category == "热门" && option.label == "全部"
-                        val active = isSelected || isDefault
-                        FilterChip(
-                            selected = active,
-                            onClick = {
-                                viewModel.updateCategoryFilters(
-                                    filters.copy(category = option.value)
-                                )
-                            },
-                            label = { Text(option.label, fontSize = 12.sp) },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary
-                            )
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                // 二级: 高级筛选 pills(参考 Selene-Source 的 _buildFilterPill)
-                // 只在"全部"分类下显示高级筛选
-                val showAdvanced = filters.category == "热门" ||
-                        !categoryOptions.any { it.label == filters.category && it.label != "全部" }
-
-                if (showAdvanced) {
-                    Text("筛选", fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(bottom = 6.dp))
+                // 一级分类(仅电影)
+                if (categoryOpts.isNotEmpty()) {
                     Row(
                         modifier = Modifier.horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        // 类型 pill
-                        FilterPill(
-                            title = "类型",
-                            options = typeOptions,
-                            selectedValue = filters.category,
-                            isDefault = filters.category == "热门",
-                            onClick = { showTypeFilter = true }
-                        )
-                        // 地区 pill
-                        FilterPill(
-                            title = "地区",
-                            options = regionOptions,
-                            selectedValue = filters.region,
-                            isDefault = filters.region == "全部",
-                            onClick = { showRegionFilter = true }
-                        )
-                        // 年代 pill
-                        FilterPill(
-                            title = "年代",
-                            options = yearOptions,
-                            selectedValue = filters.year,
-                            isDefault = filters.year == "全部",
-                            onClick = { showYearFilter = true }
-                        )
-                        // 排序 pill
-                        FilterPill(
-                            title = "排序",
-                            options = sortOptions,
-                            selectedValue = filters.sort,
-                            isDefault = filters.sort == "T",
-                            onClick = { showSortFilter = true }
-                        )
+                        categoryOpts.forEach { option ->
+                            FilterChip(
+                                selected = filters.category == option.value,
+                                onClick = { viewModel.updateCategoryFilters(filters.copy(category = option.value)) },
+                                label = { Text(option.label, fontSize = 12.sp) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                                )
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                }
+
+                // 筛选 pills
+                if (filterPills.isNotEmpty()) {
+                    Text("筛选", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 6.dp))
+                    Row(
+                        modifier = Modifier.horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        filterPills.forEachIndexed { index, pill ->
+                            val currentValue = when (pill.title) {
+                                "类型" -> filters.category
+                                "地区" -> filters.region
+                                "年代" -> filters.year
+                                "排序" -> filters.sort
+                                else -> ""
+                            }
+                            val isDefault = currentValue == "全部" || currentValue == "热门" || currentValue == "T" ||
+                                    currentValue == "tv" || currentValue == "日本" || currentValue == "show"
+                            FilterPillButton(
+                                title = pill.title,
+                                options = pill.options,
+                                selectedValue = currentValue,
+                                isDefault = isDefault,
+                                onClick = { activeFilterIndex = index }
+                            )
+                        }
                     }
                 }
             }
@@ -323,26 +279,17 @@ fun VideoCategoryScreen(
                 items(categoryResults) { video ->
                     VideoCard(video = video, onClick = { onVideoClick(video) })
                 }
-                // 底部加载更多
                 if (hasMore) {
                     item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(3) }) {
-                        Box(
-                            modifier = Modifier.fillMaxWidth().padding(16.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
+                        Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
                             CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
                         }
                     }
                 }
-                // 已到底部
-                if (!hasMore && categoryResults.size > PAGE_SIZE) {
+                if (!hasMore && categoryResults.size > 25) {
                     item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(3) }) {
-                        Box(
-                            modifier = Modifier.fillMaxWidth().padding(16.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("— 已显示全部 $totalCount 部 —",
-                                fontSize = 12.sp,
+                        Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                            Text("— 已显示全部 $totalCount 部 —", fontSize = 12.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
                         }
                     }
@@ -351,90 +298,62 @@ fun VideoCategoryScreen(
         }
     }
 
-    // ========== 筛选弹窗(参考 Selene-Source 的 showFilterOptionsSelector) ==========
-    if (showTypeFilter) {
+    // ========== 筛选底部弹窗 ==========
+    if (activeFilterIndex >= 0 && activeFilterIndex < filterPills.size) {
+        val pill = filterPills[activeFilterIndex]
+        val currentValue = when (pill.title) {
+            "类型" -> filters.category
+            "地区" -> filters.region
+            "年代" -> filters.year
+            "排序" -> filters.sort
+            else -> ""
+        }
         FilterBottomSheet(
-            title = "类型", options = typeOptions, selectedValue = filters.category,
+            title = pill.title,
+            options = pill.options,
+            selectedValue = currentValue,
             onSelect = { value ->
-                viewModel.updateCategoryFilters(filters.copy(category = value))
-                showTypeFilter = false
+                val newFilters = when (pill.title) {
+                    "类型" -> filters.copy(category = value)
+                    "地区" -> filters.copy(region = value)
+                    "年代" -> filters.copy(year = value)
+                    "排序" -> filters.copy(sort = value)
+                    else -> filters
+                }
+                viewModel.updateCategoryFilters(newFilters)
+                activeFilterIndex = -1
             },
-            onDismiss = { showTypeFilter = false }
-        )
-    }
-    if (showRegionFilter) {
-        FilterBottomSheet(
-            title = "地区", options = regionOptions, selectedValue = filters.region,
-            onSelect = { value ->
-                viewModel.updateCategoryFilters(filters.copy(region = value))
-                showRegionFilter = false
-            },
-            onDismiss = { showRegionFilter = false }
-        )
-    }
-    if (showYearFilter) {
-        FilterBottomSheet(
-            title = "年代", options = yearOptions, selectedValue = filters.year,
-            onSelect = { value ->
-                viewModel.updateCategoryFilters(filters.copy(year = value))
-                showYearFilter = false
-            },
-            onDismiss = { showYearFilter = false }
-        )
-    }
-    if (showSortFilter) {
-        FilterBottomSheet(
-            title = "排序", options = sortOptions, selectedValue = filters.sort,
-            onSelect = { value ->
-                viewModel.updateCategoryFilters(filters.copy(sort = value))
-                showSortFilter = false
-            },
-            onDismiss = { showSortFilter = false }
+            onDismiss = { activeFilterIndex = -1 }
         )
     }
 }
 
-// ==================== 筛选 Pill(参考 Selene-Source FilterPillHover) ====================
+// ==================== 筛选 Pill 按钮 ====================
 
 @Composable
-private fun FilterPill(
+private fun FilterPillButton(
     title: String,
     options: List<FilterOption>,
     selectedValue: String,
     isDefault: Boolean,
     onClick: () -> Unit
 ) {
-    val displayText = if (isDefault) {
-        title
-    } else {
-        options.firstOrNull { it.value == selectedValue }?.label ?: title
-    }
+    val displayText = if (isDefault) title
+    else options.firstOrNull { it.value == selectedValue }?.label ?: title
 
-    Surface(
-        onClick = onClick,
-        shape = RoundedCornerShape(20.dp),
-        color = Color.Transparent
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
-        ) {
-            Text(
-                displayText,
-                fontSize = 13.sp,
+    Surface(onClick = onClick, shape = RoundedCornerShape(20.dp), color = Color.Transparent) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)) {
+            Text(displayText, fontSize = 13.sp,
                 fontWeight = if (isDefault) FontWeight.Normal else FontWeight.Medium,
-                color = if (isDefault) MaterialTheme.colorScheme.onSurfaceVariant
-                else MaterialTheme.colorScheme.primary
-            )
+                color = if (isDefault) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary)
             Spacer(modifier = Modifier.width(2.dp))
             Text("▾", fontSize = 10.sp,
-                color = if (isDefault) MaterialTheme.colorScheme.onSurfaceVariant
-                else MaterialTheme.colorScheme.primary)
+                color = if (isDefault) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary)
         }
     }
 }
 
-// ==================== 筛选底部弹窗(参考 Selene-Source showFilterOptionsSelector) ====================
+// ==================== 筛选底部弹窗 ====================
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -445,57 +364,29 @@ private fun FilterBottomSheet(
     onSelect: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        containerColor = MaterialTheme.colorScheme.surface,
-        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 16.dp).padding(bottom = 32.dp)
-        ) {
-            Text(title, fontSize = 18.sp, fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 16.dp))
-
-            // 4列网格
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp).padding(bottom = 32.dp)) {
+            Text(title, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 16.dp))
             val rows = options.chunked(4)
             rows.forEach { row ->
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
+                Row(modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     row.forEach { option ->
                         val isSelected = option.value == selectedValue
-                        Surface(
-                            onClick = { onSelect(option.value) },
-                            shape = RoundedCornerShape(8.dp),
-                            color = if (isSelected) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.surfaceVariant,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Box(
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    option.label,
-                                    fontSize = 13.sp,
+                        Surface(onClick = { onSelect(option.value) }, shape = RoundedCornerShape(8.dp),
+                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                            modifier = Modifier.weight(1f)) {
+                            Box(modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp), contentAlignment = Alignment.Center) {
+                                Text(option.label, fontSize = 13.sp,
                                     fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal,
-                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary
-                                    else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
+                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                         }
                     }
-                    // 填充空位
-                    repeat(4 - row.size) {
-                        Spacer(modifier = Modifier.weight(1f))
-                    }
+                    repeat(4 - row.size) { Spacer(modifier = Modifier.weight(1f)) }
                 }
             }
         }
     }
 }
-
-private const val PAGE_SIZE = 25

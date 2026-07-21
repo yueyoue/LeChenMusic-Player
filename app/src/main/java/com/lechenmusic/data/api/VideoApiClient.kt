@@ -73,6 +73,21 @@ interface DoubanApi {
         @Query("type") type: String = "\u5168\u90E8"
     ): Response<DoubanHotResponse>
 
+    /**
+     * 豆瓣 recent_hot 带完整筛选(参考 Selene-Source)
+     * type 参数同时承担地区和年份筛选:
+     *   - 电影: type=全部/华语/欧美/韩国/日本/中国大陆/美国/中国香港/中国台湾/英国/法国/德国/印度
+     *   - 年份通过 category 参数传递(如 category=2025)
+     */
+    @GET("v2/subject/recent_hot/{kind}")
+    suspend fun getRecentHotFiltered(
+        @Path("kind") kind: String,
+        @Query("start") start: Int = 0,
+        @Query("limit") limit: Int = 20,
+        @Query("category") category: String = "\u70ED\u95E8",
+        @Query("type") type: String = "\u5168\u90E8"
+    ): Response<DoubanHotResponse>
+
 }
 
 /**

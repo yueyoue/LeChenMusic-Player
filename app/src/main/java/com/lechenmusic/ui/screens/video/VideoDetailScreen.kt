@@ -79,6 +79,8 @@ fun VideoDetailScreen(
     // 播放器控件自动隐藏
     var inlineControlsVisible by remember { mutableStateOf(true) }
     var fsControlsVisible by remember { mutableStateOf(true) }
+    var inlineInteractionCount by remember { mutableIntStateOf(0) }
+    var fsInteractionCount by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(source, videoId) {
         if (source != "searching") {
@@ -102,17 +104,19 @@ fun VideoDetailScreen(
     }
 
     // 内联播放器控件自动隐藏(3秒无操作)
-    LaunchedEffect(inlineControlsVisible) {
-        if (inlineControlsVisible && exoPlayer.isPlaying) {
+    LaunchedEffect(inlineInteractionCount) {
+        if (exoPlayer.isPlaying) {
+            inlineControlsVisible = true
             kotlinx.coroutines.delay(3000)
-            inlineControlsVisible = false
+            if (exoPlayer.isPlaying) inlineControlsVisible = false
         }
     }
     // 全屏播放器控件自动隐藏(3秒无操作)
-    LaunchedEffect(fsControlsVisible) {
-        if (fsControlsVisible && exoPlayer.isPlaying) {
+    LaunchedEffect(fsInteractionCount) {
+        if (exoPlayer.isPlaying) {
+            fsControlsVisible = true
             kotlinx.coroutines.delay(3000)
-            fsControlsVisible = false
+            if (exoPlayer.isPlaying) fsControlsVisible = false
         }
     }
 
@@ -209,6 +213,7 @@ fun VideoDetailScreen(
                     .pointerInput(Unit) {
                         detectTapGestures {
                             fsControlsVisible = !fsControlsVisible
+                            if (fsControlsVisible) fsInteractionCount++
                         }
                     }
             )
@@ -344,6 +349,7 @@ fun VideoDetailScreen(
                             .pointerInput(Unit) {
                                 detectTapGestures {
                                     inlineControlsVisible = !inlineControlsVisible
+                                    if (inlineControlsVisible) inlineInteractionCount++
                                 }
                             }
                     )
@@ -402,6 +408,7 @@ fun VideoDetailScreen(
                             kotlinx.coroutines.delay(500)
                         }
                     }
+                    if (inlineControlsVisible) {
                     Box(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(start = 8.dp, end = 8.dp, bottom = 4.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -480,6 +487,7 @@ fun VideoDetailScreen(
                             )
                         }
                     }
+                    } // end if inlineControlsVisible
                 }
             }
 
