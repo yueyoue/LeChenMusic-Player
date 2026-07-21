@@ -343,28 +343,57 @@ fun VideoDetailScreen(
             }
             if (fsControlsVisible) {
             Column(
-                modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)
+                modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp)
             ) {
-                Slider(
-                    value = fsProgress,
-                    onValueChange = { newValue ->
-                        fsDragging = true
-                        fsProgress = newValue
-                    },
-                    onValueChangeFinished = {
-                        exoPlayer.seekTo((fsProgress * fsDuration).toLong())
-                        fsDragging = false
-                    },
+                // 自定义手势进度条（和内联播放器同款，极致跟手）
+                var fsBarWidthPx by remember { mutableFloatStateOf(1f) }
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = SliderDefaults.colors(
-                        thumbColor = MaterialTheme.colorScheme.primary,
-                        activeTrackColor = MaterialTheme.colorScheme.primary,
-                        inactiveTrackColor = Color.White.copy(alpha = 0.3f)
-                    )
-                )
-                Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(formatTime(fsPosition), color = Color.White, fontSize = 11.sp)
-                    Text(formatTime(fsDuration), color = Color.White, fontSize = 11.sp)
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(formatTime(fsPosition), color = Color.White.copy(alpha = 0.7f), fontSize = 10.sp, modifier = Modifier.width(40.dp))
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(32.dp)
+                            .onGloballyPositioned { fsBarWidthPx = it.size.width.toFloat() }
+                            .pointerInput(Unit) {
+                                detectDragGestures(
+                                    onDragStart = { offset ->
+                                        fsDragging = true
+                                        fsProgress = (offset.x / fsBarWidthPx).coerceIn(0f, 1f)
+                                    },
+                                    onDragEnd = {
+                                        exoPlayer.seekTo((fsProgress * fsDuration).toLong())
+                                        fsDragging = false
+                                    },
+                                    onDragCancel = { fsDragging = false }
+                                ) { change, dragAmount ->
+                                    change.consume()
+                                    val newOffset = (fsProgress * fsBarWidthPx) + dragAmount.x
+                                    fsProgress = (newOffset / fsBarWidthPx).coerceIn(0f, 1f)
+                                }
+                            }
+                            .pointerInput(Unit) {
+                                detectTapGestures(
+                                    onPress = { offset ->
+                                        fsDragging = true
+                                        fsProgress = (offset.x / fsBarWidthPx).coerceIn(0f, 1f)
+                                        val success = tryAwaitRelease()
+                                        if (success) {
+                                            exoPlayer.seekTo((fsProgress * fsDuration).toLong())
+                                        }
+                                        fsDragging = false
+                                    }
+                                )
+                            },
+                        contentAlignment = Alignment.CenterStart
+                    ) {
+                        Box(modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)).background(Color.White.copy(alpha = 0.3f)))
+                        Box(modifier = Modifier.fillMaxWidth(fraction = fsProgress).height(4.dp).clip(RoundedCornerShape(2.dp)).background(MaterialTheme.colorScheme.primary))
+                        Box(modifier = Modifier.offset { IntOffset((fsProgress * fsBarWidthPx - 8).toInt(), 0) }.size(16.dp).background(MaterialTheme.colorScheme.primary, CircleShape))
+                    }
+                    Text(formatTime(fsDuration), color = Color.White.copy(alpha = 0.7f), fontSize = 10.sp, modifier = Modifier.width(40.dp), textAlign = TextAlign.End)
                 }
             }
             } // end if (fsControlsVisible)
@@ -437,23 +466,23 @@ fun VideoDetailScreen(
                     )
                     // 自定义叠加层: 返回 + 全屏 + 播放/暂停
                     if (inlineControlsVisible) {
-                        // 返回按钮 (左上)
+                        // 返回按钮 (左上) - 增加内边距避免遮挡视频
                         IconButton(
                             onClick = onBack,
-                            modifier = Modifier.align(Alignment.TopStart).statusBarsPadding().padding(4.dp)
+                            modifier = Modifier.align(Alignment.TopStart).statusBarsPadding().padding(start = 8.dp, top = 8.dp)
                         ) {
                             Icon(Icons.Default.ArrowBack, "返回", tint = Color.White)
                         }
-                        // 投屏 + 全屏按钮 (右上)
-                        Row(modifier = Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(4.dp)) {
+                        // 投屏按钮 (右上) - 增加内边距
+                        Row(modifier = Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(end = 8.dp, top = 8.dp)) {
                             IconButton(onClick = { showCastSheet = true }) {
                                 Icon(Icons.Default.Cast, "投屏", tint = if (castDevice != null) MaterialTheme.colorScheme.primary else Color.White)
                             }
                         }
-                        // 全屏按钮 (右下)
+                        // 全屏按钮 (右下) - 增加内边距
                         IconButton(
                             onClick = { isPlayerFullscreen = true },
-                            modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp)
+                            modifier = Modifier.align(Alignment.BottomEnd).padding(end = 8.dp, bottom = 8.dp)
                         ) {
                             Icon(Icons.Default.Fullscreen, "全屏", tint = Color.White)
                         }
