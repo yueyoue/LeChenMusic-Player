@@ -121,11 +121,25 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
     private val CACHE_TTL = 10 * 60 * 1000L  // 10分钟缓存
     private val PAGE_SIZE = 20
     private var categoryFullList = listOf<VideoInfo>()
+    private var categoryFiltered = listOf<VideoInfo>()  // 筛选后的列表
     private var categoryCurrentPage = 0
     private val _categoryHasMore = MutableStateFlow(true)
     val categoryHasMore: StateFlow<Boolean> = _categoryHasMore.asStateFlow()
     private val _categoryTotalCount = MutableStateFlow(0)
     val categoryTotalCount: StateFlow<Int> = _categoryTotalCount.asStateFlow()
+
+    // ===== 分类筛选 =====
+    data class CategoryFilters(
+        val year: String = "全部",      // 全部/2026/2025/2024/2023/更早
+        val area: String = "全部",      // 全部/中国大陆/美国/韩国/日本/...
+        val source: String = "全部"     // 全部/各来源
+    )
+    private val _categoryFilters = MutableStateFlow(CategoryFilters())
+    val categoryFilters: StateFlow<CategoryFilters> = _categoryFilters.asStateFlow()
+    private val _categoryAreas = MutableStateFlow<List<String>>(emptyList())
+    val categoryAreas: StateFlow<List<String>> = _categoryAreas.asStateFlow()
+    private val _categorySources = MutableStateFlow<List<String>>(emptyList())
+    val categorySources: StateFlow<List<String>> = _categorySources.asStateFlow()
 
     // ===== 直播 =====
     private val _liveSources = MutableStateFlow<List<LiveSource>>(emptyList())
@@ -616,10 +630,8 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
             if (!forceRefresh && cached != null && System.currentTimeMillis() - cached.first < CACHE_TTL) {
                 logDebug("searchCategory", "使用缓存: $keyword, ${cached.second.size} 条")
                 categoryFullList = cached.second
-                _categoryTotalCount.value = categoryFullList.size
-                categoryCurrentPage = 0
-                _categoryResults.value = categoryFullList.take(PAGE_SIZE)
-                _categoryHasMore.value = categoryFullList.size > PAGE_SIZE
+                extractFilterOptions(cached.second)
+                applyCategoryFilters()
                 return@launch
             }
 
@@ -634,10 +646,8 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                     // 写入缓存
                     categoryCache[keyword] = System.currentTimeMillis() to deduped
                     categoryFullList = deduped
-                    _categoryTotalCount.value = deduped.size
-                    categoryCurrentPage = 0
-                    _categoryResults.value = deduped.take(PAGE_SIZE)
-                    _categoryHasMore.value = deduped.size > PAGE_SIZE
+                    extractFilterOptions(deduped)
+                    applyCategoryFilters()
                     logDebug("searchCategory", "搜索完成: $keyword, ${deduped.size} 条, 首页显示 ${_categoryResults.value.size} 条")
                 } else {
                     _categoryResults.value = emptyList()
@@ -657,15 +667,85 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
         if (!_categoryHasMore.value) return
         categoryCurrentPage++
         val end = (categoryCurrentPage + 1) * PAGE_SIZE
-        val newItems = categoryFullList.take(end)
+        val newItems = categoryFiltered.take(end)
         _categoryResults.value = newItems
-        _categoryHasMore.value = newItems.size < categoryFullList.size
-        logDebug("loadMoreCategory", "加载更多: 显示 ${newItems.size}/${categoryFullList.size}")
+        _categoryHasMore.value = newItems.size < categoryFiltered.size
+        logDebug("loadMoreCategory", "加载更多: 显示 ${newItems.size}/${categoryFiltered.size}")
+    }
+
+    /** 更新筛选条件并重新过滤 */
+    fun updateCategoryFilters(filters: CategoryFilters) {
+        _categoryFilters.value = filters
+        applyCategoryFilters()
+    }
+
+    /** 应用筛选(客户端过滤) */
+    private fun applyCategoryFilters() {
+        val filters = _categoryFilters.value
+        var filtered = categoryFullList
+
+        // 按年份筛选
+        if (filters.year != "全部") {
+            filtered = when (filters.year) {
+                "更早" -> filtered.filter { it.year.isNotBlank() && it.year.toIntOrNull()?.let { y -> y < 2023 } == true }
+                else -> filtered.filter { it.year == filters.year }
+            }
+        }
+
+        // 按地区筛选
+        if (filters.area != "全部") {
+            filtered = filtered.filter {
+                it.area.contains(filters.area, ignoreCase = true) ||
+                it.sourceName.contains(filters.area, ignoreCase = true) ||
+                it.sourceNameAlt.contains(filters.area, ignoreCase = true)
+            }
+        }
+
+        // 按来源筛选
+        if (filters.source != "全部") {
+            filtered = filtered.filter { it.displaySourceName == filters.source }
+        }
+
+        categoryFiltered = filtered
+        _categoryTotalCount.value = filtered.size
+        categoryCurrentPage = 0
+        _categoryResults.value = filtered.take(PAGE_SIZE)
+        _categoryHasMore.value = filtered.size > PAGE_SIZE
+        logDebug("applyCategoryFilters", "筛选完成: ${categoryFullList.size} -> ${filtered.size} 条")
+    }
+
+    /** 提取可选的筛选项(从全量数据中) */
+    private fun extractFilterOptions(list: List<VideoInfo>) {
+        // 提取地区
+        val areas = list.mapNotNull { v ->
+            when {
+                v.area.isNotBlank() -> v.area
+                v.sourceName.contains("爱奇艺") || v.sourceNameAlt.contains("爱奇艺") -> "中国大陆"
+                v.sourceName.contains("优酷") || v.sourceNameAlt.contains("优酷") -> "中国大陆"
+                v.sourceName.contains("腾讯") || v.sourceNameAlt.contains("腾讯") -> "中国大陆"
+                v.sourceName.contains("芒果") || v.sourceNameAlt.contains("芒果") -> "中国大陆"
+                v.sourceName.contains("Netflix") || v.sourceNameAlt.contains("Netflix") -> "欧美"
+                else -> null
+            }
+        }.distinct().sorted()
+        _categoryAreas.value = listOf("全部") + areas
+
+        // 提取来源
+        val sources = list.map { it.displaySourceName }.filter { it.isNotBlank() }.distinct().sorted()
+        _categorySources.value = listOf("全部") + sources
     }
 
     /** 清除分类缓存 */
     fun clearCategoryCache() {
         categoryCache.clear()
+    }
+
+    /** 重置分类筛选 */
+    fun resetCategoryFilters() {
+        _categoryFilters.value = CategoryFilters()
+        if (categoryFullList.isNotEmpty()) {
+            applyCategoryFilters()
+        }
     }
 
     /**
