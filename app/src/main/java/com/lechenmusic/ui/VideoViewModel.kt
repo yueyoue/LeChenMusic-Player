@@ -391,6 +391,13 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                     srcTitle.contains(normalizedTitle)
                 } ?: validSources.firstOrNull()
 
+                if (matched == null) {
+                    _toastMessage.value = "未找到「$title」的播放源"
+                    _searchSourceLoading.value = false
+                    _detailLoading.value = false
+                    return@launch
+                }
+
                 logDebug("searchAndPlay", "匹配: title=${matched.title}, source=${matched.source}, eps=${matched.episodes.size}")
 
                 if (matched.episodes.isEmpty()) {
