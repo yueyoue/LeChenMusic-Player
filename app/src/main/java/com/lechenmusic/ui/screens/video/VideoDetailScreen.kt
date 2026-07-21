@@ -395,14 +395,3 @@ fun VideoDetailScreen(
         }
     }
 }
-
-private fun categoryName(type: String): String {
-    return when (type) {
-        "movie" -> "电影"
-        "tv", "tvshow" -> "电视剧"
-        "anime" -> "动漫"
-        "variety", "show" -> "综艺"
-        "documentary" -> "纪录片"
-        else -> type.ifBlank { "影视" }
-    }
-}
