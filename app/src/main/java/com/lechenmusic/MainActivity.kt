@@ -240,6 +240,10 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                         .fillMaxSize()
                         .padding(paddingValues)
                 ) {
+                    // 响应式窗口大小(用于子页面)
+                    val windowSizeClass = androidx.compose.material3.windowsizeclass.calculateWindowSizeClass(
+                        LocalContext.current as android.app.Activity
+                    )
                     composable(Screen.Home.route) {
                         HomeScreen(
                             viewModel = viewModel,
@@ -657,9 +661,9 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                             categoryType = type,
                             onBack = { navController.popBackStack() },
                             onVideoClick = { video ->
-                                // 统一走 searchAndPlay：构造 VideoDetail 后导航
                                 videoViewModel.searchAndPlay(video.title, video.id, video.year)
-                            }
+                            },
+                            windowSizeClass = windowSizeClass
                         )
                     }
 

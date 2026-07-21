@@ -13,6 +13,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.windowsizeclass.WindowSizeClass
+import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
+import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
+import androidx.compose.ui.platform.LocalContext
 // PullToRefreshBox not available in this BOM version
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -38,7 +42,8 @@ fun VideoScreen(
     onSearchClick: () -> Unit = {},
     onVideoClick: (VideoInfo) -> Unit = {},
     onLiveClick: () -> Unit = {},
-    onRecordClick: (VideoPlayRecord) -> Unit = {}
+    onRecordClick: (VideoPlayRecord) -> Unit = {},
+    windowSizeClass: WindowSizeClass? = null
 ) {
     val isLoggedIn by viewModel.isLoggedIn.collectAsState()
     val homeData by viewModel.homeData.collectAsState()
@@ -52,6 +57,17 @@ fun VideoScreen(
     // 分类数据
     val categoryResults by viewModel.categoryResults.collectAsState()
     val categoryLoading by viewModel.categoryLoading.collectAsState()
+
+    // 响应式网格列数
+    val gridColumns = remember {
+        val ws = windowSizeClass
+        when {
+            ws == null -> 3
+            ws.widthSizeClass == WindowWidthSizeClass.Expanded -> 6
+            ws.widthSizeClass == WindowWidthSizeClass.Medium -> 4
+            else -> 3
+        }
+    }
 
     // 当前分类关键词
     var currentCategoryKeyword by remember { mutableStateOf("") }
@@ -158,10 +174,10 @@ fun VideoScreen(
                     onVideoClick = onVideoClick,
                     onRecordClick = onRecordClick
                 )
-                1 -> VideoCategoryList(viewModel, categoryResults, categoryLoading, onVideoClick)
-                2 -> VideoCategoryList(viewModel, categoryResults, categoryLoading, onVideoClick)
-                3 -> VideoCategoryList(viewModel, categoryResults, categoryLoading, onVideoClick)
-                4 -> VideoCategoryList(viewModel, categoryResults, categoryLoading, onVideoClick)
+                1 -> VideoCategoryList(viewModel, categoryResults, categoryLoading, onVideoClick, gridColumns)
+                2 -> VideoCategoryList(viewModel, categoryResults, categoryLoading, onVideoClick, gridColumns)
+                3 -> VideoCategoryList(viewModel, categoryResults, categoryLoading, onVideoClick, gridColumns)
+                4 -> VideoCategoryList(viewModel, categoryResults, categoryLoading, onVideoClick, gridColumns)
             }
         }
     }
@@ -355,7 +371,8 @@ private fun VideoCategoryList(
     viewModel: VideoViewModel,
     videos: List<VideoInfo>,
     isLoading: Boolean,
-    onVideoClick: (VideoInfo) -> Unit
+    onVideoClick: (VideoInfo) -> Unit,
+    gridColumns: Int = 3
 ) {
     val hasMore by viewModel.categoryHasMore.collectAsState()
     val gridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
@@ -384,7 +401,7 @@ private fun VideoCategoryList(
 
     LazyVerticalGrid(
         state = gridState,
-        columns = GridCells.Fixed(3),
+        columns = GridCells.Fixed(gridColumns),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)

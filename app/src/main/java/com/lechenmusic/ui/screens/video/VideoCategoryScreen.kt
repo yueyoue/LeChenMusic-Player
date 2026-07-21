@@ -14,6 +14,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
+import androidx.compose.material3.windowsizeclass.WindowSizeClass
+import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -122,7 +125,8 @@ fun VideoCategoryScreen(
     viewModel: VideoViewModel,
     categoryType: String,
     onBack: () -> Unit,
-    onVideoClick: (VideoInfo) -> Unit
+    onVideoClick: (VideoInfo) -> Unit,
+    windowSizeClass: WindowSizeClass? = null
 ) {
     val categoryResults by viewModel.categoryResults.collectAsState()
     val isLoading by viewModel.categoryLoading.collectAsState()
@@ -141,6 +145,16 @@ fun VideoCategoryScreen(
     }
 
     val filterPills = remember(categoryType) { getFilterPills(categoryType) }
+    // 响应式网格列数
+    val gridColumns = remember {
+        val ws = windowSizeClass
+        when {
+            ws == null -> 3
+            ws.widthSizeClass == androidx.compose.material3.windowsizeclass.WindowWidthSizeClass.Expanded -> 6
+            ws.widthSizeClass == androidx.compose.material3.windowsizeclass.WindowWidthSizeClass.Medium -> 4
+            else -> 3
+        }
+    }
     val categoryOpts = remember(categoryType) { getCategoryOptions(categoryType) }
 
     var activeFilterIndex by remember { mutableIntStateOf(-1) } // 当前展开的筛选
@@ -271,7 +285,7 @@ fun VideoCategoryScreen(
         } else {
             LazyVerticalGrid(
                 state = gridState,
-                columns = GridCells.Fixed(3),
+                columns = GridCells.Fixed(gridColumns),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
