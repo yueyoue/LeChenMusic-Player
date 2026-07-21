@@ -37,6 +37,7 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.PlayerView
 import coil.compose.AsyncImage
 import com.lechenmusic.ErrorReporter
+import com.lechenmusic.R
 import com.lechenmusic.data.model.*
 import com.lechenmusic.ui.VideoViewModel
 
@@ -87,16 +88,6 @@ fun VideoDetailScreen(
             .build().apply {
                 playWhenReady = false
                 repeatMode = Player.REPEAT_MODE_OFF
-                addListener(object : Player.Listener {
-                    override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
-                        ErrorReporter.reportError(
-                            level = "error",
-                            message = "[影视详情播放] ${error.errorCodeName}: ${error.message}",
-                            throwable = error,
-                            screen = "video_detail_player"
-                        )
-                    }
-                })
             }
     }
 
@@ -133,12 +124,12 @@ fun VideoDetailScreen(
     // 全屏模式下显示纯播放器
     if (isPlayerFullscreen) {
         Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+            // 视频画面（无内置控制器）
             AndroidView(
                 factory = { ctx ->
                     PlayerView(ctx).apply {
                         player = exoPlayer
-                        useController = true
-                        setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
+                        useController = false
                         layoutParams = FrameLayout.LayoutParams(
                             FrameLayout.LayoutParams.MATCH_PARENT,
                             FrameLayout.LayoutParams.MATCH_PARENT
@@ -147,12 +138,59 @@ fun VideoDetailScreen(
                 },
                 modifier = Modifier.fillMaxSize()
             )
-            // 返回按钮
+            // 自定义叠加层
+            // 退出全屏 (左上)
             IconButton(
                 onClick = { isPlayerFullscreen = false },
-                modifier = Modifier.align(Alignment.TopStart).statusBarsPadding()
+                modifier = Modifier.align(Alignment.TopStart).statusBarsPadding().padding(4.dp)
             ) {
                 Icon(Icons.Default.ArrowBack, "退出全屏", tint = Color.White)
+            }
+            // 播放/暂停 (居中)
+            var fsIsPlaying by remember { mutableStateOf(false) }
+            LaunchedEffect(exoPlayer) {
+                while (true) {
+                    fsIsPlaying = exoPlayer.isPlaying
+                    kotlinx.coroutines.delay(200)
+                }
+            }
+            IconButton(
+                onClick = { exoPlayer.playWhenReady = !exoPlayer.isPlaying },
+                modifier = Modifier.align(Alignment.Center).size(64.dp)
+            ) {
+                Icon(
+                    if (fsIsPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    if (fsIsPlaying) "暂停" else "播放",
+                    tint = Color.White,
+                    modifier = Modifier.size(48.dp)
+                )
+            }
+            // 底部进度条 + 时间
+            var fsProgress by remember { mutableFloatStateOf(0f) }
+            var fsDuration by remember { mutableLongStateOf(0L) }
+            var fsPosition by remember { mutableLongStateOf(0L) }
+            LaunchedEffect(exoPlayer) {
+                while (true) {
+                    fsDuration = exoPlayer.duration.coerceAtLeast(0L)
+                    fsPosition = exoPlayer.currentPosition.coerceAtLeast(0L)
+                    fsProgress = if (fsDuration > 0) fsPosition.toFloat() / fsDuration else 0f
+                    kotlinx.coroutines.delay(500)
+                }
+            }
+            Column(
+                modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                LinearProgressIndicator(
+                    progress = { fsProgress },
+                    modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = Color.White.copy(alpha = 0.3f)
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(formatTime(fsPosition), color = Color.White, fontSize = 11.sp)
+                    Text(formatTime(fsDuration), color = Color.White, fontSize = 11.sp)
+                }
             }
         }
         BackHandler { isPlayerFullscreen = false }
@@ -188,12 +226,12 @@ fun VideoDetailScreen(
                         .aspectRatio(16f / 9f)
                         .background(Color.Black)
                 ) {
+                    // 视频画面（无内置控制器）
                     AndroidView(
                         factory = { ctx ->
                             PlayerView(ctx).apply {
                                 player = exoPlayer
-                                useController = true
-                                setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
+                                useController = false
                                 layoutParams = FrameLayout.LayoutParams(
                                     FrameLayout.LayoutParams.MATCH_PARENT,
                                     FrameLayout.LayoutParams.MATCH_PARENT
@@ -202,19 +240,59 @@ fun VideoDetailScreen(
                         },
                         modifier = Modifier.fillMaxSize()
                     )
-                    // 全屏按钮
+                    // 自定义叠加层: 返回 + 全屏 + 播放/暂停
+                    // 返回按钮 (左上)
+                    IconButton(
+                        onClick = onBack,
+                        modifier = Modifier.align(Alignment.TopStart).statusBarsPadding().padding(4.dp)
+                    ) {
+                        Icon(Icons.Default.ArrowBack, "返回", tint = Color.White)
+                    }
+                    // 全屏按钮 (右下)
                     IconButton(
                         onClick = { isPlayerFullscreen = true },
-                        modifier = Modifier.align(Alignment.BottomEnd).padding(8.dp)
+                        modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp)
                     ) {
                         Icon(Icons.Default.Fullscreen, "全屏", tint = Color.White)
                     }
-                    // 返回按钮
+                    // 播放/暂停按钮 (居中)
+                    var isPlaying by remember { mutableStateOf(false) }
+                    LaunchedEffect(exoPlayer) {
+                        while (true) {
+                            isPlaying = exoPlayer.isPlaying
+                            kotlinx.coroutines.delay(200)
+                        }
+                    }
                     IconButton(
-                        onClick = onBack,
-                        modifier = Modifier.align(Alignment.TopStart).statusBarsPadding()
+                        onClick = { exoPlayer.playWhenReady = !exoPlayer.isPlaying },
+                        modifier = Modifier.align(Alignment.Center).size(56.dp)
                     ) {
-                        Icon(Icons.Default.ArrowBack, "返回", tint = Color.White)
+                        Icon(
+                            if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            if (isPlaying) "暂停" else "播放",
+                            tint = Color.White,
+                            modifier = Modifier.size(40.dp)
+                        )
+                    }
+                    // 底部进度条
+                    var progress by remember { mutableFloatStateOf(0f) }
+                    var durationMs by remember { mutableLongStateOf(0L) }
+                    var positionMs by remember { mutableLongStateOf(0L) }
+                    LaunchedEffect(exoPlayer) {
+                        while (true) {
+                            durationMs = exoPlayer.duration.coerceAtLeast(0L)
+                            positionMs = exoPlayer.currentPosition.coerceAtLeast(0L)
+                            progress = if (durationMs > 0) positionMs.toFloat() / durationMs else 0f
+                            kotlinx.coroutines.delay(500)
+                        }
+                    }
+                    Box(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(start = 48.dp, end = 48.dp, bottom = 8.dp)) {
+                        LinearProgressIndicator(
+                            progress = { progress },
+                            modifier = Modifier.fillMaxWidth().height(3.dp).clip(RoundedCornerShape(2.dp)),
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = Color.White.copy(alpha = 0.3f)
+                        )
                     }
                 }
             }
@@ -394,4 +472,12 @@ fun VideoDetailScreen(
             }
         }
     }
+}
+
+private fun formatTime(ms: Long): String {
+    val totalSec = ms / 1000
+    val h = totalSec / 3600
+    val m = (totalSec % 3600) / 60
+    val s = totalSec % 60
+    return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
 }

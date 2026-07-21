@@ -293,6 +293,14 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
     // ==================== 详情 ====================
 
     fun loadDetail(source: String, id: String) {
+        // 如果已经有该 source+id 的完整数据（含episodes），不重复加载
+        val existing = _videoDetail.value
+        if (existing != null && existing.source == source && existing.id == id
+            && (existing.episodes.isNotEmpty() || existing.sources.isNotEmpty())) {
+            logDebug("loadDetail", "已有数据,跳过加载: source=$source id=$id")
+            _detailLoading.value = false
+            return
+        }
         viewModelScope.launch {
             _detailLoading.value = true
             try {
