@@ -353,32 +353,44 @@ fun VideoCategoryScreen(
 
     // ========== 筛选弹窗(参考 Selene-Source 的 showFilterOptionsSelector) ==========
     if (showTypeFilter) {
-        FilterBottomSheet("类型", typeOptions, filters.category) { value ->
-            viewModel.updateCategoryFilters(filters.copy(category = value))
-            showTypeFilter = false
-        }
-        { showTypeFilter = false }
+        FilterBottomSheet(
+            title = "类型", options = typeOptions, selectedValue = filters.category,
+            onSelect = { value ->
+                viewModel.updateCategoryFilters(filters.copy(category = value))
+                showTypeFilter = false
+            },
+            onDismiss = { showTypeFilter = false }
+        )
     }
     if (showRegionFilter) {
-        FilterBottomSheet("地区", regionOptions, filters.region) { value ->
-            viewModel.updateCategoryFilters(filters.copy(region = value))
-            showRegionFilter = false
-        }
-        { showRegionFilter = false }
+        FilterBottomSheet(
+            title = "地区", options = regionOptions, selectedValue = filters.region,
+            onSelect = { value ->
+                viewModel.updateCategoryFilters(filters.copy(region = value))
+                showRegionFilter = false
+            },
+            onDismiss = { showRegionFilter = false }
+        )
     }
     if (showYearFilter) {
-        FilterBottomSheet("年代", yearOptions, filters.year) { value ->
-            viewModel.updateCategoryFilters(filters.copy(year = value))
-            showYearFilter = false
-        }
-        { showYearFilter = false }
+        FilterBottomSheet(
+            title = "年代", options = yearOptions, selectedValue = filters.year,
+            onSelect = { value ->
+                viewModel.updateCategoryFilters(filters.copy(year = value))
+                showYearFilter = false
+            },
+            onDismiss = { showYearFilter = false }
+        )
     }
     if (showSortFilter) {
-        FilterBottomSheet("排序", sortOptions, filters.sort) { value ->
-            viewModel.updateCategoryFilters(filters.copy(sort = value))
-            showSortFilter = false
-        }
-        { showSortFilter = false }
+        FilterBottomSheet(
+            title = "排序", options = sortOptions, selectedValue = filters.sort,
+            onSelect = { value ->
+                viewModel.updateCategoryFilters(filters.copy(sort = value))
+                showSortFilter = false
+            },
+            onDismiss = { showSortFilter = false }
+        )
     }
 }
 
