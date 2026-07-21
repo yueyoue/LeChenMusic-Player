@@ -615,12 +615,13 @@ fun HomeScreen(
                                 videoViewModel?.loadPlayRecords()
                             }
                         }
-                        // 搜索完成后直接跳转播放器
-                        val needNav = videoViewModel?.needNavigateToPlayer?.collectAsState()?.value ?: false
-                        androidx.compose.runtime.LaunchedEffect(needNav) {
-                            if (needNav) {
-                                videoViewModel?.consumeNavigateToPlayer()
-                                onNavigateToVideoPlayer()
+                        // searchAndPlay 完成后跳转详情页（而非直接播放）
+                        val navigateToDetail = videoViewModel?.navigateToDetail?.collectAsState()?.value ?: false
+                        val searchDetail = videoViewModel?.videoDetail?.collectAsState()?.value
+                        androidx.compose.runtime.LaunchedEffect(navigateToDetail) {
+                            if (navigateToDetail && searchDetail != null) {
+                                videoViewModel?.consumeNavigateToDetail()
+                                onNavigateToVideoDetail(searchDetail.source, searchDetail.id)
                             }
                         }
                         // Bug修复：搜索播放源时显示加载弹窗

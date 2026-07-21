@@ -643,12 +643,13 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                     }
                     composable(Screen.VideoCategory.route) { backStackEntry ->
                         val type = backStackEntry.arguments?.getString("type") ?: "movie"
-                        // 搜索完成后直接跳转播放器
-                        val needNav by videoViewModel.needNavigateToPlayer.collectAsState()
-                        androidx.compose.runtime.LaunchedEffect(needNav) {
-                            if (needNav) {
-                                videoViewModel.consumeNavigateToPlayer()
-                                navController.navigate(Screen.VideoPlayerDirect.route)
+                        // searchAndPlay 完成后跳转详情页
+                        val navigateToDetail by videoViewModel.navigateToDetail.collectAsState()
+                        val searchDetail by videoViewModel.videoDetail.collectAsState()
+                        androidx.compose.runtime.LaunchedEffect(navigateToDetail) {
+                            if (navigateToDetail && searchDetail != null) {
+                                videoViewModel.consumeNavigateToDetail()
+                                navController.navigate(Screen.VideoDetail.createRoute(searchDetail!!.source, searchDetail!!.id))
                             }
                         }
                         com.lechenmusic.ui.screens.video.VideoCategoryScreen(

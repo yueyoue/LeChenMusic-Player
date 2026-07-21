@@ -389,10 +389,10 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                     episodes = matched.episodes,
                     episodesTitles = matched.episodesTitles
                 )
-                logDebug("searchAndPlay", "VideoDetail OK, episodes=${'$'}{detail.episodes.size}, 设置导航")
+                logDebug("searchAndPlay", "VideoDetail OK, episodes=${'$'}{detail.episodes.size}, 导航到详情页")
                 _videoDetail.value = detail
-                _needNavigateToPlayer.value = true
-                logDebug("searchAndPlay", "完成, needNavigateToPlayer=true")
+                _navigateToDetail.value = true
+                logDebug("searchAndPlay", "完成, navigateToDetail=true")
             } catch (e: Exception) {
                 logDebug("searchAndPlay", "异常: ${'$'}{e.javaClass.simpleName}: ${'$'}{e.message}")
                 _toastMessage.value = "搜索播放源失败: ${e.message}"
@@ -405,10 +405,15 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // 导航触发器
+    // 导航触发器（直接播放 - 保留兼容）
     private val _needNavigateToPlayer = MutableStateFlow(false)
     val needNavigateToPlayer: StateFlow<Boolean> = _needNavigateToPlayer.asStateFlow()
     fun consumeNavigateToPlayer() { _needNavigateToPlayer.value = false }
+
+    // 导航到详情页（searchAndPlay 用这个）
+    private val _navigateToDetail = MutableStateFlow(false)
+    val navigateToDetail: StateFlow<Boolean> = _navigateToDetail.asStateFlow()
+    fun consumeNavigateToDetail() { _navigateToDetail.value = false }
 
     // 搜索播放源的加载状态（用于 UI 弹窗提示）
     private val _searchSourceLoading = MutableStateFlow(false)
