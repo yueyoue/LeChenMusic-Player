@@ -118,10 +118,26 @@ fun VideoDetailScreen(
             if (exoPlayer.isPlaying) inlineControlsVisible = false
         }
     }
+
+    // 视频开始播放后自动隐藏控件
+    LaunchedEffect(exoPlayer.isPlaying) {
+        if (exoPlayer.isPlaying) {
+            kotlinx.coroutines.delay(3000)
+            if (exoPlayer.isPlaying) inlineControlsVisible = false
+        }
+    }
     // 全屏播放器控件自动隐藏(3秒无操作)
     LaunchedEffect(fsInteractionCount) {
         if (fsInteractionCount > 0 && exoPlayer.isPlaying) {
             fsControlsVisible = true
+            kotlinx.coroutines.delay(3000)
+            if (exoPlayer.isPlaying) fsControlsVisible = false
+        }
+    }
+
+    // 全屏视频开始播放后自动隐藏控件
+    LaunchedEffect(exoPlayer.isPlaying) {
+        if (exoPlayer.isPlaying) {
             kotlinx.coroutines.delay(3000)
             if (exoPlayer.isPlaying) fsControlsVisible = false
         }
@@ -147,11 +163,35 @@ fun VideoDetailScreen(
     }
 
     // 定期保存播放记录（参考 Selene-Source 每10秒保存）
+    // 同时在退出时保存
     LaunchedEffect(currentDetail) {
         val detail = currentDetail ?: return@LaunchedEffect
         while (true) {
             kotlinx.coroutines.delay(10000)
             if (exoPlayer.isPlaying && exoPlayer.duration > 0) {
+                viewModel.savePlayRecord(
+                    com.lechenmusic.data.model.PlayRecordRequest(
+                        source = detail.source,
+                        id = detail.id,
+                        title = detail.title,
+                        cover = detail.displayCover,
+                        year = detail.year,
+                        episode_index = 0,
+                        total_episodes = detail.episodes.size,
+                        play_time = (exoPlayer.currentPosition / 1000).toInt(),
+                        total_time = (exoPlayer.duration / 1000).toInt(),
+                        type = detail.typeName
+                    )
+                )
+            }
+        }
+    }
+
+    // 退出时保存播放记录（参考 Selene-Source _saveProgress force=true）
+    DisposableEffect(Unit) {
+        onDispose {
+            val detail = currentDetail
+            if (detail != null && exoPlayer.currentPosition > 1000) {
                 viewModel.savePlayRecord(
                     com.lechenmusic.data.model.PlayRecordRequest(
                         source = detail.source,

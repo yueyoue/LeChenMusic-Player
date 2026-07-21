@@ -254,11 +254,20 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
             _homeError.value = null
             try {
                 val doubanApi = DoubanApiClient.getApi()
-                // 参考 Selene-Source: 各分类使用正确的 category+type 参数
-                val moviesResp = withContext(Dispatchers.IO) { doubanApi.getRecentHot("movie", limit = 12, category = "\u70ED\u95E8", type = "\u5168\u90E8") }
-                val tvResp = withContext(Dispatchers.IO) { doubanApi.getRecentHot("tv", limit = 12, category = "\u6700\u8FD1\u70ED\u95E8", type = "tv") }
-                val animeResp = withContext(Dispatchers.IO) { doubanApi.getRecentHot("movie", limit = 12, category = "\u70ED\u95E8", type = "\u65E5\u672C") }
-                val showResp = withContext(Dispatchers.IO) { doubanApi.getRecentHot("tv", limit = 12, category = "show", type = "show") }
+
+                // 参考 Selene-Source: 用 /recommend 接口 + tags 精确筛选
+                val moviesResp = withContext(Dispatchers.IO) {
+                    doubanApi.getRecommendations("movie", tags = "热门", sort = "T", count = 15)
+                }
+                val tvResp = withContext(Dispatchers.IO) {
+                    doubanApi.getRecommendations("tv", tags = "热门", sort = "T", count = 15)
+                }
+                val animeResp = withContext(Dispatchers.IO) {
+                    doubanApi.getRecommendations("tv", tags = "日本,动画", sort = "T", count = 15)
+                }
+                val showResp = withContext(Dispatchers.IO) {
+                    doubanApi.getRecommendations("tv", tags = "综艺", sort = "T", count = 15)
+                }
 
                 _homeData.value = HomeRecommendData(
                     continueWatch = _playRecords.value,
@@ -391,11 +400,11 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                 logDebug("searchAndPlay", "搜索返回: ${results.size} 个源")
 
                 // 保存所有有 episodes 的源（用于片源切换）
-                // 去重: 同标题只保留集数最多的源(参考 Selene-Source)
+                // 参考 Selene-Source: 去重+限制
                 val validSources = results.filter { it.episodes.isNotEmpty() }
-                    .groupBy { it.title.replace(" ", "").lowercase() }
-                    .values.map { group -> group.maxByOrNull { it.episodes.size }!! }
-                    .take(20)  // 限制最多20个源
+                    .groupBy { it.source }
+                    .values.map { group -> group.first() }
+                    .take(30)
                 _allSearchSources.value = validSources
 
                 if (results.isEmpty()) {
@@ -405,24 +414,38 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                     return@launch
                 }
 
-                _searchSourceMessage.value = "已找到 $results.size} 个源，正在选择最佳..."
+                _searchSourceMessage.value = "已找到 ${results.size} 个源，正在选择最佳..."
 
-                // 参考 Selene-Source: 精确标题匹配 + 年份匹配 + 类型匹配
+                // 参考 Selene-Source fetchSourcesData: 三级匹配
+                // 第一级: 标题精确匹配(去空格+小写) + 年份匹配
                 val normalizedTitle = title.replace(" ", "").lowercase()
-                val matched = validSources.firstOrNull { src ->
+                var matched = validSources.firstOrNull { src ->
                     val srcTitle = src.title.replace(" ", "").lowercase()
                     val titleMatch = srcTitle == normalizedTitle
-                    val yearMatch = year.isBlank() || src.year == year
+                    val yearMatch = year.isBlank() || src.year.lowercase() == year.lowercase()
                     titleMatch && yearMatch
-                } ?: validSources.firstOrNull { src ->
-                    // 包含匹配 + 年份必须一致(避免 "晚餐" 匹配 "最后的猪肉晚餐")
-                    val srcTitle = src.title.replace(" ", "").lowercase()
-                    val containsMatch = srcTitle.contains(normalizedTitle) || normalizedTitle.contains(srcTitle)
-                    val yearMatch = year.isBlank() || src.year == year
-                    containsMatch && yearMatch
-                } ?: validSources.firstOrNull { src ->
-                    // 最后兜底: 标题精确匹配(忽略年份)
-                    src.title.replace(" ", "").lowercase() == normalizedTitle
+                }
+
+                // 第二级: 标题包含匹配 + 年份必须一致
+                if (matched == null) {
+                    matched = validSources.firstOrNull { src ->
+                        val srcTitle = src.title.replace(" ", "").lowercase()
+                        val containsMatch = srcTitle.contains(normalizedTitle) || normalizedTitle.contains(srcTitle)
+                        val yearMatch = year.isBlank() || src.year.lowercase() == year.lowercase()
+                        containsMatch && yearMatch
+                    }
+                }
+
+                // 第三级: 标题精确匹配(忽略年份) - 兜底
+                if (matched == null) {
+                    matched = validSources.firstOrNull { src ->
+                        src.title.replace(" ", "").lowercase() == normalizedTitle
+                    }
+                }
+
+                // 第四级: 取第一个有效源 - 最终兜底
+                if (matched == null) {
+                    matched = validSources.firstOrNull()
                 }
 
                 if (matched == null) {

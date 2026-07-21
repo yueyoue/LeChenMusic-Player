@@ -221,9 +221,10 @@ fun VideoPlayerScreen(
     }
 
     // 控制栏自动隐藏
-    LaunchedEffect(showControls) {
-        if (showControls) {
-            delay(5000)
+    // 控制栏自动隐藏（参考 Selene-Source: 3秒后隐藏）
+    LaunchedEffect(showControls, isPlaying) {
+        if (showControls && isPlaying) {
+            delay(3000)
             showControls = false
         }
     }
