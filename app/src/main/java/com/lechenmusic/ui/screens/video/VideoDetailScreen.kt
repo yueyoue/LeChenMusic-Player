@@ -475,7 +475,7 @@ fun VideoDetailScreen(
             if (currentEpisodes.isNotEmpty()) {
                 item {
                     Text(
-                        "选集 (${currentSrc.episodes.size})",
+                        "选集 (${currentEpisodes.size})",
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
