@@ -238,43 +238,61 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                     Column(
                         modifier = Modifier
                             .fillMaxHeight()
-                            .width(80.dp)
+                            .width(64.dp)
                             .background(MaterialTheme.colorScheme.surfaceContainerLowest),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Spacer(modifier = Modifier.height(40.dp))
+                        Spacer(modifier = Modifier.height(32.dp))
                         Text(
                             "LC",
-                            fontSize = 20.sp,
+                            fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(bottom = 32.dp)
+                            modifier = Modifier.padding(bottom = 24.dp)
                         )
                         tabs.forEach { tab ->
                             val selected = currentRoute == tab.route
-                            IconButton(
-                                onClick = { onNavClick(tab.route) },
-                                modifier = Modifier.padding(vertical = 8.dp)
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier
+                                    .clickable { onNavClick(tab.route) }
+                                    .padding(vertical = 6.dp)
                             ) {
                                 Icon(
                                     tab.icon,
                                     contentDescription = tab.label,
                                     tint = if (selected) MaterialTheme.colorScheme.primary
                                         else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(28.dp)
+                                    modifier = Modifier.size(22.dp)
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    tab.label,
+                                    fontSize = 10.sp,
+                                    color = if (selected) MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
                                 )
                             }
                         }
                         Spacer(modifier = Modifier.weight(1f))
-                        IconButton(
-                            onClick = { onNavClick(Screen.Settings.route) },
-                            modifier = Modifier.padding(bottom = 24.dp)
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier
+                                .clickable { onNavClick(Screen.Settings.route) }
+                                .padding(bottom = 20.dp)
                         ) {
                             Icon(
                                 Icons.Default.Person,
                                 contentDescription = "我的",
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(28.dp)
+                                modifier = Modifier.size(22.dp)
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                "我的",
+                                fontSize = 10.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
