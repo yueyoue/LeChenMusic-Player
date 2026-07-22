@@ -243,58 +243,129 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                             .background(MaterialTheme.colorScheme.surfaceContainerLowest),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Spacer(modifier = Modifier.height(32.dp))
-                        Text(
-                            "LC",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(bottom = 24.dp)
+                        Spacer(modifier = Modifier.height(24.dp))
+                        // 首页
+                        val homeSelected = currentRoute == Screen.Home.route
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier
+                                .clickable { onNavClick(Screen.Home.route) }
+                                .padding(vertical = 6.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Home, "首页",
+                                tint = if (homeSelected) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(22.dp)
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text("首页", fontSize = 10.sp,
+                                color = if (homeSelected) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontWeight = if (homeSelected) FontWeight.SemiBold else FontWeight.Normal)
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        // 音乐/有声书/影视模式按钮
+                        data class ModeItem(val icon: ImageVector, val label: String, val mode: String)
+                        val modeItems = listOf(
+                            ModeItem(Icons.Default.Headphones, "听歌", "music"),
+                            ModeItem(Icons.Default.MenuBook, "听书", "audiobook"),
+                            ModeItem(Icons.Default.LocalMovies, "电影", "video"),
+                            ModeItem(Icons.Default.LiveTv, "电视", "live")
                         )
-                        tabs.forEach { tab ->
-                            val selected = currentRoute == tab.route
+                        val currentHomeMode by viewModel.homeMode.collectAsState()
+                        modeItems.forEach { item ->
+                            val active = currentRoute == Screen.Home.route && (
+                                (item.mode == "music" && currentHomeMode == "music") ||
+                                (item.mode == "audiobook" && currentHomeMode == "audiobook") ||
+                                (item.mode == "video" && currentHomeMode == "video") ||
+                                (item.mode == "live" && false)
+                            )
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 modifier = Modifier
-                                    .clickable { onNavClick(tab.route) }
+                                    .clickable {
+                                        when (item.mode) {
+                                            "live" -> {
+                                                onNavClick(Screen.Home.route)
+                                                navController.navigate(Screen.Live.route)
+                                            }
+                                            else -> {
+                                                if (currentRoute != Screen.Home.route) {
+                                                    onNavClick(Screen.Home.route)
+                                                }
+                                                viewModel.setHomeMode(item.mode)
+                                                if (item.mode == "audiobook") viewModel.loadAudiobooks()
+                                            }
+                                        }
+                                    }
                                     .padding(vertical = 6.dp)
                             ) {
                                 Icon(
-                                    tab.icon,
-                                    contentDescription = tab.label,
-                                    tint = if (selected) MaterialTheme.colorScheme.primary
+                                    item.icon, item.label,
+                                    tint = if (active) MaterialTheme.colorScheme.primary
                                         else MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(22.dp)
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
-                                Text(
-                                    tab.label,
-                                    fontSize = 10.sp,
-                                    color = if (selected) MaterialTheme.colorScheme.primary
+                                Text(item.label, fontSize = 10.sp,
+                                    color = if (active) MaterialTheme.colorScheme.primary
                                         else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
-                                )
+                                    fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal)
                             }
                         }
-                        Spacer(modifier = Modifier.weight(1f))
+                        Spacer(modifier = Modifier.height(8.dp))
+                        // 搜索
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             modifier = Modifier
-                                .clickable { onNavClick(Screen.Settings.route) }
-                                .padding(bottom = 20.dp)
+                                .clickable { onNavClick(Screen.Search.route) }
+                                .padding(vertical = 6.dp)
                         ) {
                             Icon(
-                                Icons.Default.Person,
-                                contentDescription = "我的",
+                                Icons.Default.Search, "搜索",
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(22.dp)
                             )
                             Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                "我的",
-                                fontSize = 10.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            Text("搜索", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Spacer(modifier = Modifier.weight(1f))
+                        // 收藏
+                        val favSelected = currentRoute == Screen.Favorites.route
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier
+                                .clickable { onNavClick(Screen.Favorites.route) }
+                                .padding(vertical = 6.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Favorite, "收藏",
+                                tint = if (favSelected) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(22.dp)
                             )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text("收藏", fontSize = 10.sp,
+                                color = if (favSelected) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontWeight = if (favSelected) FontWeight.SemiBold else FontWeight.Normal)
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        // 我的
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier
+                                .clickable { onNavClick(Screen.Settings.route) }
+                                .padding(bottom = 20.dp, top = 6.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Person, "我的",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(22.dp)
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text("我的", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                     // 右侧内容

@@ -2123,31 +2123,6 @@ private fun TabletMusicHomeContent(
         ),
         verticalArrangement = Arrangement.spacedBy(config.sectionSpacing)
     ) {
-        // ===== Top Bar: Title + Mode Switcher =====
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-                    Surface(shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.surfaceVariant) {
-                        Row(modifier = Modifier.padding(3.dp)) {
-                            TabletModeBtn("\uD83C\uDFB5", "音乐", homeMode == "music", config) { viewModel.setHomeMode("music") }
-                            TabletModeBtn("\uD83D\uDCD6", "有声书", homeMode == "audiobook", config) {
-                                viewModel.setHomeMode("audiobook")
-                                viewModel.loadAudiobooks()
-                            }
-                            TabletModeBtn("\uD83C\uDFAC", "影视", homeMode == "video", config) { viewModel.setHomeMode("video") }
-                        }
-                    }
-                }
-                IconButton(onClick = onNavigateToSearch) {
-                    Icon(Icons.Default.Search, "搜索", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-        }
-
         if (homeMode == "music") {
             // ===== Hero: Banner (2/3) + Hot List (1/3) =====
             item {
@@ -2310,29 +2285,6 @@ private fun TabletMusicHomeContent(
 
 // ==================== Tablet Sub-Components ====================
 
-@Composable
-private fun TabletModeBtn(icon: String, label: String, active: Boolean, config: ResponsiveConfig, onClick: () -> Unit) {
-    Surface(
-        modifier = Modifier.clickable(onClick = onClick),
-        shape = RoundedCornerShape(50),
-        color = if (active) MaterialTheme.colorScheme.primary else Color.Transparent
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(icon, fontSize = config.bodyFontSize.value.sp)
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(
-                label,
-                fontSize = config.bodyFontSize,
-                fontWeight = if (active) FontWeight.Bold else FontWeight.Medium,
-                color = if (active) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
 
 @Composable
 private fun TabletSecHd(title: String, action: String, config: ResponsiveConfig, onClick: (() -> Unit)? = null) {
