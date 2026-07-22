@@ -2131,12 +2131,6 @@ private fun TabletMusicHomeContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-                    Text(
-                        "LeChenMusic",
-                        fontSize = config.titleFontSize,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
                     Surface(shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.surfaceVariant) {
                         Row(modifier = Modifier.padding(3.dp)) {
                             TabletModeBtn("\uD83C\uDFB5", "音乐", homeMode == "music", config) { viewModel.setHomeMode("music") }
@@ -2185,7 +2179,7 @@ private fun TabletMusicHomeContent(
                             Text(
                                 musicSlides.firstOrNull()?.title ?: "每日推荐",
                                 fontSize = (config.sectionTitleSize.value + 6).sp,
-                                fontWeight = FontWeight.ExtraBold,
+                                fontWeight = FontWeight.Bold,
                                 color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis
                             )
                             Spacer(modifier = Modifier.height(4.dp))
@@ -2204,7 +2198,7 @@ private fun TabletMusicHomeContent(
                             ) {
                                 Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("立即播放", fontWeight = FontWeight.Bold, fontSize = config.bodyFontSize)
+                                Text("立即播放", fontWeight = FontWeight.SemiBold, fontSize = config.bodyFontSize)
                             }
                         }
                     }
@@ -2227,7 +2221,7 @@ private fun TabletMusicHomeContent(
                                             if (song.coverArt != null) AsyncImage(model = ApiClient.getCoverArtUrl(serverUrl, username, password, song.coverArt), contentDescription = null, contentScale = ContentScale.Crop)
                                         }
                                         Column(modifier = Modifier.weight(1f)) {
-                                            Text(song.title, fontSize = config.cardTitleSize, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                            Text(song.title, fontSize = config.cardTitleSize, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                             Text(song.artist, fontSize = config.captionFontSize, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                                         }
                                     }
@@ -2347,7 +2341,7 @@ private fun TabletSecHd(title: String, action: String, config: ResponsiveConfig,
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(title, fontSize = config.sectionTitleSize, fontWeight = FontWeight.Bold)
+        Text(title, fontSize = config.sectionTitleSize, fontWeight = FontWeight.SemiBold)
         if (action.isNotEmpty()) {
             Text(action, fontSize = config.captionFontSize, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Medium, modifier = Modifier.clickable { onClick?.invoke() })
         }
@@ -2362,7 +2356,7 @@ private fun TabletAlbumCard(album: Album, s: String, u: String, p: String, confi
             if (album.coverArt != null) AsyncImage(model = ApiClient.getCoverArtUrl(s, u, p, album.coverArt), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
             else Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.Album, null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f), modifier = Modifier.size(48.dp)) }
         }
-        Text(album.name, fontSize = config.cardTitleSize, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
+        Text(album.name, fontSize = config.cardTitleSize, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
         Text(album.artist, fontSize = config.cardSubtitleSize, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
     }
 }
@@ -2374,7 +2368,7 @@ private fun TabletPlaylistCard(pl: Playlist, s: String, u: String, p: String, co
         Surface(modifier = Modifier.size(size), shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceVariant, shadowElevation = 2.dp) {
             if (pl.coverArt != null) AsyncImage(model = ApiClient.getCoverArtUrl(s, u, p, pl.coverArt), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
         }
-        Text(pl.name, fontSize = config.cardTitleSize, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
+        Text(pl.name, fontSize = config.cardTitleSize, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
         Text("${pl.songCount}首", fontSize = config.cardSubtitleSize, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
