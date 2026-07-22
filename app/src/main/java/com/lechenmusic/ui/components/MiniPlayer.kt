@@ -33,6 +33,7 @@ fun MiniPlayer(
     username: String,
     password: String,
     audiobookCoverUrl: String? = null,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
     val currentSong by playerManager.currentSong.collectAsState()
@@ -41,7 +42,7 @@ fun MiniPlayer(
     val song = currentSong ?: return
 
     Surface(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 8.dp, vertical = 4.dp)
             .clickable(onClick = onClick),

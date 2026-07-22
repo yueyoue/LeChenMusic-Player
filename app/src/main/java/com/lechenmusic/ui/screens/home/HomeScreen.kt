@@ -2239,17 +2239,6 @@ private fun TabletMusicHomeContent(
                 }
             }
 
-            // ===== Quick Access =====
-            item {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    TabletQuickBtn(Icons.Default.Person, "歌手", Color(0xFFA78BFA), config, onNavigateToArtists)
-                    TabletQuickBtn(Icons.Default.Album, "专辑", Color(0xFF5352ED), config, onNavigateToAlbums)
-                    TabletQuickBtn(Icons.Default.PlaylistPlay, "歌单", Color(0xFF34D399), config, onNavigateToAllPlaylists)
-                    TabletQuickBtn(Icons.Default.Radio, "电台", Color(0xFFFF4D6A), config, onNavigateToRadio)
-                    TabletQuickBtn(Icons.Default.Download, "缓存", Color(0xFFFBBF24), config, onNavigateToCachedMusic)
-                }
-            }
-
             // ===== Latest Albums =====
             if (newestAlbums.isNotEmpty()) {
                 item { TabletSecHd("🆕 最新专辑", "更多 ›", config, onNavigateToAlbums) }
@@ -2348,25 +2337,6 @@ private fun TabletModeBtn(icon: String, label: String, active: Boolean, config: 
                 color = if (active) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-    }
-}
-
-@Composable
-private fun TabletQuickBtn(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, color: Color, config: ResponsiveConfig, onClick: () -> Unit) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.clickable(onClick = onClick)
-    ) {
-        val btnSize = if (config.isExpanded) 60.dp else 54.dp
-        Surface(
-            modifier = Modifier.size(btnSize),
-            shape = RoundedCornerShape(18.dp),
-            color = color.copy(alpha = 0.15f)
-        ) {
-            Box(contentAlignment = Alignment.Center) { Icon(icon, null, tint = color, modifier = Modifier.size(btnSize * 0.45f)) }
-        }
-        Spacer(modifier = Modifier.height(6.dp))
-        Text(label, fontSize = config.captionFontSize, fontWeight = FontWeight.Medium)
     }
 }
 

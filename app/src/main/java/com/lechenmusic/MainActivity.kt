@@ -22,6 +22,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavGraphBuilder
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -51,7 +53,13 @@ import com.lechenmusic.ui.screens.audiobook.AudiobookDetailScreen
 import com.lechenmusic.ui.screens.audiobook.AudiobookPlayerScreen
 import com.lechenmusic.ui.screens.audiobook.AudiobookNarratorListScreen
 import com.lechenmusic.ui.screens.audiobook.AudiobookNarratorDetailScreen
+import com.lechenmusic.ui.screens.video.VideoSearchScreen
+import com.lechenmusic.ui.screens.video.VideoDetailScreen
+import com.lechenmusic.ui.screens.video.VideoPlayerScreen
+import com.lechenmusic.ui.screens.video.VideoCategoryScreen
+import com.lechenmusic.ui.screens.video.LiveScreen
 import com.lechenmusic.ui.theme.LeChenMusicTheme
+import com.lechenmusic.ui.responsive.ResponsiveConfig
 import com.lechenmusic.ui.responsive.rememberResponsiveConfig
 import com.lechenmusic.update.UpdateInfo
 
@@ -186,494 +194,543 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                 LocalContext.current as android.app.Activity
             )
             val responsiveConfig = rememberResponsiveConfig(windowSizeClass)
-            Scaffold(
-                bottomBar = {
-                    AnimatedVisibility(
-                        visible = showBottomBar || (currentSong != null && currentRoute != Screen.Player.route && currentRoute != Screen.AudiobookPlayer.route),
-                        enter = slideInVertically(initialOffsetY = { it }),
-                        exit = slideOutVertically(targetOffsetY = { it })
+            val useSideNav = responsiveConfig.useRailNav
+            val showMiniPlayer = currentSong != null && currentRoute != Screen.Player.route && currentRoute != Screen.AudiobookPlayer.route
+
+            // MiniPlayer 组件（复用）
+            @Composable
+            fun MiniPlayerBar(modifier: Modifier = Modifier) {
+                if (showMiniPlayer) {
+                    val currentBook by viewModel.currentAudiobook.collectAsState()
+                    val audiobookCoverUrl by viewModel.playerManager.audiobookCoverUrl.collectAsState()
+                    val isAudiobookPlaying = currentBook != null || audiobookCoverUrl != null || (currentSong?.id?.startsWith("audiobook_") == true)
+                    MiniPlayer(
+                        playerManager = viewModel.playerManager,
+                        serverUrl = serverUrl,
+                        username = username,
+                        password = password,
+                        audiobookCoverUrl = if (isAudiobookPlaying) audiobookCoverUrl else null,
+                        modifier = modifier,
+                        onClick = {
+                            if (isAudiobookPlaying) navController.navigate(Screen.AudiobookPlayer.route)
+                            else navController.navigate(Screen.Player.route)
+                        }
+                    )
+                }
+            }
+
+            // 导航点击处理
+            val onNavClick: (String) -> Unit = { route ->
+                if (currentRoute != route) {
+                    navController.navigate(route) {
+                        popUpTo(Screen.Home.route) { saveState = false }
+                        launchSingleTop = true
+                        restoreState = false
+                    }
+                    if (route == Screen.Home.route) viewModel.loadHomeData()
+                }
+            }
+
+            if (useSideNav) {
+                // ===== 平板/车机: 左侧导航栏 + 内容区 =====
+                Row(modifier = Modifier.fillMaxSize()) {
+                    // 左侧 NavigationRail
+                    Column(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .width(80.dp)
+                            .background(MaterialTheme.colorScheme.surfaceContainerLowest),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Column {
-                            if (currentSong != null && currentRoute != Screen.Player.route && currentRoute != Screen.AudiobookPlayer.route) {
-                                val currentBook by viewModel.currentAudiobook.collectAsState()
-                                val audiobookCoverUrl by viewModel.playerManager.audiobookCoverUrl.collectAsState()
-                                // 判断是否在播放有声书
-                                val isAudiobookPlaying = currentBook != null || audiobookCoverUrl != null || (currentSong?.id?.startsWith("audiobook_") == true)
-                                MiniPlayer(
-                                    playerManager = viewModel.playerManager,
-                                    serverUrl = serverUrl,
-                                    username = username,
-                                    password = password,
-                                    audiobookCoverUrl = if (isAudiobookPlaying) audiobookCoverUrl else null,
-                                    onClick = {
-                                        if (isAudiobookPlaying) {
-                                            navController.navigate(Screen.AudiobookPlayer.route)
-                                        } else {
-                                            navController.navigate(Screen.Player.route)
-                                        }
-                                    }
+                        Spacer(modifier = Modifier.height(40.dp))
+                        Text(
+                            "LC",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(bottom = 32.dp)
+                        )
+                        tabs.forEach { tab ->
+                            val selected = currentRoute == tab.route
+                            IconButton(
+                                onClick = { onNavClick(tab.route) },
+                                modifier = Modifier.padding(vertical = 8.dp)
+                            ) {
+                                Icon(
+                                    tab.icon,
+                                    contentDescription = tab.label,
+                                    tint = if (selected) MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(28.dp)
                                 )
                             }
-                            if (showBottomBar) {
+                        }
+                        Spacer(modifier = Modifier.weight(1f))
+                        IconButton(
+                            onClick = { onNavClick(Screen.Settings.route) },
+                            modifier = Modifier.padding(bottom = 24.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Person,
+                                contentDescription = "我的",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
+                    }
+                    // 右侧内容
+                    Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                        Scaffold { innerPadding ->
+                            NavHost(
+                                navController = navController,
+                                startDestination = Screen.Home.route,
+                                modifier = Modifier.fillMaxSize().padding(innerPadding)
+                            ) {
+                                composable(Screen.Home.route) {
+                                    HomeScreen(
+                                        viewModel = viewModel,
+                                        onAlbumClick = { aId -> navController.navigate(Screen.AlbumDetail.createRoute(aId)) },
+                                        onSongClick = { s: com.lechenmusic.data.model.Song, p: List<com.lechenmusic.data.model.Song> -> viewModel.playSong(s, p) },
+                                        onPlaylistClick = { navController.navigate(Screen.PlaylistDetail.createRoute(it)) },
+                                        onSettingsClick = { navController.navigate(Screen.Settings.route) },
+                                        onNavigateToAlbums = { navController.navigate(Screen.Albums.route) },
+                                        onNavigateToFavorites = { navController.navigate(Screen.Favorites.route) },
+                                        onNavigateToAllSongs = { navController.navigate(Screen.AllSongs.route) },
+                                        onNavigateToRecentPlayed = { navController.navigate(Screen.RecentPlayed.route) },
+                                        onNavigateToRadio = { navController.navigate(Screen.Radio.route) },
+                                        onNavigateToSearch = { navController.navigate(Screen.Search.route) },
+                                        onNavigateToArtists = { navController.navigate(Screen.Artists.route) },
+                                        onNavigateToAllPlaylists = { navController.navigate(Screen.AllPlaylists.route) },
+                                        onNavigateToCachedMusic = { navController.navigate(Screen.CachedMusic.route) },
+                                        onNavigateToAudiobook = { genre -> navController.navigate(Screen.Audiobook.createRoute(genre)) },
+                                        onNavigateToAudiobookDetail = { id -> navController.navigate(Screen.AudiobookDetail.createRoute(id)) },
+                                        onNavigateToNarrator = { name -> navController.navigate(Screen.NarratorDetail.createRoute(name)) },
+                                        onNavigateToNarratorList = { navController.navigate(Screen.NarratorList.route) },
+                                        onNavigateToVideoDetail = { source, videoId -> navController.navigate(Screen.VideoDetail.createRoute(source, videoId)) },
+                                        onNavigateToVideoPlayer = { navController.navigate(Screen.VideoPlayerDirect.route) },
+                                        onNavigateToVideoCategory = { type -> navController.navigate(Screen.VideoCategory.createRoute(type)) },
+                                        onNavigateToVideoSearch = { navController.navigate(Screen.VideoSearch.route) },
+                                        onNavigateToLive = { navController.navigate(Screen.Live.route) },
+                                        videoViewModel = videoViewModel,
+                                        responsiveConfig = responsiveConfig
+                                    )
+                                }
+                                sharedNavRoutes(navController, viewModel, videoViewModel, windowSizeClass)
+                            }
+                        }
+                        // 平板模式: MiniPlayer 在右下角
+                        MiniPlayerBar(
+                            modifier = Modifier.align(Alignment.BottomCenter)
+                        )
+                    }
+                }
+            } else {
+                // ===== 手机: 标准 Scaffold + 底部导航栏 =====
+                Scaffold(
+                    bottomBar = {
+                        if (showBottomBar) {
+                            Column {
+                                MiniPlayerBar()
                                 NavigationBar {
                                     tabs.forEach { tab ->
+                                        val selected = currentRoute == tab.route
                                         NavigationBarItem(
+                                            selected = selected,
+                                            onClick = { onNavClick(tab.route) },
                                             icon = { Icon(tab.icon, contentDescription = tab.label) },
-                                            label = { Text(tab.label, fontSize = 10.sp) },
-                                            selected = currentRoute == tab.route,
-                                            onClick = {
-                                                if (currentRoute == tab.route) return@NavigationBarItem
-                                                navController.navigate(tab.route) {
-                                                    popUpTo(Screen.Home.route) { saveState = false }
-                                                    launchSingleTop = true
-                                                    restoreState = false
-                                                }
-                                                if (tab.route == Screen.Home.route) {
-                                                    viewModel.loadHomeData()
-                                                }
-                                            }
+                                            label = { Text(tab.label) }
                                         )
                                     }
                                 }
                             }
                         }
                     }
-                }
-            ) { paddingValues ->
-                NavHost(
-                    navController = navController,
-                    startDestination = Screen.Home.route,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues)
-                ) {
-                    composable(Screen.Home.route) {
-                        HomeScreen(
-                            viewModel = viewModel,
-                            onAlbumClick = { aId -> navController.navigate(Screen.AlbumDetail.createRoute(aId)) },
-                            onSongClick = { s: com.lechenmusic.data.model.Song, p: List<com.lechenmusic.data.model.Song> -> viewModel.playSong(s, p) },
-                            onPlaylistClick = { navController.navigate(Screen.PlaylistDetail.createRoute(it)) },
-                            onSettingsClick = { navController.navigate(Screen.Settings.route) },
-                            onNavigateToAlbums = { navController.navigate(Screen.Albums.route) },
-                            onNavigateToFavorites = { navController.navigate(Screen.Favorites.route) },
-                            onNavigateToAllSongs = { navController.navigate(Screen.AllSongs.route) },
-                            onNavigateToRecentPlayed = { navController.navigate(Screen.RecentPlayed.route) },
-                            onNavigateToRadio = { navController.navigate(Screen.Radio.route) },
-                            onNavigateToSearch = { navController.navigate(Screen.Search.route) },
-                            onNavigateToArtists = { navController.navigate(Screen.Artists.route) },
-                            onNavigateToAllPlaylists = { navController.navigate(Screen.AllPlaylists.route) },
-                            onNavigateToCachedMusic = { navController.navigate(Screen.CachedMusic.route) },
-                            onNavigateToAudiobook = { genre -> navController.navigate(Screen.Audiobook.createRoute(genre)) },
-                            onNavigateToAudiobookDetail = { id -> navController.navigate(Screen.AudiobookDetail.createRoute(id)) },
-                            onNavigateToNarrator = { name -> navController.navigate(Screen.NarratorDetail.createRoute(name)) },
-                            onNavigateToNarratorList = { navController.navigate(Screen.NarratorList.route) },
-                            onNavigateToVideoDetail = { source, videoId -> navController.navigate(Screen.VideoDetail.createRoute(source, videoId)) },
-                            onNavigateToVideoPlayer = { navController.navigate(Screen.VideoPlayerDirect.route) },
-                            onNavigateToVideoCategory = { type -> navController.navigate(Screen.VideoCategory.createRoute(type)) },
-                            onNavigateToVideoSearch = { navController.navigate(Screen.VideoSearch.route) },
-                            onNavigateToLive = { navController.navigate(Screen.Live.route) },
-                            videoViewModel = videoViewModel,
-                            responsiveConfig = responsiveConfig
-                        )
-                    }
-                    composable(Screen.Favorites.route) {
-                        FavoritesScreen(
-                            viewModel = viewModel,
-                            onSongClick = { s: com.lechenmusic.data.model.Song, p: List<com.lechenmusic.data.model.Song> -> viewModel.playSong(s, p) },
-                            onAlbumClick = { aId -> navController.navigate(Screen.AlbumDetail.createRoute(aId)) },
-                            onAudiobookClick = { navController.navigate(Screen.AudiobookDetail.createRoute(it)) },
-                            onPlaylistClick = { navController.navigate(Screen.PlaylistDetail.createRoute(it)) }
-                        )
-                    }
-                    composable(Screen.Search.route) {
-                        SearchScreen(
-                            viewModel = viewModel,
-                            onSongClick = { s: com.lechenmusic.data.model.Song, p: List<com.lechenmusic.data.model.Song> -> viewModel.playSong(s, p) },
-                            onAlbumClick = { aId -> navController.navigate(Screen.AlbumDetail.createRoute(aId)) },
-                            onArtistClick = { artistId -> navController.navigate(Screen.ArtistDetail.createRoute(artistId)) }
-                        )
-                    }
-                    composable(Screen.Artists.route) {
-                        ArtistsScreen(
-                            viewModel = viewModel,
-                            onArtistClick = { artistId -> navController.navigate(Screen.ArtistDetail.createRoute(artistId)) }
-                        )
-                    }
-                    composable(Screen.Albums.route) {
-                        AlbumsScreen(
-                            viewModel = viewModel,
-                            onAlbumClick = { aId -> navController.navigate(Screen.AlbumDetail.createRoute(aId)) }
-                        )
-                    }
-                    composable(Screen.AllSongs.route) {
-                        AllSongsScreen(
-                            viewModel = viewModel,
-                            onSongClick = { s: com.lechenmusic.data.model.Song, p: List<com.lechenmusic.data.model.Song> -> viewModel.playSong(s, p) },
-                            onArtistClick = { artistId -> navController.navigate(Screen.ArtistDetail.createRoute(artistId)) },
-                            onAlbumClick = { aId -> navController.navigate(Screen.AlbumDetail.createRoute(aId)) }
-                        )
-                    }
-                    composable(Screen.AllPlaylists.route) {
-                        AllPlaylistsScreen(
-                            viewModel = viewModel,
-                            onBack = { navController.popBackStack() },
-                            onPlaylistClick = { navController.navigate(Screen.PlaylistDetail.createRoute(it)) }
-                        )
-                    }
-                    composable(Screen.CachedMusic.route) {
-                        CachedMusicScreen(
-                            viewModel = viewModel,
-                            onBack = { navController.popBackStack() },
-                            onSongClick = { s: com.lechenmusic.data.model.Song, p: List<com.lechenmusic.data.model.Song> -> viewModel.playSong(s, p) },
-                            onArtistClick = { artistId -> navController.navigate(Screen.ArtistDetail.createRoute(artistId)) },
-                            onAlbumClick = { aId -> navController.navigate(Screen.AlbumDetail.createRoute(aId)) }
-                        )
-                    }
-                    composable(Screen.RecentPlayed.route) {
-                        RecentPlayedScreen(
-                            viewModel = viewModel,
-                            onBack = { navController.popBackStack() },
-                            onSongClick = { s: com.lechenmusic.data.model.Song, p: List<com.lechenmusic.data.model.Song> -> viewModel.playSong(s, p) },
-                            onArtistClick = { artistId -> navController.navigate(Screen.ArtistDetail.createRoute(artistId)) },
-                            onAlbumClick = { aId -> navController.navigate(Screen.AlbumDetail.createRoute(aId)) }
-                        )
-                    }
-                    composable(Screen.Settings.route) {
-                        SettingsScreen(
-                            viewModel = viewModel,
-                            videoViewModel = videoViewModel,
-                            onBack = {
-                                navController.popBackStack()
-                            },
-                            onLogout = {
-                                navController.navigate(Screen.Home.route) {
-                                    popUpTo(0) { inclusive = true }
-                                }
-                            }
-                        )
-                    }
-                    composable(Screen.Player.route) {
-                        PlayerScreen(
-                            playerManager = viewModel.playerManager,
-                            viewModel = viewModel,
-                            serverUrl = serverUrl,
-                            username = username,
-                            password = password,
-                            onBack = { navController.popBackStack() },
-                            onShowPlaylist = { },
-                            onShowMore = { },
-                            onNavigateToArtist = { artistId ->
-                                navController.navigate(Screen.ArtistDetail.createRoute(artistId))
-                            },
-                            onNavigateToAlbum = { albumId ->
-                                navController.navigate(Screen.AlbumDetail.createRoute(albumId))
-                            }
-                        )
-                    }
-                    composable(Screen.AlbumDetail.route) { backStackEntry ->
-                        val albumId = backStackEntry.arguments?.getString("albumId") ?: ""
-                        AlbumDetailScreen(
-                            viewModel = viewModel,
-                            albumId = albumId,
-                            onBack = { navController.popBackStack() },
-                            onSongClick = { s: com.lechenmusic.data.model.Song, p: List<com.lechenmusic.data.model.Song> -> viewModel.playSong(s, p) },
-                            onArtistClick = { artistId -> navController.navigate(Screen.ArtistDetail.createRoute(artistId)) },
-                            onAlbumClick = { aId -> navController.navigate(Screen.AlbumDetail.createRoute(aId)) }
-                        )
-                    }
-                    composable(Screen.ArtistDetail.route) { backStackEntry ->
-                        val artistId = backStackEntry.arguments?.getString("artistId") ?: ""
-                        ArtistDetailScreen(
-                            viewModel = viewModel,
-                            artistId = artistId,
-                            onBack = { navController.popBackStack() },
-                            onAlbumClick = { aId -> navController.navigate(Screen.AlbumDetail.createRoute(aId)) },
-                            onSongClick = { s: com.lechenmusic.data.model.Song, p: List<com.lechenmusic.data.model.Song> -> viewModel.playSong(s, p) }
-                        )
-                    }
-                    composable(Screen.PlaylistDetail.route) { backStackEntry ->
-                        val playlistId = backStackEntry.arguments?.getString("playlistId") ?: ""
-                        PlaylistDetailScreen(
-                            viewModel = viewModel,
-                            playlistId = playlistId,
-                            onBack = { navController.popBackStack() },
-                            onSongClick = { s: com.lechenmusic.data.model.Song, p: List<com.lechenmusic.data.model.Song> -> viewModel.playSong(s, p) },
-                            onArtistClick = { artistId -> navController.navigate(Screen.ArtistDetail.createRoute(artistId)) },
-                            onAlbumClick = { aId -> navController.navigate(Screen.AlbumDetail.createRoute(aId)) }
-                        )
-                    }
-                    composable(Screen.Radio.route) {
-                        RadioScreen(
-                            viewModel = viewModel,
-                            onBack = { navController.popBackStack() }
-                        )
-                    }
-                    composable(Screen.Audiobook.route) { backStackEntry ->
-                        val genre = backStackEntry.arguments?.getString("genre")
-                        AudiobookScreen(
-                            viewModel = viewModel,
-                            genreFilter = genre,
-                            onBack = { navController.popBackStack() },
-                            onAudiobookClick = { id -> navController.navigate(Screen.AudiobookDetail.createRoute(id)) }
-                        )
-                    }
-                    composable(Screen.AudiobookDetail.route) { backStackEntry ->
-                        val audiobookId = backStackEntry.arguments?.getString("audiobookId") ?: ""
-                        AudiobookDetailScreen(
-                            viewModel = viewModel,
-                            audiobookId = audiobookId,
-                            onBack = { navController.popBackStack() },
-                            onPlayChapter = { book, chapter, chapters ->
-                                viewModel.playAudiobookChapter(book, chapter, chapters)
-                                // Don't navigate - let mini player handle it
-                            }
-                        )
-                    }
-                    composable(Screen.NarratorList.route) {
-                        AudiobookNarratorListScreen(
-                            viewModel = viewModel,
-                            onBack = { navController.popBackStack() },
-                            onNarratorClick = { name -> navController.navigate(Screen.NarratorDetail.createRoute(name)) }
-                        )
-                    }
-                    composable(Screen.NarratorDetail.route) { backStackEntry ->
-                        val narratorName = backStackEntry.arguments?.getString("narratorName") ?: ""
-                        AudiobookNarratorDetailScreen(
-                            viewModel = viewModel,
-                            narratorName = narratorName,
-                            onBack = { navController.popBackStack() },
-                            onBookClick = { id -> navController.navigate(Screen.AudiobookDetail.createRoute(id)) }
-                        )
-                    }
-                    composable(Screen.AudiobookPlayer.route) {
-                        val currentBook by viewModel.currentAudiobook.collectAsState()
-                        val chapters by viewModel.currentAudiobookChapters.collectAsState()
-                        val chapterIndex by viewModel.currentChapterIndex.collectAsState()
-                        val isPlaying by viewModel.audiobookIsPlaying.collectAsState()
-                        val position by viewModel.audiobookPosition.collectAsState()
-                        val duration by viewModel.audiobookDuration.collectAsState()
-                        val serverUrl by viewModel.serverUrl.collectAsState()
-                        val username by viewModel.username.collectAsState()
-                        val password by viewModel.password.collectAsState()
-                        val audiobookCoverUrl by viewModel.playerManager.audiobookCoverUrl.collectAsState()
-                        val playbackSpeed by viewModel.audiobookPlaybackSpeed.collectAsState()
-                        val timerMinutes by viewModel.audiobookTimerMinutes.collectAsState()
-                        // 如果 currentBook 为 null 但有有声书封面，说明是从通知栏进入，尝试恢复状态
-                        if (currentBook == null && audiobookCoverUrl != null) {
-                            // 从歌曲ID中提取bookId，尝试加载
-                            val currentSong by viewModel.playerManager.currentSong.collectAsState()
-                            val bookId = currentSong?.id?.removePrefix("audiobook_")?.substringBefore("_")
-                            if (bookId != null) {
-                                LaunchedEffect(bookId) {
-                                    viewModel.loadAudiobookDetail(bookId)
-                                }
-                            }
-                            // 显示通用播放器作为临时回退
-                            PlayerScreen(
-                                playerManager = viewModel.playerManager,
+                ) { innerPadding ->
+                    NavHost(
+                        navController = navController,
+                        startDestination = Screen.Home.route,
+                        modifier = Modifier.fillMaxSize().padding(innerPadding)
+                    ) {
+                        composable(Screen.Home.route) {
+                            HomeScreen(
                                 viewModel = viewModel,
-                                serverUrl = serverUrl,
-                                username = username,
-                                password = password,
-                                onBack = { navController.popBackStack() },
-                                onShowPlaylist = {},
-                                onShowMore = {},
-                                onNavigateToArtist = {},
-                                onNavigateToAlbum = {}
-                            )
-                        } else if (currentBook != null) {
-                            AudiobookPlayerScreen(
-                                book = currentBook!!,
-                                chapters = chapters,
-                                currentChapterIndex = chapterIndex,
-                                isPlaying = isPlaying,
-                                currentPositionMs = position,
-                                durationMs = duration,
-                                serverUrl = serverUrl,
-                                username = username,
-                                password = password,
-                                coverUrl = audiobookCoverUrl,
-                                playbackSpeed = playbackSpeed,
-                                timerMinutes = timerMinutes,
-                                onBack = { navController.popBackStack() },
-                                onPlayPause = { viewModel.audiobookTogglePlayPause() },
-                                onSeekTo = { viewModel.audiobookSeekTo(it) },
-                                onSkipForward15s = { viewModel.audiobookSkipForward15s() },
-                                onSkipBackward15s = { viewModel.audiobookSkipBackward15s() },
-                                onPreviousChapter = { viewModel.audiobookPreviousChapter() },
-                                onNextChapter = { viewModel.audiobookNextChapter() },
-                                onChapterSelect = { viewModel.playAudiobookChapter(currentBook!!, chapters[it], chapters) },
-                                onSetTimer = { viewModel.audiobookSetTimer(it) },
-                                onChangeSpeed = { viewModel.audiobookChangeSpeed(it) },
-                                onSaveProgress = { viewModel.saveAudiobookProgress() }
+                                onAlbumClick = { aId -> navController.navigate(Screen.AlbumDetail.createRoute(aId)) },
+                                onSongClick = { s: com.lechenmusic.data.model.Song, p: List<com.lechenmusic.data.model.Song> -> viewModel.playSong(s, p) },
+                                onPlaylistClick = { navController.navigate(Screen.PlaylistDetail.createRoute(it)) },
+                                onSettingsClick = { navController.navigate(Screen.Settings.route) },
+                                onNavigateToAlbums = { navController.navigate(Screen.Albums.route) },
+                                onNavigateToFavorites = { navController.navigate(Screen.Favorites.route) },
+                                onNavigateToAllSongs = { navController.navigate(Screen.AllSongs.route) },
+                                onNavigateToRecentPlayed = { navController.navigate(Screen.RecentPlayed.route) },
+                                onNavigateToRadio = { navController.navigate(Screen.Radio.route) },
+                                onNavigateToSearch = { navController.navigate(Screen.Search.route) },
+                                onNavigateToArtists = { navController.navigate(Screen.Artists.route) },
+                                onNavigateToAllPlaylists = { navController.navigate(Screen.AllPlaylists.route) },
+                                onNavigateToCachedMusic = { navController.navigate(Screen.CachedMusic.route) },
+                                onNavigateToAudiobook = { genre -> navController.navigate(Screen.Audiobook.createRoute(genre)) },
+                                onNavigateToAudiobookDetail = { id -> navController.navigate(Screen.AudiobookDetail.createRoute(id)) },
+                                onNavigateToNarrator = { name -> navController.navigate(Screen.NarratorDetail.createRoute(name)) },
+                                onNavigateToNarratorList = { navController.navigate(Screen.NarratorList.route) },
+                                onNavigateToVideoDetail = { source, videoId -> navController.navigate(Screen.VideoDetail.createRoute(source, videoId)) },
+                                onNavigateToVideoPlayer = { navController.navigate(Screen.VideoPlayerDirect.route) },
+                                onNavigateToVideoCategory = { type -> navController.navigate(Screen.VideoCategory.createRoute(type)) },
+                                onNavigateToVideoSearch = { navController.navigate(Screen.VideoSearch.route) },
+                                onNavigateToLive = { navController.navigate(Screen.Live.route) },
+                                videoViewModel = videoViewModel,
+                                responsiveConfig = responsiveConfig
                             )
                         }
+                        sharedNavRoutes(navController, viewModel, videoViewModel, windowSizeClass)
                     }
-
-                    // ===== 影视模块路由 =====
-                    composable(Screen.VideoSearch.route) {
-                        com.lechenmusic.ui.screens.video.VideoSearchScreen(
-                            viewModel = videoViewModel,
-                            onBack = { navController.popBackStack() },
-                            onVideoClick = { video ->
-                                navController.navigate(Screen.VideoDetail.createRoute(video.source, video.id))
-                            }
-                        )
-                    }
-                    composable(Screen.VideoDetail.route) { backStackEntry ->
-                        val source = backStackEntry.arguments?.getString("source") ?: ""
-                        val videoId = backStackEntry.arguments?.getString("videoId") ?: ""
-                        val detail by videoViewModel.videoDetail.collectAsState()
-                        com.lechenmusic.ui.screens.video.VideoDetailScreen(
-                            viewModel = videoViewModel,
-                            source = source,
-                            videoId = videoId,
-                            onBack = { navController.popBackStack() },
-                            onPlay = { playSource, episodeIndex ->
-                                navController.navigate(
-                                    Screen.VideoPlayer.createRoute(
-                                        detail?.title ?: "影视播放",
-                                        playSource,
-                                        episodeIndex
-                                    )
-                                )
-                            },
-                            onVideoClick = { video ->
-                                navController.navigate(Screen.VideoDetail.createRoute(video.source, video.id))
-                            }
-                        )
-                    }
-                    composable(Screen.VideoPlayer.route) { backStackEntry ->
-                        val videoTitle = backStackEntry.arguments?.getString("videoTitle") ?: "影视播放"
-                        val source = backStackEntry.arguments?.getString("source") ?: ""
-                        val episodeIndex = backStackEntry.arguments?.getString("episodeIndex")?.toIntOrNull() ?: 0
-                        val detail by videoViewModel.videoDetail.collectAsState()
-                        val detailLoading by videoViewModel.detailLoading.collectAsState()
-                        val sources = detail?.toSources() ?: emptyList()
-                        val sourceIndex = sources.indexOfFirst { it.source == source }.coerceAtLeast(0)
-
-                        if (detailLoading || sources.isEmpty()) {
-                            // 加载中或无数据时显示加载状态
-                            Box(modifier = Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    CircularProgressIndicator(color = Color.White)
-                                    Spacer(modifier = Modifier.height(16.dp))
-                                    Text(
-                                        if (detailLoading) "正在加载播放源..." else "未找到播放资源",
-                                        color = Color.White.copy(alpha = 0.7f),
-                                        fontSize = 14.sp
-                                    )
-                                    Spacer(modifier = Modifier.height(16.dp))
-                                    TextButton(onClick = { navController.popBackStack() }) {
-                                        Text("返回", color = Color.White)
-                                    }
-                                }
-                            }
-                        } else {
-                            var playerError by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<Exception?>(null) }
-                            if (playerError != null) {
-                                videoViewModel.reportVideoError("VideoPlayer", "播放器初始化崩溃", playerError)
-                                Box(modifier = Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text("播放器初始化失败", color = Color.White, fontSize = 16.sp)
-                                        Spacer(modifier = Modifier.height(8.dp))
-                                        Text(playerError?.message ?: "", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
-                                        Spacer(modifier = Modifier.height(16.dp))
-                                        TextButton(onClick = { navController.popBackStack() }) {
-                                            Text("返回", color = Color.White)
-                                        }
-                                    }
-                                }
-                            } else {
-                                com.lechenmusic.ui.screens.video.VideoPlayerScreen(
-                                    videoTitle = videoTitle,
-                                    sources = sources,
-                                    initialSource = sourceIndex,
-                                    initialEpisode = episodeIndex,
-                                    onBack = { navController.popBackStack() }
-                                )
-                            }
-                        }
-                    }
-                    // 直接播放路由（搜索结果直接播放，无需参数）
-                    composable(Screen.VideoPlayerDirect.route) {
-                        val detail by videoViewModel.videoDetail.collectAsState()
-                        val detailLoading by videoViewModel.detailLoading.collectAsState()
-                        val sources = detail?.toSources() ?: emptyList()
-
-                        if (detailLoading || sources.isEmpty()) {
-                            Box(modifier = Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    CircularProgressIndicator(color = Color.White)
-                                    Spacer(modifier = Modifier.height(16.dp))
-                                    Text(
-                                        if (detailLoading) "正在搜索播放源..." else "未找到播放资源",
-                                        color = Color.White.copy(alpha = 0.7f),
-                                        fontSize = 14.sp
-                                    )
-                                    Spacer(modifier = Modifier.height(16.dp))
-                                    TextButton(onClick = { navController.popBackStack() }) {
-                                        Text("返回", color = Color.White)
-                                    }
-                                }
-                            }
-                        } else {
-                            var playerError by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<Exception?>(null) }
-                            if (playerError != null) {
-                                videoViewModel.reportVideoError("VideoPlayerDirect", "播放器初始化崩溃", playerError)
-                                Box(modifier = Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text("播放器初始化失败", color = Color.White, fontSize = 16.sp)
-                                        Spacer(modifier = Modifier.height(8.dp))
-                                        Text(playerError?.message ?: "", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
-                                        Spacer(modifier = Modifier.height(16.dp))
-                                        TextButton(onClick = { navController.popBackStack() }) {
-                                            Text("返回", color = Color.White)
-                                        }
-                                    }
-                                }
-                            } else {
-                                com.lechenmusic.ui.screens.video.VideoPlayerScreen(
-                                    videoTitle = detail?.title ?: "影视播放",
-                                    sources = sources,
-                                    initialSource = 0,
-                                    initialEpisode = 0,
-                                    onBack = { navController.popBackStack() }
-                                )
-                            }
-                        }
-                    }
-
-                    composable(Screen.Live.route) {
-                        com.lechenmusic.ui.screens.video.LiveScreen(
-                            viewModel = videoViewModel,
-                            onBack = { navController.popBackStack() }
-                        )
-                    }
-                    composable(Screen.VideoCategory.route) { backStackEntry ->
-                        val type = backStackEntry.arguments?.getString("type") ?: "movie"
-                        // searchAndPlay 完成后跳转详情页
-                        val navigateToDetail by videoViewModel.navigateToDetail.collectAsState()
-                        val searchDetail by videoViewModel.videoDetail.collectAsState()
-                        androidx.compose.runtime.LaunchedEffect(navigateToDetail) {
-                            if (navigateToDetail && searchDetail != null) {
-                                videoViewModel.consumeNavigateToDetail()
-                                navController.navigate(Screen.VideoDetail.createRoute(searchDetail!!.source, searchDetail!!.id))
-                            }
-                        }
-                        com.lechenmusic.ui.screens.video.VideoCategoryScreen(
-                            viewModel = videoViewModel,
-                            categoryType = type,
-                            onBack = { navController.popBackStack() },
-                            onVideoClick = { video ->
-                                videoViewModel.searchAndPlay(video.title, video.id, video.year)
-                            },
-                            windowSizeClass = windowSizeClass
-                        )
-                    }
-
                 }
             }
         }
+    }
+}
+
+// ===== 共享导航路由（平板/手机复用） =====
+fun NavGraphBuilder.sharedNavRoutes(
+    navController: NavHostController,
+    viewModel: MainViewModel,
+    videoViewModel: VideoViewModel,
+    windowSizeClass: androidx.compose.material3.windowsizeclass.WindowSizeClass
+) {
+    val onBack: () -> Unit = { navController.popBackStack() }
+
+    composable(Screen.Favorites.route) {
+        FavoritesScreen(
+            viewModel = viewModel,
+            onSongClick = { s, p -> viewModel.playSong(s, p) },
+            onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) },
+            onAudiobookClick = { navController.navigate(Screen.AudiobookDetail.createRoute(it)) }
+        )
+    }
+
+    composable(Screen.Search.route) {
+        SearchScreen(
+            viewModel = viewModel,
+            onSongClick = { s, p -> viewModel.playSong(s, p) },
+            onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) },
+            onArtistClick = { navController.navigate(Screen.ArtistDetail.createRoute(it)) }
+        )
+    }
+
+    composable(Screen.Artists.route) {
+        ArtistsScreen(
+            viewModel = viewModel,
+            onArtistClick = { navController.navigate(Screen.ArtistDetail.createRoute(it)) }
+        )
+    }
+
+    composable(Screen.Albums.route) {
+        AlbumsScreen(
+            viewModel = viewModel,
+            onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) }
+        )
+    }
+
+    composable(Screen.AllSongs.route) {
+        AllSongsScreen(
+            viewModel = viewModel,
+            onSongClick = { s, p -> viewModel.playSong(s, p) },
+            onArtistClick = { navController.navigate(Screen.ArtistDetail.createRoute(it)) },
+            onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) }
+        )
+    }
+
+    composable(Screen.AllPlaylists.route) {
+        AllPlaylistsScreen(
+            viewModel = viewModel,
+            onBack = onBack,
+            onPlaylistClick = { navController.navigate(Screen.PlaylistDetail.createRoute(it)) }
+        )
+    }
+
+    composable(Screen.CachedMusic.route) {
+        CachedMusicScreen(
+            viewModel = viewModel,
+            onBack = onBack,
+            onSongClick = { s, p -> viewModel.playSong(s, p) },
+            onArtistClick = { navController.navigate(Screen.ArtistDetail.createRoute(it)) },
+            onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) }
+        )
+    }
+
+    composable(Screen.RecentPlayed.route) {
+        RecentPlayedScreen(
+            viewModel = viewModel,
+            onBack = onBack,
+            onSongClick = { s, p -> viewModel.playSong(s, p) },
+            onArtistClick = { navController.navigate(Screen.ArtistDetail.createRoute(it)) },
+            onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) }
+        )
+    }
+
+    composable(Screen.Settings.route) {
+        SettingsScreen(
+            viewModel = viewModel,
+            videoViewModel = videoViewModel,
+            onBack = onBack,
+            onLogout = {
+                viewModel.logout()
+                navController.navigate(Screen.Home.route) {
+                    popUpTo(0) { inclusive = true }
+                }
+            }
+        )
+    }
+
+    composable(Screen.Player.route) {
+        val srvUrl by viewModel.serverUrl.collectAsState()
+        val usr by viewModel.username.collectAsState()
+        val pwd by viewModel.password.collectAsState()
+        PlayerScreen(
+            playerManager = viewModel.playerManager,
+            viewModel = viewModel,
+            serverUrl = srvUrl,
+            username = usr,
+            password = pwd,
+            onBack = onBack,
+            onShowPlaylist = { },
+            onShowMore = { },
+            onNavigateToArtist = { navController.navigate(Screen.ArtistDetail.createRoute(it)) },
+            onNavigateToAlbum = { navController.navigate(Screen.AlbumDetail.createRoute(it)) }
+        )
+    }
+
+    composable(Screen.AlbumDetail.route) { backStackEntry ->
+        val albumId = backStackEntry.arguments?.getString("albumId") ?: return@composable
+        AlbumDetailScreen(
+            viewModel = viewModel,
+            albumId = albumId,
+            onBack = onBack,
+            onSongClick = { s, p -> viewModel.playSong(s, p) }
+        )
+    }
+
+    composable(Screen.ArtistDetail.route) { backStackEntry ->
+        val artistId = backStackEntry.arguments?.getString("artistId") ?: return@composable
+        ArtistDetailScreen(
+            viewModel = viewModel,
+            artistId = artistId,
+            onBack = onBack,
+            onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) },
+            onSongClick = { s, p -> viewModel.playSong(s, p) }
+        )
+    }
+
+    composable(Screen.PlaylistDetail.route) { backStackEntry ->
+        val playlistId = backStackEntry.arguments?.getString("playlistId") ?: return@composable
+        PlaylistDetailScreen(
+            viewModel = viewModel,
+            playlistId = playlistId,
+            onBack = onBack,
+            onSongClick = { s, p -> viewModel.playSong(s, p) }
+        )
+    }
+
+    composable(Screen.Radio.route) {
+        RadioScreen(
+            viewModel = viewModel,
+            onBack = onBack
+        )
+    }
+
+    composable(Screen.Audiobook.route) { backStackEntry ->
+        val genre = backStackEntry.arguments?.getString("genre")
+        AudiobookScreen(
+            viewModel = viewModel,
+            genreFilter = genre,
+            onBack = onBack,
+            onAudiobookClick = { navController.navigate(Screen.AudiobookDetail.createRoute(it)) }
+        )
+    }
+
+    composable(Screen.AudiobookDetail.route) { backStackEntry ->
+        val audiobookId = backStackEntry.arguments?.getString("audiobookId") ?: return@composable
+        AudiobookDetailScreen(
+            viewModel = viewModel,
+            audiobookId = audiobookId,
+            onBack = onBack,
+            onPlayChapter = { book, chapter, chapters ->
+                viewModel.playAudiobookChapter(book, chapter, chapters)
+                navController.navigate(Screen.AudiobookPlayer.route)
+            }
+        )
+    }
+
+    composable(Screen.AudiobookPlayer.route) {
+        val srvUrl by viewModel.serverUrl.collectAsState()
+        val usr by viewModel.username.collectAsState()
+        val pwd by viewModel.password.collectAsState()
+        val currentBook by viewModel.currentAudiobook.collectAsState()
+        val chapters by viewModel.currentAudiobookChapters.collectAsState()
+        val chapterIndex by viewModel.currentChapterIndex.collectAsState()
+        val isPlaying by viewModel.playerManager.isPlaying.collectAsState()
+        val position by viewModel.audiobookPosition.collectAsState()
+        val duration by viewModel.audiobookDuration.collectAsState()
+        val audiobookCoverUrl by viewModel.playerManager.audiobookCoverUrl.collectAsState()
+
+        if (currentBook != null) {
+            AudiobookPlayerScreen(
+                book = currentBook!!,
+                chapters = chapters,
+                currentChapterIndex = chapterIndex,
+                isPlaying = isPlaying,
+                currentPositionMs = position,
+                durationMs = duration,
+                serverUrl = srvUrl,
+                username = usr,
+                password = pwd,
+                coverUrl = audiobookCoverUrl,
+                onBack = onBack,
+                onPlayPause = { viewModel.audiobookTogglePlayPause() },
+                onSeekTo = { viewModel.audiobookSeekTo(it) },
+                onSkipForward15s = { viewModel.audiobookSkipForward15s() },
+                onSkipBackward15s = { viewModel.audiobookSkipBackward15s() },
+                onPreviousChapter = { viewModel.audiobookPreviousChapter() },
+                onNextChapter = { viewModel.audiobookNextChapter() },
+                onChapterSelect = { idx ->
+                    val book = currentBook!!
+                    val ch = chapters.getOrNull(idx) ?: return@AudiobookPlayerScreen
+                    viewModel.playAudiobookChapter(book, ch, chapters)
+                },
+                onSetTimer = { viewModel.audiobookSetTimer(it) },
+                onChangeSpeed = { viewModel.audiobookChangeSpeed(it) }
+            )
+        } else if (audiobookCoverUrl != null) {
+            // 通知栏入口: 有封面 URL 但没有 book 数据，尝试恢复播放状态
+            val song by viewModel.playerManager.currentSong.collectAsState()
+            if (song != null) {
+                AudiobookPlayerScreen(
+                    book = com.lechenmusic.data.model.Audiobook(id = "", title = song!!.title, coverPath = audiobookCoverUrl),
+                    chapters = chapters,
+                    currentChapterIndex = chapterIndex,
+                    isPlaying = isPlaying,
+                    currentPositionMs = position,
+                    durationMs = duration,
+                    serverUrl = srvUrl,
+                    username = usr,
+                    password = pwd,
+                    coverUrl = audiobookCoverUrl,
+                    onBack = onBack,
+                    onPlayPause = { viewModel.audiobookTogglePlayPause() },
+                    onSeekTo = { viewModel.audiobookSeekTo(it) },
+                    onSkipForward15s = { viewModel.audiobookSkipForward15s() },
+                    onSkipBackward15s = { viewModel.audiobookSkipBackward15s() },
+                    onPreviousChapter = { viewModel.audiobookPreviousChapter() },
+                    onNextChapter = { viewModel.audiobookNextChapter() },
+                    onChapterSelect = { idx ->
+                        val book = currentBook ?: return@AudiobookPlayerScreen
+                        val ch = chapters.getOrNull(idx) ?: return@AudiobookPlayerScreen
+                        viewModel.playAudiobookChapter(book, ch, chapters)
+                    },
+                    onSetTimer = { viewModel.audiobookSetTimer(it) },
+                    onChangeSpeed = { viewModel.audiobookChangeSpeed(it) }
+                )
+            } else {
+                navController.popBackStack()
+            }
+        } else {
+            navController.popBackStack()
+        }
+    }
+
+    composable(Screen.NarratorList.route) {
+        AudiobookNarratorListScreen(
+            viewModel = viewModel,
+            onBack = onBack,
+            onNarratorClick = { navController.navigate(Screen.NarratorDetail.createRoute(it)) }
+        )
+    }
+
+    composable(Screen.NarratorDetail.route) { backStackEntry ->
+        val narratorName = backStackEntry.arguments?.getString("narratorName") ?: return@composable
+        AudiobookNarratorDetailScreen(
+            viewModel = viewModel,
+            narratorName = narratorName,
+            onBack = onBack,
+            onBookClick = { navController.navigate(Screen.AudiobookDetail.createRoute(it)) }
+        )
+    }
+
+    // ===== 影视模块 =====
+
+    composable(Screen.VideoSearch.route) {
+        VideoSearchScreen(
+            viewModel = videoViewModel,
+            onBack = onBack,
+            onVideoClick = { video ->
+                navController.navigate(Screen.VideoDetail.createRoute(video.source, video.id))
+            }
+        )
+    }
+
+    composable(Screen.VideoDetail.route) { backStackEntry ->
+        val source = backStackEntry.arguments?.getString("source") ?: return@composable
+        val videoId = backStackEntry.arguments?.getString("videoId") ?: return@composable
+        VideoDetailScreen(
+            viewModel = videoViewModel,
+            source = source,
+            videoId = videoId,
+            onBack = onBack,
+            onPlay = { playSource, episodeIndex ->
+                navController.navigate(Screen.VideoPlayerDirect.route)
+            },
+            onVideoClick = { video ->
+                navController.navigate(Screen.VideoDetail.createRoute(video.source, video.id))
+            }
+        )
+    }
+
+    composable(Screen.VideoPlayerDirect.route) {
+        val detail by videoViewModel.videoDetail.collectAsState()
+        if (detail != null) {
+            val sources = detail!!.toSources()
+            VideoPlayerScreen(
+                videoTitle = detail!!.title,
+                sources = sources,
+                initialSource = 0,
+                initialEpisode = 0,
+                onBack = onBack
+            )
+        } else {
+            navController.popBackStack()
+        }
+    }
+
+    composable(Screen.VideoPlayer.route) { backStackEntry ->
+        val videoTitle = backStackEntry.arguments?.getString("videoTitle") ?: ""
+        val source = backStackEntry.arguments?.getString("source") ?: ""
+        val episodeIndex = backStackEntry.arguments?.getString("episodeIndex")?.toIntOrNull() ?: 0
+        val detail by videoViewModel.videoDetail.collectAsState()
+        val sources = detail?.toSources() ?: emptyList()
+        VideoPlayerScreen(
+            videoTitle = videoTitle,
+            sources = sources,
+            initialSource = sources.indexOfFirst { it.source == source }.coerceAtLeast(0),
+            initialEpisode = episodeIndex,
+            onBack = onBack
+        )
+    }
+
+    composable(Screen.Live.route) {
+        LiveScreen(
+            viewModel = videoViewModel,
+            onBack = onBack
+        )
+    }
+
+    composable(Screen.VideoCategory.route) { backStackEntry ->
+        val type = backStackEntry.arguments?.getString("type") ?: return@composable
+        VideoCategoryScreen(
+            viewModel = videoViewModel,
+            categoryType = type,
+            onBack = onBack,
+            onVideoClick = { video ->
+                navController.navigate(Screen.VideoDetail.createRoute(video.source, video.id))
+            },
+            windowSizeClass = windowSizeClass
+        )
     }
 }
