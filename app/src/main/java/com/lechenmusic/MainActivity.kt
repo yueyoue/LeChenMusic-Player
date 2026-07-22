@@ -250,7 +250,7 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                             horizontalAlignment = Alignment.CenterHorizontally,
                             modifier = Modifier
                                 .clickable { onNavClick(Screen.Home.route) }
-                                .padding(vertical = 6.dp)
+                                .padding(vertical = 4.dp)
                         ) {
                             Icon(
                                 Icons.Default.Home, "首页",
@@ -258,7 +258,7 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                                     else MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(22.dp)
                             )
-                            Spacer(modifier = Modifier.height(2.dp))
+                            Spacer(modifier = Modifier.height(1.dp))
                             Text("首页", fontSize = 10.sp,
                                 color = if (homeSelected) MaterialTheme.colorScheme.primary
                                     else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -299,7 +299,7 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                                             }
                                         }
                                     }
-                                    .padding(vertical = 6.dp)
+                                    .padding(vertical = 4.dp)
                             ) {
                                 Icon(
                                     item.icon, item.label,
@@ -307,7 +307,7 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                                         else MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(22.dp)
                                 )
-                                Spacer(modifier = Modifier.height(2.dp))
+                                Spacer(modifier = Modifier.height(1.dp))
                                 Text(item.label, fontSize = 10.sp,
                                     color = if (active) MaterialTheme.colorScheme.primary
                                         else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -320,14 +320,14 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                             horizontalAlignment = Alignment.CenterHorizontally,
                             modifier = Modifier
                                 .clickable { onNavClick(Screen.Search.route) }
-                                .padding(vertical = 6.dp)
+                                .padding(vertical = 4.dp)
                         ) {
                             Icon(
                                 Icons.Default.Search, "搜索",
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(22.dp)
                             )
-                            Spacer(modifier = Modifier.height(2.dp))
+                            Spacer(modifier = Modifier.height(1.dp))
                             Text("搜索", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Spacer(modifier = Modifier.weight(1f))
@@ -337,7 +337,7 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                             horizontalAlignment = Alignment.CenterHorizontally,
                             modifier = Modifier
                                 .clickable { onNavClick(Screen.Favorites.route) }
-                                .padding(vertical = 6.dp)
+                                .padding(vertical = 4.dp)
                         ) {
                             Icon(
                                 Icons.Default.Favorite, "收藏",
@@ -345,7 +345,7 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                                     else MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(22.dp)
                             )
-                            Spacer(modifier = Modifier.height(2.dp))
+                            Spacer(modifier = Modifier.height(1.dp))
                             Text("收藏", fontSize = 10.sp,
                                 color = if (favSelected) MaterialTheme.colorScheme.primary
                                     else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -364,7 +364,7 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(22.dp)
                             )
-                            Spacer(modifier = Modifier.height(2.dp))
+                            Spacer(modifier = Modifier.height(1.dp))
                             Text("我的", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
