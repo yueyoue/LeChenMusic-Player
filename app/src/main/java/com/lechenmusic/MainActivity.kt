@@ -52,6 +52,7 @@ import com.lechenmusic.ui.screens.audiobook.AudiobookPlayerScreen
 import com.lechenmusic.ui.screens.audiobook.AudiobookNarratorListScreen
 import com.lechenmusic.ui.screens.audiobook.AudiobookNarratorDetailScreen
 import com.lechenmusic.ui.theme.LeChenMusicTheme
+import com.lechenmusic.ui.responsive.rememberResponsiveConfig
 import com.lechenmusic.update.UpdateInfo
 
 class MainActivity : ComponentActivity() {
@@ -184,6 +185,7 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
             val windowSizeClass = androidx.compose.material3.windowsizeclass.calculateWindowSizeClass(
                 LocalContext.current as android.app.Activity
             )
+            val responsiveConfig = rememberResponsiveConfig(windowSizeClass)
             Scaffold(
                 bottomBar = {
                     AnimatedVisibility(
@@ -270,7 +272,8 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                             onNavigateToVideoCategory = { type -> navController.navigate(Screen.VideoCategory.createRoute(type)) },
                             onNavigateToVideoSearch = { navController.navigate(Screen.VideoSearch.route) },
                             onNavigateToLive = { navController.navigate(Screen.Live.route) },
-                            videoViewModel = videoViewModel
+                            videoViewModel = videoViewModel,
+                            responsiveConfig = responsiveConfig
                         )
                     }
                     composable(Screen.Favorites.route) {

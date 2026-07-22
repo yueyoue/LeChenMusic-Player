@@ -36,8 +36,10 @@ import com.lechenmusic.data.model.Playlist
 import com.lechenmusic.data.model.Song
 import com.lechenmusic.ui.MainViewModel
 import com.lechenmusic.ui.components.*
+import com.lechenmusic.ui.responsive.ResponsiveConfig
 import com.lechenmusic.ui.screens.audiobook.getAudiobookCoverUrl
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.unit.TextUnit
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -67,7 +69,8 @@ fun HomeScreen(
     onNavigateToVideoCategory: (String) -> Unit = {},
     onNavigateToVideoSearch: () -> Unit = {},
     onNavigateToLive: () -> Unit = {},
-    videoViewModel: com.lechenmusic.ui.VideoViewModel? = null
+    videoViewModel: com.lechenmusic.ui.VideoViewModel? = null,
+    responsiveConfig: ResponsiveConfig? = null
 ) {
     val newestAlbums by viewModel.newestAlbums.collectAsState()
     val randomAlbums by viewModel.randomAlbums.collectAsState()
@@ -91,8 +94,9 @@ fun HomeScreen(
     val videoHomeLoading = videoViewModel?.homeLoading?.collectAsState()?.value ?: false
     val videoPlayRecords = videoViewModel?.playRecords?.collectAsState()?.value ?: emptyList()
 
-    // Pull-to-refresh state
-
+    // 判断是否使用平板布局
+    val config = responsiveConfig
+    val isTablet = config != null && (config.isMedium || config.isExpanded)
 
     Box(
         modifier = Modifier
@@ -101,10 +105,50 @@ fun HomeScreen(
         Scaffold(
             modifier = Modifier.fillMaxSize(),
         ) { padding ->
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 80.dp)
-            ) {
+            if (isTablet && homeMode == "music") {
+                // ===== 平板音乐首页布局 =====
+                TabletMusicHomeContent(
+                    config = config!!,
+                    viewModel = viewModel,
+                    newestAlbums = newestAlbums,
+                    randomAlbums = randomAlbums,
+                    dailySongs = dailySongs,
+                    playlists = playlists,
+                    recentPlayedSongs = recentPlayedSongs,
+                    radioStations = radioStations,
+                    musicSlides = musicSlides,
+                    serverUrl = serverUrl,
+                    username = username,
+                    password = password,
+                    onAlbumClick = onAlbumClick,
+                    onSongClick = onSongClick,
+                    onPlaylistClick = onPlaylistClick,
+                    onNavigateToAlbums = onNavigateToAlbums,
+                    onNavigateToFavorites = onNavigateToFavorites,
+                    onNavigateToAllSongs = onNavigateToAllSongs,
+                    onNavigateToRecentPlayed = onNavigateToRecentPlayed,
+                    onNavigateToRadio = onNavigateToRadio,
+                    onNavigateToSearch = onNavigateToSearch,
+                    onNavigateToArtists = onNavigateToArtists,
+                    onNavigateToAllPlaylists = onNavigateToAllPlaylists,
+                    onNavigateToCachedMusic = onNavigateToCachedMusic,
+                    onNavigateToAudiobook = onNavigateToAudiobook,
+                    onNavigateToAudiobookDetail = onNavigateToAudiobookDetail,
+                    onNavigateToNarrator = onNavigateToNarrator,
+                    onNavigateToNarratorList = onNavigateToNarratorList,
+                    onNavigateToVideoDetail = onNavigateToVideoDetail,
+                    onNavigateToVideoPlayer = onNavigateToVideoPlayer,
+                    onNavigateToVideoCategory = onNavigateToVideoCategory,
+                    onNavigateToVideoSearch = onNavigateToVideoSearch,
+                    onNavigateToLive = onNavigateToLive,
+                    videoViewModel = videoViewModel
+                )
+            } else {
+                // ===== 手机布局（原有逻辑） =====
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = 80.dp)
+                ) {
                 // Search
                 item {
                     Surface(
@@ -860,8 +904,9 @@ fun HomeScreen(
                         }
                     }
                 }
-            }
-        }
+            } // else (手机布局)
+        } // Scaffold
+        } // Scaffold content lambda
 
         // ===== 影视导航逻辑（放在 LazyColumn 外面，避免滚动时被回收） =====
         if (homeMode == "video") {
@@ -2012,5 +2057,390 @@ private fun RankCard(
             fontSize = 10.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+    }
+}
+
+// ==================== Tablet Music Home Layout ====================
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun TabletMusicHomeContent(
+    config: ResponsiveConfig,
+    viewModel: MainViewModel,
+    newestAlbums: List<Album>,
+    randomAlbums: List<Album>,
+    dailySongs: List<Song>,
+    playlists: List<Playlist>,
+    recentPlayedSongs: List<Song>,
+    radioStations: List<InternetRadioStation>,
+    musicSlides: List<com.lechenmusic.data.model.SlideConfig>,
+    serverUrl: String,
+    username: String,
+    password: String,
+    onAlbumClick: (String) -> Unit,
+    onSongClick: (Song, List<Song>) -> Unit,
+    onPlaylistClick: (String) -> Unit,
+    onNavigateToAlbums: () -> Unit,
+    onNavigateToFavorites: () -> Unit,
+    onNavigateToAllSongs: () -> Unit,
+    onNavigateToRecentPlayed: () -> Unit,
+    onNavigateToRadio: () -> Unit,
+    onNavigateToSearch: () -> Unit,
+    onNavigateToArtists: () -> Unit,
+    onNavigateToAllPlaylists: () -> Unit,
+    onNavigateToCachedMusic: () -> Unit,
+    onNavigateToAudiobook: (String?) -> Unit,
+    onNavigateToAudiobookDetail: (String) -> Unit,
+    onNavigateToNarrator: (String) -> Unit,
+    onNavigateToNarratorList: () -> Unit,
+    onNavigateToVideoDetail: (String, String) -> Unit,
+    onNavigateToVideoPlayer: () -> Unit,
+    onNavigateToVideoCategory: (String) -> Unit,
+    onNavigateToVideoSearch: () -> Unit,
+    onNavigateToLive: () -> Unit,
+    videoViewModel: com.lechenmusic.ui.VideoViewModel?
+) {
+    val homeMode by viewModel.homeMode.collectAsState()
+    val audiobooks by viewModel.audiobooks.collectAsState()
+    val audiobookWithProgress by viewModel.audiobookWithProgress.collectAsState()
+    val starredAudiobooks by viewModel.starredAudiobooks.collectAsState()
+    val audiobookSlides by viewModel.audiobookSlides.collectAsState()
+
+    val isVideoLoggedIn = videoViewModel?.isLoggedIn?.collectAsState()?.value ?: false
+    val videoHomeData = videoViewModel?.homeData?.collectAsState()?.value
+    val videoHomeLoading = videoViewModel?.homeLoading?.collectAsState()?.value ?: false
+    val videoPlayRecords = videoViewModel?.playRecords?.collectAsState()?.value ?: emptyList()
+
+    val pad = config.contentPadding
+    val gap = config.itemSpacing
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(
+            start = pad, end = pad,
+            top = pad,
+            bottom = 100.dp
+        ),
+        verticalArrangement = Arrangement.spacedBy(config.sectionSpacing)
+    ) {
+        // ===== Top Bar: Title + Mode Switcher =====
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                    Text(
+                        "LeChenMusic",
+                        fontSize = config.titleFontSize,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Surface(shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.surfaceVariant) {
+                        Row(modifier = Modifier.padding(3.dp)) {
+                            TabletModeBtn("\uD83C\uDFB5", "音乐", homeMode == "music", config) { viewModel.setHomeMode("music") }
+                            TabletModeBtn("\uD83D\uDCD6", "有声书", homeMode == "audiobook", config) {
+                                viewModel.setHomeMode("audiobook")
+                                viewModel.loadAudiobooks()
+                            }
+                            TabletModeBtn("\uD83C\uDFAC", "影视", homeMode == "video", config) { viewModel.setHomeMode("video") }
+                        }
+                    }
+                }
+                IconButton(onClick = onNavigateToSearch) {
+                    Icon(Icons.Default.Search, "搜索", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+
+        if (homeMode == "music") {
+            // ===== Hero: Banner (2/3) + Hot List (1/3) =====
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth().height(config.heroHeight),
+                    horizontalArrangement = Arrangement.spacedBy(gap)
+                ) {
+                    // Featured Banner
+                    Box(
+                        modifier = Modifier
+                            .weight(2f)
+                            .fillMaxHeight()
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(Brush.linearGradient(listOf(Color(0xFF6C5CE7), Color(0xFFA78BFA), Color(0xFFD4BBFF))))
+                    ) {
+                        if (musicSlides.isNotEmpty()) {
+                            val slide = musicSlides.first()
+                            if (slide.imageUrl.isNotEmpty()) {
+                                val fullUrl = if (slide.imageUrl.startsWith("http")) slide.imageUrl
+                                    else "${serverUrl.trimEnd('/')}${slide.imageUrl}"
+                                AsyncImage(model = fullUrl, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop, alpha = 0.35f)
+                            }
+                        }
+                        Column(modifier = Modifier.align(Alignment.BottomStart).padding(24.dp)) {
+                            Surface(shape = RoundedCornerShape(8.dp), color = Color.White.copy(alpha = 0.15f)) {
+                                Text("精选推荐", modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp), fontSize = config.captionFontSize, fontWeight = FontWeight.SemiBold, color = Color.White)
+                            }
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Text(
+                                musicSlides.firstOrNull()?.title ?: "每日推荐",
+                                fontSize = (config.sectionTitleSize.value + 6).sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text("探索专为您量身打造的原创合集", fontSize = config.bodyFontSize, color = Color.White.copy(alpha = 0.8f))
+                            Spacer(modifier = Modifier.height(14.dp))
+                            Button(
+                                onClick = {
+                                    val link = musicSlides.firstOrNull()?.link ?: ""
+                                    when {
+                                        link.startsWith("playlist:") -> onPlaylistClick(link.removePrefix("playlist:"))
+                                        link.startsWith("album:") -> onAlbumClick(link.removePrefix("album:"))
+                                    }
+                                },
+                                shape = RoundedCornerShape(50),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color(0xFF6C5CE7))
+                            ) {
+                                Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("立即播放", fontWeight = FontWeight.Bold, fontSize = config.bodyFontSize)
+                            }
+                        }
+                    }
+                    // Hot List Card
+                    Surface(
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                        shape = RoundedCornerShape(20.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainer,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                    ) {
+                        Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.SpaceBetween) {
+                            Column {
+                                Text("今日热榜", fontSize = config.sectionTitleSize, fontWeight = FontWeight.Bold)
+                                Text("全球播放量最高的 50 首", fontSize = config.captionFontSize, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                dailySongs.take(3).forEachIndexed { i, song ->
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                        Surface(modifier = Modifier.size(36.dp), shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
+                                            if (song.coverArt != null) AsyncImage(model = ApiClient.getCoverArtUrl(serverUrl, username, password, song.coverArt), contentDescription = null, contentScale = ContentScale.Crop)
+                                        }
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(song.title, fontSize = config.cardTitleSize, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                            Text(song.artist, fontSize = config.captionFontSize, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                                        }
+                                    }
+                                }
+                            }
+                            Icon(Icons.Default.TrendingUp, null, tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f), modifier = Modifier.size(36.dp).align(Alignment.End))
+                        }
+                    }
+                }
+            }
+
+            // ===== Quick Access =====
+            item {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    TabletQuickBtn(Icons.Default.Person, "歌手", Color(0xFFA78BFA), config, onNavigateToArtists)
+                    TabletQuickBtn(Icons.Default.Album, "专辑", Color(0xFF5352ED), config, onNavigateToAlbums)
+                    TabletQuickBtn(Icons.Default.PlaylistPlay, "歌单", Color(0xFF34D399), config, onNavigateToAllPlaylists)
+                    TabletQuickBtn(Icons.Default.Radio, "电台", Color(0xFFFF4D6A), config, onNavigateToRadio)
+                    TabletQuickBtn(Icons.Default.Download, "缓存", Color(0xFFFBBF24), config, onNavigateToCachedMusic)
+                }
+            }
+
+            // ===== Latest Albums =====
+            if (newestAlbums.isNotEmpty()) {
+                item { TabletSecHd("🆕 最新专辑", "更多 ›", config, onNavigateToAlbums) }
+                item {
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(gap)) {
+                        items(newestAlbums) { TabletAlbumCard(it, serverUrl, username, password, config) { onAlbumClick(it.id) } }
+                    }
+                }
+            }
+
+            // ===== Daily Recommendations - Dual Column =====
+            if (dailySongs.isNotEmpty()) {
+                item { TabletSecHd("🎯 每日推荐", "换一批 ↻", config) { viewModel.refreshDailySongs() } }
+                item {
+                    val half = (dailySongs.size + 1) / 2
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap)) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            dailySongs.take(half).forEach { TabletSongRow(it, serverUrl, username, password, config) { onSongClick(it, dailySongs) } }
+                        }
+                        Column(modifier = Modifier.weight(1f)) {
+                            dailySongs.drop(half).forEach { TabletSongRow(it, serverUrl, username, password, config) { onSongClick(it, dailySongs) } }
+                        }
+                    }
+                }
+            }
+
+            // ===== Playlists =====
+            if (playlists.isNotEmpty()) {
+                item { TabletSecHd("📋 歌单", "更多 ›", config, onNavigateToAllPlaylists) }
+                item {
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(gap)) {
+                        items(playlists.take(8)) { TabletPlaylistCard(it, serverUrl, username, password, config) { onPlaylistClick(it.id) } }
+                    }
+                }
+            }
+
+            // ===== Random Albums =====
+            if (randomAlbums.isNotEmpty()) {
+                item { TabletSecHd("🎲 随机专辑", "换一批 ↻", config) { viewModel.refreshRandomAlbums() } }
+                item {
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(gap)) {
+                        items(randomAlbums) { TabletAlbumCard(it, serverUrl, username, password, config) { onAlbumClick(it.id) } }
+                    }
+                }
+            }
+
+            // ===== Recent Played - Multi Column =====
+            item { TabletSecHd("⏱️ 最近播放", "更多 ›", config, onNavigateToRecentPlayed) }
+            if (recentPlayedSongs.isNotEmpty()) {
+                item {
+                    val cols = config.recentColumns
+                    val chunkSize = (recentPlayedSongs.size + cols - 1) / cols
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap)) {
+                        for (col in 0 until cols) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                recentPlayedSongs.drop(col * chunkSize).take(chunkSize).forEach { song ->
+                                    TabletSongRow(song, serverUrl, username, password, config) { onSongClick(song, recentPlayedSongs) }
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                item { Text("播放歌曲后将显示在此处", fontSize = config.bodyFontSize, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(vertical = 16.dp)) }
+            }
+
+            // ===== Radio =====
+            item { TabletSecHd("📻 电台", "", config) }
+            if (radioStations.isNotEmpty()) {
+                items(radioStations.take(4)) { TabletRadioRow(it, config) { viewModel.playerManager.playRadioStation(it) } }
+            }
+        }
+    }
+}
+
+// ==================== Tablet Sub-Components ====================
+
+@Composable
+private fun TabletModeBtn(icon: String, label: String, active: Boolean, config: ResponsiveConfig, onClick: () -> Unit) {
+    Surface(
+        modifier = Modifier.clickable(onClick = onClick),
+        shape = RoundedCornerShape(50),
+        color = if (active) MaterialTheme.colorScheme.primary else Color.Transparent
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(icon, fontSize = config.bodyFontSize.value.sp)
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                label,
+                fontSize = config.bodyFontSize,
+                fontWeight = if (active) FontWeight.Bold else FontWeight.Medium,
+                color = if (active) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun TabletQuickBtn(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, color: Color, config: ResponsiveConfig, onClick: () -> Unit) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.clickable(onClick = onClick)
+    ) {
+        val btnSize = if (config.isExpanded) 60.dp else 54.dp
+        Surface(
+            modifier = Modifier.size(btnSize),
+            shape = RoundedCornerShape(18.dp),
+            color = color.copy(alpha = 0.15f)
+        ) {
+            Box(contentAlignment = Alignment.Center) { Icon(icon, null, tint = color, modifier = Modifier.size(btnSize * 0.45f)) }
+        }
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(label, fontSize = config.captionFontSize, fontWeight = FontWeight.Medium)
+    }
+}
+
+@Composable
+private fun TabletSecHd(title: String, action: String, config: ResponsiveConfig, onClick: (() -> Unit)? = null) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(title, fontSize = config.sectionTitleSize, fontWeight = FontWeight.Bold)
+        if (action.isNotEmpty()) {
+            Text(action, fontSize = config.captionFontSize, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Medium, modifier = Modifier.clickable { onClick?.invoke() })
+        }
+    }
+}
+
+@Composable
+private fun TabletAlbumCard(album: Album, s: String, u: String, p: String, config: ResponsiveConfig, onClick: () -> Unit) {
+    val size = config.albumCardSize
+    Column(modifier = Modifier.width(size).clickable(onClick = onClick)) {
+        Surface(modifier = Modifier.size(size), shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceVariant, shadowElevation = 2.dp) {
+            if (album.coverArt != null) AsyncImage(model = ApiClient.getCoverArtUrl(s, u, p, album.coverArt), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+            else Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.Album, null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f), modifier = Modifier.size(48.dp)) }
+        }
+        Text(album.name, fontSize = config.cardTitleSize, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
+        Text(album.artist, fontSize = config.cardSubtitleSize, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+    }
+}
+
+@Composable
+private fun TabletPlaylistCard(pl: Playlist, s: String, u: String, p: String, config: ResponsiveConfig, onClick: () -> Unit) {
+    val size = config.playlistCardSize
+    Column(modifier = Modifier.width(size).clickable(onClick = onClick)) {
+        Surface(modifier = Modifier.size(size), shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceVariant, shadowElevation = 2.dp) {
+            if (pl.coverArt != null) AsyncImage(model = ApiClient.getCoverArtUrl(s, u, p, pl.coverArt), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+        }
+        Text(pl.name, fontSize = config.cardTitleSize, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
+        Text("${pl.songCount}首", fontSize = config.cardSubtitleSize, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun TabletSongRow(song: Song, s: String, u: String, p: String, config: ResponsiveConfig, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Surface(modifier = Modifier.size(config.songCoverSize), shape = RoundedCornerShape(10.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
+            if (song.coverArt != null) AsyncImage(model = ApiClient.getCoverArtUrl(s, u, p, song.coverArt), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+            else Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.MusicNote, null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)) }
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(song.title, fontSize = config.bodyFontSize, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(song.artist, fontSize = config.captionFontSize, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+        }
+        Text(song.durationFormatted, fontSize = config.captionFontSize, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun TabletRadioRow(station: InternetRadioStation, config: ResponsiveConfig, onClick: () -> Unit) {
+    val colors = listOf(Color(0xFFFF4D6A), Color(0xFFA78BFA), Color(0xFF5352ED), Color(0xFF34D399), Color(0xFF60A5FA), Color(0xFFFBBF24))
+    val color = colors[station.name.hashCode().mod(colors.size).let { if (it < 0) it + colors.size else it }]
+    Surface(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick), shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surface, shadowElevation = 2.dp) {
+        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Surface(modifier = Modifier.size(52.dp), shape = CircleShape, color = color) { Box(contentAlignment = Alignment.Center) { Text("📻", fontSize = 22.sp) } }
+            Spacer(modifier = Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(station.name, fontSize = config.bodyFontSize, fontWeight = FontWeight.SemiBold)
+                Text("网络电台", fontSize = config.captionFontSize, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Icon(Icons.Default.PlayArrow, "播放", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(32.dp))
+        }
     }
 }
