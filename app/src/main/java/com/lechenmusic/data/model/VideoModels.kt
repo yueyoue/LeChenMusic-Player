@@ -188,6 +188,12 @@ data class PlayRecordRequest(
     val type: String = ""
 )
 
+/** 保存播放记录的请求包装（参考 Selene-Source: key + record） */
+data class PlayRecordSaveRequest(
+    val key: String,
+    val record: PlayRecordRequest
+)
+
 // ==================== 直播 ====================
 
 data class LiveSourcesResponse(

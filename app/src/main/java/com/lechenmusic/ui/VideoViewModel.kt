@@ -255,18 +255,18 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 val doubanApi = DoubanApiClient.getApi()
 
-                // 参考 Selene-Source: 用 /recommend 接口 + tags 精确筛选
+                // 用 recent_hot 接口（recommend+tags 返回空）
                 val moviesResp = withContext(Dispatchers.IO) {
-                    doubanApi.getRecommendations("movie", tags = "热门", sort = "T", count = 15)
+                    doubanApi.getRecentHot("movie", limit = 15)
                 }
                 val tvResp = withContext(Dispatchers.IO) {
-                    doubanApi.getRecommendations("tv", tags = "热门", sort = "T", count = 15)
+                    doubanApi.getRecentHot("tv", limit = 15)
                 }
                 val animeResp = withContext(Dispatchers.IO) {
-                    doubanApi.getRecommendations("tv", tags = "日本,动画", sort = "T", count = 15)
+                    doubanApi.getRecentHot("anime", limit = 15)
                 }
                 val showResp = withContext(Dispatchers.IO) {
-                    doubanApi.getRecommendations("tv", tags = "综艺", sort = "T", count = 15)
+                    doubanApi.getRecentHot("show", limit = 15)
                 }
 
                 _homeData.value = HomeRecommendData(
@@ -632,7 +632,9 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             try {
                 val api = VideoApiClient.getApi(videoServerUrl.value)
-                withContext(Dispatchers.IO) { api.savePlayRecord(record) }
+                val key = "${record.source}+${record.id}"
+                val request = PlayRecordSaveRequest(key = key, record = record)
+                withContext(Dispatchers.IO) { api.savePlayRecord(request) }
             } catch (_: Exception) { }
         }
     }
@@ -681,7 +683,7 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 val doubanApi = DoubanApiClient.getApi()
                 val doubanKind = when (kind) {
-                    "anime" -> "movie"
+                    "anime" -> "tv"
                     "variety" -> "tv"
                     else -> kind
                 }
@@ -752,8 +754,8 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
     private fun getDefaultParams(kind: String): Pair<String, String> = when (kind) {
         "movie" -> "\u70ED\u95E8" to "\u5168\u90E8"
         "tv" -> "\u6700\u8FD1\u70ED\u95E8" to "tv"
-        "anime" -> "\u70ED\u95E8" to "\u65E5\u672C"
-        "variety" -> "show" to "show"
+        "anime" -> "\u65E5\u672C" to "\u52A8\u6F2B"
+        "variety" -> "\u7EFC\u827A" to "show"
         else -> "\u70ED\u95E8" to "\u5168\u90E8"
     }
 

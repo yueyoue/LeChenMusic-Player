@@ -65,6 +65,7 @@ fun HomeScreen(
     onNavigateToVideoDetail: (String, String) -> Unit = { _, _ -> },
     onNavigateToVideoPlayer: () -> Unit = {},
     onNavigateToVideoCategory: (String) -> Unit = {},
+    onNavigateToVideoSearch: () -> Unit = {},
     onNavigateToLive: () -> Unit = {},
     videoViewModel: com.lechenmusic.ui.VideoViewModel? = null
 ) {
@@ -113,7 +114,7 @@ fun HomeScreen(
                             .clickable {
                                 when (homeMode) {
                                     "audiobook" -> onNavigateToAudiobook(null)
-                                    "video" -> { /* 视频搜索暂不跳转 */ }
+                                    "video" -> onNavigateToVideoSearch()
                                     else -> onNavigateToSearch()
                                 }
                             },

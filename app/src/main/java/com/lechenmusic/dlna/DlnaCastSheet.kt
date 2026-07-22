@@ -43,6 +43,12 @@ fun DlnaCastSheet(
                 isSearching = false
                 searchDone = true
             }
+            // 8秒后如果还在搜索，自动停止
+            kotlinx.coroutines.delay(8000)
+            if (isSearching) {
+                isSearching = false
+                searchDone = true
+            }
         }
     }
 

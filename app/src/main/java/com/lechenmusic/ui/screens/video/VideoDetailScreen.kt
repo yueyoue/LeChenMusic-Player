@@ -268,12 +268,22 @@ fun VideoDetailScreen(
             )
             // 自定义叠加层
             if (fsControlsVisible) {
-                // 退出全屏 (左上)
-                IconButton(
-                    onClick = { isPlayerFullscreen = false },
-                    modifier = Modifier.align(Alignment.TopStart).statusBarsPadding().padding(4.dp)
+                // 退出全屏 + 电影名 (左上)
+                Row(
+                    modifier = Modifier.align(Alignment.TopStart).statusBarsPadding().padding(start = 4.dp, top = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.ArrowBack, "退出全屏", tint = Color.White)
+                    IconButton(onClick = { isPlayerFullscreen = false }) {
+                        Icon(Icons.Default.ArrowBack, "退出全屏", tint = Color.White)
+                    }
+                    Text(
+                        currentDetail?.title ?: "",
+                        color = Color.White,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
                 }
                 // 投屏按钮 (右上)
                 IconButton(
@@ -331,12 +341,18 @@ fun VideoDetailScreen(
             var fsDuration by remember { mutableLongStateOf(0L) }
             var fsPosition by remember { mutableLongStateOf(0L) }
             var fsDragging by remember { mutableStateOf(false) }
+            var fsSeeking by remember { mutableStateOf(false) }
             LaunchedEffect(exoPlayer) {
                 while (true) {
-                    if (!fsDragging) {
+                    if (!fsDragging && !fsSeeking) {
                         fsDuration = exoPlayer.duration.coerceAtLeast(0L)
                         fsPosition = exoPlayer.currentPosition.coerceAtLeast(0L)
                         fsProgress = if (fsDuration > 0) fsPosition.toFloat() / fsDuration else 0f
+                    }
+                    // seek 完成后重置标记
+                    if (fsSeeking) {
+                        kotlinx.coroutines.delay(500)
+                        fsSeeking = false
                     }
                     kotlinx.coroutines.delay(300)
                 }
@@ -364,10 +380,11 @@ fun VideoDetailScreen(
                                         fsProgress = (offset.x / fsBarWidthPx).coerceIn(0f, 1f)
                                     },
                                     onDragEnd = {
-                                        exoPlayer.seekTo((fsProgress * fsDuration).toLong())
                                         fsDragging = false
+                                        fsSeeking = true
+                                        exoPlayer.seekTo((fsProgress * fsDuration).toLong())
                                     },
-                                    onDragCancel = { fsDragging = false }
+                                    onDragCancel = { fsDragging = false; fsSeeking = false }
                                 ) { change, dragAmount ->
                                     change.consume()
                                     val newOffset = (fsProgress * fsBarWidthPx) + dragAmount.x
@@ -381,6 +398,7 @@ fun VideoDetailScreen(
                                         fsProgress = (offset.x / fsBarWidthPx).coerceIn(0f, 1f)
                                         val success = tryAwaitRelease()
                                         if (success) {
+                                            fsSeeking = true
                                             exoPlayer.seekTo((fsProgress * fsDuration).toLong())
                                         }
                                         fsDragging = false
@@ -466,23 +484,23 @@ fun VideoDetailScreen(
                     )
                     // 自定义叠加层: 返回 + 全屏 + 播放/暂停
                     if (inlineControlsVisible) {
-                        // 返回按钮 (左上) - 增加内边距避免遮挡视频
+                        // 返回按钮 (左上) - 增大内边距
                         IconButton(
                             onClick = onBack,
-                            modifier = Modifier.align(Alignment.TopStart).statusBarsPadding().padding(start = 8.dp, top = 8.dp)
+                            modifier = Modifier.align(Alignment.TopStart).padding(start = 12.dp, top = 16.dp)
                         ) {
                             Icon(Icons.Default.ArrowBack, "返回", tint = Color.White)
                         }
-                        // 投屏按钮 (右上) - 增加内边距
-                        Row(modifier = Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(end = 8.dp, top = 8.dp)) {
+                        // 投屏按钮 (右上) - 增大内边距
+                        Row(modifier = Modifier.align(Alignment.TopEnd).padding(end = 12.dp, top = 16.dp)) {
                             IconButton(onClick = { showCastSheet = true }) {
                                 Icon(Icons.Default.Cast, "投屏", tint = if (castDevice != null) MaterialTheme.colorScheme.primary else Color.White)
                             }
                         }
-                        // 全屏按钮 (右下) - 增加内边距
+                        // 全屏按钮 (右下) - 增大内边距
                         IconButton(
                             onClick = { isPlayerFullscreen = true },
-                            modifier = Modifier.align(Alignment.BottomEnd).padding(end = 8.dp, bottom = 8.dp)
+                            modifier = Modifier.align(Alignment.BottomEnd).padding(end = 12.dp, bottom = 16.dp)
                         ) {
                             Icon(Icons.Default.Fullscreen, "全屏", tint = Color.White)
                         }
@@ -514,13 +532,18 @@ fun VideoDetailScreen(
                     var durationMs by remember { mutableLongStateOf(0L) }
                     var positionMs by remember { mutableLongStateOf(0L) }
                     var isDragging by remember { mutableStateOf(false) }
+                    var isSeeking by remember { mutableStateOf(false) }
                     var barWidthPx by remember { mutableFloatStateOf(1f) }
                     LaunchedEffect(exoPlayer) {
                         while (true) {
-                            if (!isDragging) {
+                            if (!isDragging && !isSeeking) {
                                 durationMs = exoPlayer.duration.coerceAtLeast(0L)
                                 positionMs = exoPlayer.currentPosition.coerceAtLeast(0L)
                                 progress = if (durationMs > 0) positionMs.toFloat() / durationMs else 0f
+                            }
+                            if (isSeeking) {
+                                kotlinx.coroutines.delay(500)
+                                isSeeking = false
                             }
                             kotlinx.coroutines.delay(500)
                         }
@@ -550,10 +573,11 @@ fun VideoDetailScreen(
                                                 progress = (offset.x / barWidthPx).coerceIn(0f, 1f)
                                             },
                                             onDragEnd = {
-                                                exoPlayer.seekTo((progress * durationMs).toLong())
                                                 isDragging = false
+                                                isSeeking = true
+                                                exoPlayer.seekTo((progress * durationMs).toLong())
                                             },
-                                            onDragCancel = { isDragging = false }
+                                            onDragCancel = { isDragging = false; isSeeking = false }
                                         ) { change, dragAmount ->
                                             change.consume()
                                             val newOffset = (progress * barWidthPx) + dragAmount.x
@@ -567,6 +591,7 @@ fun VideoDetailScreen(
                                                 progress = (offset.x / barWidthPx).coerceIn(0f, 1f)
                                                 val success = tryAwaitRelease()
                                                 if (success) {
+                                                    isSeeking = true
                                                     exoPlayer.seekTo((progress * durationMs).toLong())
                                                 }
                                                 isDragging = false

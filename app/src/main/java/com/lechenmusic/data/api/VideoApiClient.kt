@@ -45,7 +45,7 @@ interface LunaTvApi {
     suspend fun getPlayRecords(): Response<Map<String, VideoPlayRecord>>
 
     @POST("api/playrecords")
-    suspend fun savePlayRecord(@Body request: PlayRecordRequest): Response<Map<String, Any>>
+    suspend fun savePlayRecord(@Body request: PlayRecordSaveRequest): Response<Map<String, Any>>
 
     @HTTP(method = "DELETE", path = "api/playrecords", hasBody = true)
     suspend fun deletePlayRecord(@Body request: Map<String, String>): Response<Map<String, Any>>

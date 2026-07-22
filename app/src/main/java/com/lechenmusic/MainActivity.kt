@@ -268,6 +268,7 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                             onNavigateToVideoDetail = { source, videoId -> navController.navigate(Screen.VideoDetail.createRoute(source, videoId)) },
                             onNavigateToVideoPlayer = { navController.navigate(Screen.VideoPlayerDirect.route) },
                             onNavigateToVideoCategory = { type -> navController.navigate(Screen.VideoCategory.createRoute(type)) },
+                            onNavigateToVideoSearch = { navController.navigate(Screen.VideoSearch.route) },
                             onNavigateToLive = { navController.navigate(Screen.Live.route) },
                             videoViewModel = videoViewModel
                         )
