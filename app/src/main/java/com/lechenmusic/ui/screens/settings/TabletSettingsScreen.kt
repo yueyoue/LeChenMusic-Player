@@ -1,5 +1,7 @@
 package com.lechenmusic.ui.screens.settings
 
+import android.content.Context
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -11,7 +13,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lechenmusic.ui.MainViewModel
@@ -30,8 +36,45 @@ fun TabletSettingsScreen(
     val serverUrl by viewModel.serverUrl.collectAsState()
     val username by viewModel.username.collectAsState()
     val themeMode by viewModel.themeMode.collectAsState()
+    val cacheSize by viewModel.cacheSize.collectAsState()
+    val serverStats by viewModel.serverStats.collectAsState()
+    val context = LocalContext.current
 
     var showLogoutDialog by remember { mutableStateOf(false) }
+    var showCacheDialog by remember { mutableStateOf(false) }
+    var showAboutDialog by remember { mutableStateOf(false) }
+    var showUpdateDialog by remember { mutableStateOf(false) }
+    val updateInfo by viewModel.updateInfo.collectAsState()
+    val updateStatus by viewModel.updateStatus.collectAsState()
+    val isCheckingUpdate by viewModel.isCheckingUpdate.collectAsState()
+    val toastMessage by viewModel.toastMessage.collectAsState()
+    var userTriggeredCheck by remember { mutableStateOf(false) }
+
+    // Show toast messages
+    LaunchedEffect(toastMessage) {
+        toastMessage?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            viewModel.clearToast()
+        }
+    }
+
+    // Show update dialog on check
+    LaunchedEffect(updateInfo, userTriggeredCheck) {
+        if (updateInfo != null && userTriggeredCheck) {
+            showUpdateDialog = true
+            userTriggeredCheck = false
+        }
+    }
+
+    // Cache sizes
+    var musicCacheSize by remember { mutableStateOf("计算中...") }
+    var otherDataSize by remember { mutableStateOf("计算中...") }
+
+    LaunchedEffect(Unit) {
+        val cacheBytes = viewModel.playerManager.getCacheBytes()
+        musicCacheSize = if (cacheBytes > 0) formatSize(cacheBytes) else calculateCacheSize(context, "music_cache")
+        otherDataSize = calculateOtherDataSize(context)
+    }
 
     Column(
         modifier = Modifier
@@ -48,7 +91,7 @@ fun TabletSettingsScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // 用户信息卡片
+        // ===== 用户信息卡片 =====
         Surface(
             shape = RoundedCornerShape(20.dp),
             color = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -82,79 +125,176 @@ fun TabletSettingsScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // 设置项列表
-        Text("外观", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
-        Spacer(modifier = Modifier.height(8.dp))
+        // ===== 服务器信息 =====
+        SectionTitle("服务器信息")
         SettingsCard {
-            SettingsItem(
-                icon = Icons.Default.DarkMode,
-                title = "深色模式",
-                subtitle = if (themeMode == "dark") "已开启" else "已关闭",
-                onClick = { viewModel.setThemeMode(if (themeMode == "dark") "light" else "dark") }
-            )
-            SettingsDivider()
-            SettingsItem(
-                icon = Icons.Default.Palette,
-                title = "主题颜色",
-                subtitle = "紫色",
-                onClick = { }
+            val statsLoaded = serverStats.songCount > 0 || serverStats.albumCount > 0
+            SettingsInfoRow("服务器地址", serverUrl)
+            SettingsInfoRow("用户名", username)
+            SettingsInfoRow("歌曲数量", if (statsLoaded) "${serverStats.songCount}" else "加载中...")
+            SettingsInfoRow("专辑数量", if (statsLoaded) "${serverStats.albumCount}" else "加载中...")
+            SettingsInfoRow("歌手数量", if (statsLoaded) "${serverStats.artistCount}" else "加载中...")
+            SettingsInfoRow("歌单数量", if (statsLoaded) "${serverStats.playlistCount}" else "加载中...")
+            SettingsInfoRow("有声读物", if (statsLoaded) "${serverStats.audiobookCount}" else "加载中...")
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // ===== 外观设置 =====
+        SectionTitle("外观设置")
+        SettingsCard {
+            SettingsToggleItem(
+                icon = Icons.Default.Settings,
+                iconBg = Color(0xFFA55EEA).copy(alpha = 0.15f),
+                label = "深色模式",
+                checked = themeMode == "dark",
+                onCheckedChange = { viewModel.setThemeMode(if (it) "dark" else "light") }
             )
         }
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        Text("播放", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
-        Spacer(modifier = Modifier.height(8.dp))
+        // ===== 缓存设置 =====
+        SectionTitle("缓存设置")
         SettingsCard {
-            SettingsItem(
-                icon = Icons.Default.MusicNote,
-                title = "音质设置",
-                subtitle = "自动",
-                onClick = { }
-            )
-            SettingsDivider()
-            SettingsItem(
-                icon = Icons.Default.Download,
-                title = "缓存大小",
-                subtitle = "2GB",
-                onClick = { }
-            )
-            SettingsDivider()
-            SettingsItem(
-                icon = Icons.Default.Delete,
-                title = "清除缓存",
-                subtitle = "释放存储空间",
-                onClick = { }
+            SettingsClickItem(
+                icon = Icons.Default.Storage,
+                iconBg = Color(0xFFFF4757).copy(alpha = 0.15f),
+                label = "音乐缓存大小",
+                value = "${cacheSize} GB",
+                onClick = { showCacheDialog = true }
             )
         }
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        Text("关于", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
-        Spacer(modifier = Modifier.height(8.dp))
+        // ===== 存储空间 =====
+        SectionTitle("存储空间")
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerLow,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                val exoCacheBytes = viewModel.playerManager.getCacheBytes()
+                val musicBytes = if (exoCacheBytes > 0) exoCacheBytes else getCacheSizeBytes(context, "music_cache")
+                val otherBytes = getOtherDataSizeBytes(context)
+                val totalUsed = musicBytes + otherBytes
+                val maxBytes = cacheSize.toLong() * 1024 * 1024 * 1024
+                val progress = if (maxBytes > 0) (totalUsed.toFloat() / maxBytes).coerceIn(0f, 1f) else 0f
+
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("已使用 ${formatSize(totalUsed)}", fontSize = 13.sp)
+                    Text("共 ${cacheSize} GB", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                LinearProgressIndicator(
+                    progress = { progress },
+                    modifier = Modifier.fillMaxWidth().height(8.dp),
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("🎵 音乐缓存 $musicCacheSize", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("📦 其他数据 $otherDataSize", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                OutlinedButton(
+                    onClick = {
+                        viewModel.playerManager.clearMusicCache()
+                        musicCacheSize = "0 B"
+                        otherDataSize = calculateOtherDataSize(context)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("清除缓存", color = MaterialTheme.colorScheme.primary)
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // ===== 账号 =====
+        SectionTitle("账号")
         SettingsCard {
-            SettingsItem(
+            SettingsClickItem(
+                icon = Icons.Default.Person,
+                iconBg = Color(0xFF5352ED).copy(alpha = 0.15f),
+                label = "当前账号",
+                value = username,
+                onClick = { }
+            )
+            SettingsClickItem(
+                icon = Icons.Default.Link,
+                iconBg = Color(0xFFFFA502).copy(alpha = 0.15f),
+                label = "服务器地址",
+                value = serverUrl,
+                onClick = { }
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showLogoutDialog = true }
+                    .padding(vertical = 14.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("切换服务器", color = MaterialTheme.colorScheme.primary, fontSize = 14.sp)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // ===== 影视服务器设置 =====
+        if (videoViewModel != null) {
+            VideoServerSettings(videoViewModel)
+            Spacer(modifier = Modifier.height(20.dp))
+        }
+
+        // ===== 版本更新 =====
+        SectionTitle("版本更新")
+        SettingsCard {
+            SettingsClickItem(
+                icon = Icons.Default.Refresh,
+                iconBg = Color(0xFF1E90FF).copy(alpha = 0.15f),
+                label = "检查更新",
+                value = if (isCheckingUpdate) "检查中..."
+                else if (updateInfo != null) "有新版本 v${updateInfo!!.versionName}"
+                else if (updateStatus.isNotEmpty()) updateStatus
+                else "当前 ${getCurrentVersionName(context)}",
+                onClick = {
+                    viewModel.dismissUpdate()
+                    userTriggeredCheck = true
+                    viewModel.checkForUpdate(silent = false)
+                }
+            )
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // ===== 关于 =====
+        SectionTitle("关于")
+        SettingsCard {
+            SettingsClickItem(
                 icon = Icons.Default.Info,
-                title = "版本",
-                subtitle = "v1.5.0",
-                onClick = { }
-            )
-            SettingsDivider()
-            SettingsItem(
-                icon = Icons.Default.Update,
-                title = "检查更新",
-                subtitle = "当前已是最新版本",
-                onClick = { }
+                iconBg = Color(0xFF2ED573).copy(alpha = 0.15f),
+                label = "关于悦音",
+                value = "",
+                onClick = { showAboutDialog = true }
             )
         }
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // 退出登录
+        // ===== 退出登录 =====
         Surface(
             shape = RoundedCornerShape(16.dp),
             color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f),
-            modifier = Modifier.fillMaxWidth().clickable { showLogoutDialog = true }
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { showLogoutDialog = true }
         ) {
             Row(
                 modifier = Modifier.padding(20.dp),
@@ -167,17 +307,103 @@ fun TabletSettingsScreen(
             }
         }
 
+        // 底部留白
         Spacer(modifier = Modifier.height(160.dp))
     }
 
+    // ===== 弹窗们 =====
+
+    // 关于弹窗
+    if (showAboutDialog) {
+        AlertDialog(
+            onDismissRequest = { showAboutDialog = false },
+            title = { Text("关于悦音", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Language, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
+                            Text("官网", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("http://yy.tthsdd.top", fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                        }
+                    }
+                    HorizontalDivider()
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Email, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
+                            Text("邮箱", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("10711306@qq.com", fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { showAboutDialog = false }) { Text("确定") } }
+        )
+    }
+
+    // 更新弹窗
+    if (showUpdateDialog && updateInfo != null) {
+        val info = updateInfo!!
+        AlertDialog(
+            onDismissRequest = { showUpdateDialog = false },
+            title = { Text("发现新版本 v${info.versionName}", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("更新内容：", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(info.updateLog, fontSize = 14.sp)
+                    if (updateStatus.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(updateStatus, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Medium)
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { viewModel.downloadUpdate() }) {
+                    Text("立即更新", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.skipUpdate(); showUpdateDialog = false }) { Text("跳过该版本") }
+            }
+        )
+    }
+
+    // 缓存大小选择弹窗
+    if (showCacheDialog) {
+        AlertDialog(
+            onDismissRequest = { showCacheDialog = false },
+            title = { Text("选择缓存大小") },
+            text = {
+                Column {
+                    listOf(2, 4, 8, 16).forEach { size ->
+                        Text(
+                            "${size} GB",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { viewModel.setCacheSize(size); showCacheDialog = false }
+                                .padding(vertical = 14.dp),
+                            fontSize = 15.sp,
+                            fontWeight = if (size == cacheSize) FontWeight.Bold else FontWeight.Normal,
+                            color = if (size == cacheSize) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { showCacheDialog = false }) { Text("取消") } }
+        )
+    }
+
+    // 退出登录弹窗
     if (showLogoutDialog) {
         AlertDialog(
             onDismissRequest = { showLogoutDialog = false },
-            title = { Text("退出登录") },
-            text = { Text("确定要退出登录吗？") },
+            title = { Text("切换服务器") },
+            text = { Text("确定要退出当前服务器吗？退出后需要重新输入服务器地址登录。") },
             confirmButton = {
-                TextButton(onClick = { showLogoutDialog = false; onLogout() }) {
-                    Text("确定", color = MaterialTheme.colorScheme.error)
+                TextButton(onClick = { viewModel.logout(); showLogoutDialog = false; onLogout() }) {
+                    Text("确定", color = MaterialTheme.colorScheme.primary)
                 }
             },
             dismissButton = {
@@ -185,6 +411,142 @@ fun TabletSettingsScreen(
             }
         )
     }
+}
+
+// ==================== 影视服务器设置 ====================
+@Composable
+private fun VideoServerSettings(viewModel: VideoViewModel) {
+    val videoServerUrl by viewModel.videoServerUrl.collectAsState()
+    val videoUsername by viewModel.videoUsername.collectAsState()
+    val videoPassword by viewModel.videoPassword.collectAsState()
+    val isLoggedIn by viewModel.isLoggedIn.collectAsState()
+
+    var showVideoServerDialog by remember { mutableStateOf(false) }
+    var testResult by remember { mutableStateOf<Pair<Boolean, String>?>(null) }
+
+    SectionTitle("影视服务器")
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column {
+            SettingsClickItem(
+                icon = Icons.Default.Tv,
+                iconBg = Color(0xFFE94560).copy(alpha = 0.15f),
+                label = "影视服务器",
+                value = if (isLoggedIn) "已连接" else if (videoServerUrl.isNotBlank()) "未连接" else "未配置",
+                onClick = { showVideoServerDialog = true }
+            )
+            if (videoServerUrl.isNotBlank()) {
+                SettingsInfoRow("服务器地址", videoServerUrl)
+                SettingsInfoRow("用户名", videoUsername)
+            }
+            if (isLoggedIn) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { viewModel.logout() }
+                        .padding(vertical = 14.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("断开影视服务器", color = MaterialTheme.colorScheme.error, fontSize = 14.sp)
+                }
+            }
+        }
+    }
+
+    if (showVideoServerDialog) {
+        var url by remember { mutableStateOf(videoServerUrl.ifBlank { "http://j.tthsdd.top:3000" }) }
+        var user by remember { mutableStateOf(videoUsername) }
+        var pass by remember { mutableStateOf(videoPassword) }
+        var isTesting by remember { mutableStateOf(false) }
+
+        AlertDialog(
+            onDismissRequest = { showVideoServerDialog = false; testResult = null },
+            title = { Text("影视服务器配置", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        value = url,
+                        onValueChange = { url = it },
+                        label = { Text("服务器地址") },
+                        placeholder = { Text("http://j.tthsdd.top:3000") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = user,
+                        onValueChange = { user = it },
+                        label = { Text("用户名") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = pass,
+                        onValueChange = { pass = it },
+                        label = { Text("密码") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    testResult?.let { (success, message) ->
+                        Text(
+                            message,
+                            fontSize = 13.sp,
+                            color = if (success) Color(0xFF2ED573) else MaterialTheme.colorScheme.error
+                        )
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            isTesting = true
+                            testResult = null
+                            viewModel.testConnection(url, user, pass) { success, msg ->
+                                isTesting = false
+                                testResult = success to msg
+                            }
+                        },
+                        enabled = !isTesting && url.isNotBlank() && user.isNotBlank(),
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        if (isTesting) {
+                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                        Text(if (isTesting) "测试中..." else "测试连接")
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.login(url, user, pass)
+                    showVideoServerDialog = false
+                    testResult = null
+                }) {
+                    Text("保存并连接", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showVideoServerDialog = false; testResult = null }) {
+                    Text("取消")
+                }
+            }
+        )
+    }
+}
+
+// ==================== 通用组件 ====================
+
+@Composable
+private fun SectionTitle(title: String) {
+    Text(
+        title,
+        fontSize = 12.sp,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        fontWeight = FontWeight.Medium,
+        letterSpacing = 1.sp,
+        modifier = Modifier.padding(bottom = 12.dp)
+    )
 }
 
 @Composable
@@ -199,33 +561,126 @@ private fun SettingsCard(content: @Composable ColumnScope.() -> Unit) {
 }
 
 @Composable
-private fun SettingsItem(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    title: String,
-    subtitle: String,
+private fun SettingsInfoRow(label: String, value: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(label, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(value, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+    HorizontalDivider(
+        modifier = Modifier.padding(horizontal = 20.dp),
+        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+    )
+}
+
+@Composable
+private fun SettingsToggleItem(
+    icon: ImageVector,
+    iconBg: Color,
+    label: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Surface(
+            modifier = Modifier.size(32.dp),
+            shape = RoundedCornerShape(8.dp),
+            color = iconBg
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp))
+            }
+        }
+        Text(label, fontSize = 15.sp, modifier = Modifier.weight(1f).padding(start = 12.dp))
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
+    }
+}
+
+@Composable
+private fun SettingsClickItem(
+    icon: ImageVector,
+    iconBg: Color,
+    label: String,
+    value: String,
     onClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(horizontal = 20.dp, vertical = 16.dp),
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(24.dp))
-        Spacer(modifier = Modifier.width(16.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(title, fontSize = 16.sp, fontWeight = FontWeight.Medium)
-            Text(subtitle, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Surface(
+            modifier = Modifier.size(32.dp),
+            shape = RoundedCornerShape(8.dp),
+            color = iconBg
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp))
+            }
         }
-        Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+        Text(label, fontSize = 15.sp, modifier = Modifier.weight(1f).padding(start = 12.dp))
+        Text(
+            value,
+            fontSize = 13.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.widthIn(max = 160.dp)
+        )
+        Icon(
+            Icons.Default.KeyboardArrowRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(16.dp)
+        )
     }
 }
 
-@Composable
-private fun SettingsDivider() {
-    HorizontalDivider(
-        modifier = Modifier.padding(horizontal = 20.dp),
-        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
-    )
+// ==================== 工具函数 ====================
+
+private fun getCacheSizeBytes(context: Context, dirName: String): Long {
+    val dir = java.io.File(context.cacheDir, dirName)
+    if (!dir.exists()) return 0
+    return dir.walkTopDown().filter { it.isFile }.sumOf { it.length() }
+}
+
+private fun getOtherDataSizeBytes(context: Context): Long {
+    var size = 0L
+    val datastoreDir = java.io.File(context.filesDir, "datastore")
+    if (datastoreDir.exists()) size += datastoreDir.walkTopDown().filter { it.isFile }.sumOf { it.length() }
+    context.cacheDir.listFiles()?.forEach { f ->
+        if (f.name != "music_cache") {
+            size += if (f.isDirectory) f.walkTopDown().filter { it.isFile }.sumOf { it.length() } else f.length()
+        }
+    }
+    return size
+}
+
+private fun calculateCacheSize(context: Context, dirName: String): String = formatSize(getCacheSizeBytes(context, dirName))
+private fun calculateOtherDataSize(context: Context): String = formatSize(getOtherDataSizeBytes(context))
+
+private fun formatSize(bytes: Long): String = when {
+    bytes < 1024 -> "$bytes B"
+    bytes < 1024 * 1024 -> "%.1f KB".format(bytes / 1024.0)
+    bytes < 1024 * 1024 * 1024 -> "%.1f MB".format(bytes / (1024.0 * 1024))
+    else -> "%.2f GB".format(bytes / (1024.0 * 1024 * 1024))
+}
+
+private fun getCurrentVersionName(context: Context): String {
+    return try {
+        context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "1.0.0"
+    } catch (_: Exception) {
+        "1.0.0"
+    }
 }

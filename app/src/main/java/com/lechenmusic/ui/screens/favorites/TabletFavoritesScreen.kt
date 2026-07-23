@@ -1,8 +1,10 @@
 package com.lechenmusic.ui.screens.favorites
-import androidx.compose.foundation.background
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -43,128 +45,343 @@ fun TabletFavoritesScreen(
     val password by viewModel.password.collectAsState()
 
     var selectedTab by remember { mutableStateOf(0) }
+    var searchText by remember { mutableStateOf("") }
+    var isSearchActive by remember { mutableStateOf(false) }
+
+    val tabs = listOf("单曲" to starredSongs.size, "专辑" to starredAlbums.size, "歌手" to 0, "有声书" to starredAudiobooks.size)
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // 面包屑
+        // ===== 顶部: 标题 + Tab栏 + 搜索框 =====
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = MaterialTheme.colorScheme.background,
+            shadowElevation = 2.dp
+        ) {
+            Column(modifier = Modifier.padding(horizontal = responsiveConfig.contentPadding, vertical = 12.dp)) {
+                // 标题行
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("我的收藏", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        // 搜索框
+                        if (isSearchActive) {
+                            OutlinedTextField(
+                                value = searchText,
+                                onValueChange = { searchText = it },
+                                placeholder = { Text("搜索我的收藏", fontSize = 14.sp) },
+                                singleLine = true,
+                                modifier = Modifier.width(280.dp),
+                                trailingIcon = {
+                                    IconButton(onClick = { searchText = ""; isSearchActive = false }) {
+                                        Icon(Icons.Default.Close, "关闭搜索", modifier = Modifier.size(18.dp))
+                                    }
+                                },
+                                shape = RoundedCornerShape(50),
+                                textStyle = LocalTextStyle.current.copy(fontSize = 14.sp)
+                            )
+                        } else {
+                            IconButton(onClick = { isSearchActive = true }) {
+                                Icon(Icons.Default.Search, "搜索", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                        // 排序按钮
+                        IconButton(onClick = { }) {
+                            Icon(Icons.Default.Sort, "排序", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        // 筛选按钮
+                        IconButton(onClick = { }) {
+                            Icon(Icons.Default.FilterList, "筛选", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Tab 栏
+                Row(horizontalArrangement = Arrangement.spacedBy(28.dp)) {
+                    tabs.forEachIndexed { index, (label, count) ->
+                        Column(
+                            modifier = Modifier.clickable { selectedTab = index },
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                "$label ($count)",
+                                fontSize = 15.sp,
+                                fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal,
+                                color = if (selectedTab == index) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            if (selectedTab == index) {
+                                Box(
+                                    modifier = Modifier
+                                        .width(36.dp)
+                                        .height(3.dp)
+                                        .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(2.dp))
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // ===== 操作栏 =====
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = responsiveConfig.contentPadding, vertical = 12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = responsiveConfig.contentPadding, vertical = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("收藏", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-        }
-
-        // Tab
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = responsiveConfig.contentPadding),
-            horizontalArrangement = Arrangement.spacedBy(24.dp)
-        ) {
-            listOf("歌曲" to starredSongs.size, "专辑" to starredAlbums.size, "有声书" to starredAudiobooks.size).forEachIndexed { index, (label, count) ->
-                Column(
-                    modifier = Modifier.clickable { selectedTab = index },
-                    horizontalAlignment = Alignment.CenterHorizontally
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                // 全部播放按钮
+                Button(
+                    onClick = {
+                        if (starredSongs.isNotEmpty()) onSongClick(starredSongs.first(), starredSongs)
+                    },
+                    shape = RoundedCornerShape(50),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    ),
+                    contentPadding = PaddingValues(horizontal = 24.dp, vertical = 10.dp)
                 ) {
-                    Text(
-                        "$label ($count)",
-                        fontSize = 16.sp,
-                        fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal,
-                        color = if (selectedTab == index) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    if (selectedTab == index) {
-                        Box(modifier = Modifier.width(32.dp).height(2.dp).background(MaterialTheme.colorScheme.primary, RoundedCornerShape(1.dp)))
-                    }
+                    Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("全部播放", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 }
+                // 批量操作按钮
+                OutlinedButton(
+                    onClick = { },
+                    shape = RoundedCornerShape(50),
+                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp)
+                ) {
+                    Icon(Icons.Default.Checklist, null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("批量操作", fontSize = 14.sp)
+                }
+            }
+
+            // 统计
+            when (selectedTab) {
+                0 -> Text("共 ${starredSongs.size} 首", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                1 -> Text("共 ${starredAlbums.size} 张专辑", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                2 -> Text("歌手收藏", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                3 -> Text("共 ${starredAudiobooks.size} 本有声书", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
+        // ===== 内容区域 =====
         when (selectedTab) {
-            0 -> {
-                // 歌曲
-                if (starredSongs.isEmpty()) {
-                    EmptyFavorites("暂无收藏歌曲")
+            0 -> SongListTab(
+                songs = starredSongs,
+                searchText = searchText,
+                serverUrl = serverUrl,
+                username = username,
+                password = password,
+                onSongClick = onSongClick
+            )
+            1 -> AlbumsTab(
+                albums = starredAlbums,
+                responsiveConfig = responsiveConfig,
+                serverUrl = serverUrl,
+                username = username,
+                password = password,
+                onAlbumClick = onAlbumClick
+            )
+            2 -> ArtistPlaceholder()
+            3 -> AudiobooksTab(
+                audiobooks = starredAudiobooks,
+                responsiveConfig = responsiveConfig,
+                serverUrl = serverUrl,
+                username = username,
+                password = password,
+                onAudiobookClick = onAudiobookClick
+            )
+        }
+    }
+}
+
+// ==================== 单曲 Tab: 表格式布局 ====================
+@Composable
+private fun SongListTab(
+    songs: List<Song>,
+    searchText: String,
+    serverUrl: String,
+    username: String,
+    password: String,
+    onSongClick: (Song, List<Song>) -> Unit
+) {
+    val filteredSongs = if (searchText.isBlank()) songs
+    else songs.filter {
+        it.title.contains(searchText, ignoreCase = true) ||
+        it.artist.contains(searchText, ignoreCase = true) ||
+        it.album.contains(searchText, ignoreCase = true)
+    }
+
+    if (filteredSongs.isEmpty()) {
+        EmptyFavorites(if (searchText.isBlank()) "暂无收藏歌曲" else "未找到匹配的歌曲")
+        return
+    }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        // 表头
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("#", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.width(48.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            Text("标题", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(2f))
+            Text("专辑", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1.5f))
+            Text("收藏时间", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1.5f))
+            Text("时长", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.width(80.dp), textAlign = androidx.compose.ui.text.style.TextAlign.End)
+            Spacer(modifier = Modifier.width(48.dp))
+        }
+        HorizontalDivider(
+            modifier = Modifier.padding(horizontal = 24.dp),
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+        )
+
+        // 歌曲列表
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(bottom = 160.dp)
+        ) {
+            itemsIndexed(filteredSongs) { index, song ->
+                SongTableRow(
+                    index = index + 1,
+                    song = song,
+                    serverUrl = serverUrl,
+                    username = username,
+                    password = password,
+                    onClick = { onSongClick(song, filteredSongs) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SongTableRow(
+    index: Int,
+    song: Song,
+    serverUrl: String,
+    username: String,
+    password: String,
+    onClick: () -> Unit
+) {
+    var isHovered by remember { mutableStateOf(false) }
+
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        color = if (isHovered) MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f)
+        else MaterialTheme.colorScheme.surface
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(horizontal = 24.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // 序号 (悬停显示播放按钮)
+            Box(
+                modifier = Modifier.width(48.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                if (isHovered) {
+                    Icon(
+                        Icons.Default.PlayArrow,
+                        "播放",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
                 } else {
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(2),
-                        contentPadding = PaddingValues(start = responsiveConfig.contentPadding, end = responsiveConfig.contentPadding, bottom = 160.dp),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        items(starredSongs) { song ->
-                            Row(
-                                modifier = Modifier.fillMaxWidth().clickable { onSongClick(song, starredSongs) }.padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                CoverImage(
-                                    coverArtId = song.coverArt ?: song.albumId,
-                                    serverUrl = serverUrl, username = username, password = password,
-                                    modifier = Modifier.size(48.dp).clip(RoundedCornerShape(8.dp))
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(song.title, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    Text(song.artist, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
-                                }
-                            }
-                        }
-                    }
+                    Text(
+                        "$index",
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
-            1 -> {
-                // 专辑
-                if (starredAlbums.isEmpty()) {
-                    EmptyFavorites("暂无收藏专辑")
-                } else {
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(responsiveConfig.gridColumns.coerceIn(3, 5)),
-                        contentPadding = PaddingValues(start = responsiveConfig.contentPadding, end = responsiveConfig.contentPadding, bottom = 160.dp),
-                        horizontalArrangement = Arrangement.spacedBy(responsiveConfig.itemSpacing),
-                        verticalArrangement = Arrangement.spacedBy(responsiveConfig.itemSpacing)
-                    ) {
-                        items(starredAlbums) { album ->
-                            Column(modifier = Modifier.clickable { onAlbumClick(album.id) }) {
-                                CoverImage(
-                                    coverArtId = album.coverArt,
-                                    serverUrl = serverUrl, username = username, password = password,
-                                    modifier = Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(12.dp))
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(album.name, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Text(album.artist, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
-                            }
-                        }
-                    }
+
+            // 标题: 封面 + 歌名 + 歌手
+            Row(
+                modifier = Modifier.weight(2f),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                CoverImage(
+                    coverArtId = song.coverArt ?: song.albumId,
+                    serverUrl = serverUrl,
+                    username = username,
+                    password = password,
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Column {
+                    Text(
+                        song.title,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        song.artist,
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
             }
-            2 -> {
-                // 有声书
-                if (starredAudiobooks.isEmpty()) {
-                    EmptyFavorites("暂无收藏有声书")
-                } else {
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(responsiveConfig.gridColumns.coerceIn(3, 5)),
-                        contentPadding = PaddingValues(start = responsiveConfig.contentPadding, end = responsiveConfig.contentPadding, bottom = 160.dp),
-                        horizontalArrangement = Arrangement.spacedBy(responsiveConfig.itemSpacing),
-                        verticalArrangement = Arrangement.spacedBy(responsiveConfig.itemSpacing)
-                    ) {
-                        items(starredAudiobooks) { book ->
-                            Column(modifier = Modifier.clickable { onAudiobookClick(book.id) }) {
-                                Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.fillMaxWidth().aspectRatio(1f)) {
-                                    val coverUrl = getAudiobookCoverUrl(serverUrl, username, password, book.id)
-                                    if (coverUrl != null) {
-                                        AsyncImage(model = coverUrl, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
-                                    } else {
-                                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                            Icon(Icons.Default.MenuBook, null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
-                                        }
-                                    }
-                                }
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(book.title, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Text(book.narrator.ifEmpty { book.author }, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
-                            }
-                        }
+
+            // 专辑
+            Text(
+                song.album,
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1.5f)
+            )
+
+            // 收藏时间
+            Text(
+                song.starred?.take(10) ?: "-",
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1.5f)
+            )
+
+            // 时长
+            Text(
+                formatDuration(song.duration),
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.width(80.dp),
+                textAlign = androidx.compose.ui.text.style.TextAlign.End
+            )
+
+            // 更多按钮
+            Box(modifier = Modifier.width(48.dp), contentAlignment = Alignment.Center) {
+                if (isHovered) {
+                    IconButton(onClick = { }, modifier = Modifier.size(32.dp)) {
+                        Icon(
+                            Icons.Default.MoreVert,
+                            "更多",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
                 }
             }
@@ -172,13 +389,175 @@ fun TabletFavoritesScreen(
     }
 }
 
+// ==================== 专辑 Tab ====================
+@Composable
+private fun AlbumsTab(
+    albums: List<Album>,
+    responsiveConfig: ResponsiveConfig,
+    serverUrl: String,
+    username: String,
+    password: String,
+    onAlbumClick: (String) -> Unit
+) {
+    if (albums.isEmpty()) {
+        EmptyFavorites("暂无收藏专辑")
+        return
+    }
+
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(responsiveConfig.gridColumns.coerceIn(3, 5)),
+        contentPadding = PaddingValues(
+            start = responsiveConfig.contentPadding,
+            end = responsiveConfig.contentPadding,
+            bottom = 160.dp
+        ),
+        horizontalArrangement = Arrangement.spacedBy(responsiveConfig.itemSpacing),
+        verticalArrangement = Arrangement.spacedBy(responsiveConfig.itemSpacing)
+    ) {
+        items(albums) { album ->
+            Column(modifier = Modifier.clickable { onAlbumClick(album.id) }) {
+                CoverImage(
+                    coverArtId = album.coverArt,
+                    serverUrl = serverUrl,
+                    username = username,
+                    password = password,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(1f)
+                        .clip(RoundedCornerShape(14.dp))
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    album.name,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    album.artist,
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1
+                )
+            }
+        }
+    }
+}
+
+// ==================== 歌手 Tab 占位 ====================
+@Composable
+private fun ArtistPlaceholder() {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(
+                Icons.Default.Person,
+                null,
+                modifier = Modifier.size(64.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                "歌手收藏功能即将推出",
+                fontSize = 16.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+// ==================== 有声书 Tab ====================
+@Composable
+private fun AudiobooksTab(
+    audiobooks: List<Audiobook>,
+    responsiveConfig: ResponsiveConfig,
+    serverUrl: String,
+    username: String,
+    password: String,
+    onAudiobookClick: (String) -> Unit
+) {
+    if (audiobooks.isEmpty()) {
+        EmptyFavorites("暂无收藏有声书")
+        return
+    }
+
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(responsiveConfig.gridColumns.coerceIn(3, 5)),
+        contentPadding = PaddingValues(
+            start = responsiveConfig.contentPadding,
+            end = responsiveConfig.contentPadding,
+            bottom = 160.dp
+        ),
+        horizontalArrangement = Arrangement.spacedBy(responsiveConfig.itemSpacing),
+        verticalArrangement = Arrangement.spacedBy(responsiveConfig.itemSpacing)
+    ) {
+        items(audiobooks) { book ->
+            Column(modifier = Modifier.clickable { onAudiobookClick(book.id) }) {
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(1f)
+                ) {
+                    val coverUrl = getAudiobookCoverUrl(serverUrl, username, password, book.id)
+                    if (coverUrl != null) {
+                        AsyncImage(
+                            model = coverUrl,
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                        )
+                    } else {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Icon(
+                                Icons.Default.MenuBook,
+                                null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    book.title,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    book.narrator.ifEmpty { book.author },
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1
+                )
+            }
+        }
+    }
+}
+
+// ==================== 空状态 ====================
 @Composable
 private fun EmptyFavorites(text: String) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(Icons.Default.FavoriteBorder, null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
+            Icon(
+                Icons.Default.FavoriteBorder,
+                null,
+                modifier = Modifier.size(64.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+            )
             Spacer(modifier = Modifier.height(16.dp))
-            Text(text, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(text, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 16.sp)
         }
     }
+}
+
+// ==================== 工具函数 ====================
+private fun formatDuration(seconds: Int): String {
+    if (seconds <= 0) return "--:--"
+    val min = seconds / 60
+    val sec = seconds % 60
+    return "%d:%02d".format(min, sec)
 }

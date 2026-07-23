@@ -53,6 +53,7 @@ import com.lechenmusic.ui.screens.home.CachedMusicScreen
 import com.lechenmusic.ui.screens.audiobook.AudiobookScreen
 import com.lechenmusic.ui.screens.audiobook.AudiobookDetailScreen
 import com.lechenmusic.ui.screens.audiobook.AudiobookPlayerScreen
+import com.lechenmusic.ui.screens.audiobook.TabletAudiobookPlayerScreen
 import com.lechenmusic.ui.screens.audiobook.AudiobookNarratorListScreen
 import com.lechenmusic.ui.screens.audiobook.AudiobookNarratorDetailScreen
 import com.lechenmusic.ui.screens.video.VideoSearchScreen
@@ -776,6 +777,7 @@ fun NavGraphBuilder.sharedNavRoutes(
     }
 
     composable(Screen.AudiobookPlayer.route) {
+        val responsiveCfg = com.lechenmusic.ui.responsive.rememberResponsiveConfig(windowSizeClass)
         val srvUrl by viewModel.serverUrl.collectAsState()
         val usr by viewModel.username.collectAsState()
         val pwd by viewModel.password.collectAsState()
@@ -786,40 +788,13 @@ fun NavGraphBuilder.sharedNavRoutes(
         val position by viewModel.audiobookPosition.collectAsState()
         val duration by viewModel.audiobookDuration.collectAsState()
         val audiobookCoverUrl by viewModel.playerManager.audiobookCoverUrl.collectAsState()
+        val playbackSpeed by viewModel.audiobookPlaybackSpeed.collectAsState()
+        val timerMinutes by viewModel.audiobookTimerMinutes.collectAsState()
 
-        if (currentBook != null) {
-            AudiobookPlayerScreen(
-                book = currentBook!!,
-                chapters = chapters,
-                currentChapterIndex = chapterIndex,
-                isPlaying = isPlaying,
-                currentPositionMs = position,
-                durationMs = duration,
-                serverUrl = srvUrl,
-                username = usr,
-                password = pwd,
-                coverUrl = audiobookCoverUrl,
-                onBack = onBack,
-                onPlayPause = { viewModel.audiobookTogglePlayPause() },
-                onSeekTo = { viewModel.audiobookSeekTo(it) },
-                onSkipForward15s = { viewModel.audiobookSkipForward15s() },
-                onSkipBackward15s = { viewModel.audiobookSkipBackward15s() },
-                onPreviousChapter = { viewModel.audiobookPreviousChapter() },
-                onNextChapter = { viewModel.audiobookNextChapter() },
-                onChapterSelect = { idx ->
-                    val book = currentBook!!
-                    val ch = chapters.getOrNull(idx) ?: return@AudiobookPlayerScreen
-                    viewModel.playAudiobookChapter(book, ch, chapters)
-                },
-                onSetTimer = { viewModel.audiobookSetTimer(it) },
-                onChangeSpeed = { viewModel.audiobookChangeSpeed(it) }
-            )
-        } else if (audiobookCoverUrl != null) {
-            // 通知栏入口: 有封面 URL 但没有 book 数据，尝试恢复播放状态
-            val song by viewModel.playerManager.currentSong.collectAsState()
-            if (song != null) {
-                AudiobookPlayerScreen(
-                    book = com.lechenmusic.data.model.Audiobook(id = "", title = song!!.title, coverPath = audiobookCoverUrl),
+        val audiobookCallbacks: @Composable (com.lechenmusic.data.model.Audiobook) -> Unit = { book ->
+            if (responsiveCfg.isMedium || responsiveCfg.isExpanded) {
+                TabletAudiobookPlayerScreen(
+                    book = book,
                     chapters = chapters,
                     currentChapterIndex = chapterIndex,
                     isPlaying = isPlaying,
@@ -829,6 +804,8 @@ fun NavGraphBuilder.sharedNavRoutes(
                     username = usr,
                     password = pwd,
                     coverUrl = audiobookCoverUrl,
+                    playbackSpeed = playbackSpeed,
+                    timerMinutes = timerMinutes,
                     onBack = onBack,
                     onPlayPause = { viewModel.audiobookTogglePlayPause() },
                     onSeekTo = { viewModel.audiobookSeekTo(it) },
@@ -837,13 +814,52 @@ fun NavGraphBuilder.sharedNavRoutes(
                     onPreviousChapter = { viewModel.audiobookPreviousChapter() },
                     onNextChapter = { viewModel.audiobookNextChapter() },
                     onChapterSelect = { idx ->
-                        val book = currentBook ?: return@AudiobookPlayerScreen
+                        val ch = chapters.getOrNull(idx) ?: return@TabletAudiobookPlayerScreen
+                        viewModel.playAudiobookChapter(book, ch, chapters)
+                    },
+                    onSetTimer = { viewModel.audiobookSetTimer(it) },
+                    onChangeSpeed = { viewModel.audiobookChangeSpeed(it) },
+                    onSaveProgress = { viewModel.saveAudiobookProgress() }
+                )
+            } else {
+                AudiobookPlayerScreen(
+                    book = book,
+                    chapters = chapters,
+                    currentChapterIndex = chapterIndex,
+                    isPlaying = isPlaying,
+                    currentPositionMs = position,
+                    durationMs = duration,
+                    serverUrl = srvUrl,
+                    username = usr,
+                    password = pwd,
+                    coverUrl = audiobookCoverUrl,
+                    playbackSpeed = playbackSpeed,
+                    timerMinutes = timerMinutes,
+                    onBack = onBack,
+                    onPlayPause = { viewModel.audiobookTogglePlayPause() },
+                    onSeekTo = { viewModel.audiobookSeekTo(it) },
+                    onSkipForward15s = { viewModel.audiobookSkipForward15s() },
+                    onSkipBackward15s = { viewModel.audiobookSkipBackward15s() },
+                    onPreviousChapter = { viewModel.audiobookPreviousChapter() },
+                    onNextChapter = { viewModel.audiobookNextChapter() },
+                    onChapterSelect = { idx ->
                         val ch = chapters.getOrNull(idx) ?: return@AudiobookPlayerScreen
                         viewModel.playAudiobookChapter(book, ch, chapters)
                     },
                     onSetTimer = { viewModel.audiobookSetTimer(it) },
-                    onChangeSpeed = { viewModel.audiobookChangeSpeed(it) }
+                    onChangeSpeed = { viewModel.audiobookChangeSpeed(it) },
+                    onSaveProgress = { viewModel.saveAudiobookProgress() }
                 )
+            }
+        }
+
+        if (currentBook != null) {
+            audiobookCallbacks(currentBook!!)
+        } else if (audiobookCoverUrl != null) {
+            // 通知栏入口: 有封面 URL 但没有 book 数据，尝试恢复播放状态
+            val song by viewModel.playerManager.currentSong.collectAsState()
+            if (song != null) {
+                audiobookCallbacks(com.lechenmusic.data.model.Audiobook(id = "", title = song!!.title, coverPath = audiobookCoverUrl))
             } else {
                 navController.popBackStack()
             }
