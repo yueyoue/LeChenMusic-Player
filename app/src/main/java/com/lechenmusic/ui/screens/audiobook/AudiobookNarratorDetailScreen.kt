@@ -17,6 +17,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -179,6 +180,7 @@ fun AudiobookNarratorDetailScreen(
         }
     } else {
         // ===== 手机布局 =====
+        @OptIn(ExperimentalMaterial3Api::class)
         Scaffold(
             topBar = {
                 TopAppBar(
@@ -207,7 +209,7 @@ fun AudiobookNarratorDetailScreen(
                     }
                     Box(
                         modifier = Modifier.fillMaxSize().background(
-                            androidx.compose.foundation.Brush.verticalGradient(
+                            Brush.verticalGradient(
                                 listOf(
                                     Color.Black.copy(alpha = 0.6f),
                                     Color.Transparent,

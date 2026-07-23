@@ -104,13 +104,6 @@ fun TabletAudiobookHomeContent(
                                     fontWeight = FontWeight.Bold,
                                     color = Color.White
                                 )
-                                if (slide.subtitle.isNotBlank()) {
-                                    Text(
-                                        slide.subtitle,
-                                        fontSize = 14.sp,
-                                        color = Color.White.copy(alpha = 0.7f)
-                                    )
-                                }
                             }
                         }
                     }
