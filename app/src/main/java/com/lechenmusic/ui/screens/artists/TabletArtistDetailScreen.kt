@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -238,23 +240,27 @@ fun TabletArtistDetailScreen(
                     }
                 }
                 1 -> {
-                    // 专辑列表
+                    // 专辑列表 - 封面大图网格显示
                     if (currentArtist.album.isNullOrEmpty()) {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             Text("暂无专辑", color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     } else {
-                        LazyColumn(
+                        val albumList = currentArtist.album!!
+                        val albumColumns = responsiveConfig.gridColumns.coerceIn(3, 5)
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(albumColumns),
                             modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(start = 24.dp, end = 24.dp, bottom = 160.dp)
+                            contentPadding = PaddingValues(start = 24.dp, end = 24.dp, bottom = 160.dp),
+                            horizontalArrangement = Arrangement.spacedBy(responsiveConfig.itemSpacing),
+                            verticalArrangement = Arrangement.spacedBy(responsiveConfig.itemSpacing)
                         ) {
-                            items(currentArtist.album!!) { album ->
-                                Row(
+                            items(albumList.size) { idx ->
+                                val album = albumList[idx]
+                                Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clickable { onAlbumClick(album.id) }
-                                        .padding(vertical = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     CoverImage(
                                         coverArtId = album.coverArt ?: album.id,
@@ -262,24 +268,24 @@ fun TabletArtistDetailScreen(
                                         username = username,
                                         password = password,
                                         modifier = Modifier
-                                            .size(64.dp)
-                                            .clip(RoundedCornerShape(12.dp))
+                                            .fillMaxWidth()
+                                            .aspectRatio(1f)
+                                            .clip(RoundedCornerShape(16.dp))
                                     )
-                                    Spacer(modifier = Modifier.width(16.dp))
-                                    Column {
-                                        Text(
-                                            album.name,
-                                            fontSize = 16.sp,
-                                            fontWeight = FontWeight.Medium,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                        Text(
-                                            "${album.songCount} 首歌曲",
-                                            fontSize = 13.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
+                                    Spacer(modifier = Modifier.height(10.dp))
+                                    Text(
+                                        album.name,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        "${album.songCount} 首歌曲",
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1
+                                    )
                                 }
                             }
                         }

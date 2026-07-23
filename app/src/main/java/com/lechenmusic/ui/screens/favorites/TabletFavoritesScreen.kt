@@ -16,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -40,6 +41,7 @@ fun TabletFavoritesScreen(
     val starredSongs by viewModel.starredSongs.collectAsState()
     val starredAlbums by viewModel.starredAlbums.collectAsState()
     val starredAudiobooks by viewModel.starredAudiobooks.collectAsState()
+    val starredArtists by viewModel.starredArtists.collectAsState()
     val serverUrl by viewModel.serverUrl.collectAsState()
     val username by viewModel.username.collectAsState()
     val password by viewModel.password.collectAsState()
@@ -48,7 +50,7 @@ fun TabletFavoritesScreen(
     var searchText by remember { mutableStateOf("") }
     var isSearchActive by remember { mutableStateOf(false) }
 
-    val tabs = listOf("单曲" to starredSongs.size, "专辑" to starredAlbums.size, "歌手" to 0, "有声书" to starredAudiobooks.size)
+    val tabs = listOf("单曲" to starredSongs.size, "专辑" to starredAlbums.size, "歌手" to starredArtists.size, "有声书" to starredAudiobooks.size)
 
     Column(modifier = Modifier.fillMaxSize()) {
         // ===== 顶部: 标题 + Tab栏 + 搜索框 =====
@@ -88,14 +90,7 @@ fun TabletFavoritesScreen(
                                 Icon(Icons.Default.Search, "搜索", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
-                        // 排序按钮
-                        IconButton(onClick = { }) {
-                            Icon(Icons.Default.Sort, "排序", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        // 筛选按钮
-                        IconButton(onClick = { }) {
-                            Icon(Icons.Default.FilterList, "筛选", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
+                        // Issue 19: 排序图标已删除
                     }
                 }
 
@@ -194,7 +189,13 @@ fun TabletFavoritesScreen(
                 password = password,
                 onAlbumClick = onAlbumClick
             )
-            2 -> ArtistPlaceholder()
+            2 -> ArtistsTab(
+                artists = starredArtists,
+                responsiveConfig = responsiveConfig,
+                serverUrl = serverUrl,
+                username = username,
+                password = password
+            )
             3 -> AudiobooksTab(
                 audiobooks = starredAudiobooks,
                 responsiveConfig = responsiveConfig,
@@ -445,23 +446,73 @@ private fun AlbumsTab(
     }
 }
 
-// ==================== 歌手 Tab 占位 ====================
+// ==================== 歌手 Tab ====================
 @Composable
-private fun ArtistPlaceholder() {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                Icons.Default.Person,
-                null,
-                modifier = Modifier.size(64.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                "歌手收藏功能即将推出",
-                fontSize = 16.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+private fun ArtistsTab(
+    artists: List<com.lechenmusic.data.model.Artist>,
+    responsiveConfig: ResponsiveConfig,
+    serverUrl: String,
+    username: String,
+    password: String
+) {
+    if (artists.isEmpty()) {
+        EmptyFavorites("暂无收藏歌手")
+        return
+    }
+
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(responsiveConfig.gridColumns.coerceIn(3, 5)),
+        contentPadding = PaddingValues(
+            start = responsiveConfig.contentPadding,
+            end = responsiveConfig.contentPadding,
+            bottom = 160.dp
+        ),
+        horizontalArrangement = Arrangement.spacedBy(responsiveConfig.itemSpacing),
+        verticalArrangement = Arrangement.spacedBy(responsiveConfig.itemSpacing)
+    ) {
+        items(artists) { artist ->
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                val effectiveCoverArt = artist.coverArt ?: artist.id
+                if (artist.artistImageUrl != null) {
+                    AsyncImage(
+                        model = artist.artistImageUrl,
+                        contentDescription = artist.name,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(1f)
+                            .clip(RoundedCornerShape(16.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    CoverImage(
+                        coverArtId = effectiveCoverArt,
+                        serverUrl = serverUrl,
+                        username = username,
+                        password = password,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(1f)
+                            .clip(RoundedCornerShape(16.dp))
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    artist.name,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    "${artist.albumCount} 张专辑",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1
+                )
+            }
         }
     }
 }

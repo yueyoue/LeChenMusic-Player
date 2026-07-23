@@ -8,6 +8,9 @@ import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -213,6 +216,7 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                         username = username,
                         password = password,
                         audiobookCoverUrl = if (isAudiobookPlaying) audiobookCoverUrl else null,
+                        isAudiobook = isAudiobookPlaying,
                         modifier = modifier,
                         onClick = {
                             if (isAudiobookPlaying) navController.navigate(Screen.AudiobookPlayer.route)
@@ -235,7 +239,7 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
             }
 
             // 播放页隐藏左侧导航栏
-            val hideSideNav = currentRoute == Screen.Player.route
+            val hideSideNav = currentRoute == Screen.Player.route || currentRoute == Screen.AudiobookPlayer.route || currentRoute == Screen.VideoPlayerDirect.route || currentRoute == Screen.VideoPlayer.route
 
             if (useSideNav) {
                 // ===== 平板/车机: 左侧导航栏 + 内容区 =====
@@ -517,9 +521,12 @@ fun NavGraphBuilder.sharedNavRoutes(
     composable(Screen.Search.route) {
         SearchScreen(
             viewModel = viewModel,
+            videoViewModel = videoViewModel,
             onSongClick = { s, p -> viewModel.playSong(s, p) },
             onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) },
-            onArtistClick = { navController.navigate(Screen.ArtistDetail.createRoute(it)) }
+            onArtistClick = { navController.navigate(Screen.ArtistDetail.createRoute(it)) },
+            onAudiobookClick = { navController.navigate(Screen.AudiobookDetail.createRoute(it)) },
+            onVideoClick = { source, videoId -> navController.navigate(Screen.VideoDetail.createRoute(source, videoId)) }
         )
     }
 
@@ -529,6 +536,7 @@ fun NavGraphBuilder.sharedNavRoutes(
             com.lechenmusic.ui.screens.artists.TabletArtistsScreen(
                 viewModel = viewModel,
                 responsiveConfig = responsiveCfg,
+                onBack = onBack,
                 onArtistClick = { navController.navigate(Screen.ArtistDetail.createRoute(it)) }
             )
         } else {
@@ -545,6 +553,7 @@ fun NavGraphBuilder.sharedNavRoutes(
             com.lechenmusic.ui.screens.albums.TabletAlbumsScreen(
                 viewModel = viewModel,
                 responsiveConfig = responsiveCfg,
+                onBack = onBack,
                 onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) }
             )
         } else {
@@ -556,11 +565,14 @@ fun NavGraphBuilder.sharedNavRoutes(
     }
 
     composable(Screen.AllSongs.route) {
+        val responsiveCfg = com.lechenmusic.ui.responsive.rememberResponsiveConfig(windowSizeClass)
         AllSongsScreen(
             viewModel = viewModel,
             onSongClick = { s, p -> viewModel.playSong(s, p) },
             onArtistClick = { navController.navigate(Screen.ArtistDetail.createRoute(it)) },
-            onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) }
+            onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) },
+            onBack = if (responsiveCfg.isMedium || responsiveCfg.isExpanded) onBack else null,
+            responsiveConfig = if (responsiveCfg.isMedium || responsiveCfg.isExpanded) responsiveCfg else null
         )
     }
 
@@ -650,6 +662,16 @@ fun NavGraphBuilder.sharedNavRoutes(
         val pwd by viewModel.password.collectAsState()
         val responsiveCfg = com.lechenmusic.ui.responsive.rememberResponsiveConfig(windowSizeClass)
         if (responsiveCfg.isMedium || responsiveCfg.isExpanded) {
+            // 平板全屏播放器：隐藏左侧导航，保持屏幕常亮
+            val context = LocalContext.current
+            DisposableEffect(Unit) {
+                val window = (context as? android.app.Activity)?.window
+                window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                onDispose { window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
+            }
+            var showAddToPlaylistDialog by remember { mutableStateOf(false) }
+            var showQueueDialog by remember { mutableStateOf(false) }
+
             TabletPlayerScreen(
                 playerManager = viewModel.playerManager,
                 viewModel = viewModel,
@@ -659,9 +681,72 @@ fun NavGraphBuilder.sharedNavRoutes(
                 onBack = onBack,
                 onNavigateToArtist = { navController.navigate(Screen.ArtistDetail.createRoute(it)) },
                 onNavigateToAlbum = { navController.navigate(Screen.AlbumDetail.createRoute(it)) },
-                onShowAddToPlaylist = { navController.navigate(Screen.AllPlaylists.route) },
-                onShowQueue = { navController.navigate(Screen.AllPlaylists.route) }
+                onShowAddToPlaylist = { showAddToPlaylistDialog = true },
+                onShowQueue = { showQueueDialog = true }
             )
+
+            // 添加到歌单弹窗
+            if (showAddToPlaylistDialog) {
+                val playlists by viewModel.playlists.collectAsState()
+                val currentSong by viewModel.playerManager.currentSong.collectAsState()
+                AlertDialog(
+                    onDismissRequest = { showAddToPlaylistDialog = false },
+                    title = { Text("添加到歌单") },
+                    text = {
+                        Column {
+                            if (playlists.isEmpty()) {
+                                Text("暂无歌单，请先创建歌单")
+                            } else {
+                                playlists.forEach { pl ->
+                                    Surface(
+                                        modifier = Modifier.fillMaxWidth().clickable {
+                                            currentSong?.let { viewModel.addToPlaylist(pl.id, it.id) }
+                                            showAddToPlaylistDialog = false
+                                        }.padding(vertical = 4.dp),
+                                        shape = RoundedCornerShape(8.dp)
+                                    ) {
+                                        Text(pl.name, modifier = Modifier.padding(12.dp), fontSize = 15.sp)
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = { showAddToPlaylistDialog = false }) { Text("取消") }
+                    }
+                )
+            }
+
+            // 播放队列弹窗
+            if (showQueueDialog) {
+                val queueSongs by viewModel.playerManager.playlist.collectAsState()
+                AlertDialog(
+                    onDismissRequest = { showQueueDialog = false },
+                    title = { Text("播放队列 (${queueSongs.size}首)") },
+                    text = {
+                        Column {
+                            if (queueSongs.isEmpty()) {
+                                Text("播放队列为空")
+                            } else {
+                                LazyColumn(modifier = Modifier.heightIn(max = 400.dp)) {
+                                    items(queueSongs) { song ->
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(song.title, fontSize = 14.sp, modifier = Modifier.weight(1f), maxLines = 1)
+                                            Text(song.artist, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = { showQueueDialog = false }) { Text("关闭") }
+                    }
+                )
+            }
         } else {
             PlayerScreen(
                 playerManager = viewModel.playerManager,
@@ -778,6 +863,13 @@ fun NavGraphBuilder.sharedNavRoutes(
 
     composable(Screen.AudiobookPlayer.route) {
         val responsiveCfg = com.lechenmusic.ui.responsive.rememberResponsiveConfig(windowSizeClass)
+        // 平板全屏播放器：保持屏幕常亮
+        val abContext = LocalContext.current
+        DisposableEffect(Unit) {
+            val window = (abContext as? android.app.Activity)?.window
+            window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            onDispose { window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
+        }
         val srvUrl by viewModel.serverUrl.collectAsState()
         val usr by viewModel.username.collectAsState()
         val pwd by viewModel.password.collectAsState()
@@ -945,6 +1037,10 @@ fun NavGraphBuilder.sharedNavRoutes(
     }
 
     composable(Screen.VideoPlayerDirect.route) {
+        // 播放视频时停止音乐/有声书
+        LaunchedEffect(Unit) {
+            viewModel.playerManager.forcePause()
+        }
         val detail by videoViewModel.videoDetail.collectAsState()
         if (detail != null) {
             val sources = detail!!.toSources()

@@ -51,7 +51,7 @@ fun TabletAudiobookHomeContent(
     ) {
         item { Spacer(modifier = Modifier.height(16.dp)) }
 
-        // ===== 继续收听 =====
+        // ===== 继续收听 (Issue 7: 列表显示，标题改为继续收听) =====
         val booksWithProgress = audiobookWithProgress.filter { it.progress != null && !it.progress.completed }
         if (booksWithProgress.isNotEmpty()) {
             item {
@@ -61,52 +61,28 @@ fun TabletAudiobookHomeContent(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text("继续收听", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                    Text(
-                        "最近播放 ›",
-                        fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.clickable { onNavigateToAudiobook(null) }
-                    )
                 }
                 Spacer(modifier = Modifier.height(12.dp))
             }
-            item {
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    itemsIndexed(booksWithProgress.take(5)) { index, bwp ->
-                        if (index == 0) {
-                            // 第一个卡片: 大尺寸封面全铺 + 渐变遮罩
-                            ContinueListeningLargeCard(
-                                book = bwp.toAudiobook(),
-                                progress = bwp.progress,
-                                serverUrl = serverUrl,
-                                username = username,
-                                password = password,
-                                onClick = {
-                                    viewModel.resumeAudiobook(bwp.toAudiobook())
-                                    onNavigateToAudiobookDetail(bwp.id)
-                                }
-                            )
-                        } else {
-                            // 后续卡片: glass-panel 风格
-                            ContinueListeningGlassCard(
-                                book = bwp.toAudiobook(),
-                                progress = bwp.progress,
-                                serverUrl = serverUrl,
-                                username = username,
-                                password = password,
-                                onClick = {
-                                    viewModel.resumeAudiobook(bwp.toAudiobook())
-                                    onNavigateToAudiobookDetail(bwp.id)
-                                }
-                            )
-                        }
+            // 列表显示
+            items(booksWithProgress.take(5)) { bwp ->
+                ContinueListeningListRow(
+                    book = bwp.toAudiobook(),
+                    progress = bwp.progress,
+                    serverUrl = serverUrl,
+                    username = username,
+                    password = password,
+                    onClick = {
+                        viewModel.resumeAudiobook(bwp.toAudiobook())
+                        onNavigateToAudiobookDetail(bwp.id)
                     }
-                }
-                Spacer(modifier = Modifier.height(24.dp))
+                )
+                Spacer(modifier = Modifier.height(8.dp))
             }
+            item { Spacer(modifier = Modifier.height(24.dp)) }
         }
 
-        // ===== 热门分类 (6列网格) =====
+        // ===== 热门分类 (Issue 8: 改为有声小说、相声、评书、儿童，修复边框) =====
         item {
             Text("热门分类", fontSize = 20.sp, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(12.dp))
@@ -115,12 +91,10 @@ fun TabletAudiobookHomeContent(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 val categories = listOf(
-                    "📖" to "历史",
-                    "🔍" to "悬疑",
-                    "🚀" to "科幻",
-                    "👶" to "儿童",
-                    "⚡" to "玄幻",
-                    "📂" to "更多"
+                    "📖" to "有声小说",
+                    "🎤" to "相声",
+                    "🎭" to "评书",
+                    "👶" to "儿童"
                 )
                 categories.forEach { (emoji, label) ->
                     CategoryGlassCard(
@@ -128,8 +102,11 @@ fun TabletAudiobookHomeContent(
                         label = label,
                         modifier = Modifier.weight(1f),
                         onClick = {
-                            if (label == "更多") onNavigateToAudiobook(null)
-                            else onNavigateToAudiobook(label)
+                            val genre = when (label) {
+                                "有声小说" -> "有声读物"
+                                else -> label
+                            }
+                            onNavigateToAudiobook(genre)
                         }
                     )
                 }
@@ -137,14 +114,14 @@ fun TabletAudiobookHomeContent(
             Spacer(modifier = Modifier.height(24.dp))
         }
 
-        // ===== 演播者 =====
+        // ===== 演播者 (Issue 9: 去掉背景框，上面头像下面名字，头像改大) =====
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("🎙️ 演播者", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text("演播者", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 Text(
                     "全部 ›",
                     fontSize = 14.sp,
@@ -154,9 +131,9 @@ fun TabletAudiobookHomeContent(
             }
             Spacer(modifier = Modifier.height(12.dp))
             if (narrators.isNotEmpty()) {
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
                     items(narrators.take(8)) { narr ->
-                        NarratorChip(
+                        NarratorAvatarCard(
                             name = narr.name,
                             count = "${narr.count}部",
                             onClick = { onNavigateToNarrator(narr.name) }
@@ -167,40 +144,7 @@ fun TabletAudiobookHomeContent(
             Spacer(modifier = Modifier.height(24.dp))
         }
 
-        // ===== 最近更新 (横向滚动 192dp 卡片) =====
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("最近更新", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                Text(
-                    "发现更多 ›",
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.clickable { onNavigateToAudiobook(null) }
-                )
-            }
-            Spacer(modifier = Modifier.height(12.dp))
-        }
-        item {
-            val recent = audiobooks.sortedByDescending { it.updatedAt }.take(8)
-            if (recent.isNotEmpty()) {
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    items(recent) { book ->
-                        AudiobookCompactCard(
-                            book = book,
-                            serverUrl = serverUrl,
-                            username = username,
-                            password = password,
-                            onClick = { onNavigateToAudiobookDetail(book.id) }
-                        )
-                    }
-                }
-            }
-            Spacer(modifier = Modifier.height(24.dp))
-        }
+        // ===== Issue 11: 最近更新已删除 =====
 
         // ===== 有声小说 =====
         item {
@@ -209,7 +153,7 @@ fun TabletAudiobookHomeContent(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("📖 有声小说", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text("有声小说", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 Text(
                     "更多 ›",
                     fontSize = 14.sp,
@@ -248,7 +192,7 @@ fun TabletAudiobookHomeContent(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("🎤 相声", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text("相声", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 Text(
                     "更多 ›",
                     fontSize = 14.sp,
@@ -287,7 +231,7 @@ fun TabletAudiobookHomeContent(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("🎭 评书", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text("评书", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 Text(
                     "更多 ›",
                     fontSize = 14.sp,
@@ -319,14 +263,14 @@ fun TabletAudiobookHomeContent(
             Spacer(modifier = Modifier.height(24.dp))
         }
 
-        // ===== 儿童读物 =====
+        // ===== 儿童 =====
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("👶 儿童读物", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text("儿童", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 Text(
                     "更多 ›",
                     fontSize = 14.sp,
@@ -360,7 +304,7 @@ fun TabletAudiobookHomeContent(
 
         // ===== 热门榜单 =====
         item {
-            Text("🏆 热门榜单", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text("热门榜单", fontSize = 20.sp, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(12.dp))
             val popular = audiobooks.sortedByDescending { it.chapterCount }.take(5)
             popular.forEachIndexed { index, book ->
@@ -376,7 +320,7 @@ fun TabletAudiobookHomeContent(
             Spacer(modifier = Modifier.height(24.dp))
         }
 
-        // ===== 我的收藏 (横向滚动 192dp 卡片) =====
+        // ===== 我的收藏 =====
         if (starredAudiobooks.isNotEmpty()) {
             item {
                 Row(
@@ -384,7 +328,7 @@ fun TabletAudiobookHomeContent(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("⭐ 我的收藏", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    Text("我的收藏", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                     Text(
                         "全部 ›",
                         fontSize = 14.sp,
@@ -414,9 +358,9 @@ fun TabletAudiobookHomeContent(
     }
 }
 
-// ==================== 继续收听 - 大卡片 (500x240) ====================
+// ==================== 继续收听 - 列表行 ====================
 @Composable
-private fun ContinueListeningLargeCard(
+private fun ContinueListeningListRow(
     book: Audiobook,
     progress: com.lechenmusic.data.model.AudiobookProgress?,
     serverUrl: String,
@@ -426,205 +370,65 @@ private fun ContinueListeningLargeCard(
 ) {
     val coverUrl = getAudiobookCoverUrl(serverUrl, username, password, book.id)
     Surface(
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
         modifier = Modifier
-            .width(500.dp)
-            .height(240.dp)
-            .clickable { onClick() },
-        color = MaterialTheme.colorScheme.surfaceContainer
+            .fillMaxWidth()
+            .clickable { onClick() }
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            // 封面图全铺
-            if (coverUrl != null) {
-                AsyncImage(
-                    model = coverUrl,
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-            }
-            // 渐变遮罩
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.horizontalGradient(
-                            colors = listOf(
-                                Color.Black.copy(alpha = 0.85f),
-                                Color.Black.copy(alpha = 0.4f),
-                                Color.Transparent
-                            )
-                        )
-                    )
-            )
-            // 内容
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(28.dp),
-                verticalArrangement = Arrangement.Center
-            ) {
-                Surface(
-                    shape = RoundedCornerShape(20.dp),
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
-                    modifier = Modifier.clip(RoundedCornerShape(20.dp))
-                ) {
-                    Text(
-                        "正在收听",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
-                    )
-                }
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    book.title,
-                    fontSize = 26.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                if (progress != null) {
-                    val remainingChapter = book.chapterCount - progress.chapterNumber
-                    Text(
-                        "剩余约 ${remainingChapter} 章",
-                        fontSize = 14.sp,
-                        color = Color.White.copy(alpha = 0.7f)
-                    )
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-                Button(
-                    onClick = onClick,
-                    shape = RoundedCornerShape(50),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
-                    ),
-                    modifier = Modifier.height(48.dp)
-                ) {
-                    Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(20.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("继续", fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                }
-            }
-        }
-    }
-}
-
-// ==================== 继续收听 - 中卡片 (300x240) glass-panel ====================
-@Composable
-private fun ContinueListeningGlassCard(
-    book: Audiobook,
-    progress: com.lechenmusic.data.model.AudiobookProgress?,
-    serverUrl: String,
-    username: String,
-    password: String,
-    onClick: () -> Unit
-) {
-    val coverUrl = getAudiobookCoverUrl(serverUrl, username, password, book.id)
-    Surface(
-        shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.6f),
-        modifier = Modifier
-            .width(300.dp)
-            .height(240.dp)
-            .clickable { onClick() },
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.15f))
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(20.dp),
-            verticalArrangement = Arrangement.SpaceBetween
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // 顶部: 小封面 + 书名/分类
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    modifier = Modifier.size(56.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant
-                ) {
-                    if (coverUrl != null) {
-                        AsyncImage(
-                            model = coverUrl,
-                            contentDescription = null,
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
-                        )
-                    } else {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Icon(
-                                Icons.Default.MenuBook,
-                                null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-                            )
-                        }
+            // 封面
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.size(56.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant
+            ) {
+                if (coverUrl != null) {
+                    AsyncImage(
+                        model = coverUrl,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Default.MenuBook, null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
                     }
                 }
-                Spacer(modifier = Modifier.width(14.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        book.title,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(
-                        book.genre.ifEmpty { book.narrator.ifEmpty { book.author } },
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1
-                    )
-                }
             }
-            // 中间: 进度条
-            if (progress != null) {
-                val progressFraction = (progress.chapterNumber.toFloat() / book.chapterCount.coerceAtLeast(1)).coerceIn(0f, 1f)
-                Column {
-                    LinearProgressIndicator(
-                        progress = { progressFraction },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(6.dp)
-                            .clip(RoundedCornerShape(3.dp)),
-                        color = MaterialTheme.colorScheme.primary,
-                        trackColor = MaterialTheme.colorScheme.surfaceContainerHighest
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.width(14.dp))
+            // 信息
+            Column(modifier = Modifier.weight(1f)) {
+                Text(book.title, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Spacer(modifier = Modifier.height(2.dp))
+                if (progress != null) {
                     Text(
-                        "已听 ${(progressFraction * 100).toInt()}%",
+                        "第 ${progress.chapterNumber} / ${book.chapterCount} 章",
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
-            // 底部: 播放按钮
-            Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp)
-                    .clickable { onClick() }
+            // 播放按钮
+            FilledIconButton(
+                onClick = onClick,
+                modifier = Modifier.size(40.dp),
+                shape = CircleShape,
+                colors = IconButtonDefaults.filledIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                )
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        Icons.Default.PlayArrow,
-                        "播放",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
+                Icon(Icons.Default.PlayArrow, "播放", modifier = Modifier.size(22.dp))
             }
         }
     }
 }
 
-// ==================== 热门分类 glass-panel 卡片 ====================
+// ==================== 热门分类 glass-panel 卡片 (Issue 8: 修复边框) ====================
 @Composable
 private fun CategoryGlassCard(
     emoji: String,
@@ -634,11 +438,11 @@ private fun CategoryGlassCard(
 ) {
     Surface(
         shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.6f),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
         modifier = modifier
             .height(80.dp)
             .clickable { onClick() },
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.15f))
+        border = androidx.compose.foundation.BorderStroke(1.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
     ) {
         Column(
             modifier = Modifier.fillMaxSize(),
@@ -656,42 +460,48 @@ private fun CategoryGlassCard(
     }
 }
 
-// ==================== 演播者 Chip ====================
+// ==================== 演播者头像卡片 (Issue 9: 上面头像下面名字) ====================
 @Composable
-private fun NarratorChip(
+private fun NarratorAvatarCard(
     name: String,
     count: String,
     onClick: () -> Unit
 ) {
-    Surface(
-        shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        modifier = Modifier.clickable { onClick() }
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .width(80.dp)
+            .clickable { onClick() }
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
+        // 头像 (改大)
+        Surface(
+            shape = CircleShape,
+            modifier = Modifier.size(64.dp),
+            color = MaterialTheme.colorScheme.primaryContainer
         ) {
-            Surface(
-                shape = RoundedCornerShape(50),
-                modifier = Modifier.size(32.dp),
-                color = MaterialTheme.colorScheme.primaryContainer
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text(
-                        name.take(1),
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.width(8.dp))
-            Column {
-                Text(name, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1)
-                Text(count, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Box(contentAlignment = Alignment.Center) {
+                Text(
+                    name.take(1),
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
             }
         }
+        Spacer(modifier = Modifier.height(8.dp))
+        // 名字
+        Text(
+            name,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Medium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Text(
+            count,
+            fontSize = 11.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 

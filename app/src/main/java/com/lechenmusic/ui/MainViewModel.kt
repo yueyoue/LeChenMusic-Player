@@ -76,6 +76,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val starredAudiobooks: StateFlow<List<Audiobook>> = _starredAudiobooks.asStateFlow()
     private val _starredPlaylists = MutableStateFlow<List<Playlist>>(emptyList())
     val starredPlaylists: StateFlow<List<Playlist>> = _starredPlaylists.asStateFlow()
+    private val _starredArtists = MutableStateFlow<List<com.lechenmusic.data.model.Artist>>(emptyList())
+    val starredArtists: StateFlow<List<com.lechenmusic.data.model.Artist>> = _starredArtists.asStateFlow()
 
     // Server stats
     private val _serverStats = MutableStateFlow(ServerStats())
@@ -385,6 +387,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _starredAlbums.value = emptyList()
             _starredAudiobooks.value = emptyList()
             _starredPlaylists.value = emptyList()
+            _starredArtists.value = emptyList()
             _recentPlayedSongs.value = emptyList()
             _allSongs.value = emptyList()
             _cachedSongs.value = emptyList()
@@ -523,6 +526,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 _starredSongs.value = it.songs
                 _starredAlbums.value = it.albums
                 _starredPlaylists.value = it.playlists
+                _starredArtists.value = it.artist ?: emptyList()
             }
             loadStarredAudiobooks()
             loadAudiobooks()

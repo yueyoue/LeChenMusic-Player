@@ -28,6 +28,7 @@ import com.lechenmusic.ui.responsive.ResponsiveConfig
 fun TabletAlbumsScreen(
     viewModel: MainViewModel,
     responsiveConfig: ResponsiveConfig,
+    onBack: () -> Unit,
     onAlbumClick: (String) -> Unit
 ) {
     val serverUrl by viewModel.serverUrl.collectAsState()
@@ -81,44 +82,56 @@ fun TabletAlbumsScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // ===== 顶部面包屑 + 搜索栏 =====
+        // ===== 顶部: 返回按钮 + 搜索栏 =====
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = responsiveConfig.contentPadding, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 面包屑
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("音乐库", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(" / ", color = MaterialTheme.colorScheme.outlineVariant)
-                Text("专辑", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+            // 返回按钮
+            IconButton(onClick = onBack) {
+                Icon(Icons.Default.ArrowBack, "返回")
             }
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("专辑", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // 搜索框
+            // 搜索框 (功能型)
+            var searchQuery by remember { mutableStateOf("") }
             Surface(
                 shape = RoundedCornerShape(24.dp),
                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
                 modifier = Modifier.width(260.dp)
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 0.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(Icons.Default.Search, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("搜索专辑、艺人...", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    androidx.compose.foundation.text.BasicTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        modifier = Modifier.weight(1f).padding(vertical = 10.dp),
+                        textStyle = androidx.compose.ui.text.TextStyle(fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface),
+                        singleLine = true,
+                        decorationBox = { innerTextField ->
+                            Box {
+                                if (searchQuery.isEmpty()) {
+                                    Text("搜索专辑、艺人...", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                innerTextField()
+                            }
+                        }
+                    )
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { searchQuery = "" }, modifier = Modifier.size(20.dp)) {
+                            Icon(Icons.Default.Close, "清除", modifier = Modifier.size(16.dp))
+                        }
+                    }
                 }
             }
-
-            Spacer(modifier = Modifier.width(16.dp))
-
-            // 排序/筛选
-            Icon(Icons.Default.Sort, "排序", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(24.dp).clickable { })
-            Spacer(modifier = Modifier.width(12.dp))
-            Icon(Icons.Default.FilterList, "筛选", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(24.dp).clickable { })
         }
 
         // ===== 筛选 Chips =====
@@ -128,7 +141,7 @@ fun TabletAlbumsScreen(
                 .padding(horizontal = responsiveConfig.contentPadding, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            listOf("newest" to "最新", "random" to "随机", "frequent" to "最常播放", "starred" to "收藏").forEach { (type, label) ->
+            listOf("newest" to "最新", "random" to "随机", "frequent" to "艺术家", "starred" to "名称").forEach { (type, label) ->
                 FilterChip(
                     selected = sortType == type,
                     onClick = { sortType = type },

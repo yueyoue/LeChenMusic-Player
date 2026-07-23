@@ -70,18 +70,19 @@ fun TabletAudiobookScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // ===== 顶部面包屑 + 搜索栏 =====
+        // ===== 顶部: 返回按钮 + 搜索栏 =====
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = responsiveConfig.contentPadding, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("有声书", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(" / ", color = MaterialTheme.colorScheme.outlineVariant)
-                Text(title, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+            // 返回按钮
+            IconButton(onClick = onBack) {
+                Icon(Icons.Default.ArrowBack, "返回")
             }
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(title, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
 
             Spacer(modifier = Modifier.weight(1f))
 
@@ -100,12 +101,6 @@ fun TabletAudiobookScreen(
                     Text("搜索有声书名称、作者、演播者...", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
-
-            Spacer(modifier = Modifier.width(16.dp))
-
-            Icon(Icons.Default.Sort, "排序", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(24.dp).clickable { })
-            Spacer(modifier = Modifier.width(12.dp))
-            Icon(Icons.Default.FilterList, "筛选", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(24.dp).clickable { })
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -143,7 +138,7 @@ fun TabletAudiobookScreen(
                 verticalArrangement = Arrangement.spacedBy(responsiveConfig.itemSpacing)
             ) {
                 items(filteredBooks, key = { it.id }) { book ->
-                    AudiobookGridCard(
+                    TabletAudiobookGridCard(
                         book = book,
                         serverUrl = serverUrl,
                         username = username,

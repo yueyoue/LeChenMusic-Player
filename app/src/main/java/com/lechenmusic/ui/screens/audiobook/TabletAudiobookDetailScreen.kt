@@ -73,11 +73,49 @@ fun TabletAudiobookDetailScreen(
 
     Column(modifier = Modifier.fillMaxSize()) {
         // ===== 顶部返回按钮 =====
-        IconButton(
-            onClick = onBack,
-            modifier = Modifier.padding(start = 8.dp, top = 8.dp)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(Icons.Default.ArrowBack, "返回")
+            IconButton(onClick = onBack) {
+                Icon(Icons.Default.ArrowBack, "返回")
+            }
+            Spacer(modifier = Modifier.weight(1f))
+            // 收藏按钮移到上方
+            IconButton(onClick = {
+                if (isStarred) viewModel.unstarAudiobook(book.id)
+                else viewModel.starAudiobook(book.id)
+            }) {
+                Icon(
+                    if (isStarred) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                    "收藏",
+                    tint = if (isStarred) Color(0xFFE94560) else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+            // 章节数标签
+            Surface(shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.primaryContainer) {
+                Text(
+                    "${book.chapterCount}章",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                )
+            }
+            if (book.genre.isNotBlank()) {
+                Spacer(modifier = Modifier.width(8.dp))
+                Surface(shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+                    Text(
+                        book.genre,
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.width(8.dp))
         }
 
         Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
@@ -147,70 +185,32 @@ fun TabletAudiobookDetailScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // 章节数 + 分类
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Surface(shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.primaryContainer) {
-                    Text(
-                        "${book.chapterCount}章",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                    )
-                }
-                if (book.genre.isNotBlank()) {
-                    Surface(shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh) {
-                        Text(
-                            book.genre,
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                        )
-                    }
-                }
-            }
+            // 章节数 + 分类 (已移至顶部)
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // 操作按钮
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                // 收藏
-                IconButton(onClick = {
-                    if (isStarred) viewModel.unstarAudiobook(book.id)
-                    else viewModel.starAudiobook(book.id)
-                }) {
-                    Icon(
-                        if (isStarred) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                        "收藏",
-                        tint = if (isStarred) Color(0xFFE94560) else MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // 播放按钮
+            // 播放按钮 (Issue 12: 修复被挤成一条的问题)
             Column(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Button(
                     onClick = { if (chapters.isNotEmpty()) onPlayChapter(book, chapters[0], chapters) },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Icon(Icons.Default.PlayArrow, null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("从头播放", fontWeight = FontWeight.Bold)
+                    Text("从头播放", fontWeight = FontWeight.Bold, fontSize = 15.sp)
                 }
                 OutlinedButton(
                     onClick = { viewModel.resumeAudiobook(book) },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Icon(Icons.Default.PlayArrow, null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("继续播放")
+                    Text("继续播放", fontSize = 15.sp)
                 }
             }
 
@@ -256,18 +256,13 @@ fun TabletAudiobookDetailScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp, vertical = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     "章节列表 (${chapters.size})",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Icon(Icons.Default.SwapVert, "排序", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(22.dp).clickable { })
-                    Icon(Icons.Default.Download, "下载", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(22.dp).clickable { })
-                }
             }
 
             // 章节列表
