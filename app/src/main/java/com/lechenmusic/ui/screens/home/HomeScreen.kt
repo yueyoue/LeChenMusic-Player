@@ -38,6 +38,13 @@ import com.lechenmusic.ui.MainViewModel
 import com.lechenmusic.ui.components.*
 import com.lechenmusic.ui.responsive.ResponsiveConfig
 import com.lechenmusic.ui.screens.audiobook.getAudiobookCoverUrl
+import com.lechenmusic.data.model.VideoInfo
+import com.lechenmusic.data.model.VideoPlayRecord
+import com.lechenmusic.data.model.HomeRecommendData
+import com.lechenmusic.ui.screens.video.VideoCard
+import com.lechenmusic.ui.screens.video.VideoHorizontalCard
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.TextUnit
 import kotlinx.coroutines.delay
@@ -102,50 +109,91 @@ fun HomeScreen(
         modifier = Modifier
             .fillMaxSize()
     ) {
-        Scaffold(
-            modifier = Modifier.fillMaxSize(),
-        ) { padding ->
-            if (isTablet && homeMode == "music") {
-                // ===== 平板音乐首页布局 =====
-                TabletMusicHomeContent(
-                    config = config!!,
-                    viewModel = viewModel,
-                    newestAlbums = newestAlbums,
-                    randomAlbums = randomAlbums,
-                    dailySongs = dailySongs,
-                    playlists = playlists,
-                    recentPlayedSongs = recentPlayedSongs,
-                    radioStations = radioStations,
-                    musicSlides = musicSlides,
-                    serverUrl = serverUrl,
-                    username = username,
-                    password = password,
-                    onAlbumClick = onAlbumClick,
-                    onSongClick = onSongClick,
-                    onPlaylistClick = onPlaylistClick,
-                    onNavigateToAlbums = onNavigateToAlbums,
-                    onNavigateToFavorites = onNavigateToFavorites,
-                    onNavigateToAllSongs = onNavigateToAllSongs,
-                    onNavigateToRecentPlayed = onNavigateToRecentPlayed,
-                    onNavigateToRadio = onNavigateToRadio,
-                    onNavigateToSearch = onNavigateToSearch,
-                    onNavigateToArtists = onNavigateToArtists,
-                    onNavigateToAllPlaylists = onNavigateToAllPlaylists,
-                    onNavigateToCachedMusic = onNavigateToCachedMusic,
-                    onNavigateToAudiobook = onNavigateToAudiobook,
-                    onNavigateToAudiobookDetail = onNavigateToAudiobookDetail,
-                    onNavigateToNarrator = onNavigateToNarrator,
-                    onNavigateToNarratorList = onNavigateToNarratorList,
-                    onNavigateToVideoDetail = onNavigateToVideoDetail,
-                    onNavigateToVideoPlayer = onNavigateToVideoPlayer,
-                    onNavigateToVideoCategory = onNavigateToVideoCategory,
-                    onNavigateToVideoSearch = onNavigateToVideoSearch,
-                    onNavigateToLive = onNavigateToLive,
-                    videoViewModel = videoViewModel
-                )
-            } else {
-                // ===== 手机布局（原有逻辑） =====
-                LazyColumn(
+        if (isTablet) {
+            // ===== 平板布局：根据 homeMode 切换 =====
+            when (homeMode) {
+                "music" -> {
+                    Scaffold(modifier = Modifier.fillMaxSize()) { _ ->
+                        TabletMusicHomeContent(
+                            config = config!!,
+                            viewModel = viewModel,
+                            newestAlbums = newestAlbums,
+                            randomAlbums = randomAlbums,
+                            dailySongs = dailySongs,
+                            playlists = playlists,
+                            recentPlayedSongs = recentPlayedSongs,
+                            radioStations = radioStations,
+                            musicSlides = musicSlides,
+                            serverUrl = serverUrl,
+                            username = username,
+                            password = password,
+                            onAlbumClick = onAlbumClick,
+                            onSongClick = onSongClick,
+                            onPlaylistClick = onPlaylistClick,
+                            onNavigateToAlbums = onNavigateToAlbums,
+                            onNavigateToFavorites = onNavigateToFavorites,
+                            onNavigateToAllSongs = onNavigateToAllSongs,
+                            onNavigateToRecentPlayed = onNavigateToRecentPlayed,
+                            onNavigateToRadio = onNavigateToRadio,
+                            onNavigateToSearch = onNavigateToSearch,
+                            onNavigateToArtists = onNavigateToArtists,
+                            onNavigateToAllPlaylists = onNavigateToAllPlaylists,
+                            onNavigateToCachedMusic = onNavigateToCachedMusic,
+                            onNavigateToAudiobook = onNavigateToAudiobook,
+                            onNavigateToAudiobookDetail = onNavigateToAudiobookDetail,
+                            onNavigateToNarrator = onNavigateToNarrator,
+                            onNavigateToNarratorList = onNavigateToNarratorList,
+                            onNavigateToVideoDetail = onNavigateToVideoDetail,
+                            onNavigateToVideoPlayer = onNavigateToVideoPlayer,
+                            onNavigateToVideoCategory = onNavigateToVideoCategory,
+                            onNavigateToVideoSearch = onNavigateToVideoSearch,
+                            onNavigateToLive = onNavigateToLive,
+                            videoViewModel = videoViewModel
+                        )
+                    }
+                }
+                "audiobook" -> {
+                    Scaffold(modifier = Modifier.fillMaxSize()) { _ ->
+                        TabletAudiobookHomeContent(
+                            audiobooks = audiobooks,
+                            audiobookWithProgress = audiobookWithProgress,
+                            starredAudiobooks = starredAudiobooks,
+                            viewModel = viewModel,
+                            serverUrl = serverUrl,
+                            username = username,
+                            password = password,
+                            onNavigateToAudiobook = onNavigateToAudiobook,
+                            onNavigateToAudiobookDetail = onNavigateToAudiobookDetail,
+                            onNavigateToNarrator = onNavigateToNarrator,
+                            onNavigateToNarratorList = onNavigateToNarratorList
+                        )
+                    }
+                }
+                "video" -> {
+                    Scaffold(modifier = Modifier.fillMaxSize()) { _ ->
+                        TabletVideoHomeContent(
+                            config = config!!,
+                            videoViewModel = videoViewModel!!,
+                            isVideoLoggedIn = isVideoLoggedIn,
+                            videoHomeData = videoHomeData,
+                            videoHomeLoading = videoHomeLoading,
+                            videoPlayRecords = videoPlayRecords,
+                            onNavigateToVideoDetail = onNavigateToVideoDetail,
+                            onNavigateToVideoCategory = onNavigateToVideoCategory,
+                            onNavigateToVideoSearch = onNavigateToVideoSearch,
+                            onNavigateToLive = onNavigateToLive
+                        )
+                    }
+                    // 影视导航逻辑
+                    VideoNavigationHandler(videoViewModel, onNavigateToVideoDetail)
+                }
+            }
+        } else {
+            // ===== 手机布局（原有逻辑） =====
+            Scaffold(
+                modifier = Modifier.fillMaxSize(),
+            ) { padding ->
+            LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(bottom = 80.dp)
                 ) {
@@ -922,46 +970,13 @@ fun HomeScreen(
                         }
                     }
                 }
+            } // Scaffold
             } // else (手机布局)
-        } // Scaffold
-        } // Scaffold content lambda
+        } // if (isTablet) / else
 
         // ===== 影视导航逻辑（放在 LazyColumn 外面，避免滚动时被回收） =====
-        if (homeMode == "video") {
-            val navigateToDetail = videoViewModel?.navigateToDetail?.collectAsState()?.value ?: false
-            val searchDetail = videoViewModel?.videoDetail?.collectAsState()?.value
-            androidx.compose.runtime.LaunchedEffect(navigateToDetail) {
-                if (navigateToDetail && searchDetail != null) {
-                    videoViewModel?.consumeNavigateToDetail()
-                    onNavigateToVideoDetail(searchDetail.source, searchDetail.id)
-                }
-            }
-            // 搜索播放源时显示加载弹窗
-            val searchSourceLoading = videoViewModel?.searchSourceLoading?.collectAsState()?.value ?: false
-            val searchSourceMsg = videoViewModel?.searchSourceMessage?.collectAsState()?.value ?: ""
-            if (searchSourceLoading) {
-                AlertDialog(
-                    onDismissRequest = { /* 不允许关闭 */ },
-                    title = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                strokeWidth = 2.dp
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text("搜索播放源", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                        }
-                    },
-                    text = {
-                        Text(
-                            searchSourceMsg.ifBlank { "正在搜索，请稍候..." },
-                            fontSize = 14.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    },
-                    confirmButton = {}
-                )
-            }
+        if (homeMode == "video" && !isTablet) {
+            VideoNavigationHandler(videoViewModel, onNavigateToVideoDetail)
         }
 
     }
@@ -2412,5 +2427,608 @@ private fun TabletRadioRow(station: InternetRadioStation, config: ResponsiveConf
             }
             Icon(Icons.Default.PlayArrow, "播放", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(32.dp))
         }
+    }
+}
+
+// ==================== Tablet Video Home Layout ====================
+
+@Composable
+private fun TabletVideoHomeContent(
+    config: ResponsiveConfig,
+    videoViewModel: com.lechenmusic.ui.VideoViewModel,
+    isVideoLoggedIn: Boolean,
+    videoHomeData: HomeRecommendData?,
+    videoHomeLoading: Boolean,
+    videoPlayRecords: List<VideoPlayRecord>,
+    onNavigateToVideoDetail: (String, String) -> Unit,
+    onNavigateToVideoCategory: (String) -> Unit,
+    onNavigateToVideoSearch: () -> Unit,
+    onNavigateToLive: () -> Unit
+) {
+    val pad = config.contentPadding
+    val gap = config.itemSpacing
+
+    if (!isVideoLoggedIn) {
+        Box(
+            modifier = Modifier.fillMaxSize().padding(40.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(
+                    Icons.Default.Tv,
+                    null,
+                    modifier = Modifier.size(80.dp),
+                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                )
+                Spacer(modifier = Modifier.height(20.dp))
+                Text(
+                    "请先配置影视服务器",
+                    fontSize = config.titleFontSize,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    "前往 我的 → 影视服务器 配置",
+                    fontSize = config.bodyFontSize,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                )
+            }
+        }
+        return
+    }
+
+    // 分类 tab 状态
+    var selectedVideoTab by remember { mutableIntStateOf(0) }
+    val videoTabs = listOf("推荐", "电影", "剧集", "动漫", "综艺", "直播")
+    val categoryResults by videoViewModel.categoryResults.collectAsState()
+    val categoryLoading by videoViewModel.categoryLoading.collectAsState()
+    val hasMore by videoViewModel.categoryHasMore.collectAsState()
+
+    // 当前分类关键词
+    var currentCategoryKeyword by remember { mutableStateOf("") }
+
+    LaunchedEffect(selectedVideoTab) {
+        when (selectedVideoTab) {
+            1 -> if (currentCategoryKeyword != "movie") { currentCategoryKeyword = "movie"; videoViewModel.fetchDoubanCategory("movie") }
+            2 -> if (currentCategoryKeyword != "tv") { currentCategoryKeyword = "tv"; videoViewModel.fetchDoubanCategory("tv") }
+            3 -> if (currentCategoryKeyword != "anime") { currentCategoryKeyword = "anime"; videoViewModel.fetchDoubanCategory("anime") }
+            4 -> if (currentCategoryKeyword != "variety") { currentCategoryKeyword = "variety"; videoViewModel.fetchDoubanCategory("variety") }
+        }
+    }
+
+    val gridColumns = when {
+        config.isExpanded -> 6
+        config.isMedium -> 4
+        else -> 3
+    }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        // ===== 顶部 Tab 栏 =====
+        ScrollableTabRow(
+            selectedTabIndex = selectedVideoTab,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = pad),
+            containerColor = Color.Transparent,
+            contentColor = MaterialTheme.colorScheme.primary,
+            edgePadding = 0.dp,
+            divider = {}
+        ) {
+            videoTabs.forEachIndexed { index, title ->
+                Tab(
+                    selected = selectedVideoTab == index,
+                    onClick = {
+                        selectedVideoTab = index
+                        if (title == "直播") onNavigateToLive()
+                    },
+                    text = {
+                        Text(
+                            title,
+                            fontSize = if (selectedVideoTab == index) config.sectionTitleSize else config.bodyFontSize,
+                            fontWeight = if (selectedVideoTab == index) FontWeight.Bold else FontWeight.Normal,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(
+                                    if (selectedVideoTab == index)
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                                    else Color.Transparent
+                                )
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                        )
+                    }
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // ===== 内容区 =====
+        when (selectedVideoTab) {
+            0 -> {
+                // 推荐 Tab
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(start = pad, end = pad, bottom = 100.dp),
+                    verticalArrangement = Arrangement.spacedBy(gap)
+                ) {
+                    // 最近观看
+                    if (videoPlayRecords.isNotEmpty()) {
+                        item {
+                            TabletSecHd("最近观看", "", config)
+                        }
+                        item {
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(gap)) {
+                                items(videoPlayRecords.take(10)) { record ->
+                                    TabletVideoContinueCard(record = record, config = config) {
+                                        onNavigateToVideoDetail(record.source, record.videoIdRaw)
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Hero: 热门推荐
+                    val hotAll = buildList {
+                        videoHomeData?.hotMovies?.let { addAll(it) }
+                        videoHomeData?.hotTvShows?.let { addAll(it) }
+                    }.distinctBy { it.id }.take(6)
+
+                    if (hotAll.isNotEmpty()) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(config.heroHeight)
+                                    .clip(RoundedCornerShape(20.dp))
+                                    .clickable { onNavigateToVideoDetail(hotAll.first().source, hotAll.first().id) }
+                            ) {
+                                val firstVideo = hotAll.first()
+                                if (firstVideo.displayCover.isNotBlank()) {
+                                    AsyncImage(
+                                        model = firstVideo.displayCover,
+                                        contentDescription = null,
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.Crop,
+                                        alpha = 0.4f
+                                    )
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(
+                                            Brush.horizontalGradient(
+                                                listOf(Color.Black.copy(alpha = 0.7f), Color.Transparent)
+                                            )
+                                        )
+                                )
+                                Column(
+                                    modifier = Modifier
+                                        .align(Alignment.BottomStart)
+                                        .padding(24.dp)
+                                ) {
+                                    Surface(
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = Color(0xFFFF4D6A)
+                                    ) {
+                                        Text(
+                                            "今日热门",
+                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
+                                            fontSize = config.captionFontSize,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.White
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(10.dp))
+                                    Text(
+                                        firstVideo.title,
+                                        fontSize = (config.sectionTitleSize.value + 6).sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    val info = buildString {
+                                        append(firstVideo.year)
+                                        if (firstVideo.type.isNotBlank()) append(" · ${com.lechenmusic.ui.screens.video.categoryName(firstVideo.type)}")
+                                    }
+                                    Text(info, fontSize = config.bodyFontSize, color = Color.White.copy(alpha = 0.8f))
+                                    Spacer(modifier = Modifier.height(14.dp))
+                                    Button(
+                                        onClick = { onNavigateToVideoDetail(firstVideo.source, firstVideo.id) },
+                                        shape = RoundedCornerShape(50),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = MaterialTheme.colorScheme.primary,
+                                            contentColor = MaterialTheme.colorScheme.onPrimary
+                                        )
+                                    ) {
+                                        Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(18.dp))
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text("立即播放", fontWeight = FontWeight.SemiBold, fontSize = config.bodyFontSize)
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // 热门电影
+                    val hotMovies = videoHomeData?.hotMovies ?: emptyList()
+                    if (hotMovies.isNotEmpty()) {
+                        item { TabletSecHd("热门电影", "", config) }
+                        item {
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(gap)) {
+                                items(hotMovies) { video ->
+                                    TabletVideoCard(video = video, config = config) {
+                                        onNavigateToVideoDetail(video.source, video.id)
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // 热门剧集
+                    val hotTv = videoHomeData?.hotTvShows ?: emptyList()
+                    if (hotTv.isNotEmpty()) {
+                        item { TabletSecHd("热门剧集", "", config) }
+                        item {
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(gap)) {
+                                items(hotTv) { video ->
+                                    TabletVideoCard(video = video, config = config) {
+                                        onNavigateToVideoDetail(video.source, video.id)
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // 热门综艺
+                    val hotVariety = videoHomeData?.hotVariety ?: emptyList()
+                    if (hotVariety.isNotEmpty()) {
+                        item { TabletSecHd("热门综艺", "", config) }
+                        item {
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(gap)) {
+                                items(hotVariety) { video ->
+                                    TabletVideoCard(video = video, config = config) {
+                                        onNavigateToVideoDetail(video.source, video.id)
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // 热门动漫
+                    val hotAnime = videoHomeData?.hotAnime ?: emptyList()
+                    if (hotAnime.isNotEmpty()) {
+                        item { TabletSecHd("热门动漫", "", config) }
+                        item {
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(gap)) {
+                                items(hotAnime) { video ->
+                                    TabletVideoCard(video = video, config = config) {
+                                        onNavigateToVideoDetail(video.source, video.id)
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // 加载指示器
+                    if (videoHomeLoading) {
+                        item {
+                            Box(modifier = Modifier.fillMaxWidth().padding(20.dp), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator(modifier = Modifier.size(32.dp))
+                            }
+                        }
+                    }
+
+                    // 空状态
+                    if (!videoHomeLoading && hotMovies.isEmpty() && hotTv.isEmpty() && videoPlayRecords.isEmpty()) {
+                        item {
+                            Box(modifier = Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) {
+                                Text("暂无推荐数据", fontSize = config.bodyFontSize, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                }
+            }
+            else -> {
+                // 分类 Tab (电影/剧集/动漫/综艺)
+                val gridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
+                val shouldLoadMore by remember {
+                    derivedStateOf {
+                        val lastVisibleIndex = gridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+                        val totalItems = gridState.layoutInfo.totalItemsCount
+                        lastVisibleIndex >= totalItems - 6 && hasMore && !categoryLoading
+                    }
+                }
+                LaunchedEffect(shouldLoadMore) {
+                    if (shouldLoadMore) videoViewModel.loadMoreCategory()
+                }
+
+                if (categoryLoading && categoryResults.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
+                } else {
+                    LazyVerticalGrid(
+                        state = gridState,
+                        columns = GridCells.Fixed(gridColumns),
+                        contentPadding = PaddingValues(start = pad, end = pad, bottom = 100.dp),
+                        horizontalArrangement = Arrangement.spacedBy(gap),
+                        verticalArrangement = Arrangement.spacedBy(gap)
+                    ) {
+                        androidx.compose.foundation.lazy.grid.items(categoryResults) { video ->
+                            VideoCard(video = video, onClick = { onNavigateToVideoDetail(video.source, video.id) })
+                        }
+                        if (hasMore) {
+                            item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(gridColumns) }) {
+                                Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                                    CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ==================== Tablet Video Sub-Components ====================
+
+@Composable
+private fun TabletVideoCard(
+    video: VideoInfo,
+    config: ResponsiveConfig,
+    onClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .width(config.cardWidth)
+            .clickable(onClick = onClick)
+    ) {
+        Box(
+            modifier = Modifier
+                .width(config.cardWidth)
+                .aspectRatio(0.7f)
+                .clip(RoundedCornerShape(14.dp))
+                .background(
+                    Brush.linearGradient(
+                        listOf(
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                            MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f)
+                        )
+                    )
+                )
+        ) {
+            if (video.displayCover.isNotBlank()) {
+                AsyncImage(
+                    model = video.displayCover,
+                    contentDescription = video.title,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        video.title.take(1),
+                        fontSize = 32.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                    )
+                }
+            }
+            // 评分标签
+            if (video.rate != null) {
+                Surface(
+                    shape = RoundedCornerShape(bottomStart = 8.dp, topEnd = 14.dp),
+                    color = Color(0xFFFF6B81).copy(alpha = 0.9f),
+                    modifier = Modifier.align(Alignment.TopEnd)
+                ) {
+                    Text(
+                        video.rate,
+                        fontSize = config.captionFontSize,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                    )
+                }
+            }
+            // 进度条
+            if (video.displayPlayTime > 0 && video.displayTotalTime > 0) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(3.dp)
+                        .align(Alignment.BottomCenter)
+                        .background(Color.Black.copy(alpha = 0.3f))
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(fraction = video.progressPercent)
+                            .height(3.dp)
+                            .background(Color(0xFFE94560))
+                    )
+                }
+            }
+            // 集数标签
+            if (video.displayTotalEpisodes > 1) {
+                Surface(
+                    shape = RoundedCornerShape(topStart = 14.dp, bottomEnd = 14.dp),
+                    color = Color.Black.copy(alpha = 0.6f),
+                    modifier = Modifier.align(Alignment.BottomStart)
+                ) {
+                    Text(
+                        "更新至${video.displayTotalEpisodes}集",
+                        fontSize = config.captionFontSize,
+                        color = Color.White,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                    )
+                }
+            }
+        }
+        Text(
+            video.title,
+            fontSize = config.cardTitleSize,
+            fontWeight = FontWeight.Medium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(top = 8.dp)
+        )
+        Text(
+            buildString {
+                append(video.year)
+                if (video.type.isNotBlank()) append(" · ${com.lechenmusic.ui.screens.video.categoryName(video.type)}")
+            },
+            fontSize = config.cardSubtitleSize,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1
+        )
+    }
+}
+
+@Composable
+private fun TabletVideoContinueCard(
+    record: VideoPlayRecord,
+    config: ResponsiveConfig,
+    onClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .width(240.dp)
+            .clickable(onClick = onClick)
+    ) {
+        Box(
+            modifier = Modifier
+                .width(240.dp)
+                .height(135.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(
+                    Brush.linearGradient(
+                        listOf(
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                            MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f)
+                        )
+                    )
+                )
+        ) {
+            if (record.cover.isNotBlank()) {
+                AsyncImage(
+                    model = record.cover,
+                    contentDescription = record.title,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.PlayArrow,
+                        null,
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                        modifier = Modifier.size(36.dp)
+                    )
+                }
+            }
+            // 进度条
+            if (record.displayTotalTime > 0) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(3.dp)
+                        .align(Alignment.BottomCenter)
+                        .background(Color.Black.copy(alpha = 0.3f))
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(fraction = record.progressPercent)
+                            .height(3.dp)
+                            .background(Color(0xFFE94560))
+                    )
+                }
+            }
+            // 播放图标
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                color = Color.Black.copy(alpha = 0.5f),
+                modifier = Modifier.align(Alignment.Center)
+            ) {
+                Icon(
+                    Icons.Default.PlayArrow,
+                    null,
+                    tint = Color.White,
+                    modifier = Modifier.size(36.dp).padding(6.dp)
+                )
+            }
+            // 集数标签
+            if (record.displayTotalEpisodes > 1) {
+                Surface(
+                    shape = RoundedCornerShape(topStart = 14.dp, bottomEnd = 14.dp),
+                    color = Color.Black.copy(alpha = 0.6f),
+                    modifier = Modifier.align(Alignment.BottomStart)
+                ) {
+                    Text(
+                        "看到第${record.displayEpisodeIndex + 1}集",
+                        fontSize = config.captionFontSize,
+                        color = Color.White,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                    )
+                }
+            }
+        }
+        Text(
+            record.title,
+            fontSize = config.cardTitleSize,
+            fontWeight = FontWeight.Medium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(top = 8.dp)
+        )
+    }
+}
+
+// ==================== Video Navigation Handler ====================
+
+@Composable
+private fun VideoNavigationHandler(
+    videoViewModel: com.lechenmusic.ui.VideoViewModel?,
+    onNavigateToVideoDetail: (String, String) -> Unit
+) {
+    val navigateToDetail = videoViewModel?.navigateToDetail?.collectAsState()?.value ?: false
+    val searchDetail = videoViewModel?.videoDetail?.collectAsState()?.value
+    androidx.compose.runtime.LaunchedEffect(navigateToDetail) {
+        if (navigateToDetail && searchDetail != null) {
+            videoViewModel?.consumeNavigateToDetail()
+            onNavigateToVideoDetail(searchDetail.source, searchDetail.id)
+        }
+    }
+    // 搜索播放源时显示加载弹窗
+    val searchSourceLoading = videoViewModel?.searchSourceLoading?.collectAsState()?.value ?: false
+    val searchSourceMsg = videoViewModel?.searchSourceMessage?.collectAsState()?.value ?: ""
+    if (searchSourceLoading) {
+        AlertDialog(
+            onDismissRequest = { /* 不允许关闭 */ },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text("搜索播放源", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                }
+            },
+            text = {
+                Text(
+                    searchSourceMsg.ifBlank { "正在搜索，请稍候..." },
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
+            confirmButton = {}
+        )
     }
 }
