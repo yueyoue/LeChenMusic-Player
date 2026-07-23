@@ -147,7 +147,7 @@ fun TabletPlayerScreen(
                 onClick = onBack,
                 modifier = Modifier.padding(start = 8.dp, top = 8.dp)
             ) {
-                Icon(Icons.Default.KeyboardArrowDown, "返回", modifier = Modifier.size(32.dp))
+                Icon(Icons.Default.KeyboardArrowDown, "返回", tint = Color.White, modifier = Modifier.size(32.dp))
             }
 
             // ===== 主内容区 =====
@@ -164,10 +164,10 @@ fun TabletPlayerScreen(
 
                 // 右侧：歌曲信息 + 歌词
                 Column(modifier = Modifier.weight(1f).fillMaxHeight().padding(vertical = 16.dp)) {
-                    Text(song.title, fontSize = 28.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(song.title, fontSize = 28.sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        song.artist, fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        song.artist, fontSize = 18.sp, color = Color.White.copy(alpha = 0.7f),
                         modifier = Modifier.clickable { if (song.artistId.isNotBlank()) onNavigateToArtist(song.artistId) }
                     )
                     Spacer(modifier = Modifier.height(24.dp))
@@ -185,8 +185,8 @@ fun TabletPlayerScreen(
                                     text = line.text,
                                     fontSize = if (isActive) 20.sp else 16.sp,
                                     fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (isActive) MaterialTheme.colorScheme.primary
-                                        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f),
+                                    color = if (isActive) Color.White
+                                        else Color.White.copy(alpha = 0.35f),
                                     modifier = Modifier.padding(vertical = if (isActive) 6.dp else 4.dp).fillMaxWidth()
                                 )
                             }
@@ -194,13 +194,13 @@ fun TabletPlayerScreen(
                     } else if (plainLines.isNotEmpty()) {
                         LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth(), contentPadding = PaddingValues(vertical = 40.dp)) {
                             itemsIndexed(plainLines) { _, line ->
-                                Text(line, fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                Text(line, fontSize = 16.sp, color = Color.White.copy(alpha = 0.4f),
                                     modifier = Modifier.padding(vertical = 4.dp).fillMaxWidth())
                             }
                         }
                     } else {
                         Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            Text("暂无歌词", fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
+                            Text("暂无歌词", fontSize = 16.sp, color = Color.White.copy(alpha = 0.4f))
                         }
                     }
                 }
@@ -210,70 +210,72 @@ fun TabletPlayerScreen(
             Surface(modifier = Modifier.fillMaxWidth(), color = Color.Transparent) {
                 Column(modifier = Modifier.padding(horizontal = 32.dp, vertical = 16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                        Text(formatTime(currentPosition), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(formatTime(currentPosition), fontSize = 12.sp, color = Color.White.copy(alpha = 0.7f))
                         Spacer(modifier = Modifier.width(12.dp))
                         Slider(value = progress, onValueChange = { playerManager.seekToProgress(it) }, modifier = Modifier.weight(1f),
-                            colors = SliderDefaults.colors(thumbColor = MaterialTheme.colorScheme.primary, activeTrackColor = MaterialTheme.colorScheme.primary,
-                                inactiveTrackColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)))
+                            colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color.White,
+                                inactiveTrackColor = Color.White.copy(alpha = 0.3f)))
                         Spacer(modifier = Modifier.width(12.dp))
-                        Text(formatTime(duration), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(formatTime(duration), fontSize = 12.sp, color = Color.White.copy(alpha = 0.7f))
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             IconButton(onClick = { playerManager.toggleStar() }) {
                                 Icon(if (isStarred) Icons.Default.Favorite else Icons.Default.FavoriteBorder, "收藏",
-                                    tint = if (isStarred) Color(0xFFFF4D6A) else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(24.dp))
+                                    tint = if (isStarred) Color(0xFFFF4D6A) else Color.White.copy(alpha = 0.7f), modifier = Modifier.size(24.dp))
                             }
+                            // 添加到歌单
+                            var showAddToMenu by remember { mutableStateOf(false) }
+                            Box {
+                                IconButton(onClick = { showAddToMenu = true }) {
+                                    Icon(Icons.Default.PlaylistAdd, "添加到", tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(24.dp))
+                                }
+                                DropdownMenu(expanded = showAddToMenu, onDismissRequest = { showAddToMenu = false }) {
+                                    DropdownMenuItem(text = { Text("添加到歌单") }, onClick = { showAddToMenu = false }, leadingIcon = { Icon(Icons.Default.QueueMusic, null) })
+                                    DropdownMenuItem(text = { Text("添加到播放列表") }, onClick = { showAddToMenu = false }, leadingIcon = { Icon(Icons.Default.PlaylistPlay, null) })
+                                }
+                            }
+                            // 播放队列
                             IconButton(onClick = { }) {
-                                Icon(Icons.Default.Download, "下载", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(24.dp))
+                                Icon(Icons.Default.QueueMusic, "播放队列", tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(24.dp))
                             }
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(24.dp), verticalAlignment = Alignment.CenterVertically) {
                             IconButton(onClick = { playerManager.toggleShuffle() }) {
-                                Icon(Icons.Default.Shuffle, "随机", tint = if (shuffleMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(22.dp))
+                                Icon(Icons.Default.Shuffle, "随机", tint = if (shuffleMode) Color.White else Color.White.copy(alpha = 0.5f), modifier = Modifier.size(22.dp))
                             }
                             IconButton(onClick = { playerManager.skipPrevious() }) {
-                                Icon(Icons.Default.SkipPrevious, "上一首", modifier = Modifier.size(32.dp))
+                                Icon(Icons.Default.SkipPrevious, "上一首", tint = Color.White, modifier = Modifier.size(32.dp))
                             }
                             FilledIconButton(onClick = { playerManager.togglePlayPause() }, modifier = Modifier.size(56.dp), shape = CircleShape,
                                 colors = IconButtonDefaults.filledIconButtonColors(containerColor = Color.White, contentColor = Color.Black)) {
                                 Icon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, if (isPlaying) "暂停" else "播放", modifier = Modifier.size(28.dp))
                             }
                             IconButton(onClick = { playerManager.skipNext() }) {
-                                Icon(Icons.Default.SkipNext, "下一首", modifier = Modifier.size(32.dp))
+                                Icon(Icons.Default.SkipNext, "下一首", tint = Color.White, modifier = Modifier.size(32.dp))
                             }
                             IconButton(onClick = { playerManager.toggleRepeat() }) {
                                 Icon(
                                     when (repeatMode) { com.lechenmusic.player.RepeatMode.ONE -> Icons.Default.RepeatOne; else -> Icons.Default.Repeat },
                                     "循环",
-                                    tint = if (repeatMode != com.lechenmusic.player.RepeatMode.OFF) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    tint = if (repeatMode != com.lechenmusic.player.RepeatMode.OFF) Color.White else Color.White.copy(alpha = 0.5f),
                                     modifier = Modifier.size(22.dp)
                                 )
                             }
                         }
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Icon(Icons.Default.VolumeUp, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+                            Icon(Icons.Default.VolumeUp, null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(20.dp))
                             Slider(value = 0.75f, onValueChange = { }, modifier = Modifier.width(100.dp),
-                                colors = SliderDefaults.colors(thumbColor = MaterialTheme.colorScheme.onSurfaceVariant, activeTrackColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    inactiveTrackColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)))
+                                colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color.White,
+                                    inactiveTrackColor = Color.White.copy(alpha = 0.3f)))
                         }
                     }
                 }
             }
         }
 
-        // 右侧浮动工具栏
-        Column(modifier = Modifier.align(Alignment.CenterEnd).padding(end = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            listOf("音", "词", "谱").forEach { label ->
-                Surface(modifier = Modifier.size(40.dp).clickable { }, shape = CircleShape, color = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)) {
-                    Box(contentAlignment = Alignment.Center) { Text(label, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                }
-            }
-            Surface(modifier = Modifier.size(40.dp).clickable { }, shape = CircleShape, color = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)) {
-                Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.HelpOutline, "帮助", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp)) }
-            }
-        }
+
     }
 }
 
