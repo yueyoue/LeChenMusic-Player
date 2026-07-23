@@ -553,21 +553,43 @@ fun NavGraphBuilder.sharedNavRoutes(
     }
 
     composable(Screen.AllPlaylists.route) {
-        AllPlaylistsScreen(
-            viewModel = viewModel,
-            onBack = onBack,
-            onPlaylistClick = { navController.navigate(Screen.PlaylistDetail.createRoute(it)) }
-        )
+        val responsiveCfg = com.lechenmusic.ui.responsive.rememberResponsiveConfig(windowSizeClass)
+        if (responsiveCfg.isMedium || responsiveCfg.isExpanded) {
+            com.lechenmusic.ui.screens.home.TabletAllPlaylistsScreen(
+                viewModel = viewModel,
+                responsiveConfig = responsiveCfg,
+                onBack = onBack,
+                onPlaylistClick = { navController.navigate(Screen.PlaylistDetail.createRoute(it)) }
+            )
+        } else {
+            AllPlaylistsScreen(
+                viewModel = viewModel,
+                onBack = onBack,
+                onPlaylistClick = { navController.navigate(Screen.PlaylistDetail.createRoute(it)) }
+            )
+        }
     }
 
     composable(Screen.CachedMusic.route) {
-        CachedMusicScreen(
-            viewModel = viewModel,
-            onBack = onBack,
-            onSongClick = { s, p -> viewModel.playSong(s, p) },
-            onArtistClick = { navController.navigate(Screen.ArtistDetail.createRoute(it)) },
-            onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) }
-        )
+        val responsiveCfg = com.lechenmusic.ui.responsive.rememberResponsiveConfig(windowSizeClass)
+        if (responsiveCfg.isMedium || responsiveCfg.isExpanded) {
+            com.lechenmusic.ui.screens.home.TabletCachedMusicScreen(
+                viewModel = viewModel,
+                responsiveConfig = responsiveCfg,
+                onBack = onBack,
+                onSongClick = { s, p -> viewModel.playSong(s, p) },
+                onArtistClick = { navController.navigate(Screen.ArtistDetail.createRoute(it)) },
+                onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) }
+            )
+        } else {
+            CachedMusicScreen(
+                viewModel = viewModel,
+                onBack = onBack,
+                onSongClick = { s, p -> viewModel.playSong(s, p) },
+                onArtistClick = { navController.navigate(Screen.ArtistDetail.createRoute(it)) },
+                onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) }
+            )
+        }
     }
 
     composable(Screen.RecentPlayed.route) {
