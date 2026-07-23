@@ -631,13 +631,25 @@ fun NavGraphBuilder.sharedNavRoutes(
 
     composable(Screen.ArtistDetail.route) { backStackEntry ->
         val artistId = backStackEntry.arguments?.getString("artistId") ?: return@composable
-        ArtistDetailScreen(
-            viewModel = viewModel,
-            artistId = artistId,
-            onBack = onBack,
-            onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) },
-            onSongClick = { s, p -> viewModel.playSong(s, p) }
-        )
+        val responsiveCfg = com.lechenmusic.ui.responsive.rememberResponsiveConfig(windowSizeClass)
+        if (responsiveCfg.isMedium || responsiveCfg.isExpanded) {
+            com.lechenmusic.ui.screens.artists.TabletArtistDetailScreen(
+                viewModel = viewModel,
+                artistId = artistId,
+                responsiveConfig = responsiveCfg,
+                onBack = onBack,
+                onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) },
+                onSongClick = { s, p -> viewModel.playSong(s, p) }
+            )
+        } else {
+            ArtistDetailScreen(
+                viewModel = viewModel,
+                artistId = artistId,
+                onBack = onBack,
+                onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) },
+                onSongClick = { s, p -> viewModel.playSong(s, p) }
+            )
+        }
     }
 
     composable(Screen.PlaylistDetail.route) { backStackEntry ->
