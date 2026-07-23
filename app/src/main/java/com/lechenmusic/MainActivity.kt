@@ -233,10 +233,14 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                 }
             }
 
+            // 播放页隐藏左侧导航栏
+            val hideSideNav = currentRoute == Screen.Player.route
+
             if (useSideNav) {
                 // ===== 平板/车机: 左侧导航栏 + 内容区 =====
                 Row(modifier = Modifier.fillMaxSize()) {
-                    // 左侧 NavigationRail
+                    // 左侧 NavigationRail（播放页隐藏）
+                    if (!hideSideNav) {
                     Column(
                         modifier = Modifier
                             .fillMaxHeight()
@@ -369,6 +373,7 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                             Text("我的", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
+                    } // end if (!hideSideNav)
                     // 右侧内容
                     Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
                         Scaffold { innerPadding ->
