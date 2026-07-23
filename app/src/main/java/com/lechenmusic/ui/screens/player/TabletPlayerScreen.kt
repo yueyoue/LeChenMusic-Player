@@ -145,7 +145,7 @@ fun StylusArm(isPlaying: Boolean, modifier: Modifier = Modifier) {
     val armWidth = 180.dp
 
     Box(modifier = modifier.size(armWidth, armLength)) {
-        Canvas(modifier = Modifier.fillMaxSize().rotate(angle, pivot = Offset(0f, 0f))) {
+        Canvas(modifier = Modifier.fillMaxSize().graphicsLayer(rotationZ = angle, transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0f))) {
             val pivotX = 0f
             val pivotY = 0f
             val armEndX = size.width * 0.85f

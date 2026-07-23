@@ -47,7 +47,7 @@ fun MiniPlayer(
             .padding(horizontal = 8.dp, vertical = 4.dp)
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.97f),
+        color = Color.Transparent,
         shadowElevation = 8.dp
     ) {
         Row(
