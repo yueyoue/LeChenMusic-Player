@@ -1,5 +1,6 @@
 package com.lechenmusic.ui.screens.home
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -31,6 +32,7 @@ import com.lechenmusic.data.model.AudiobookWithProgress
 import com.lechenmusic.ui.MainViewModel
 import com.lechenmusic.ui.screens.audiobook.getAudiobookCoverUrl
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun TabletAudiobookHomeContent(
     audiobooks: List<Audiobook>,
