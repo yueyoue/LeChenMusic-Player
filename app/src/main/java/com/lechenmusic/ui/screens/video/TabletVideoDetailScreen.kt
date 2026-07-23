@@ -38,10 +38,10 @@ fun TabletVideoDetailScreen(
     onVideoClick: (VideoInfo) -> Unit
 ) {
     val detail by viewModel.videoDetail.collectAsState()
-    val loading by viewModel.videoDetailLoading.collectAsState()
+    val loading by viewModel.detailLoading.collectAsState()
 
     LaunchedEffect(source, videoId) {
-        viewModel.loadVideoDetail(source, videoId)
+        viewModel.loadDetail(source, videoId)
     }
 
     if (loading) {
