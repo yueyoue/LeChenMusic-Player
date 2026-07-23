@@ -25,7 +25,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -145,7 +147,7 @@ fun StylusArm(isPlaying: Boolean, modifier: Modifier = Modifier) {
     val armWidth = 180.dp
 
     Box(modifier = modifier.size(armWidth, armLength)) {
-        Canvas(modifier = Modifier.fillMaxSize().graphicsLayer(rotationZ = angle, transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0f))) {
+        Canvas(modifier = Modifier.fillMaxSize().graphicsLayer(rotationZ = angle, transformOrigin = TransformOrigin(0f, 0f))) {
             val pivotX = 0f
             val pivotY = 0f
             val armEndX = size.width * 0.85f
@@ -399,3 +401,4 @@ private fun formatTime(ms: Long): String {
     val totalSeconds = ms / 1000
     return "%02d:%02d".format(totalSeconds / 60, totalSeconds % 60)
 }
+
