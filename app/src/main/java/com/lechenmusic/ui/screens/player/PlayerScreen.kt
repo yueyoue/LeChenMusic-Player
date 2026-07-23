@@ -823,14 +823,14 @@ private fun CoverView(song: Song, serverUrl: String, username: String, password:
     }
 }
 
-private data class LyricLine(val timeMs: Long, val text: String)
+internal data class LyricLine(val timeMs: Long, val text: String)
 
 /**
  * Parse LRC format lyrics: [mm:ss.xx]text
  * Returns list of (timeMs, text) pairs sorted by time.
  * If not LRC format, returns null.
  */
-private fun parseLrc(lrcText: String): List<LyricLine>? {
+internal fun parseLrc(lrcText: String): List<LyricLine>? {
     val regex = Regex("\\[(\\d{1,2}):(\\d{2})(?:\\.(\\d{1,3}))?\\](.*)")
     val lines = mutableListOf<LyricLine>()
     for (line in lrcText.split("\n")) {
@@ -859,7 +859,7 @@ private fun parseLrc(lrcText: String): List<LyricLine>? {
  * Find the active lyric line index based on current playback position.
  * Uses binary search for efficiency.
  */
-private fun findActiveLyricLine(lines: List<LyricLine>, positionMs: Long): Int {
+internal fun findActiveLyricLine(lines: List<LyricLine>, positionMs: Long): Int {
     if (lines.isEmpty()) return 0
     // Binary search: find the last line whose timeMs <= positionMs
     var lo = 0
