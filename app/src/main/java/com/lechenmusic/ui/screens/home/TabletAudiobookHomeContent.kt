@@ -151,24 +151,30 @@ fun TabletAudiobookHomeContent(
                 Spacer(modifier = Modifier.height(12.dp))
             }
             item {
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    itemsIndexed(booksWithProgress.take(5)) { index, bwp ->
-                        if (index == 0) {
-                            // 第一个: 大卡片 (500x240) 封面全铺 + 渐变遮罩
-                            ContinueListeningLargeCard(
-                                book = bwp.toAudiobook(),
-                                progress = bwp.progress,
-                                serverUrl = serverUrl,
-                                username = username,
-                                password = password,
-                                onClick = {
-                                    viewModel.resumeAudiobook(bwp.toAudiobook())
-                                    onNavigateToAudiobookDetail(bwp.id)
-                                }
-                            )
-                        } else {
-                            // 后续: glass-panel 卡片 (300x240)
-                            ContinueListeningGlassCard(
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // 左侧: 大卡片 (500x240)
+                    val firstBwp = booksWithProgress.first()
+                    ContinueListeningLargeCard(
+                        book = firstBwp.toAudiobook(),
+                        progress = firstBwp.progress,
+                        serverUrl = serverUrl,
+                        username = username,
+                        password = password,
+                        onClick = {
+                            viewModel.resumeAudiobook(firstBwp.toAudiobook())
+                            onNavigateToAudiobookDetail(firstBwp.id)
+                        }
+                    )
+                    // 右侧: 列表显示
+                    Column(
+                        modifier = Modifier.weight(1f).height(240.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        booksWithProgress.drop(1).take(4).forEach { bwp ->
+                            ContinueListeningListRow(
                                 book = bwp.toAudiobook(),
                                 progress = bwp.progress,
                                 serverUrl = serverUrl,
