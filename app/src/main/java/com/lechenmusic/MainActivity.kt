@@ -494,12 +494,23 @@ fun NavGraphBuilder.sharedNavRoutes(
     val onBack: () -> Unit = { navController.popBackStack() }
 
     composable(Screen.Favorites.route) {
-        FavoritesScreen(
-            viewModel = viewModel,
-            onSongClick = { s, p -> viewModel.playSong(s, p) },
-            onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) },
-            onAudiobookClick = { navController.navigate(Screen.AudiobookDetail.createRoute(it)) }
-        )
+        val responsiveCfg = com.lechenmusic.ui.responsive.rememberResponsiveConfig(windowSizeClass)
+        if (responsiveCfg.isMedium || responsiveCfg.isExpanded) {
+            com.lechenmusic.ui.screens.favorites.TabletFavoritesScreen(
+                viewModel = viewModel,
+                responsiveConfig = responsiveCfg,
+                onSongClick = { s, p -> viewModel.playSong(s, p) },
+                onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) },
+                onAudiobookClick = { navController.navigate(Screen.AudiobookDetail.createRoute(it)) }
+            )
+        } else {
+            FavoritesScreen(
+                viewModel = viewModel,
+                onSongClick = { s, p -> viewModel.playSong(s, p) },
+                onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) },
+                onAudiobookClick = { navController.navigate(Screen.AudiobookDetail.createRoute(it)) }
+            )
+        }
     }
 
     composable(Screen.Search.route) {
@@ -603,17 +614,33 @@ fun NavGraphBuilder.sharedNavRoutes(
     }
 
     composable(Screen.Settings.route) {
-        SettingsScreen(
-            viewModel = viewModel,
-            videoViewModel = videoViewModel,
-            onBack = onBack,
-            onLogout = {
-                viewModel.logout()
-                navController.navigate(Screen.Home.route) {
-                    popUpTo(0) { inclusive = true }
+        val responsiveCfg = com.lechenmusic.ui.responsive.rememberResponsiveConfig(windowSizeClass)
+        if (responsiveCfg.isMedium || responsiveCfg.isExpanded) {
+            com.lechenmusic.ui.screens.settings.TabletSettingsScreen(
+                viewModel = viewModel,
+                videoViewModel = videoViewModel,
+                responsiveConfig = responsiveCfg,
+                onBack = onBack,
+                onLogout = {
+                    viewModel.logout()
+                    navController.navigate(Screen.Home.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
                 }
-            }
-        )
+            )
+        } else {
+            SettingsScreen(
+                viewModel = viewModel,
+                videoViewModel = videoViewModel,
+                onBack = onBack,
+                onLogout = {
+                    viewModel.logout()
+                    navController.navigate(Screen.Home.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
+            )
+        }
     }
 
     composable(Screen.Player.route) {
@@ -846,30 +873,59 @@ fun NavGraphBuilder.sharedNavRoutes(
     // ===== 影视模块 =====
 
     composable(Screen.VideoSearch.route) {
-        VideoSearchScreen(
-            viewModel = videoViewModel,
-            onBack = onBack,
-            onVideoClick = { video ->
-                navController.navigate(Screen.VideoDetail.createRoute(video.source, video.id))
-            }
-        )
+        val responsiveCfg = com.lechenmusic.ui.responsive.rememberResponsiveConfig(windowSizeClass)
+        if (responsiveCfg.isMedium || responsiveCfg.isExpanded) {
+            com.lechenmusic.ui.screens.video.TabletVideoSearchScreen(
+                viewModel = videoViewModel,
+                responsiveConfig = responsiveCfg,
+                onBack = onBack,
+                onVideoClick = { video ->
+                    navController.navigate(Screen.VideoDetail.createRoute(video.source, video.id))
+                }
+            )
+        } else {
+            VideoSearchScreen(
+                viewModel = videoViewModel,
+                onBack = onBack,
+                onVideoClick = { video ->
+                    navController.navigate(Screen.VideoDetail.createRoute(video.source, video.id))
+                }
+            )
+        }
     }
 
     composable(Screen.VideoDetail.route) { backStackEntry ->
         val source = backStackEntry.arguments?.getString("source") ?: return@composable
         val videoId = backStackEntry.arguments?.getString("videoId") ?: return@composable
-        VideoDetailScreen(
-            viewModel = videoViewModel,
-            source = source,
-            videoId = videoId,
-            onBack = onBack,
-            onPlay = { playSource, episodeIndex ->
-                navController.navigate(Screen.VideoPlayerDirect.route)
-            },
-            onVideoClick = { video ->
-                navController.navigate(Screen.VideoDetail.createRoute(video.source, video.id))
-            }
-        )
+        val responsiveCfg = com.lechenmusic.ui.responsive.rememberResponsiveConfig(windowSizeClass)
+        if (responsiveCfg.isMedium || responsiveCfg.isExpanded) {
+            com.lechenmusic.ui.screens.video.TabletVideoDetailScreen(
+                viewModel = videoViewModel,
+                source = source,
+                videoId = videoId,
+                responsiveConfig = responsiveCfg,
+                onBack = onBack,
+                onPlay = { playSource, episodeIndex ->
+                    navController.navigate(Screen.VideoPlayerDirect.route)
+                },
+                onVideoClick = { video ->
+                    navController.navigate(Screen.VideoDetail.createRoute(video.source, video.id))
+                }
+            )
+        } else {
+            VideoDetailScreen(
+                viewModel = videoViewModel,
+                source = source,
+                videoId = videoId,
+                onBack = onBack,
+                onPlay = { playSource, episodeIndex ->
+                    navController.navigate(Screen.VideoPlayerDirect.route)
+                },
+                onVideoClick = { video ->
+                    navController.navigate(Screen.VideoDetail.createRoute(video.source, video.id))
+                }
+            )
+        }
     }
 
     composable(Screen.VideoPlayerDirect.route) {
@@ -904,10 +960,19 @@ fun NavGraphBuilder.sharedNavRoutes(
     }
 
     composable(Screen.Live.route) {
-        LiveScreen(
-            viewModel = videoViewModel,
-            onBack = onBack
-        )
+        val responsiveCfg = com.lechenmusic.ui.responsive.rememberResponsiveConfig(windowSizeClass)
+        if (responsiveCfg.isMedium || responsiveCfg.isExpanded) {
+            com.lechenmusic.ui.screens.video.TabletLiveScreen(
+                viewModel = videoViewModel,
+                responsiveConfig = responsiveCfg,
+                onBack = onBack
+            )
+        } else {
+            LiveScreen(
+                viewModel = videoViewModel,
+                onBack = onBack
+            )
+        }
     }
 
     composable(Screen.VideoCategory.route) { backStackEntry ->
