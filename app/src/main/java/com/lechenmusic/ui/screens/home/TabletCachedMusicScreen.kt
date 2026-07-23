@@ -98,11 +98,6 @@ fun TabletCachedMusicScreen(
                     )
                 }
             }
-
-            // 下载/管理
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Icon(Icons.Default.Download, "下载管理", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(22.dp).clickable { })
-            }
         }
 
         Spacer(modifier = Modifier.height(8.dp))

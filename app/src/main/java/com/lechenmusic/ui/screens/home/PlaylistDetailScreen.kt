@@ -230,7 +230,10 @@ fun PlaylistDetailScreen(
                 onUnstar = { viewModel.unstar(song.id) },
                 onAddToPlaylist = { plId -> viewModel.addToPlaylist(plId, song.id, currentPlaylist.owner) },
                 onCreatePlaylist = { name -> viewModel.createPlaylistAndAddSong(name, song.id) },
-                onAddToQueue = { viewModel.playerManager.addToQueue(song) },
+                onAddToQueue = {
+                    viewModel.playerManager.addToQueue(song)
+                    Toast.makeText(context, "已添加到播放队列", Toast.LENGTH_SHORT).show()
+                },
                 onNavigateToArtist = { if (song.artistId.isNotBlank()) onArtistClick(song.artistId) },
                 onNavigateToAlbum = { if (song.albumId.isNotBlank()) onAlbumClick(song.albumId) },
                 trailing = {

@@ -167,7 +167,10 @@ fun AllSongsScreen(
                     onUnstar = { viewModel.unstar(song.id) },
                     onAddToPlaylist = { plId -> viewModel.addToPlaylist(plId, song.id) },
                     onCreatePlaylist = { name -> viewModel.createPlaylistAndAddSong(name, song.id) },
-                    onAddToQueue = { viewModel.playerManager.addToQueue(song) },
+                    onAddToQueue = {
+                        viewModel.playerManager.addToQueue(song)
+                        Toast.makeText(context, "已添加到播放队列", Toast.LENGTH_SHORT).show()
+                    },
                     onNavigateToArtist = { onArtistClick(song.artistId) },
                     onNavigateToAlbum = { onAlbumClick(song.albumId) }
                 )

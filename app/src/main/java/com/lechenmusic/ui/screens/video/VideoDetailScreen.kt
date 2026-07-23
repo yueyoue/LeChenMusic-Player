@@ -149,9 +149,13 @@ fun VideoDetailScreen(
         val src = detail.toSources().firstOrNull()
         val ep = src?.episodes?.getOrNull(0)
         if (ep != null && ep.url.isNotBlank()) {
-            exoPlayer.setMediaItem(MediaItem.fromUri(ep.url))
-            exoPlayer.prepare()
-            exoPlayer.playWhenReady = true
+            try {
+                exoPlayer.setMediaItem(MediaItem.fromUri(ep.url))
+                exoPlayer.prepare()
+                exoPlayer.playWhenReady = true
+            } catch (e: Exception) {
+                ErrorReporter.reportError("error", "视频加载失败", e, "video_detail")
+            }
         }
     }
 

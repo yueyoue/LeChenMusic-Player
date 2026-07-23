@@ -257,16 +257,16 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
 
                 // 用 recent_hot 接口（recommend+tags 返回空）
                 val moviesResp = withContext(Dispatchers.IO) {
-                    doubanApi.getRecentHot("movie", limit = 15)
+                    doubanApi.getRecentHot("movie", limit = 15, category = "\u70ED\u95E8", type = "\u5168\u90E8")
                 }
                 val tvResp = withContext(Dispatchers.IO) {
-                    doubanApi.getRecentHot("tv", limit = 15)
+                    doubanApi.getRecentHot("tv", limit = 15, category = "\u6700\u8FD1\u70ED\u95E8", type = "tv")
                 }
                 val animeResp = withContext(Dispatchers.IO) {
-                    doubanApi.getRecentHot("anime", limit = 15)
+                    doubanApi.getRecentHot("anime", limit = 15, category = "\u65E5\u672C", type = "\u52A8\u6F2B")
                 }
                 val showResp = withContext(Dispatchers.IO) {
-                    doubanApi.getRecentHot("show", limit = 15)
+                    doubanApi.getRecentHot("show", limit = 15, category = "\u7EFC\u827A", type = "show")
                 }
 
                 _homeData.value = HomeRecommendData(
@@ -336,6 +336,11 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
     // ==================== 详情 ====================
 
     fun loadDetail(source: String, id: String) {
+        if (source.isBlank() || id.isBlank()) {
+            _toastMessage.value = "参数错误"
+            _detailLoading.value = false
+            return
+        }
         // 如果已经有该 source+id 的完整数据（含episodes），不重复加载
         val existing = _videoDetail.value
         if (existing != null && existing.source == source && existing.id == id
@@ -458,13 +463,13 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                 logDebug("searchAndPlay", "匹配: title=${matched.title}, source=${matched.source}, eps=${matched.episodes.size}")
 
                 if (matched.episodes.isEmpty()) {
-                    _toastMessage.value = "「$matched.title}」暂无可播放资源"
+                    _toastMessage.value = "「${matched.title}」暂无可播放资源"
                     _searchSourceLoading.value = false
                     _detailLoading.value = false
                     return@launch
                 }
 
-                _searchSourceMessage.value = "已找到播放源：$matched.displaySourceName}，共 $matched.episodes.size} 集"
+                _searchSourceMessage.value = "已找到播放源：${matched.displaySourceName}，共 ${matched.episodes.size} 集"
 
                 // 构造 VideoDetail
                 val detail = VideoDetail(
@@ -487,7 +492,7 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                 logDebug("searchAndPlay", "完成, navigateToDetail=true")
             } catch (e: Exception) {
                 logDebug("searchAndPlay", "异常: ${e.javaClass.simpleName}: ${e.message}")
-                _toastMessage.value = "搜索播放源失败: $e.message}"
+                _toastMessage.value = "搜索播放源失败: ${e.message}"
                 reportVideoError("searchAndPlay", "搜索播放源失败: $title", e)
                 _searchSourceLoading.value = false
                 _detailLoading.value = false
@@ -683,8 +688,8 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 val doubanApi = DoubanApiClient.getApi()
                 val doubanKind = when (kind) {
-                    "anime" -> "tv"
-                    "variety" -> "tv"
+                    "anime" -> "anime"
+                    "variety" -> "show"
                     else -> kind
                 }
 
@@ -829,8 +834,8 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                 val hasFilters = filters.category != "\u70ED\u95E8" || filters.region != "\u5168\u90E8" ||
                         filters.year != "\u5168\u90E8" || filters.sort != "T"
                 val doubanKind = when (categoryCurrentKind) {
-                    "anime" -> "movie"
-                    "variety" -> "tv"
+                    "anime" -> "anime"
+                    "variety" -> "show"
                     else -> categoryCurrentKind
                 }
 

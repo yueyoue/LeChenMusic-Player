@@ -106,22 +106,7 @@ fun TabletArtistDetailScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
 
-            // 关注按钮
-            Surface(
-                shape = RoundedCornerShape(24.dp),
-                color = MaterialTheme.colorScheme.primaryContainer,
-                modifier = Modifier.clickable { }
-            ) {
-                Text(
-                    "+ 关注",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.padding(horizontal = 40.dp, vertical = 12.dp)
-                )
-            }
         }
 
         // ===== 右侧：歌曲/专辑列表 (2/3) =====
@@ -194,11 +179,7 @@ fun TabletArtistDetailScreen(
                     }
                 }
 
-                // 排序/下载
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Icon(Icons.Default.SwapVert, "排序", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(22.dp).clickable { })
-                    Icon(Icons.Default.Download, "下载", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(22.dp).clickable { })
-                }
+
             }
 
             Spacer(modifier = Modifier.height(8.dp))

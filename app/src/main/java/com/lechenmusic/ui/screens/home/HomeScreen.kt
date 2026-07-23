@@ -491,7 +491,7 @@ fun HomeScreen(
                         SecHd("⏱️ 继续收听", "全部 ›") {}
                     }
                     if (booksWithProgress.isNotEmpty()) {
-                        items(booksWithProgress.take(3)) { bwp ->
+                        items(booksWithProgress.take(20)) { bwp ->
                             ContCard(
                                 bwp.toAudiobook(),
                                 serverUrl,
@@ -2470,6 +2470,7 @@ private fun TabletVideoHomeContent(
     val hotMovies = videoHomeData?.hotMovies ?: emptyList()
     val hotTv = videoHomeData?.hotTvShows ?: emptyList()
     val hotVariety = videoHomeData?.hotVariety ?: emptyList()
+    val hotAnime = videoHomeData?.hotAnime ?: emptyList()
 
     // 主内容 + 右侧最近播放面板
     Row(modifier = Modifier.fillMaxSize()) {
@@ -2571,6 +2572,25 @@ private fun TabletVideoHomeContent(
                                 }
                             }
                         }
+                    }
+                }
+            }
+
+            // 热门动漫 (4列网格 2:3卡片)
+            if (hotAnime.isNotEmpty()) {
+                item {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Text("热门动漫", fontSize = config.sectionTitleSize, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        Text("查看全部 ›", fontSize = config.bodyFontSize, color = MaterialTheme.colorScheme.secondary, modifier = Modifier.clickable { onNavigateToVideoCategory("anime") })
+                    }
+                }
+                val animeRows = hotAnime.take(8).chunked(4)
+                items(animeRows) { row ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(gap), modifier = Modifier.fillMaxWidth()) {
+                        row.forEach { video ->
+                            TabletVideoMovieCard(video = video, config = config, modifier = Modifier.weight(1f)) { navigateVideo(video) }
+                        }
+                        repeat(4 - row.size) { Spacer(modifier = Modifier.weight(1f)) }
                     }
                 }
             }

@@ -16,9 +16,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.widget.Toast
 import com.lechenmusic.data.model.Song
 import com.lechenmusic.ui.MainViewModel
 import com.lechenmusic.ui.components.CoverImage
@@ -38,6 +40,7 @@ fun AlbumDetailScreen(
     val username by viewModel.username.collectAsState()
     val password by viewModel.password.collectAsState()
     val playlists by viewModel.playlists.collectAsState()
+    val context = LocalContext.current
 
     LaunchedEffect(albumId) {
         viewModel.loadAlbumDetail(albumId)
@@ -127,7 +130,10 @@ fun AlbumDetailScreen(
                 onUnstar = { viewModel.unstar(song.id) },
                 onAddToPlaylist = { plId -> viewModel.addToPlaylist(plId, song.id) },
                 onCreatePlaylist = { name -> viewModel.createPlaylistAndAddSong(name, song.id) },
-                onAddToQueue = { viewModel.playerManager.addToQueue(song) },
+                onAddToQueue = {
+                    viewModel.playerManager.addToQueue(song)
+                    Toast.makeText(context, "已添加到播放队列", Toast.LENGTH_SHORT).show()
+                },
                 onNavigateToArtist = { if (song.artistId.isNotBlank()) onArtistClick(song.artistId) },
                 onNavigateToAlbum = { if (song.albumId.isNotBlank()) onAlbumClick(song.albumId) },
                 trailing = {
