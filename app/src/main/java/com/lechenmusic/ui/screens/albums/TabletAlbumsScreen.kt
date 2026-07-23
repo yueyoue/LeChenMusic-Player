@@ -39,6 +39,7 @@ fun TabletAlbumsScreen(
     var allAlbumsUnsorted by remember { mutableStateOf<List<Album>>(emptyList()) }
     var sortType by remember { mutableStateOf("newest") }
     var isLoading by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
 
     LaunchedEffect(sortType) {
         when (sortType) {
@@ -99,7 +100,6 @@ fun TabletAlbumsScreen(
             Spacer(modifier = Modifier.weight(1f))
 
             // 搜索框 (功能型)
-            var searchQuery by remember { mutableStateOf("") }
             Surface(
                 shape = RoundedCornerShape(24.dp),
                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -159,11 +159,16 @@ fun TabletAlbumsScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         // ===== 专辑网格 =====
+        val filteredAlbums = if (searchQuery.isBlank()) albums
+            else albums.filter {
+                it.name.contains(searchQuery, ignoreCase = true) ||
+                it.artist.contains(searchQuery, ignoreCase = true)
+            }
         if (isLoading) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             }
-        } else if (albums.isEmpty()) {
+        } else if (filteredAlbums.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text("暂无专辑", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
@@ -179,7 +184,7 @@ fun TabletAlbumsScreen(
                 horizontalArrangement = Arrangement.spacedBy(responsiveConfig.itemSpacing),
                 verticalArrangement = Arrangement.spacedBy(responsiveConfig.itemSpacing)
             ) {
-                items(albums, key = { it.id }) { album ->
+                items(filteredAlbums, key = { it.id }) { album ->
                     AlbumGridCard(
                         album = album,
                         serverUrl = serverUrl,

@@ -201,7 +201,7 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
             )
             val responsiveConfig = rememberResponsiveConfig(windowSizeClass)
             val useSideNav = responsiveConfig.useRailNav
-            val showMiniPlayer = currentSong != null && currentRoute != Screen.Player.route && currentRoute != Screen.AudiobookPlayer.route
+            val showMiniPlayer = currentSong != null && currentRoute != Screen.Player.route && currentRoute != Screen.AudiobookPlayer.route && currentRoute != Screen.VideoPlayerDirect.route && currentRoute != Screen.VideoPlayer.route
 
             // MiniPlayer 组件（复用）
             @Composable
@@ -254,27 +254,6 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        // 首页
-                        val homeSelected = currentRoute == Screen.Home.route
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier
-                                .clickable { onNavClick(Screen.Home.route) }
-                                .padding(vertical = 4.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.Home, "首页",
-                                tint = if (homeSelected) MaterialTheme.colorScheme.primary
-                                    else MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(22.dp)
-                            )
-                            Spacer(modifier = Modifier.height(1.dp))
-                            Text("首页", fontSize = 10.sp,
-                                color = if (homeSelected) MaterialTheme.colorScheme.primary
-                                    else MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontWeight = if (homeSelected) FontWeight.SemiBold else FontWeight.Normal)
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
                         // 音乐/有声书/影视模式按钮
                         data class ModeItem(val icon: ImageVector, val label: String, val mode: String)
                         val modeItems = listOf(
@@ -662,12 +641,27 @@ fun NavGraphBuilder.sharedNavRoutes(
         val pwd by viewModel.password.collectAsState()
         val responsiveCfg = com.lechenmusic.ui.responsive.rememberResponsiveConfig(windowSizeClass)
         if (responsiveCfg.isMedium || responsiveCfg.isExpanded) {
-            // 平板全屏播放器：隐藏左侧导航，保持屏幕常亮
+            // 平板全屏播放器：隐藏系统栏 + 保持屏幕常亮
             val context = LocalContext.current
             DisposableEffect(Unit) {
-                val window = (context as? android.app.Activity)?.window
+                val activity = context as? android.app.Activity
+                val window = activity?.window
                 window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-                onDispose { window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
+                // 隐藏状态栏和导航栏 (沉浸式)
+                @Suppress("DEPRECATION")
+                window?.decorView?.systemUiVisibility = (
+                    android.view.View.SYSTEM_UI_FLAG_FULLSCREEN or
+                    android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+                    android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or
+                    android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
+                    android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
+                    android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                )
+                onDispose {
+                    window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                    @Suppress("DEPRECATION")
+                    window?.decorView?.systemUiVisibility = android.view.View.SYSTEM_UI_FLAG_VISIBLE
+                }
             }
             var showAddToPlaylistDialog by remember { mutableStateOf(false) }
             var showQueueDialog by remember { mutableStateOf(false) }
@@ -769,7 +763,9 @@ fun NavGraphBuilder.sharedNavRoutes(
             viewModel = viewModel,
             albumId = albumId,
             onBack = onBack,
-            onSongClick = { s, p -> viewModel.playSong(s, p) }
+            onSongClick = { s, p -> viewModel.playSong(s, p) },
+            onArtistClick = { navController.navigate(Screen.ArtistDetail.createRoute(it)) },
+            onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) }
         )
     }
 
@@ -802,7 +798,9 @@ fun NavGraphBuilder.sharedNavRoutes(
             viewModel = viewModel,
             playlistId = playlistId,
             onBack = onBack,
-            onSongClick = { s, p -> viewModel.playSong(s, p) }
+            onSongClick = { s, p -> viewModel.playSong(s, p) },
+            onArtistClick = { navController.navigate(Screen.ArtistDetail.createRoute(it)) },
+            onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) }
         )
     }
 
@@ -863,12 +861,26 @@ fun NavGraphBuilder.sharedNavRoutes(
 
     composable(Screen.AudiobookPlayer.route) {
         val responsiveCfg = com.lechenmusic.ui.responsive.rememberResponsiveConfig(windowSizeClass)
-        // 平板全屏播放器：保持屏幕常亮
+        // 平板全屏播放器：隐藏系统栏 + 保持屏幕常亮
         val abContext = LocalContext.current
         DisposableEffect(Unit) {
-            val window = (abContext as? android.app.Activity)?.window
+            val activity = abContext as? android.app.Activity
+            val window = activity?.window
             window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-            onDispose { window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
+            @Suppress("DEPRECATION")
+            window?.decorView?.systemUiVisibility = (
+                android.view.View.SYSTEM_UI_FLAG_FULLSCREEN or
+                android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+                android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or
+                android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
+                android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
+                android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+            )
+            onDispose {
+                window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                @Suppress("DEPRECATION")
+                window?.decorView?.systemUiVisibility = android.view.View.SYSTEM_UI_FLAG_VISIBLE
+            }
         }
         val srvUrl by viewModel.serverUrl.collectAsState()
         val usr by viewModel.username.collectAsState()
@@ -970,11 +982,13 @@ fun NavGraphBuilder.sharedNavRoutes(
 
     composable(Screen.NarratorDetail.route) { backStackEntry ->
         val narratorName = backStackEntry.arguments?.getString("narratorName") ?: return@composable
+        val responsiveCfg = com.lechenmusic.ui.responsive.rememberResponsiveConfig(windowSizeClass)
         AudiobookNarratorDetailScreen(
             viewModel = viewModel,
             narratorName = narratorName,
             onBack = onBack,
-            onBookClick = { navController.navigate(Screen.AudiobookDetail.createRoute(it)) }
+            onBookClick = { navController.navigate(Screen.AudiobookDetail.createRoute(it)) },
+            responsiveConfig = responsiveCfg
         )
     }
 

@@ -615,8 +615,10 @@ class MusicPlayerManager(private val context: Context) {
         } catch (_: Exception) { }
     }
 
-    // Add song to end of current queue
+    // Add song to end of current queue (with deduplication)
     fun addToQueue(song: Song) {
+        // Check if song already exists in queue
+        if (_playlist.value.any { it.id == song.id }) return
         player?.apply {
             val url = repository!!.getStreamUrl(song.id)
             val mediaItem = MediaItem.Builder()

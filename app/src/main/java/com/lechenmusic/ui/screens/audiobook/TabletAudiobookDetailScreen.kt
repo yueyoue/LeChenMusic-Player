@@ -82,40 +82,8 @@ fun TabletAudiobookDetailScreen(
             IconButton(onClick = onBack) {
                 Icon(Icons.Default.ArrowBack, "返回")
             }
-            Spacer(modifier = Modifier.weight(1f))
-            // 收藏按钮移到上方
-            IconButton(onClick = {
-                if (isStarred) viewModel.unstarAudiobook(book.id)
-                else viewModel.starAudiobook(book.id)
-            }) {
-                Icon(
-                    if (isStarred) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                    "收藏",
-                    tint = if (isStarred) Color(0xFFE94560) else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(28.dp)
-                )
-            }
-            // 章节数标签
-            Surface(shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.primaryContainer) {
-                Text(
-                    "${book.chapterCount}章",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                )
-            }
-            if (book.genre.isNotBlank()) {
-                Spacer(modifier = Modifier.width(8.dp))
-                Surface(shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh) {
-                    Text(
-                        book.genre,
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                    )
-                }
-            }
             Spacer(modifier = Modifier.width(8.dp))
+            Text("书籍详情", fontSize = 18.sp, fontWeight = FontWeight.Bold)
         }
 
         Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
@@ -183,61 +151,98 @@ fun TabletAudiobookDetailScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // 章节数 + 分类 (已移至顶部)
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // 播放按钮 (Issue 12: 修复被挤成一条的问题)
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+            // Issue 14: 收藏、章节数、分类 移到演播者下面
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Button(
-                    onClick = { if (chapters.isNotEmpty()) onPlayChapter(book, chapters[0], chapters) },
-                    modifier = Modifier.fillMaxWidth().height(48.dp),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Icon(Icons.Default.PlayArrow, null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("从头播放", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                // 收藏
+                IconButton(onClick = {
+                    if (isStarred) viewModel.unstarAudiobook(book.id)
+                    else viewModel.starAudiobook(book.id)
+                }, modifier = Modifier.size(36.dp)) {
+                    Icon(
+                        if (isStarred) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        "收藏",
+                        tint = if (isStarred) Color(0xFFE94560) else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(22.dp)
+                    )
                 }
-                OutlinedButton(
-                    onClick = { viewModel.resumeAudiobook(book) },
-                    modifier = Modifier.fillMaxWidth().height(48.dp),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Icon(Icons.Default.PlayArrow, null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("继续播放", fontSize = 15.sp)
+                // 章节数
+                Surface(shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.primaryContainer) {
+                    Text(
+                        "${book.chapterCount}章",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                    )
+                }
+                // 分类
+                if (book.genre.isNotBlank()) {
+                    Surface(shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+                        Text(
+                            book.genre,
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                        )
+                    }
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 内容简介
+            // Issue 14: 播放按钮缩小，两个按钮在一排
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(
+                    onClick = { if (chapters.isNotEmpty()) onPlayChapter(book, chapters[0], chapters) },
+                    modifier = Modifier.weight(1f).height(40.dp),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("从头播放", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                }
+                OutlinedButton(
+                    onClick = { viewModel.resumeAudiobook(book) },
+                    modifier = Modifier.weight(1f).height(40.dp),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("继续播放", fontSize = 13.sp)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Issue 14: 内容简介
             if (book.description.isNotBlank()) {
                 var expanded by remember { mutableStateOf(false) }
                 Surface(
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(12.dp),
                     color = MaterialTheme.colorScheme.surfaceContainerLow,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text("内容简介", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                        Spacer(modifier = Modifier.height(8.dp))
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text("内容简介", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        Spacer(modifier = Modifier.height(6.dp))
                         Text(
                             book.description,
-                            fontSize = 13.sp,
+                            fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = if (expanded) Int.MAX_VALUE else 4,
+                            maxLines = if (expanded) Int.MAX_VALUE else 3,
                             overflow = TextOverflow.Ellipsis
                         )
-                        if (book.description.length > 120) {
+                        if (book.description.length > 80) {
                             Text(
                                 if (expanded) "收起" else "展开全部",
-                                fontSize = 12.sp,
+                                fontSize = 11.sp,
                                 color = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier
                                     .padding(top = 4.dp)

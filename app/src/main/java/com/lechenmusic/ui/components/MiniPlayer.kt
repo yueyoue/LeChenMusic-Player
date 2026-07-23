@@ -42,7 +42,7 @@ fun MiniPlayer(
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 6.dp)
+            .padding(horizontal = 24.dp, vertical = 6.dp)
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(20.dp),
         color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.95f),
@@ -106,14 +106,14 @@ fun MiniPlayer(
                 IconButton(onClick = { playerManager.toggleShuffle() }, modifier = Modifier.size(36.dp)) {
                     Icon(
                         Icons.Default.Shuffle, "随机",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        tint = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.size(18.dp)
                     )
                 }
             }
 
             IconButton(onClick = { playerManager.skipPrevious() }, modifier = Modifier.size(36.dp)) {
-                Icon(Icons.Default.SkipPrevious, contentDescription = "上一曲", modifier = Modifier.size(22.dp))
+                Icon(Icons.Default.SkipPrevious, contentDescription = "上一曲", tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(22.dp))
             }
 
             // 播放/暂停 - 主按钮
@@ -134,7 +134,7 @@ fun MiniPlayer(
             }
 
             IconButton(onClick = { playerManager.skipNext() }, modifier = Modifier.size(36.dp)) {
-                Icon(Icons.Default.SkipNext, contentDescription = "下一曲", modifier = Modifier.size(22.dp))
+                Icon(Icons.Default.SkipNext, contentDescription = "下一曲", tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(22.dp))
             }
 
             if (!isAudiobook) {
@@ -142,7 +142,7 @@ fun MiniPlayer(
                 IconButton(onClick = { playerManager.toggleRepeat() }, modifier = Modifier.size(36.dp)) {
                     Icon(
                         Icons.Default.Repeat, "循环",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        tint = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.size(18.dp)
                     )
                 }

@@ -42,34 +42,19 @@ fun TabletAllPlaylistsScreen(
                 .padding(horizontal = responsiveConfig.contentPadding, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("首页", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(" / ", color = MaterialTheme.colorScheme.outlineVariant)
-                Text("歌单", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+            IconButton(onClick = onBack) {
+                Icon(Icons.Default.ArrowBack, "返回")
             }
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("歌单", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
 
             Spacer(modifier = Modifier.weight(1f))
 
-            Surface(
-                shape = RoundedCornerShape(24.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                modifier = Modifier.width(260.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Default.Search, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("搜索歌单...", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-
-            Spacer(modifier = Modifier.width(16.dp))
-
-            Icon(Icons.Default.Sort, "排序", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(24.dp).clickable { })
-            Spacer(modifier = Modifier.width(12.dp))
-            Icon(Icons.Default.FilterList, "筛选", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(24.dp).clickable { })
+            Text(
+                "${playlists.size} 个歌单",
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
 
         Spacer(modifier = Modifier.height(16.dp))

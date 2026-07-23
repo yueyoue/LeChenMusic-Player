@@ -247,7 +247,7 @@ fun TabletArtistDetailScreen(
                         }
                     } else {
                         val albumList = currentArtist.album!!
-                        val albumColumns = responsiveConfig.gridColumns.coerceIn(3, 5)
+                        val albumColumns = 3 // 固定3列让封面更大
                         LazyVerticalGrid(
                             columns = GridCells.Fixed(albumColumns),
                             modifier = Modifier.fillMaxSize(),

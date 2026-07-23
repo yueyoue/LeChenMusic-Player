@@ -161,6 +161,7 @@ fun HomeScreen(
                             serverUrl = serverUrl,
                             username = username,
                             password = password,
+                            slides = audiobookSlides,
                             onNavigateToAudiobook = onNavigateToAudiobook,
                             onNavigateToAudiobookDetail = onNavigateToAudiobookDetail,
                             onNavigateToNarrator = onNavigateToNarrator,
@@ -455,6 +456,7 @@ fun HomeScreen(
                             serverUrl = serverUrl,
                             username = username,
                             password = password,
+                            slides = audiobookSlides,
                             onNavigateToAudiobook = onNavigateToAudiobook,
                             onNavigateToAudiobookDetail = onNavigateToAudiobookDetail,
                             onNavigateToNarrator = onNavigateToNarrator,
@@ -2514,11 +2516,24 @@ private fun TabletVideoHomeContent(
                         Text(heroVideo.title, fontSize = (config.sectionTitleSize.value + 8).sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(buildString { append(heroVideo.year); if (heroVideo.type.isNotBlank()) append(" · ${com.lechenmusic.ui.screens.video.categoryName(heroVideo.type)}") }, fontSize = config.bodyFontSize, color = Color.White.copy(alpha = 0.7f))
+                        // Issue 16: 添加描述文字
+                        if (heroVideo.desc.isNotBlank()) {
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                heroVideo.desc,
+                                fontSize = config.captionFontSize,
+                                color = Color.White.copy(alpha = 0.6f),
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                         Spacer(modifier = Modifier.height(16.dp))
-                        Button(onClick = { navigateVideo(heroVideo) }, shape = RoundedCornerShape(50), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary)) {
-                            Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("立即播放", fontWeight = FontWeight.SemiBold)
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Button(onClick = { navigateVideo(heroVideo) }, shape = RoundedCornerShape(50), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary)) {
+                                Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("立即播放", fontWeight = FontWeight.SemiBold)
+                            }
                         }
                     }
                 }

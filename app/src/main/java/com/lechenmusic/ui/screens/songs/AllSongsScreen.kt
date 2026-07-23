@@ -168,8 +168,8 @@ fun AllSongsScreen(
                     onAddToPlaylist = { plId -> viewModel.addToPlaylist(plId, song.id) },
                     onCreatePlaylist = { name -> viewModel.createPlaylistAndAddSong(name, song.id) },
                     onAddToQueue = { viewModel.playerManager.addToQueue(song) },
-                    onNavigateToArtist = { if (song.artistId.isNotBlank()) onArtistClick(song.artistId) },
-                    onNavigateToAlbum = { if (song.albumId.isNotBlank()) onAlbumClick(song.albumId) }
+                    onNavigateToArtist = { onArtistClick(song.artistId) },
+                    onNavigateToAlbum = { onAlbumClick(song.albumId) }
                 )
             }
         } else if (isLoading) {

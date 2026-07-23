@@ -127,6 +127,9 @@ fun AlbumDetailScreen(
                 onUnstar = { viewModel.unstar(song.id) },
                 onAddToPlaylist = { plId -> viewModel.addToPlaylist(plId, song.id) },
                 onCreatePlaylist = { name -> viewModel.createPlaylistAndAddSong(name, song.id) },
+                onAddToQueue = { viewModel.playerManager.addToQueue(song) },
+                onNavigateToArtist = { if (song.artistId.isNotBlank()) onArtistClick(song.artistId) },
+                onNavigateToAlbum = { if (song.albumId.isNotBlank()) onAlbumClick(song.albumId) },
                 trailing = {
                     Text("${index + 1}", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }

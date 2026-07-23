@@ -40,18 +40,18 @@ fun TabletCachedMusicScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // ===== 顶部面包屑 + 歌曲数 =====
+        // ===== 顶部: 返回按钮 + 标题 =====
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = responsiveConfig.contentPadding, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("首页", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(" / ", color = MaterialTheme.colorScheme.outlineVariant)
-                Text("缓存音乐", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+            IconButton(onClick = onBack) {
+                Icon(Icons.Default.ArrowBack, "返回")
             }
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("缓存音乐", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
 
             Spacer(modifier = Modifier.weight(1f))
 
@@ -61,13 +61,6 @@ fun TabletCachedMusicScreen(
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-
-            Spacer(modifier = Modifier.width(16.dp))
-
-            // 操作按钮
-            Icon(Icons.Default.SwapVert, "排序", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(24.dp).clickable { })
-            Spacer(modifier = Modifier.width(12.dp))
-            Icon(Icons.Default.FilterList, "筛选", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(24.dp).clickable { })
         }
 
         Spacer(modifier = Modifier.height(8.dp))
