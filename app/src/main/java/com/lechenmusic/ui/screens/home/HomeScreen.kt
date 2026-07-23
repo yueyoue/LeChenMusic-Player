@@ -2558,7 +2558,7 @@ private fun TabletVideoHomeContent(
                             LazyRow(horizontalArrangement = Arrangement.spacedBy(gap)) {
                                 items(videoPlayRecords.take(10)) { record ->
                                     TabletVideoContinueCard(record = record, config = config) {
-                                        onNavigateToVideoDetail(record.source, record.videoIdRaw)
+                                        if (record.source.isNotBlank()) onNavigateToVideoDetail(record.source, record.videoIdRaw)
                                     }
                                 }
                             }
@@ -2578,7 +2578,11 @@ private fun TabletVideoHomeContent(
                                     .fillMaxWidth()
                                     .height(config.heroHeight)
                                     .clip(RoundedCornerShape(20.dp))
-                                    .clickable { onNavigateToVideoDetail(hotAll.first().source, hotAll.first().id) }
+                                    .clickable {
+                                        val v = hotAll.first()
+                                        if (v.source.isNotBlank()) onNavigateToVideoDetail(v.source, v.id)
+                                        else videoViewModel.searchAndPlay(v.title, v.id, v.year)
+                                    }
                             ) {
                                 val firstVideo = hotAll.first()
                                 if (firstVideo.displayCover.isNotBlank()) {
@@ -2633,7 +2637,10 @@ private fun TabletVideoHomeContent(
                                     Text(info, fontSize = config.bodyFontSize, color = Color.White.copy(alpha = 0.8f))
                                     Spacer(modifier = Modifier.height(14.dp))
                                     Button(
-                                        onClick = { onNavigateToVideoDetail(firstVideo.source, firstVideo.id) },
+                                        onClick = {
+                                            if (firstVideo.source.isNotBlank()) onNavigateToVideoDetail(firstVideo.source, firstVideo.id)
+                                            else videoViewModel.searchAndPlay(firstVideo.title, firstVideo.id, firstVideo.year)
+                                        },
                                         shape = RoundedCornerShape(50),
                                         colors = ButtonDefaults.buttonColors(
                                             containerColor = MaterialTheme.colorScheme.primary,
@@ -2657,7 +2664,8 @@ private fun TabletVideoHomeContent(
                             LazyRow(horizontalArrangement = Arrangement.spacedBy(gap)) {
                                 items(hotMovies) { video ->
                                     TabletVideoCard(video = video, config = config) {
-                                        onNavigateToVideoDetail(video.source, video.id)
+                                        if (video.source.isNotBlank()) onNavigateToVideoDetail(video.source, video.id)
+                                        else videoViewModel.searchAndPlay(video.title, video.id, video.year)
                                     }
                                 }
                             }
@@ -2672,7 +2680,8 @@ private fun TabletVideoHomeContent(
                             LazyRow(horizontalArrangement = Arrangement.spacedBy(gap)) {
                                 items(hotTv) { video ->
                                     TabletVideoCard(video = video, config = config) {
-                                        onNavigateToVideoDetail(video.source, video.id)
+                                        if (video.source.isNotBlank()) onNavigateToVideoDetail(video.source, video.id)
+                                        else videoViewModel.searchAndPlay(video.title, video.id, video.year)
                                     }
                                 }
                             }
@@ -2687,7 +2696,8 @@ private fun TabletVideoHomeContent(
                             LazyRow(horizontalArrangement = Arrangement.spacedBy(gap)) {
                                 items(hotVariety) { video ->
                                     TabletVideoCard(video = video, config = config) {
-                                        onNavigateToVideoDetail(video.source, video.id)
+                                        if (video.source.isNotBlank()) onNavigateToVideoDetail(video.source, video.id)
+                                        else videoViewModel.searchAndPlay(video.title, video.id, video.year)
                                     }
                                 }
                             }
@@ -2702,7 +2712,8 @@ private fun TabletVideoHomeContent(
                             LazyRow(horizontalArrangement = Arrangement.spacedBy(gap)) {
                                 items(hotAnime) { video ->
                                     TabletVideoCard(video = video, config = config) {
-                                        onNavigateToVideoDetail(video.source, video.id)
+                                        if (video.source.isNotBlank()) onNavigateToVideoDetail(video.source, video.id)
+                                        else videoViewModel.searchAndPlay(video.title, video.id, video.year)
                                     }
                                 }
                             }
@@ -2755,7 +2766,10 @@ private fun TabletVideoHomeContent(
                         verticalArrangement = Arrangement.spacedBy(gap)
                     ) {
                         gridItems(categoryResults) { video ->
-                            com.lechenmusic.ui.screens.video.VideoCard(video = video, onClick = { onNavigateToVideoDetail(video.source, video.id) })
+                            com.lechenmusic.ui.screens.video.VideoCard(video = video, onClick = {
+                                if (video.source.isNotBlank()) onNavigateToVideoDetail(video.source, video.id)
+                                else videoViewModel.searchAndPlay(video.title, video.id, video.year)
+                            })
                         }
                         if (hasMore) {
                             item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(gridColumns) }) {

@@ -202,6 +202,162 @@ fun TabletAudiobookHomeContent(
             Spacer(modifier = Modifier.height(24.dp))
         }
 
+        // ===== 有声小说 =====
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("📖 有声小说", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    "更多 ›",
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.clickable { onNavigateToAudiobook("有声读物") }
+                )
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+        item {
+            val novelBooks = audiobooks.filter { it.genre == "有声读物" || it.genre.isEmpty() }
+            if (novelBooks.isNotEmpty()) {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    items(novelBooks.take(8)) { book ->
+                        AudiobookCompactCard(
+                            book = book,
+                            serverUrl = serverUrl,
+                            username = username,
+                            password = password,
+                            onClick = { onNavigateToAudiobookDetail(book.id) }
+                        )
+                    }
+                }
+            } else {
+                Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                    Text("暂无有声小说", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+
+        // ===== 相声 =====
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("🎤 相声", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    "更多 ›",
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.clickable { onNavigateToAudiobook("相声") }
+                )
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+        item {
+            val xiangshengBooks = audiobooks.filter { it.genre == "相声" }
+            if (xiangshengBooks.isNotEmpty()) {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    items(xiangshengBooks.take(8)) { book ->
+                        AudiobookCompactCard(
+                            book = book,
+                            serverUrl = serverUrl,
+                            username = username,
+                            password = password,
+                            onClick = { onNavigateToAudiobookDetail(book.id) }
+                        )
+                    }
+                }
+            } else {
+                Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                    Text("暂无相声", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+
+        // ===== 评书 =====
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("🎭 评书", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    "更多 ›",
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.clickable { onNavigateToAudiobook("评书") }
+                )
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+        item {
+            val pingshuBooks = audiobooks.filter { it.genre == "评书" }
+            if (pingshuBooks.isNotEmpty()) {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    items(pingshuBooks.take(8)) { book ->
+                        AudiobookCompactCard(
+                            book = book,
+                            serverUrl = serverUrl,
+                            username = username,
+                            password = password,
+                            onClick = { onNavigateToAudiobookDetail(book.id) }
+                        )
+                    }
+                }
+            } else {
+                Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                    Text("暂无评书", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+
+        // ===== 儿童读物 =====
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("👶 儿童读物", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    "更多 ›",
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.clickable { onNavigateToAudiobook("儿童") }
+                )
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+        item {
+            val childBooks = audiobooks.filter { it.genre == "儿童" }
+            if (childBooks.isNotEmpty()) {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    items(childBooks.take(8)) { book ->
+                        AudiobookCompactCard(
+                            book = book,
+                            serverUrl = serverUrl,
+                            username = username,
+                            password = password,
+                            onClick = { onNavigateToAudiobookDetail(book.id) }
+                        )
+                    }
+                }
+            } else {
+                Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                    Text("暂无儿童读物", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+
         // ===== 热门榜单 =====
         item {
             Text("🏆 热门榜单", fontSize = 20.sp, fontWeight = FontWeight.Bold)

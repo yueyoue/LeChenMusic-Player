@@ -71,7 +71,16 @@ fun TabletAudiobookDetailScreen(
         return
     }
 
-    Row(modifier = Modifier.fillMaxSize()) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        // ===== 顶部返回按钮 =====
+        IconButton(
+            onClick = onBack,
+            modifier = Modifier.padding(start = 8.dp, top = 8.dp)
+        ) {
+            Icon(Icons.Default.ArrowBack, "返回")
+        }
+
+        Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
         // ===== 左侧：有声书信息 (1/3) =====
         Column(
             modifier = Modifier
@@ -280,6 +289,7 @@ fun TabletAudiobookDetailScreen(
                     }
                 }
             }
+        }
         }
     }
 }
