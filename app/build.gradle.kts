@@ -98,6 +98,7 @@ dependencies {
 
     // Coil - Image loading
     implementation("io.coil-kt:coil-compose:2.5.0")
+    implementation("androidx.palette:palette-ktx:1.0.0")
 
     // Media3 ExoPlayer
     implementation("androidx.media3:media3-exoplayer:1.2.1")
