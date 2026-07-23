@@ -528,10 +528,19 @@ fun NavGraphBuilder.sharedNavRoutes(
     }
 
     composable(Screen.Albums.route) {
-        AlbumsScreen(
-            viewModel = viewModel,
-            onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) }
-        )
+        val responsiveCfg = com.lechenmusic.ui.responsive.rememberResponsiveConfig(windowSizeClass)
+        if (responsiveCfg.isMedium || responsiveCfg.isExpanded) {
+            com.lechenmusic.ui.screens.albums.TabletAlbumsScreen(
+                viewModel = viewModel,
+                responsiveConfig = responsiveCfg,
+                onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) }
+            )
+        } else {
+            AlbumsScreen(
+                viewModel = viewModel,
+                onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) }
+            )
+        }
     }
 
     composable(Screen.AllSongs.route) {
