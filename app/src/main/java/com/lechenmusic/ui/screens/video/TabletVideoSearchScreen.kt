@@ -70,13 +70,13 @@ fun TabletVideoSearchScreen(
                         ),
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                        keyboardActions = KeyboardActions(onSearch = { if (query.isNotBlank()) viewModel.searchVideo(query) })
+                        keyboardActions = KeyboardActions(onSearch = { if (query.isNotBlank()) viewModel.search(query) })
                     )
                 }
             }
             Spacer(modifier = Modifier.width(12.dp))
             Button(
-                onClick = { if (query.isNotBlank()) viewModel.searchVideo(query) },
+                onClick = { if (query.isNotBlank()) viewModel.search(query) },
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Text("搜索")
