@@ -16,7 +16,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -35,13 +34,12 @@ import kotlinx.coroutines.withContext
 // ==================== Color Extraction ====================
 
 /**
- * 从封面图提取主色调，生成渐变背景色
+ * 从封面图提取高饱和度颜色作为背景色
  */
 @Composable
-fun rememberCoverColors(coverUrl: String?): Pair<Color, Color> {
+fun rememberCoverColor(coverUrl: String?): Color {
     val context = LocalContext.current
-    var dominantColor by remember { mutableStateOf(Color(0xFF1a1a2e)) }
-    var vibrantColor by remember { mutableStateOf(Color(0xFF6C5CE7)) }
+    var bgColor by remember { mutableStateOf(Color(0xFF1a1a2e)) }
 
     LaunchedEffect(coverUrl) {
         if (coverUrl == null) return@LaunchedEffect
@@ -53,19 +51,19 @@ fun rememberCoverColors(coverUrl: String?): Pair<Color, Color> {
                 val palette = withContext(Dispatchers.Default) {
                     Palette.from(bitmap).generate()
                 }
-                palette.dominantSwatch?.rgb?.let {
-                    dominantColor = Color(it).copy(alpha = 0.3f)
-                }
-                palette.vibrantSwatch?.rgb?.let {
-                    vibrantColor = Color(it).copy(alpha = 0.15f)
-                } ?: palette.mutedSwatch?.rgb?.let {
-                    vibrantColor = Color(it).copy(alpha = 0.15f)
+                // 优先取高饱和度颜色，其次暗色，最后主色调
+                val color = palette.vibrantSwatch?.rgb
+                    ?: palette.darkVibrantSwatch?.rgb
+                    ?: palette.mutedSwatch?.rgb
+                    ?: palette.dominantSwatch?.rgb
+                if (color != null) {
+                    bgColor = Color(color).copy(alpha = 0.85f)
                 }
             }
         } catch (_: Exception) {}
     }
 
-    return dominantColor to vibrantColor
+    return bgColor
 }
 
 // ==================== Cover Image Display ====================
@@ -129,8 +127,8 @@ fun TabletPlayerScreen(
 
     val coverUrl = com.lechenmusic.data.api.ApiClient.getCoverArtUrl(serverUrl, username, password, song.coverArt ?: song.albumId)
 
-    // 从封面提取颜色
-    val (dominantColor, vibrantColor) = rememberCoverColors(coverUrl)
+    // 从封面提取高饱和度颜色
+    val coverBgColor = rememberCoverColor(coverUrl)
 
     // Parse lyrics
     val lyricsText = currentLyrics
@@ -141,9 +139,7 @@ fun TabletPlayerScreen(
     }
 
     Box(
-        modifier = Modifier.fillMaxSize().background(
-            Brush.verticalGradient(listOf(dominantColor, MaterialTheme.colorScheme.background, MaterialTheme.colorScheme.background))
-        )
+        modifier = Modifier.fillMaxSize().background(coverBgColor)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             // 左上角返回按钮
