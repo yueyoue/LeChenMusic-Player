@@ -110,7 +110,9 @@ fun TabletPlayerScreen(
     password: String,
     onBack: () -> Unit,
     onNavigateToArtist: (String) -> Unit = {},
-    onNavigateToAlbum: (String) -> Unit = {}
+    onNavigateToAlbum: (String) -> Unit = {},
+    onShowAddToPlaylist: () -> Unit = {},
+    onShowQueue: () -> Unit = {}
 ) {
     val currentSong by playerManager.currentSong.collectAsState()
     val isPlaying by playerManager.isPlaying.collectAsState()
@@ -141,6 +143,8 @@ fun TabletPlayerScreen(
     Box(
         modifier = Modifier.fillMaxSize().background(coverBgColor)
     ) {
+        // 朦胧遮罩层
+        Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.15f)))
         Column(modifier = Modifier.fillMaxSize()) {
             // 左上角返回按钮
             IconButton(
@@ -163,16 +167,16 @@ fun TabletPlayerScreen(
                 Spacer(modifier = Modifier.width(32.dp))
 
                 // 右侧：歌曲信息 + 歌词
-                Column(modifier = Modifier.weight(1f).fillMaxHeight().padding(vertical = 16.dp)) {
+                Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
                     Text(song.title, fontSize = 28.sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         song.artist, fontSize = 18.sp, color = Color.White.copy(alpha = 0.7f),
                         modifier = Modifier.clickable { if (song.artistId.isNotBlank()) onNavigateToArtist(song.artistId) }
                     )
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                    // 歌词（无背景，使用默认背景）
+                    // 歌词
                     if (lrcLines != null) {
                         val activeIndex = findActiveLyricLine(lrcLines, currentPosition)
                         val listState = rememberLazyListState()
@@ -232,12 +236,12 @@ fun TabletPlayerScreen(
                                     Icon(Icons.Default.PlaylistAdd, "添加到", tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(24.dp))
                                 }
                                 DropdownMenu(expanded = showAddToMenu, onDismissRequest = { showAddToMenu = false }) {
-                                    DropdownMenuItem(text = { Text("添加到歌单") }, onClick = { showAddToMenu = false }, leadingIcon = { Icon(Icons.Default.QueueMusic, null) })
-                                    DropdownMenuItem(text = { Text("添加到播放列表") }, onClick = { showAddToMenu = false }, leadingIcon = { Icon(Icons.Default.PlaylistPlay, null) })
+                                    DropdownMenuItem(text = { Text("添加到歌单") }, onClick = { showAddToMenu = false; onShowAddToPlaylist() }, leadingIcon = { Icon(Icons.Default.QueueMusic, null) })
+                                    DropdownMenuItem(text = { Text("添加到播放列表") }, onClick = { showAddToMenu = false; onShowAddToPlaylist() }, leadingIcon = { Icon(Icons.Default.PlaylistPlay, null) })
                                 }
                             }
                             // 播放队列
-                            IconButton(onClick = { }) {
+                            IconButton(onClick = { onShowQueue() }) {
                                 Icon(Icons.Default.QueueMusic, "播放队列", tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(24.dp))
                             }
                         }
@@ -264,12 +268,7 @@ fun TabletPlayerScreen(
                                 )
                             }
                         }
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Icon(Icons.Default.VolumeUp, null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(20.dp))
-                            Slider(value = 0.75f, onValueChange = { }, modifier = Modifier.width(100.dp),
-                                colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color.White,
-                                    inactiveTrackColor = Color.White.copy(alpha = 0.3f)))
-                        }
+
                     }
                 }
             }
