@@ -43,6 +43,7 @@ import com.lechenmusic.ui.screens.home.PlaylistDetailScreen
 import com.lechenmusic.ui.screens.home.RadioScreen
 import com.lechenmusic.ui.screens.login.LoginScreen
 import com.lechenmusic.ui.screens.player.PlayerScreen
+import com.lechenmusic.ui.screens.player.TabletPlayerScreen
 import com.lechenmusic.ui.screens.recent.RecentPlayedScreen
 import com.lechenmusic.ui.screens.search.SearchScreen
 import com.lechenmusic.ui.screens.settings.SettingsScreen
@@ -574,18 +575,32 @@ fun NavGraphBuilder.sharedNavRoutes(
         val srvUrl by viewModel.serverUrl.collectAsState()
         val usr by viewModel.username.collectAsState()
         val pwd by viewModel.password.collectAsState()
-        PlayerScreen(
-            playerManager = viewModel.playerManager,
-            viewModel = viewModel,
-            serverUrl = srvUrl,
-            username = usr,
-            password = pwd,
-            onBack = onBack,
-            onShowPlaylist = { },
-            onShowMore = { },
-            onNavigateToArtist = { navController.navigate(Screen.ArtistDetail.createRoute(it)) },
-            onNavigateToAlbum = { navController.navigate(Screen.AlbumDetail.createRoute(it)) }
-        )
+        val responsiveCfg = com.lechenmusic.ui.responsive.rememberResponsiveConfig(windowSizeClass)
+        if (responsiveCfg.isMedium || responsiveCfg.isExpanded) {
+            TabletPlayerScreen(
+                playerManager = viewModel.playerManager,
+                viewModel = viewModel,
+                serverUrl = srvUrl,
+                username = usr,
+                password = pwd,
+                onBack = onBack,
+                onNavigateToArtist = { navController.navigate(Screen.ArtistDetail.createRoute(it)) },
+                onNavigateToAlbum = { navController.navigate(Screen.AlbumDetail.createRoute(it)) }
+            )
+        } else {
+            PlayerScreen(
+                playerManager = viewModel.playerManager,
+                viewModel = viewModel,
+                serverUrl = srvUrl,
+                username = usr,
+                password = pwd,
+                onBack = onBack,
+                onShowPlaylist = { },
+                onShowMore = { },
+                onNavigateToArtist = { navController.navigate(Screen.ArtistDetail.createRoute(it)) },
+                onNavigateToAlbum = { navController.navigate(Screen.AlbumDetail.createRoute(it)) }
+            )
+        }
     }
 
     composable(Screen.AlbumDetail.route) { backStackEntry ->
