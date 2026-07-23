@@ -214,7 +214,7 @@ fun TabletArtistDetailScreen(
                         val chunkedSongs = artistSongs.chunked(2)
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(horizontal = 24.dp, bottom = 160.dp)
+                            contentPadding = PaddingValues(start = 24.dp, end = 24.dp, bottom = 160.dp)
                         ) {
                             itemsIndexed(chunkedSongs) { _, rowSongs ->
                                 Row(
@@ -246,7 +246,7 @@ fun TabletArtistDetailScreen(
                     } else {
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(horizontal = 24.dp, bottom = 160.dp)
+                            contentPadding = PaddingValues(start = 24.dp, end = 24.dp, bottom = 160.dp)
                         ) {
                             items(currentArtist.album!!) { album ->
                                 Row(
