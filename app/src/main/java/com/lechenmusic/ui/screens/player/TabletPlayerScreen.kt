@@ -226,7 +226,7 @@ fun TabletPlayerScreen(
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                         Text(formatTime(currentPosition), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(modifier = Modifier.width(12.dp))
-                        Slider(value = progress, onValueChange = { playerManager.seekTo(it) }, modifier = Modifier.weight(1f),
+                        Slider(value = progress, onValueChange = { playerManager.seekToProgress(it) }, modifier = Modifier.weight(1f),
                             colors = SliderDefaults.colors(thumbColor = MaterialTheme.colorScheme.primary, activeTrackColor = MaterialTheme.colorScheme.primary,
                                 inactiveTrackColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)))
                         Spacer(modifier = Modifier.width(12.dp))
