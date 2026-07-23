@@ -590,7 +590,9 @@ fun NavGraphBuilder.sharedNavRoutes(
                 password = pwd,
                 onBack = onBack,
                 onNavigateToArtist = { navController.navigate(Screen.ArtistDetail.createRoute(it)) },
-                onNavigateToAlbum = { navController.navigate(Screen.AlbumDetail.createRoute(it)) }
+                onNavigateToAlbum = { navController.navigate(Screen.AlbumDetail.createRoute(it)) },
+                onShowAddToPlaylist = { navController.navigate(Screen.AllPlaylists.route) },
+                onShowQueue = { navController.navigate(Screen.AllPlaylists.route) }
             )
         } else {
             PlayerScreen(
