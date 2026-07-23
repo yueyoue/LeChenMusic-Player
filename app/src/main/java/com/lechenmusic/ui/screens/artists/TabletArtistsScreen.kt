@@ -23,6 +23,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.lechenmusic.data.model.Artist
 import com.lechenmusic.ui.MainViewModel
 import com.lechenmusic.ui.components.CoverImage
@@ -240,13 +241,22 @@ private fun ArtistGridCard(
                     .clip(CircleShape)
                 val effectiveCoverArt = artist.coverArt ?: artist.id
 
-                CoverImage(
-                    coverArtId = effectiveCoverArt,
-                    serverUrl = serverUrl,
-                    username = username,
-                    password = password,
-                    modifier = coverModifier
-                )
+                if (artist.artistImageUrl != null) {
+                    AsyncImage(
+                        model = artist.artistImageUrl,
+                        contentDescription = artist.name,
+                        modifier = coverModifier,
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    CoverImage(
+                        coverArtId = effectiveCoverArt,
+                        serverUrl = serverUrl,
+                        username = username,
+                        password = password,
+                        modifier = coverModifier
+                    )
+                }
 
                 // 播放覆盖层（hover/按压时显示）
                 Box(
