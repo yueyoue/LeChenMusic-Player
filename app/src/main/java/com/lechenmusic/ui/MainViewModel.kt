@@ -526,7 +526,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 _starredSongs.value = it.songs
                 _starredAlbums.value = it.albums
                 _starredPlaylists.value = it.playlists
-                _starredArtists.value = it.artist ?: emptyList()
+                _starredArtists.value = it.artists ?: emptyList()
             }
             loadStarredAudiobooks()
             loadAudiobooks()
