@@ -41,10 +41,9 @@ import com.lechenmusic.ui.screens.audiobook.getAudiobookCoverUrl
 import com.lechenmusic.data.model.VideoInfo
 import com.lechenmusic.data.model.VideoPlayRecord
 import com.lechenmusic.data.model.HomeRecommendData
-import com.lechenmusic.ui.screens.video.VideoCard
-import com.lechenmusic.ui.screens.video.VideoHorizontalCard
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.TextUnit
 import kotlinx.coroutines.delay
@@ -2755,8 +2754,8 @@ private fun TabletVideoHomeContent(
                         horizontalArrangement = Arrangement.spacedBy(gap),
                         verticalArrangement = Arrangement.spacedBy(gap)
                     ) {
-                        androidx.compose.foundation.lazy.grid.items(categoryResults) { video ->
-                            VideoCard(video = video, onClick = { onNavigateToVideoDetail(video.source, video.id) })
+                        gridItems(categoryResults) { video ->
+                            com.lechenmusic.ui.screens.video.VideoCard(video = video, onClick = { onNavigateToVideoDetail(video.source, video.id) })
                         }
                         if (hasMore) {
                             item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(gridColumns) }) {
