@@ -397,7 +397,25 @@ fun HomeScreen(
                 }
 
                 // ===== AUDIOBOOK MODE =====
-                if (homeMode == "audiobook") {
+                if (homeMode == "audiobook" && isTablet) {
+                    // ===== 平板有声书首页 =====
+                    item {
+                        TabletAudiobookHomeContent(
+                            audiobooks = audiobooks,
+                            audiobookWithProgress = audiobookWithProgress,
+                            starredAudiobooks = starredAudiobooks,
+                            viewModel = viewModel,
+                            serverUrl = serverUrl,
+                            username = username,
+                            password = password,
+                            onNavigateToAudiobook = onNavigateToAudiobook,
+                            onNavigateToAudiobookDetail = onNavigateToAudiobookDetail,
+                            onNavigateToNarrator = onNavigateToNarrator,
+                            onNavigateToNarratorList = onNavigateToNarratorList
+                        )
+                    }
+                } else if (homeMode == "audiobook") {
+                    // ===== 手机有声书首页 =====
                     // Audiobook homepage slides carousel (server-configured)
                     item {
                         AudiobookSlidesCarousel(
