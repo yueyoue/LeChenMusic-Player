@@ -2186,7 +2186,7 @@ private fun TabletMusicHomeContent(
                     ) {
                         Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.SpaceBetween) {
                             Column {
-                                Text("今日热榜", fontSize = config.sectionTitleSize, fontWeight = FontWeight.Bold)
+                                Text("今日热榜", fontSize = config.cardTitleSize, fontWeight = FontWeight.SemiBold)
                                 Text("全球播放量最高的 50 首", fontSize = config.captionFontSize, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -2246,7 +2246,7 @@ private fun TabletMusicHomeContent(
 
             // ===== Latest Albums =====
             if (newestAlbums.isNotEmpty()) {
-                item { TabletSecHd("🆕 最新专辑", "更多 ›", config, onNavigateToAlbums) }
+                item { TabletSecHd("最新专辑", "更多 ›", config, onNavigateToAlbums) }
                 item {
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(gap)) {
                         items(newestAlbums) { TabletAlbumCard(it, serverUrl, username, password, config) { onAlbumClick(it.id) } }
@@ -2256,7 +2256,7 @@ private fun TabletMusicHomeContent(
 
             // ===== Daily Recommendations - Dual Column =====
             if (dailySongs.isNotEmpty()) {
-                item { TabletSecHd("🎯 每日推荐", "换一批 ↻", config) { viewModel.refreshDailySongs() } }
+                item { TabletSecHd("每日推荐", "换一批 ↻", config) { viewModel.refreshDailySongs() } }
                 item {
                     val half = (dailySongs.size + 1) / 2
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap)) {
@@ -2272,7 +2272,7 @@ private fun TabletMusicHomeContent(
 
             // ===== Playlists =====
             if (playlists.isNotEmpty()) {
-                item { TabletSecHd("📋 歌单", "更多 ›", config, onNavigateToAllPlaylists) }
+                item { TabletSecHd("歌单", "更多 ›", config, onNavigateToAllPlaylists) }
                 item {
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(gap)) {
                         items(playlists.take(8)) { TabletPlaylistCard(it, serverUrl, username, password, config) { onPlaylistClick(it.id) } }
@@ -2282,7 +2282,7 @@ private fun TabletMusicHomeContent(
 
             // ===== Random Albums =====
             if (randomAlbums.isNotEmpty()) {
-                item { TabletSecHd("🎲 随机专辑", "换一批 ↻", config) { viewModel.refreshRandomAlbums() } }
+                item { TabletSecHd("随机专辑", "换一批 ↻", config) { viewModel.refreshRandomAlbums() } }
                 item {
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(gap)) {
                         items(randomAlbums) { TabletAlbumCard(it, serverUrl, username, password, config) { onAlbumClick(it.id) } }
@@ -2291,7 +2291,7 @@ private fun TabletMusicHomeContent(
             }
 
             // ===== Recent Played - Multi Column =====
-            item { TabletSecHd("⏱️ 最近播放", "更多 ›", config, onNavigateToRecentPlayed) }
+            item { TabletSecHd("最近播放", "更多 ›", config, onNavigateToRecentPlayed) }
             if (recentPlayedSongs.isNotEmpty()) {
                 item {
                     val cols = config.recentColumns
@@ -2311,7 +2311,7 @@ private fun TabletMusicHomeContent(
             }
 
             // ===== Radio =====
-            item { TabletSecHd("📻 电台", "", config) }
+            item { TabletSecHd("电台", "", config) }
             if (radioStations.isNotEmpty()) {
                 items(radioStations.take(4)) { TabletRadioRow(it, config) { viewModel.playerManager.playRadioStation(it) } }
             }

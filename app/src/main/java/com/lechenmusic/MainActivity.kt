@@ -241,9 +241,9 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                             .fillMaxHeight()
                             .width(64.dp)
                             .background(MaterialTheme.colorScheme.surfaceContainerLowest),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
                     ) {
-                        Spacer(modifier = Modifier.height(24.dp))
                         // 首页
                         val homeSelected = currentRoute == Screen.Home.route
                         Column(
@@ -330,7 +330,7 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                             Spacer(modifier = Modifier.height(1.dp))
                             Text("搜索", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                        Spacer(modifier = Modifier.weight(1f))
+                        Spacer(modifier = Modifier.height(8.dp))
                         // 收藏
                         val favSelected = currentRoute == Screen.Favorites.route
                         Column(
@@ -357,7 +357,7 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                             horizontalAlignment = Alignment.CenterHorizontally,
                             modifier = Modifier
                                 .clickable { onNavClick(Screen.Settings.route) }
-                                .padding(bottom = 20.dp, top = 6.dp)
+                                .padding(vertical = 4.dp)
                         ) {
                             Icon(
                                 Icons.Default.Person, "我的",
