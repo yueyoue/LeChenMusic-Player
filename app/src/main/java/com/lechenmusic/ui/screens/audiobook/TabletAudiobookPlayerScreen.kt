@@ -35,6 +35,7 @@ import com.lechenmusic.ui.screens.player.CoverImageDisplay
 import com.lechenmusic.ui.screens.player.PlayerProgressBar
 import com.lechenmusic.ui.screens.player.rememberCoverColor
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TabletAudiobookPlayerScreen(
     book: Audiobook,
