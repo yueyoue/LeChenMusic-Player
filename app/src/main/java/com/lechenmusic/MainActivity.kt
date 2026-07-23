@@ -702,25 +702,50 @@ fun NavGraphBuilder.sharedNavRoutes(
 
     composable(Screen.Audiobook.route) { backStackEntry ->
         val genre = backStackEntry.arguments?.getString("genre")
-        AudiobookScreen(
-            viewModel = viewModel,
-            genreFilter = genre,
-            onBack = onBack,
-            onAudiobookClick = { navController.navigate(Screen.AudiobookDetail.createRoute(it)) }
-        )
+        val responsiveCfg = com.lechenmusic.ui.responsive.rememberResponsiveConfig(windowSizeClass)
+        if (responsiveCfg.isMedium || responsiveCfg.isExpanded) {
+            com.lechenmusic.ui.screens.audiobook.TabletAudiobookScreen(
+                viewModel = viewModel,
+                responsiveConfig = responsiveCfg,
+                genreFilter = genre,
+                onBack = onBack,
+                onAudiobookClick = { navController.navigate(Screen.AudiobookDetail.createRoute(it)) }
+            )
+        } else {
+            AudiobookScreen(
+                viewModel = viewModel,
+                genreFilter = genre,
+                onBack = onBack,
+                onAudiobookClick = { navController.navigate(Screen.AudiobookDetail.createRoute(it)) }
+            )
+        }
     }
 
     composable(Screen.AudiobookDetail.route) { backStackEntry ->
         val audiobookId = backStackEntry.arguments?.getString("audiobookId") ?: return@composable
-        AudiobookDetailScreen(
-            viewModel = viewModel,
-            audiobookId = audiobookId,
-            onBack = onBack,
-            onPlayChapter = { book, chapter, chapters ->
-                viewModel.playAudiobookChapter(book, chapter, chapters)
-                navController.navigate(Screen.AudiobookPlayer.route)
-            }
-        )
+        val responsiveCfg = com.lechenmusic.ui.responsive.rememberResponsiveConfig(windowSizeClass)
+        if (responsiveCfg.isMedium || responsiveCfg.isExpanded) {
+            com.lechenmusic.ui.screens.audiobook.TabletAudiobookDetailScreen(
+                viewModel = viewModel,
+                audiobookId = audiobookId,
+                responsiveConfig = responsiveCfg,
+                onBack = onBack,
+                onPlayChapter = { book, chapter, chapters ->
+                    viewModel.playAudiobookChapter(book, chapter, chapters)
+                    navController.navigate(Screen.AudiobookPlayer.route)
+                }
+            )
+        } else {
+            AudiobookDetailScreen(
+                viewModel = viewModel,
+                audiobookId = audiobookId,
+                onBack = onBack,
+                onPlayChapter = { book, chapter, chapters ->
+                    viewModel.playAudiobookChapter(book, chapter, chapters)
+                    navController.navigate(Screen.AudiobookPlayer.route)
+                }
+            )
+        }
     }
 
     composable(Screen.AudiobookPlayer.route) {
