@@ -131,7 +131,7 @@ fun TabletAudiobookHomeContent(
             }
         }
 
-        // ===== 继续收听 (Issue 7: 列表显示，标题改为继续收听) =====
+        // ===== 继续收听 (横向滚动卡片，模板样式) =====
         val booksWithProgress = audiobookWithProgress.filter { it.progress != null && !it.progress.completed }
         if (booksWithProgress.isNotEmpty()) {
             item {
@@ -141,25 +141,49 @@ fun TabletAudiobookHomeContent(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text("继续收听", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        "最近播放 ›",
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.clickable { onNavigateToAudiobook(null) }
+                    )
                 }
                 Spacer(modifier = Modifier.height(12.dp))
             }
-            // 列表显示
-            items(booksWithProgress.take(5)) { bwp ->
-                ContinueListeningListRow(
-                    book = bwp.toAudiobook(),
-                    progress = bwp.progress,
-                    serverUrl = serverUrl,
-                    username = username,
-                    password = password,
-                    onClick = {
-                        viewModel.resumeAudiobook(bwp.toAudiobook())
-                        onNavigateToAudiobookDetail(bwp.id)
+            item {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    itemsIndexed(booksWithProgress.take(5)) { index, bwp ->
+                        if (index == 0) {
+                            // 第一个: 大卡片 (500x240) 封面全铺 + 渐变遮罩
+                            ContinueListeningLargeCard(
+                                book = bwp.toAudiobook(),
+                                progress = bwp.progress,
+                                serverUrl = serverUrl,
+                                username = username,
+                                password = password,
+                                onClick = {
+                                    viewModel.resumeAudiobook(bwp.toAudiobook())
+                                    onNavigateToAudiobookDetail(bwp.id)
+                                }
+                            )
+                        } else {
+                            // 后续: glass-panel 卡片 (300x240)
+                            ContinueListeningGlassCard(
+                                book = bwp.toAudiobook(),
+                                progress = bwp.progress,
+                                serverUrl = serverUrl,
+                                username = username,
+                                password = password,
+                                onClick = {
+                                    viewModel.resumeAudiobook(bwp.toAudiobook())
+                                    onNavigateToAudiobookDetail(bwp.id)
+                                }
+                            )
+                        }
                     }
-                )
-                Spacer(modifier = Modifier.height(8.dp))
+                }
+                Spacer(modifier = Modifier.height(24.dp))
             }
-            item { Spacer(modifier = Modifier.height(24.dp)) }
         }
 
         // ===== 热门分类 (Issue 8: 改为有声小说、相声、评书、儿童，修复边框) =====
@@ -503,6 +527,215 @@ private fun ContinueListeningListRow(
                 )
             ) {
                 Icon(Icons.Default.PlayArrow, "播放", modifier = Modifier.size(22.dp))
+            }
+        }
+    }
+}
+
+// ==================== 继续收听 - 大卡片 (500x240) 封面全铺 ====================
+@Composable
+private fun ContinueListeningLargeCard(
+    book: Audiobook,
+    progress: com.lechenmusic.data.model.AudiobookProgress?,
+    serverUrl: String,
+    username: String,
+    password: String,
+    onClick: () -> Unit
+) {
+    val coverUrl = getAudiobookCoverUrl(serverUrl, username, password, book.id)
+    Surface(
+        shape = RoundedCornerShape(24.dp),
+        modifier = Modifier
+            .width(500.dp)
+            .height(240.dp)
+            .clickable { onClick() },
+        color = MaterialTheme.colorScheme.surfaceContainer
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            if (coverUrl != null) {
+                AsyncImage(
+                    model = coverUrl,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            }
+            // 渐变遮罩
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.horizontalGradient(
+                            listOf(
+                                Color.Black.copy(alpha = 0.85f),
+                                Color.Black.copy(alpha = 0.4f),
+                                Color.Transparent
+                            )
+                        )
+                    )
+            )
+            // 内容
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(28.dp),
+                verticalArrangement = Arrangement.Center
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                    modifier = Modifier.clip(RoundedCornerShape(20.dp))
+                ) {
+                    Text(
+                        "正在收听",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    book.title,
+                    fontSize = 26.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                if (progress != null) {
+                    val remainingChapter = book.chapterCount - progress.chapterNumber
+                    Text(
+                        "剩余约 ${remainingChapter} 章",
+                        fontSize = 14.sp,
+                        color = Color.White.copy(alpha = 0.7f)
+                    )
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(
+                    onClick = onClick,
+                    shape = RoundedCornerShape(50),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    ),
+                    modifier = Modifier.height(48.dp)
+                ) {
+                    Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("继续", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                }
+            }
+        }
+    }
+}
+
+// ==================== 继续收听 - glass-panel 卡片 (300x240) ====================
+@Composable
+private fun ContinueListeningGlassCard(
+    book: Audiobook,
+    progress: com.lechenmusic.data.model.AudiobookProgress?,
+    serverUrl: String,
+    username: String,
+    password: String,
+    onClick: () -> Unit
+) {
+    val coverUrl = getAudiobookCoverUrl(serverUrl, username, password, book.id)
+    Surface(
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.6f),
+        modifier = Modifier
+            .width(300.dp)
+            .height(240.dp)
+            .clickable { onClick() },
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.15f))
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(20.dp),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            // 顶部: 小封面 + 书名/分类
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.size(56.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant
+                ) {
+                    if (coverUrl != null) {
+                        AsyncImage(
+                            model = coverUrl,
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Icon(
+                                Icons.Default.MenuBook,
+                                null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.width(14.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        book.title,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        book.genre.ifEmpty { book.narrator.ifEmpty { book.author } },
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1
+                    )
+                }
+            }
+            // 中间: 进度条
+            if (progress != null) {
+                val progressFraction = (progress.chapterNumber.toFloat() / book.chapterCount.coerceAtLeast(1)).coerceIn(0f, 1f)
+                Column {
+                    LinearProgressIndicator(
+                        progress = { progressFraction },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(6.dp)
+                            .clip(RoundedCornerShape(3.dp)),
+                        color = MaterialTheme.colorScheme.primary,
+                        trackColor = MaterialTheme.colorScheme.surfaceContainerHighest
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        "已听 ${(progressFraction * 100).toInt()}%",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            // 底部: 播放按钮
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .clickable { onClick() }
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        Icons.Default.PlayArrow,
+                        "播放",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
             }
         }
     }
