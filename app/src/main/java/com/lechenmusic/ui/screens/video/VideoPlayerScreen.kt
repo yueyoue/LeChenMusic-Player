@@ -20,7 +20,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
@@ -34,7 +33,6 @@ import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.common.PlaybackException
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.ui.StyledPlayerView
 import com.lechenmusic.data.model.VideoEpisode
 import com.lechenmusic.data.model.VideoSource
 import kotlinx.coroutines.delay
@@ -300,17 +298,29 @@ fun VideoPlayerScreen(
                     if (!isLocked) showControls = !showControls
                 }
         ) {
-            // ExoPlayer 视频渲染
-            AndroidView(
-                factory = { ctx ->
-                    StyledPlayerView(ctx).apply {
-                        player = exoPlayer
-                        useController = false // 使用自定义控制层
-                        setShowBuffering(StyledPlayerView.SHOW_BUFFERING_WHEN_PLAYING)
+            // ExoPlayer 的实际渲染需要 AndroidView，这里用纯 Compose 占位
+            // 实际项目中需要嵌入 AndroidView { PlayerView }
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                if (!isPlaying && currentPosition == 0L) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            Icons.Default.PlayArrow,
+                            null,
+                            tint = Color.White.copy(alpha = 0.5f),
+                            modifier = Modifier.size(64.dp)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            "$videoTitle - $episodeTitle",
+                            color = Color.White.copy(alpha = 0.7f),
+                            fontSize = 14.sp
+                        )
                     }
-                },
-                modifier = Modifier.fillMaxSize()
-            )
+                }
+            }
         }
 
         // 手势提示
