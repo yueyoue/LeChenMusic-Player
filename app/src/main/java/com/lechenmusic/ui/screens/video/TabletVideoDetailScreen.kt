@@ -3,7 +3,6 @@ package com.lechenmusic.ui.screens.video
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -24,7 +23,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.lechenmusic.data.model.VideoDetail
 import com.lechenmusic.data.model.VideoInfo
 import com.lechenmusic.ui.VideoViewModel
 import com.lechenmusic.ui.responsive.ResponsiveConfig
@@ -54,6 +52,12 @@ fun TabletVideoDetailScreen(
     }
 
     val video = detail ?: return
+    val sources = video.toSources()
+    var selectedSource by remember { mutableIntStateOf(0) }
+    var selectedEpisode by remember { mutableIntStateOf(0) }
+
+    val currentSource = sources.getOrNull(selectedSource)
+    val episodes = currentSource?.episodes ?: emptyList()
 
     Column(modifier = Modifier.fillMaxSize()) {
         // 顶部返回按钮
@@ -71,44 +75,56 @@ fun TabletVideoDetailScreen(
         }
 
         // ===== 主内容: 左侧(2/3) + 右侧(1/3) =====
-        Row(modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = responsiveConfig.contentPadding)) {
-            // ===== 左侧: 海报 + 信息 (2/3) =====
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .padding(horizontal = responsiveConfig.contentPadding, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(responsiveConfig.itemSpacing)
+        ) {
+            // ===== 左侧: 视频区域 + 影片信息 (flex-2) =====
             Column(
                 modifier = Modifier
                     .weight(2f)
                     .fillMaxHeight()
-                    .padding(end = responsiveConfig.itemSpacing)
             ) {
-                // 海报区域 (16:9)
+                // 视频播放区域 (16:9, rounded-2xl)
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .aspectRatio(16f / 9f)
                         .clip(RoundedCornerShape(16.dp))
                         .background(Color.Black)
+                        .clickable {
+                            if (episodes.isNotEmpty()) onPlay(video.source, selectedEpisode)
+                        }
                 ) {
-                    if (video.poster.isNotBlank()) {
+                    // 海报背景
+                    if (video.displayCover.isNotBlank()) {
                         AsyncImage(
-                            model = video.poster,
+                            model = video.displayCover,
                             contentDescription = null,
-                            modifier = Modifier.fillMaxSize(),
+                            modifier = Modifier.fillMaxSize().alpha(0.6f),
                             contentScale = ContentScale.Crop
                         )
-                    } else {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.Movie, null, tint = Color.White.copy(alpha = 0.3f), modifier = Modifier.size(64.dp))
-                        }
                     }
-                    // 播放按钮覆盖层
+                    // 渐变遮罩
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(Color.Black.copy(alpha = 0.3f))
-                            .clickable {
-                                if (video.episodes.isNotEmpty()) onPlay(video.source, 0)
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(
+                                        Color.Black.copy(alpha = 0.4f),
+                                        Color.Transparent,
+                                        Color.Transparent,
+                                        Color.Black.copy(alpha = 0.8f)
+                                    )
+                                )
+                            )
+                    )
+                    // 播放按钮
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Surface(
                             shape = CircleShape,
                             color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
@@ -119,48 +135,72 @@ fun TabletVideoDetailScreen(
                             }
                         }
                     }
+                    // 底部进度条占位
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(3.dp)
+                            .align(Alignment.BottomCenter)
+                            .background(Color.White.copy(alpha = 0.2f))
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // 影片信息
-                Text(
-                    video.title,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // 标签行
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Top
                 ) {
-                    // 评分
-                    if (video.rate != null) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("★", fontSize = 14.sp, color = Color(0xFFFBBF24))
-                            Spacer(modifier = Modifier.width(2.dp))
-                            Text(video.rate!!, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFBBF24))
+                    // 左侧: 标题 + 标签
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            buildString {
+                                append(video.title)
+                                if (video.year.isNotBlank()) append(" (${video.year})")
+                            },
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        // 标签行: 评分 • 类型 • 年份
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // 评分
+                            if (video.rate != null) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Star, null, tint = Color(0xFFFBBF24), modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(video.rate!!, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFBBF24))
+                                }
+                                Text("•", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            // 类型
+                            if (video.displayType.isNotBlank()) {
+                                Text(categoryName(video.displayType), fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("•", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            // 年份
+                            if (video.year.isNotBlank()) {
+                                Text(video.year, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
                         }
                     }
-                    if (video.year.isNotBlank()) {
-                        Text(video.year, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    if (video.type.isNotBlank()) {
-                        Text(categoryName(video.type), fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    if (video.sourceName.isNotBlank()) {
-                        Surface(shape = RoundedCornerShape(6.dp), color = MaterialTheme.colorScheme.primaryContainer) {
-                            Text(
-                                video.sourceName,
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                            )
+                    // 右侧: 操作按钮
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(
+                            onClick = { },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)
+                        ) {
+                            Icon(Icons.Default.Share, null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("分享")
                         }
                     }
                 }
@@ -169,65 +209,184 @@ fun TabletVideoDetailScreen(
 
                 // 描述
                 if (video.desc.isNotBlank()) {
+                    var descExpanded by remember { mutableStateOf(false) }
                     Text(
                         video.desc,
-                        fontSize = 14.sp,
+                        fontSize = 15.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        lineHeight = 22.sp,
-                        maxLines = 6,
+                        lineHeight = 24.sp,
+                        maxLines = if (descExpanded) Int.MAX_VALUE else 3,
                         overflow = TextOverflow.Ellipsis
                     )
+                    if (video.desc.length > 100) {
+                        Text(
+                            if (descExpanded) "收起" else "展开全部",
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.clickable { descExpanded = !descExpanded }.padding(top = 4.dp)
+                        )
+                    }
+                }
+
+                // 演职信息
+                if (video.director.isNotBlank() || video.actor.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // 演员头像占位
+                        repeat(3) {
+                            Surface(
+                                modifier = Modifier.size(36.dp),
+                                shape = CircleShape,
+                                color = MaterialTheme.colorScheme.surfaceVariant
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(Icons.Default.Person, null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f), modifier = Modifier.size(18.dp))
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            buildString {
+                                if (video.director.isNotBlank()) append("导演：${video.director}")
+                                if (video.director.isNotBlank() && video.actor.isNotBlank()) append(" / ")
+                                if (video.actor.isNotBlank()) append("主演：${video.actor}")
+                            },
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
 
-            // ===== 右侧: 选集 (1/3) =====
+            // ===== 右侧: 片源选择 + 选集 (flex-1) =====
             Column(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
             ) {
-                // 选集标题
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text("选集 (${video.episodes.size})", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                }
-
-                // 选集网格 (4列)
-                if (video.episodes.isNotEmpty()) {
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(4),
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(bottom = 80.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                // 片源选择面板
+                if (sources.size > 1) {
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainer,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        items(video.episodes.size) { index ->
-                            Surface(
-                                shape = RoundedCornerShape(10.dp),
-                                color = MaterialTheme.colorScheme.surfaceContainerLow,
-                                modifier = Modifier
-                                    .aspectRatio(1f)
-                                    .clickable { onPlay(video.source, index) }
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Text(
-                                        "${index + 1}",
-                                        fontSize = 16.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.SwapHoriz, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("切换播放线路", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
+                            sources.forEachIndexed { index, src ->
+                                val isSelected = index == selectedSource
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.1f)
+                                    else MaterialTheme.colorScheme.surfaceContainerHigh,
+                                    border = if (isSelected) androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f))
+                                    else androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { selectedSource = index; selectedEpisode = 0 }
+                                        .padding(vertical = 2.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(Icons.Default.Settings, null, tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text(src.sourceName, fontSize = 14.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
+                                        }
+                                        if (isSelected) {
+                                            Surface(shape = RoundedCornerShape(4.dp), color = MaterialTheme.colorScheme.secondaryContainer) {
+                                                Text("当前", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
-                } else {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("暂无剧集", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
+
+                // 选集面板
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
+                    modifier = Modifier.fillMaxWidth().weight(1f)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("选集 (共 ${episodes.size} 集)", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        if (episodes.isNotEmpty()) {
+                            LazyVerticalGrid(
+                                columns = GridCells.Fixed(4),
+                                modifier = Modifier.fillMaxSize(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                items(episodes.size) { index ->
+                                    val isActive = index == selectedEpisode
+                                    Surface(
+                                        shape = RoundedCornerShape(10.dp),
+                                        color = if (isActive) MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.surfaceContainerHigh,
+                                        border = if (!isActive) androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                                        else null,
+                                        modifier = Modifier
+                                            .aspectRatio(1f)
+                                            .clickable {
+                                                selectedEpisode = index
+                                                onPlay(video.source, index)
+                                            }
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                                Text(
+                                                    episodes.getOrNull(index)?.title ?: "${index + 1}",
+                                                    fontSize = 16.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = if (isActive) MaterialTheme.colorScheme.onPrimary
+                                                    else MaterialTheme.colorScheme.onSurface
+                                                )
+                                                if (isActive) {
+                                                    Text(
+                                                        "播放中",
+                                                        fontSize = 9.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Text("暂无剧集", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
                     }
                 }
             }
