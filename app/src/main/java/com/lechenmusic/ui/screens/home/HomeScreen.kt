@@ -2208,6 +2208,42 @@ private fun TabletMusicHomeContent(
                 }
             }
 
+            // ===== Quick Access =====
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    data class QuickItem(val icon: androidx.compose.ui.graphics.vector.ImageVector, val label: String, val color: Color, val onClick: () -> Unit)
+                    val quickItems = listOf(
+                        QuickItem(Icons.Default.Person, "歌手", Color(0xFFA78BFA), onNavigateToArtists),
+                        QuickItem(Icons.Default.Album, "专辑", Color(0xFF5352ED), onNavigateToAlbums),
+                        QuickItem(Icons.Default.MusicNote, "乐库", Color(0xFF34D399), onNavigateToAllSongs),
+                        QuickItem(Icons.Default.PlaylistPlay, "歌单", Color(0xFFFBBF24), onNavigateToAllPlaylists),
+                        QuickItem(Icons.Default.Radio, "电台", Color(0xFFFF4D6A), onNavigateToRadio),
+                        QuickItem(Icons.Default.Download, "缓存", Color(0xFF60A5FA), onNavigateToCachedMusic)
+                    )
+                    quickItems.forEach { item ->
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.clickable(onClick = item.onClick)
+                        ) {
+                            Surface(
+                                modifier = Modifier.size(48.dp),
+                                shape = RoundedCornerShape(14.dp),
+                                color = item.color.copy(alpha = 0.15f)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(item.icon, null, tint = item.color, modifier = Modifier.size(24.dp))
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(item.label, fontSize = config.cardSubtitleSize, fontWeight = FontWeight.Medium)
+                        }
+                    }
+                }
+            }
+
             // ===== Latest Albums =====
             if (newestAlbums.isNotEmpty()) {
                 item { TabletSecHd("🆕 最新专辑", "更多 ›", config, onNavigateToAlbums) }
