@@ -157,7 +157,7 @@ fun TabletAudiobookScreen(
 }
 
 @Composable
-private fun AudiobookGridCard(
+private fun TabletAudiobookGridCard(
     book: Audiobook,
     serverUrl: String,
     username: String,
