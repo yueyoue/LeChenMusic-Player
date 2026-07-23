@@ -2462,7 +2462,6 @@ private fun TabletVideoHomeContent(
         return
     }
 
-    // 导航到详情的统一处理
     fun navigateVideo(video: VideoInfo) {
         if (video.source.isNotBlank()) onNavigateToVideoDetail(video.source, video.id)
         else videoViewModel.searchAndPlay(video.title, video.id, video.year)
@@ -2471,18 +2470,138 @@ private fun TabletVideoHomeContent(
     val hotMovies = videoHomeData?.hotMovies ?: emptyList()
     val hotTv = videoHomeData?.hotTvShows ?: emptyList()
     val hotVariety = videoHomeData?.hotVariety ?: emptyList()
-    val hotAnime = videoHomeData?.hotAnime ?: emptyList()
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = pad, end = pad, bottom = 100.dp),
-        verticalArrangement = Arrangement.spacedBy(gap)
-    ) {
-        // ===== 最近观看 =====
+    // 主内容 + 右侧最近播放面板
+    Row(modifier = Modifier.fillMaxSize()) {
+        // ===== 左侧: 主内容区 =====
+        LazyColumn(
+            modifier = Modifier.weight(1f).fillMaxHeight(),
+            contentPadding = PaddingValues(start = pad, end = gap, top = 8.dp, bottom = 100.dp),
+            verticalArrangement = Arrangement.spacedBy(gap)
+        ) {
+            // Hero 横幅 (21:9, rounded-3xl)
+            val heroVideo = hotMovies.firstOrNull() ?: hotTv.firstOrNull()
+            if (heroVideo != null) {
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(21f / 9f)
+                            .clip(RoundedCornerShape(24.dp))
+                            .clickable { navigateVideo(heroVideo) }
+                    ) {
+                        if (heroVideo.displayCover.isNotBlank()) {
+                            AsyncImage(model = heroVideo.displayCover, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                        }
+                        Box(modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.85f)))))
+                        Column(modifier = Modifier.align(Alignment.BottomStart).padding(28.dp)) {
+                            Surface(shape = RoundedCornerShape(50), color = Color(0xFFFF4D6A)) {
+                                Text("今日热门", modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White, letterSpacing = 1.sp)
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(heroVideo.title, fontSize = (config.sectionTitleSize.value + 10).sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            if (heroVideo.desc.isNotBlank()) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(heroVideo.desc, fontSize = config.bodyFontSize, color = Color.White.copy(alpha = 0.7f), maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.fillMaxWidth(0.6f))
+                            }
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Button(onClick = { navigateVideo(heroVideo) }, shape = RoundedCornerShape(50), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary), contentPadding = PaddingValues(horizontal = 28.dp, vertical = 14.dp)) {
+                                    Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("立即播放", fontWeight = FontWeight.Bold)
+                                }
+                                OutlinedButton(onClick = { }, shape = RoundedCornerShape(50), border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.3f)), colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White), contentPadding = PaddingValues(horizontal = 28.dp, vertical = 14.dp)) {
+                                    Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("收藏", fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 热门电影 (4列网格 2:3卡片)
+            if (hotMovies.isNotEmpty()) {
+                item {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Text("热门电影", fontSize = config.sectionTitleSize, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        Text("查看全部 ›", fontSize = config.bodyFontSize, color = MaterialTheme.colorScheme.secondary, modifier = Modifier.clickable { onNavigateToVideoCategory("movie") })
+                    }
+                }
+                val movieRows = hotMovies.take(8).chunked(4)
+                items(movieRows) { row ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(gap), modifier = Modifier.fillMaxWidth()) {
+                        row.forEach { video ->
+                            TabletVideoMovieCard(video = video, config = config, modifier = Modifier.weight(1f)) { navigateVideo(video) }
+                        }
+                        repeat(4 - row.size) { Spacer(modifier = Modifier.weight(1f)) }
+                    }
+                }
+            }
+
+            // 精品剧集 + 热门综艺 (左右两列, 横向卡片)
+            if (hotTv.isNotEmpty() || hotVariety.isNotEmpty()) {
+                item {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap * 2)) {
+                        // 精品剧集
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                Text("精品剧集", fontSize = config.sectionTitleSize, fontWeight = FontWeight.Bold)
+                                Text("查看更多", fontSize = config.captionFontSize, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.clickable { onNavigateToVideoCategory("tv") })
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                hotTv.take(4).forEach { video ->
+                                    TabletVideoListCard(video = video, config = config) { navigateVideo(video) }
+                                }
+                            }
+                        }
+                        // 热门综艺
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                Text("热门综艺", fontSize = config.sectionTitleSize, fontWeight = FontWeight.Bold)
+                                Text("查看更多", fontSize = config.captionFontSize, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.clickable { onNavigateToVideoCategory("variety") })
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                hotVariety.take(4).forEach { video ->
+                                    TabletVideoListCard(video = video, config = config) { navigateVideo(video) }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 加载指示器
+            if (videoHomeLoading) {
+                item { Box(modifier = Modifier.fillMaxWidth().padding(20.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(modifier = Modifier.size(32.dp)) } }
+            }
+        }
+
+        // ===== 右侧: 最近播放面板 =====
         if (videoPlayRecords.isNotEmpty()) {
-            item { TabletSecHd("最近观看", "", config) }
-            item {
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(gap)) {
+            Column(
+                modifier = Modifier
+                    .width(300.dp)
+                    .fillMaxHeight()
+                    .padding(start = gap, end = pad, top = 8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("最近播放", fontSize = config.sectionTitleSize, fontWeight = FontWeight.Bold)
+                    Icon(Icons.Default.Schedule, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+                }
+                LazyColumn(
+                    modifier = Modifier.fillMaxHeight(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    contentPadding = PaddingValues(bottom = 100.dp)
+                ) {
                     items(videoPlayRecords.take(10)) { record ->
                         TabletVideoContinueCard(record = record, config = config) {
                             if (record.source.isNotBlank()) onNavigateToVideoDetail(record.source, record.videoIdRaw)
@@ -2491,127 +2610,12 @@ private fun TabletVideoHomeContent(
                 }
             }
         }
+    }
 
-        // ===== Hero 横幅 (21:9) =====
-        val heroVideo = hotMovies.firstOrNull() ?: hotTv.firstOrNull()
-        if (heroVideo != null) {
-            item {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(21f / 9f)
-                        .clip(RoundedCornerShape(24.dp))
-                        .clickable { navigateVideo(heroVideo) }
-                ) {
-                    if (heroVideo.displayCover.isNotBlank()) {
-                        AsyncImage(model = heroVideo.displayCover, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                    }
-                    // 渐变遮罩
-                    Box(modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.85f)))))
-                    Column(modifier = Modifier.align(Alignment.BottomStart).padding(28.dp)) {
-                        Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFFFF4D6A)) {
-                            Text("今日热门", modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp), fontSize = config.captionFontSize, fontWeight = FontWeight.Bold, color = Color.White)
-                        }
-                        Spacer(modifier = Modifier.height(10.dp))
-                        Text(heroVideo.title, fontSize = (config.sectionTitleSize.value + 8).sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(buildString { append(heroVideo.year); if (heroVideo.type.isNotBlank()) append(" · ${com.lechenmusic.ui.screens.video.categoryName(heroVideo.type)}") }, fontSize = config.bodyFontSize, color = Color.White.copy(alpha = 0.7f))
-                        // Issue 16: 添加描述文字
-                        if (heroVideo.desc.isNotBlank()) {
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text(
-                                heroVideo.desc,
-                                fontSize = config.captionFontSize,
-                                color = Color.White.copy(alpha = 0.6f),
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Button(onClick = { navigateVideo(heroVideo) }, shape = RoundedCornerShape(50), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary)) {
-                                Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("立即播放", fontWeight = FontWeight.SemiBold)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // ===== 热门电影 (4列网格 2:3卡片) =====
-        if (hotMovies.isNotEmpty()) {
-            item {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text("热门电影", fontSize = config.sectionTitleSize, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                    Text("查看全部 ›", fontSize = config.bodyFontSize, color = MaterialTheme.colorScheme.secondary, modifier = Modifier.clickable { onNavigateToVideoCategory("movie") })
-                }
-            }
-            // 4列网格用 chunked 实现
-            val movieRows = hotMovies.take(8).chunked(4)
-            items(movieRows) { row ->
-                Row(horizontalArrangement = Arrangement.spacedBy(gap), modifier = Modifier.fillMaxWidth()) {
-                    row.forEach { video ->
-                        TabletVideoMovieCard(video = video, config = config, modifier = Modifier.weight(1f)) { navigateVideo(video) }
-                    }
-                    repeat(4 - row.size) { Spacer(modifier = Modifier.weight(1f)) }
-                }
-            }
-        }
-
-        // ===== 左右分栏: 精品剧集 + 热门综艺 =====
-        if (hotTv.isNotEmpty() || hotVariety.isNotEmpty()) {
-            item {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap * 2)) {
-                    // 左侧: 精品剧集
-                    Column(modifier = Modifier.weight(1f)) {
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Text("精品剧集", fontSize = config.sectionTitleSize, fontWeight = FontWeight.Bold)
-                            Text("查看更多", fontSize = config.captionFontSize, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.clickable { onNavigateToVideoCategory("tv") })
-                        }
-                        Spacer(modifier = Modifier.height(12.dp))
-                        hotTv.take(4).forEach { video ->
-                            TabletVideoListCard(video = video, config = config) { navigateVideo(video) }
-                            Spacer(modifier = Modifier.height(10.dp))
-                        }
-                    }
-                    // 右侧: 热门综艺
-                    Column(modifier = Modifier.weight(1f)) {
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Text("热门综艺", fontSize = config.sectionTitleSize, fontWeight = FontWeight.Bold)
-                            Text("查看更多", fontSize = config.captionFontSize, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.clickable { onNavigateToVideoCategory("variety") })
-                        }
-                        Spacer(modifier = Modifier.height(12.dp))
-                        hotVariety.take(4).forEach { video ->
-                            TabletVideoListCard(video = video, config = config) { navigateVideo(video) }
-                            Spacer(modifier = Modifier.height(10.dp))
-                        }
-                    }
-                }
-            }
-        }
-
-        // ===== 热门动漫 (横滑卡片) =====
-        if (hotAnime.isNotEmpty()) {
-            item { TabletSecHd("热门动漫", "", config) }
-            item {
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(gap)) {
-                    items(hotAnime) { video ->
-                        TabletVideoCard(video = video, config = config) { navigateVideo(video) }
-                    }
-                }
-            }
-        }
-
-        // 加载指示器
-        if (videoHomeLoading) {
-            item { Box(modifier = Modifier.fillMaxWidth().padding(20.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(modifier = Modifier.size(32.dp)) } }
-        }
-
-        // 空状态
-        if (!videoHomeLoading && hotMovies.isEmpty() && hotTv.isEmpty() && videoPlayRecords.isEmpty()) {
-            item { Box(modifier = Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) { Text("暂无推荐数据", fontSize = config.bodyFontSize, color = MaterialTheme.colorScheme.onSurfaceVariant) } }
+    // 空状态
+    if (!videoHomeLoading && hotMovies.isEmpty() && hotTv.isEmpty() && videoPlayRecords.isEmpty()) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("暂无推荐数据", fontSize = config.bodyFontSize, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -2844,36 +2848,36 @@ private fun TabletVideoMovieCard(
     onClick: () -> Unit
 ) {
     Column(modifier = modifier.clickable(onClick = onClick)) {
+        // 2:3 海报卡片
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(2f / 3f)
                 .clip(RoundedCornerShape(16.dp))
-                .background(Brush.linearGradient(listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.3f), MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
         ) {
             if (video.displayCover.isNotBlank()) {
                 AsyncImage(model = video.displayCover, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
             }
-            // 评分
+            // 评分标签 (右上角)
             if (video.rate != null) {
-                Surface(shape = RoundedCornerShape(bottomStart = 8.dp, topEnd = 16.dp), color = Color(0xFFFF6B81).copy(alpha = 0.9f), modifier = Modifier.align(Alignment.TopEnd)) {
+                Surface(shape = RoundedCornerShape(bottomStart = 8.dp, topEnd = 16.dp), color = Color.Black.copy(alpha = 0.6f), modifier = Modifier.align(Alignment.TopEnd).padding(8.dp)) {
                     Row(modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text("★", fontSize = 10.sp, color = Color(0xFFFBBF24))
+                        Icon(Icons.Default.Star, null, tint = Color(0xFFFBBF24), modifier = Modifier.size(14.dp))
                         Spacer(modifier = Modifier.width(2.dp))
-                        Text(video.rate!!, fontSize = config.captionFontSize, fontWeight = FontWeight.Bold, color = Color.White)
+                        Text(video.rate!!, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
                     }
-                }
-            }
-            // 播放图标悬浮
-            Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.2f)).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
-                Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f), modifier = Modifier.size(48.dp)) {
-                    Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.PlayArrow, null, tint = Color.White, modifier = Modifier.size(24.dp)) }
                 }
             }
         }
         Spacer(modifier = Modifier.height(8.dp))
         Text(video.title, fontSize = config.cardTitleSize, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        Text(buildString { append(video.year); if (video.type.isNotBlank()) append(" · ${com.lechenmusic.ui.screens.video.categoryName(video.type)}") }, fontSize = config.cardSubtitleSize, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+        Text(
+            buildString { append(video.year); if (video.type.isNotBlank()) append(" · ${com.lechenmusic.ui.screens.video.categoryName(video.type)}") },
+            fontSize = config.cardSubtitleSize,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1
+        )
     }
 }
 
@@ -2888,23 +2892,52 @@ private fun TabletVideoListCard(
     Surface(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.4f)
+        color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.4f)
     ) {
         Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
-            // 小封面
-            Surface(modifier = Modifier.size(width = 56.dp, height = 75.dp), shape = RoundedCornerShape(10.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
+            // 封面 (竖版 3:4)
+            Surface(
+                modifier = Modifier.size(width = 64.dp, height = 85.dp),
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant
+            ) {
                 if (video.displayCover.isNotBlank()) {
                     AsyncImage(model = video.displayCover, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                 }
             }
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(14.dp))
+            // 信息
             Column(modifier = Modifier.weight(1f)) {
-                Text(video.title, fontSize = config.bodyFontSize, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(video.title, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(buildString { append(video.year); if (video.type.isNotBlank()) append(" · ${com.lechenmusic.ui.screens.video.categoryName(video.type)}") }, fontSize = config.captionFontSize, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                 if (video.totalEpisodes > 1) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text("更新至${video.totalEpisodes}集", fontSize = config.captionFontSize, color = MaterialTheme.colorScheme.primary)
+                    Text("更新至 ${video.displayTotalEpisodes} 集", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                } else {
+                    Text(buildString { append(video.year); if (video.type.isNotBlank()) append(" · ${com.lechenmusic.ui.screens.video.categoryName(video.type)}") }, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                // 标签
+                if (video.type.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Surface(shape = RoundedCornerShape(4.dp), color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f)) {
+                            Text(
+                                com.lechenmusic.ui.screens.video.categoryName(video.type),
+                                fontSize = 10.sp,
+                                color = MaterialTheme.colorScheme.secondary,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                        if (video.sourceName.isNotBlank()) {
+                            Surface(shape = RoundedCornerShape(4.dp), color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)) {
+                                Text(
+                                    video.sourceName,
+                                    fontSize = 10.sp,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
