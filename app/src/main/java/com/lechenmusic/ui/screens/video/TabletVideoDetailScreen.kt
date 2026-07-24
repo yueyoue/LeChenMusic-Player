@@ -1,12 +1,13 @@
 package com.lechenmusic.ui.screens.video
 
+import android.widget.FrameLayout
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -19,11 +20,19 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.ui.PlayerView
 import coil.compose.AsyncImage
 import com.lechenmusic.data.model.VideoInfo
 import com.lechenmusic.ui.VideoViewModel
@@ -44,10 +53,41 @@ fun TabletVideoDetailScreen(
     val allSearchSources by viewModel.allSearchSources.collectAsState()
     val sourceSpeeds by viewModel.sourceSpeeds.collectAsState()
     val speedTesting by viewModel.speedTesting.collectAsState()
+    val context = LocalContext.current
 
     LaunchedEffect(source, videoId) {
         viewModel.loadDetail(source, videoId)
         viewModel.loadFavorites()
+    }
+
+    // ExoPlayer - 内联播放器
+    val exoPlayer = remember {
+        val factory = DefaultMediaSourceFactory(context)
+        ExoPlayer.Builder(context)
+            .setMediaSourceFactory(factory)
+            .build().apply {
+                playWhenReady = true
+                repeatMode = Player.REPEAT_MODE_OFF
+            }
+    }
+
+    // 控件显隐
+    var controlsVisible by remember { mutableStateOf(true) }
+    var interactionCount by remember { mutableIntStateOf(0) }
+
+    // 控件自动隐藏
+    LaunchedEffect(interactionCount) {
+        if (interactionCount > 0 && exoPlayer.isPlaying) {
+            controlsVisible = true
+            kotlinx.coroutines.delay(3000)
+            if (exoPlayer.isPlaying) controlsVisible = false
+        }
+    }
+    LaunchedEffect(exoPlayer.isPlaying) {
+        if (exoPlayer.isPlaying) {
+            kotlinx.coroutines.delay(3000)
+            if (exoPlayer.isPlaying) controlsVisible = false
+        }
     }
 
     if (loading) {
@@ -58,6 +98,28 @@ fun TabletVideoDetailScreen(
     }
 
     val video = detail ?: return
+
+    // 当详情变化时自动加载第一个源的第一集
+    LaunchedEffect(video) {
+        val src = video.toSources().firstOrNull()
+        val ep = src?.episodes?.getOrNull(0)
+        if (ep != null && ep.url.isNotBlank()) {
+            exoPlayer.setMediaItem(MediaItem.fromUri(ep.url))
+            exoPlayer.prepare()
+            exoPlayer.playWhenReady = true
+        }
+    }
+
+    // 退出时释放播放器 + 保存位置
+    DisposableEffect(Unit) {
+        onDispose {
+            if (exoPlayer.currentPosition > 0) {
+                viewModel.setResumePosition(exoPlayer.currentPosition)
+            }
+            exoPlayer.stop()
+            exoPlayer.release()
+        }
+    }
 
     val videoSources = video.toSources()
     val displaySources = if (allSearchSources.size > 1) {
@@ -80,7 +142,6 @@ fun TabletVideoDetailScreen(
 
     var selectedSource by remember { mutableIntStateOf(0) }
     var selectedEpisode by remember { mutableIntStateOf(0) }
-    // 右侧 Tab: 0=选集, 1=播放源
     var rightTab by remember { mutableIntStateOf(0) }
 
     val currentSource = displaySources.getOrNull(selectedSource)
@@ -89,9 +150,7 @@ fun TabletVideoDetailScreen(
     Column(modifier = Modifier.fillMaxSize()) {
         // 顶部返回按钮
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onBack) {
@@ -103,52 +162,112 @@ fun TabletVideoDetailScreen(
 
         // ===== 主内容: 左侧(2/3) + 右侧(1/3) =====
         Row(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .padding(horizontal = responsiveConfig.contentPadding, vertical = 8.dp),
+            modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = responsiveConfig.contentPadding, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(responsiveConfig.itemSpacing)
         ) {
-            // ===== 左侧: 视频区域 + 影片信息 (flex-2) =====
-            Column(
-                modifier = Modifier
-                    .weight(2f)
-                    .fillMaxHeight()
-            ) {
-                // 视频播放区域 (16:9, rounded-2xl)
+            // ===== 左侧: 视频播放器 + 影片信息 (flex-2) =====
+            Column(modifier = Modifier.weight(2f).fillMaxHeight()) {
+                // 视频播放器 (16:9, rounded-2xl) - 自动播放
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .aspectRatio(16f / 9f)
                         .clip(RoundedCornerShape(16.dp))
                         .background(Color.Black)
-                        .clickable {
-                            if (episodes.isNotEmpty()) onPlay(video.source, selectedEpisode)
-                        }
                 ) {
-                    if (video.displayCover.isNotBlank()) {
-                        AsyncImage(
-                            model = video.displayCover,
-                            contentDescription = null,
-                            modifier = Modifier.fillMaxSize().graphicsLayer { alpha = 0.6f },
-                            contentScale = ContentScale.Crop
-                        )
-                    }
-                    Box(
-                        modifier = Modifier.fillMaxSize().background(
-                            Brush.verticalGradient(
-                                listOf(Color.Black.copy(alpha = 0.4f), Color.Transparent, Color.Transparent, Color.Black.copy(alpha = 0.8f))
-                            )
-                        )
+                    // ExoPlayer 渲染
+                    AndroidView(
+                        factory = { ctx ->
+                            PlayerView(ctx).apply {
+                                player = exoPlayer
+                                useController = false
+                                layoutParams = FrameLayout.LayoutParams(
+                                    FrameLayout.LayoutParams.MATCH_PARENT,
+                                    FrameLayout.LayoutParams.MATCH_PARENT
+                                )
+                            }
+                        },
+                        modifier = Modifier.fillMaxSize()
                     )
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f), modifier = Modifier.size(64.dp)) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(Icons.Default.PlayArrow, "播放", tint = Color.White, modifier = Modifier.size(32.dp))
+                    // 点击切换控件显隐
+                    Box(
+                        modifier = Modifier.fillMaxSize().pointerInput(Unit) {
+                            detectTapGestures {
+                                controlsVisible = !controlsVisible
+                                if (controlsVisible) interactionCount++
                             }
                         }
+                    )
+                    // 控件叠加层
+                    if (controlsVisible) {
+                        // 顶部: 返回 + 全屏
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            // 空占位（返回按钮在外层）
+                            Spacer(modifier = Modifier.size(40.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                IconButton(
+                                    onClick = { onPlay(video.source, selectedEpisode) },
+                                    modifier = Modifier.size(40.dp)
+                                ) {
+                                    Icon(Icons.Default.Fullscreen, "全屏", tint = Color.White, modifier = Modifier.size(22.dp))
+                                }
+                            }
+                        }
+                        // 底部: 播放/暂停 + 进度
+                        Row(
+                            modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            var isPlaying by remember { mutableStateOf(false) }
+                            LaunchedEffect(exoPlayer) {
+                                while (true) {
+                                    isPlaying = exoPlayer.isPlaying
+                                    kotlinx.coroutines.delay(500)
+                                }
+                            }
+                            FilledIconButton(
+                                onClick = { if (isPlaying) exoPlayer.pause() else exoPlayer.play() },
+                                modifier = Modifier.size(40.dp),
+                                shape = CircleShape,
+                                colors = IconButtonDefaults.filledIconButtonColors(
+                                    containerColor = Color.White.copy(alpha = 0.8f),
+                                    contentColor = Color.Black
+                                )
+                            ) {
+                                Icon(
+                                    if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                    null, modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            // 进度文字
+                            var currentPosition by remember { mutableLongStateOf(0L) }
+                            var duration by remember { mutableLongStateOf(0L) }
+                            LaunchedEffect(exoPlayer) {
+                                while (true) {
+                                    currentPosition = exoPlayer.currentPosition.coerceAtLeast(0L)
+                                    duration = exoPlayer.duration.coerceAtLeast(0L)
+                                    kotlinx.coroutines.delay(500)
+                                }
+                            }
+                            Text(formatVideoTime(currentPosition), fontSize = 12.sp, color = Color.White.copy(alpha = 0.8f))
+                            // 进度条
+                            Slider(
+                                value = if (duration > 0) currentPosition.toFloat() / duration else 0f,
+                                onValueChange = { exoPlayer.seekTo((it * duration).toLong()) },
+                                modifier = Modifier.weight(1f),
+                                colors = SliderDefaults.colors(
+                                    thumbColor = Color.White,
+                                    activeTrackColor = MaterialTheme.colorScheme.primary,
+                                    inactiveTrackColor = Color.White.copy(alpha = 0.3f)
+                                )
+                            )
+                            Text(formatVideoTime(duration), fontSize = 12.sp, color = Color.White.copy(alpha = 0.8f))
+                        }
                     }
-                    Box(modifier = Modifier.fillMaxWidth().height(3.dp).align(Alignment.BottomCenter).background(Color.White.copy(alpha = 0.2f)))
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -214,10 +333,7 @@ fun TabletVideoDetailScreen(
             }
 
             // ===== 右侧: Tab 切换选集/播放源 (flex-1) =====
-            Column(
-                modifier = Modifier.weight(1f).fillMaxHeight()
-            ) {
-                // Tab 栏
+            Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
                 TabRow(
                     selectedTabIndex = rightTab,
                     modifier = Modifier.fillMaxWidth(),
@@ -228,7 +344,6 @@ fun TabletVideoDetailScreen(
                     Tab(selected = rightTab == 1, onClick = { rightTab = 1 }, text = { Text("播放源 (${displaySources.size})") })
                 }
 
-                // Tab 内容
                 Surface(
                     shape = RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp),
                     color = MaterialTheme.colorScheme.surfaceContainer,
@@ -236,9 +351,14 @@ fun TabletVideoDetailScreen(
                     modifier = Modifier.fillMaxSize()
                 ) {
                     when (rightTab) {
-                        0 -> EpisodeGrid(episodes, selectedEpisode) { index ->
+                        0 -> EpisodeGrid(episodes, selectedEpisode, exoPlayer, video.source) { index ->
                             selectedEpisode = index
-                            onPlay(video.source, index)
+                            val ep = episodes.getOrNull(index)
+                            if (ep != null && ep.url.isNotBlank()) {
+                                exoPlayer.setMediaItem(MediaItem.fromUri(ep.url))
+                                exoPlayer.prepare()
+                                exoPlayer.playWhenReady = true
+                            }
                         }
                         1 -> SourceList(
                             displaySources = displaySources,
@@ -250,6 +370,25 @@ fun TabletVideoDetailScreen(
                                 selectedSource = index
                                 selectedEpisode = 0
                                 viewModel.switchSource(info)
+                                // 切换源后自动播放第一集（从上次位置继续）
+                                val ep = info.episodes.firstOrNull()
+                                if (ep != null && ep.isNotBlank()) {
+                                    exoPlayer.setMediaItem(MediaItem.fromUri(ep))
+                                    exoPlayer.prepare()
+                                    exoPlayer.playWhenReady = true
+                                    val resumeMs = viewModel.resumePositionMs.value
+                                    if (resumeMs > 0) {
+                                        exoPlayer.addListener(object : Player.Listener {
+                                            override fun onPlaybackStateChanged(state: Int) {
+                                                if (state == Player.STATE_READY) {
+                                                    exoPlayer.seekTo(resumeMs)
+                                                    viewModel.clearResumePosition()
+                                                    exoPlayer.removeListener(this)
+                                                }
+                                            }
+                                        })
+                                    }
+                                }
                             },
                             onTestSpeed = { viewModel.testSourceSpeeds() }
                         )
@@ -265,6 +404,8 @@ fun TabletVideoDetailScreen(
 private fun EpisodeGrid(
     episodes: List<com.lechenmusic.data.model.VideoEpisode>,
     selectedEpisode: Int,
+    exoPlayer: ExoPlayer,
+    videoSource: String,
     onEpisodeClick: (Int) -> Unit
 ) {
     if (episodes.isEmpty()) {
@@ -312,7 +453,6 @@ private fun SourceList(
     onTestSpeed: () -> Unit
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
-        // 测速按钮
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -328,7 +468,6 @@ private fun SourceList(
             }
         }
 
-        // 源列表
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
@@ -356,35 +495,15 @@ private fun SourceList(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // 源名称
-                        Text(
-                            src.sourceName.ifBlank { src.source },
-                            fontSize = 14.sp,
-                            fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
+                        Text(src.sourceName.ifBlank { src.source }, fontSize = 14.sp, fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
                             color = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f)
-                        )
-                        // 集数
+                            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                         Text("${src.episodes.size}集", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(modifier = Modifier.width(8.dp))
-                        // 速度
                         Text(
-                            when {
-                                speed == null -> ""
-                                speed < 0 -> "超时"
-                                else -> "${speed}ms"
-                            },
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = when {
-                                speed == null -> MaterialTheme.colorScheme.onSurfaceVariant
-                                speed < 0 -> Color.Red
-                                speed < 500 -> Color(0xFF4CAF50)
-                                speed < 1500 -> Color(0xFFFFC107)
-                                else -> Color(0xFFFF5722)
-                            }
+                            when { speed == null -> ""; speed < 0 -> "超时"; else -> "${speed}ms" },
+                            fontSize = 12.sp, fontWeight = FontWeight.Medium,
+                            color = when { speed == null -> MaterialTheme.colorScheme.onSurfaceVariant; speed < 0 -> Color.Red; speed < 500 -> Color(0xFF4CAF50); speed < 1500 -> Color(0xFFFFC107); else -> Color(0xFFFF5722) }
                         )
                         if (isCurrent) {
                             Spacer(modifier = Modifier.width(8.dp))
@@ -397,4 +516,12 @@ private fun SourceList(
             }
         }
     }
+}
+
+private fun formatVideoTime(ms: Long): String {
+    val totalSeconds = ms / 1000
+    val h = totalSeconds / 3600
+    val m = (totalSeconds % 3600) / 60
+    val s = totalSeconds % 60
+    return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%02d:%02d".format(m, s)
 }
