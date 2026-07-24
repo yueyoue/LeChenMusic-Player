@@ -186,13 +186,20 @@ class MusicRepository {
 
     suspend fun getStarred(): Result<StarredData> {
         return try {
-            android.util.Log.d("LeChenMusic", "getStarred: calling getStarred2...")
+            android.util.Log.d("LeChenMusic", "getStarred: calling getStarred2... user=$username server=$serverUrl")
             val response = api!!.getStarred(username, password)
             val body = response.subsonicResponse
             android.util.Log.d("LeChenMusic", "getStarred: status=${body.status} error=${body.error?.message}")
             val starred = body.starred2 ?: body.starred
             android.util.Log.d("LeChenMusic", "getStarred: starred2=${body.starred2!=null} starred=${body.starred!=null}")
             android.util.Log.d("LeChenMusic", "getStarred: songs=${starred?.song?.size} albums=${starred?.album?.size} artists=${starred?.artist?.size} playlists=${starred?.playlist?.size}")
+            // 打印第一首歌的详情，确认数据是否正确
+            starred?.song?.firstOrNull()?.let {
+                android.util.Log.d("LeChenMusic", "getStarred: first song: id=${it.id} title=${it.title} starred=${it.starred}")
+            }
+            starred?.album?.firstOrNull()?.let {
+                android.util.Log.d("LeChenMusic", "getStarred: first album: id=${it.id} name=${it.name} starred=${it.starred}")
+            }
             var playlists = starred?.playlist ?: emptyList()
             if (playlists.isEmpty()) {
                 android.util.Log.d("LeChenMusic", "getStarred: playlists empty, trying getPlaylists fallback...")
