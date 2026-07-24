@@ -946,7 +946,7 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
             // 兜底：URL为空时使用默认LunaTV地址
             if (url.isBlank()) url = "http://j.tthsdd.top:3000"
             if (user.isBlank()) user = "admin"
-            if (pass.isBlank()) pass = "admin"
+            if (pass.isBlank()) pass = ""
             settings.saveVideoLogin(url, user, pass)
             val sb = StringBuilder()
             sb.appendLine("1. 检查配置...")
@@ -954,16 +954,9 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
             sb.appendLine("用户: '${user}'")
             sb.appendLine("已登录: ${_isLoggedIn.value}")
 
-            if (url.isBlank()) {
-                sb.appendLine("❌ URL为空，无法加载")
-                _liveDebug.value = sb.toString()
-                _liveLoading.value = false
-                return@launch
-            }
-
             // 未登录时先自动登录
             if (!_isLoggedIn.value) {
-                if (user.isNotBlank() && pass.isNotBlank()) {
+                if (user.isNotBlank()) {
                     sb.appendLine("尝试自动登录...")
                     try {
                         val api = VideoApiClient.getApi(url)
@@ -981,7 +974,7 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                         sb.appendLine("❌ 登录异常: ${e.message}")
                     }
                 } else {
-                    sb.appendLine("❌ 账号或密码为空")
+                    sb.appendLine("❌ 账号为空")
                 }
             } else {
                 sb.appendLine("已登录，跳过登录步骤")
@@ -994,12 +987,13 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                 val response = withContext(Dispatchers.IO) { api.getLiveSources() }
                 sb.appendLine("直播源响应: ${response.code()} successful=${response.isSuccessful}")
                 if (response.isSuccessful) {
-                    val sources = response.body() ?: emptyList()
+                    val sources = (response.body() ?: emptyList()).filter { !it.disabled }
                     _liveSources.value = sources
                     sb.appendLine("✅ 源数量: ${sources.size}")
-                    sources.forEach { sb.appendLine("  - ${it.name}: ${it.source}") }
+                    sources.forEach { sb.appendLine("  - ${it.name}: key=${it.key}, url=${it.url.take(60)}") }
                     if (sources.isNotEmpty()) {
-                        loadLiveChannels(sources.first().source)
+                        // 参照 Selene-Source: 用第一个源的 key 加载频道
+                        loadLiveChannels(sources.first().key)
                     }
                 } else {
                     sb.appendLine("❌ 请求失败: ${response.code()} ${response.message()}")
@@ -1014,17 +1008,141 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun loadLiveChannels(source: String) {
+    /**
+     * 加载直播频道 - 参照 Selene-Source live_service.dart
+     * 直接请求源的 M3U URL，本地解析频道列表
+     */
+    fun loadLiveChannels(sourceKey: String) {
         viewModelScope.launch {
             _liveLoading.value = true
+            val sb = StringBuilder()
             try {
-                val api = VideoApiClient.getApi(videoServerUrl.value)
-                val response = withContext(Dispatchers.IO) { api.getLiveChannels(source) }
-                if (response.isSuccessful) {
-                    _liveChannels.value = response.body() ?: emptyList()
+                // 从已加载的源列表中找到对应的 LiveSource
+                val source = _liveSources.value.firstOrNull { it.key == sourceKey }
+                if (source == null) {
+                    sb.appendLine("❌ 未找到源: $sourceKey")
+                    _liveDebug.value = sb.toString()
+                    _liveLoading.value = false
+                    return@launch
                 }
-            } catch (_: Exception) { }
+
+                sb.appendLine("加载频道: ${source.name}")
+                sb.appendLine("URL: ${source.url.take(80)}")
+
+                if (source.url.isBlank()) {
+                    sb.appendLine("❌ 源URL为空")
+                    _liveDebug.value = sb.toString()
+                    _liveLoading.value = false
+                    return@launch
+                }
+
+                // 参照 Selene-Source: 直接 HTTP GET 请求 M3U 文件
+                val client = okhttp3.OkHttpClient.Builder()
+                    .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+                    .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+                    .build()
+
+                val userAgent = source.ua.ifBlank { "AptvPlayer/1.4.10" }
+                val request = okhttp3.Request.Builder()
+                    .url(source.url)
+                    .addHeader("User-Agent", userAgent)
+                    .build()
+
+                val responseBody = withContext(Dispatchers.IO) {
+                    client.newCall(request).execute().use { resp ->
+                        if (resp.isSuccessful) resp.body?.string() else null
+                    }
+                }
+
+                if (responseBody == null) {
+                    sb.appendLine("❌ M3U请求失败或响应为空")
+                    _liveDebug.value = sb.toString()
+                    _liveLoading.value = false
+                    return@launch
+                }
+
+                sb.appendLine("M3U内容长度: ${responseBody.length}")
+
+                // 解析 M3U 内容
+                val channels = parseM3U(sourceKey, responseBody)
+                sb.appendLine("解析到 ${channels.size} 个频道")
+
+                // 按 group 分组
+                val grouped = channels.groupBy { it.group.ifBlank { "未分组" } }
+                    .map { (name, chs) -> LiveChannelGroup(name = name, channels = chs) }
+
+                _liveChannels.value = grouped
+                sb.appendLine("✅ 分组数: ${grouped.size}")
+                grouped.take(5).forEach { g ->
+                    sb.appendLine("  ${g.name}: ${g.channels.size}个频道")
+                }
+            } catch (e: Exception) {
+                sb.appendLine("❌ 异常: ${e.javaClass.simpleName}: ${e.message}")
+                logDebug("loadLiveChannels", "异常: ${e.message}")
+            }
+            _liveDebug.value = sb.toString()
             _liveLoading.value = false
         }
+    }
+
+    /**
+     * 解析 M3U 内容 - 参照 Selene-Source live_service.dart _parseM3U
+     */
+    private fun parseM3U(sourceKey: String, m3uContent: String): List<LiveChannel> {
+        val channels = mutableListOf<LiveChannel>()
+        val lines = m3uContent.lines().map { it.trim() }.filter { it.isNotEmpty() }
+        var channelIndex = 0
+
+        var i = 0
+        while (i < lines.size) {
+            val line = lines[i]
+
+            // 跳过 #EXTM3U 头
+            if (line.startsWith("#EXTM3U")) {
+                i++
+                continue
+            }
+
+            // 解析 #EXTINF 行
+            if (line.startsWith("#EXTINF:")) {
+                // 提取 tvg-id
+                val tvgIdMatch = Regex("tvg-id=\"([^\"]*)\"").find(line)
+                val tvgId = tvgIdMatch?.groupValues?.get(1) ?: ""
+                // 提取 tvg-logo
+                val logoMatch = Regex("tvg-logo=\"([^\"]*)\"").find(line)
+                val logo = logoMatch?.groupValues?.get(1) ?: ""
+                // 提取 group-title
+                val groupMatch = Regex("group-title=\"([^\"]*)\"").find(line)
+                val group = groupMatch?.groupValues?.get(1) ?: "未分组"
+                // 提取标题（最后一个逗号后面的内容）
+                val lastComma = line.lastIndexOf(',')
+                val title = if (lastComma != -1 && lastComma < line.length - 1) {
+                    line.substring(lastComma + 1).trim()
+                } else ""
+
+                // tvg-name 作为备选
+                val tvgNameMatch = Regex("tvg-name=\"([^\"]*)\"").find(line)
+                val tvgName = tvgNameMatch?.groupValues?.get(1) ?: ""
+                val name = title.ifBlank { tvgName }
+
+                // 下一行应该是 URL
+                if (i + 1 < lines.size && !lines[i + 1].startsWith("#")) {
+                    val url = lines[i + 1]
+                    if (name.isNotBlank() && url.isNotBlank()) {
+                        channels.add(LiveChannel(
+                            name = name,
+                            url = url,
+                            logo = logo,
+                            group = group,
+                            epg = tvgId
+                        ))
+                        channelIndex++
+                    }
+                    i++ // 跳过 URL 行
+                }
+            }
+            i++
+        }
+        return channels
     }
 }
