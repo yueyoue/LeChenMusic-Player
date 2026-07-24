@@ -944,11 +944,10 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
             var user = videoUsername.value
             var pass = videoPassword.value
             // 兜底：URL为空时使用默认LunaTV地址
-            if (url.isBlank()) {
-                url = "http://j.tthsdd.top:3000"
-                if (user.isBlank()) user = "admin"
-                settings.saveVideoLogin(url, user, pass)
-            }
+            if (url.isBlank()) url = "http://j.tthsdd.top:3000"
+            if (user.isBlank()) user = "admin"
+            if (pass.isBlank()) pass = "admin"
+            settings.saveVideoLogin(url, user, pass)
             val sb = StringBuilder()
             sb.appendLine("1. 检查配置...")
             sb.appendLine("URL: '${url}'")
