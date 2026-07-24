@@ -77,34 +77,8 @@ fun TabletLiveScreen(
 
     val groups = liveChannels
 
-    // ===== 调试信息（屏幕中央覆盖层）=====
-    if (liveDebug.isNotEmpty()) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            Surface(
-                modifier = Modifier.padding(32.dp).fillMaxWidth(0.7f),
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.errorContainer,
-                shadowElevation = 8.dp
-            ) {
-                Column(modifier = Modifier.padding(20.dp)) {
-                    Text("🔍 调试信息", fontSize = 18.sp, fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onErrorContainer)
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        liveDebug,
-                        fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.onErrorContainer,
-                        lineHeight = 22.sp
-                    )
-                }
-            }
-        }
-    }
-
-    Row(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        Row(modifier = Modifier.fillMaxSize()) {
         // ===== 左侧：频道列表 (35%) =====
         Column(
             modifier = Modifier
@@ -418,6 +392,23 @@ fun TabletLiveScreen(
                         }
                     }
                 }
+            }
+        }
+    }
+
+    // 调试信息覆盖层
+    if (liveDebug.isNotEmpty()) {
+        Surface(
+            modifier = Modifier.align(Alignment.Center).padding(32.dp).fillMaxWidth(0.6f),
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.errorContainer,
+            shadowElevation = 12.dp
+        ) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                Text("\uD83D\uDD0D 调试信息", fontSize = 18.sp, fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onErrorContainer)
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(liveDebug, fontSize = 14.sp, color = MaterialTheme.colorScheme.onErrorContainer, lineHeight = 22.sp)
             }
         }
     }
