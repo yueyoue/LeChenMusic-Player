@@ -413,6 +413,7 @@ fun TabletLiveScreen(
         }
     }
 }
+}
 
 @Composable
 private fun ChannelListItem(
