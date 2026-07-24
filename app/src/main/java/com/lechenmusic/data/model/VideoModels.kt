@@ -203,8 +203,14 @@ data class LiveSourcesResponse(
 )
 
 data class LiveSource(
+    val key: String = "",
     val name: String = "",
-    val source: String = ""
+    val url: String = "",
+    val ua: String = "",
+    val epg: String = "",
+    val from: String = "",
+    val disabled: Boolean = false,
+    val source: String = ""  // 兼容旧格式
 )
 
 data class LiveChannelsResponse(
