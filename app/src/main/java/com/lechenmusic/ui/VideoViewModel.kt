@@ -148,6 +148,9 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
     private val _liveLoading = MutableStateFlow(false)
     val liveLoading: StateFlow<Boolean> = _liveLoading.asStateFlow()
 
+    private val _liveDebug = MutableStateFlow("")
+    val liveDebug: StateFlow<String> = _liveDebug.asStateFlow()
+
     // ===== Toast =====
     private val _toastMessage = MutableStateFlow<String?>(null)
     val toastMessage: StateFlow<String?> = _toastMessage.asStateFlow()
@@ -938,38 +941,69 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
     fun loadLiveSources() {
         viewModelScope.launch {
             val url = videoServerUrl.value
+            val user = videoUsername.value
+            val pass = videoPassword.value
+            val sb = StringBuilder()
+            sb.appendLine("URL: $url")
+            sb.appendLine("用户: $user")
+            sb.appendLine("已登录: ${_isLoggedIn.value}")
+
             if (url.isBlank()) {
+                sb.appendLine("❌ URL为空")
+                _liveDebug.value = sb.toString()
                 _liveLoading.value = false
                 return@launch
             }
+
             // 未登录时先自动登录
             if (!_isLoggedIn.value) {
-                val user = videoUsername.value
-                val pass = videoPassword.value
                 if (user.isNotBlank() && pass.isNotBlank()) {
+                    sb.appendLine("尝试自动登录...")
                     try {
                         val api = VideoApiClient.getApi(url)
                         val resp = withContext(Dispatchers.IO) {
                             api.login(mapOf("username" to user, "password" to pass))
                         }
+                        sb.appendLine("登录响应: ${resp.code()} ok=${resp.body()?.ok}")
                         if (resp.isSuccessful && resp.body()?.ok == true) {
                             _isLoggedIn.value = true
+                            sb.appendLine("✅ 登录成功")
+                        } else {
+                            sb.appendLine("❌ 登录失败: ${resp.code()} ${resp.message()}")
                         }
-                    } catch (_: Exception) {}
+                    } catch (e: Exception) {
+                        sb.appendLine("❌ 登录异常: ${e.message}")
+                    }
+                } else {
+                    sb.appendLine("❌ 账号或密码为空")
                 }
+            } else {
+                sb.appendLine("已登录，跳过登录步骤")
             }
+
             _liveLoading.value = true
+            sb.appendLine("加载直播源...")
             try {
                 val api = VideoApiClient.getApi(url)
                 val response = withContext(Dispatchers.IO) { api.getLiveSources() }
+                sb.appendLine("直播源响应: ${response.code()} successful=${response.isSuccessful}")
                 if (response.isSuccessful) {
-                    _liveSources.value = response.body() ?: emptyList()
-                    val sources = response.body()
-                    if (!sources.isNullOrEmpty()) {
+                    val sources = response.body() ?: emptyList()
+                    _liveSources.value = sources
+                    sb.appendLine("✅ 源数量: ${sources.size}")
+                    sources.forEach { sb.appendLine("  - ${it.name}: ${it.source}") }
+                    if (sources.isNotEmpty()) {
                         loadLiveChannels(sources.first().source)
                     }
+                } else {
+                    sb.appendLine("❌ 请求失败: ${response.code()} ${response.message()}")
+                    val errBody = response.errorBody()?.string()
+                    if (errBody != null) sb.appendLine("错误: ${errBody.take(200)}")
                 }
-            } catch (_: Exception) { }
+            } catch (e: Exception) {
+                sb.appendLine("❌ 异常: ${e.message}")
+            }
+            _liveDebug.value = sb.toString()
             _liveLoading.value = false
         }
     }

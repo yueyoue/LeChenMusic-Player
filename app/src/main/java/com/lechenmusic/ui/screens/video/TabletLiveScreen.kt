@@ -39,6 +39,7 @@ fun TabletLiveScreen(
     val liveSources by viewModel.liveSources.collectAsState()
     val liveChannels by viewModel.liveChannels.collectAsState()
     val liveLoading by viewModel.liveLoading.collectAsState()
+    val liveDebug by viewModel.liveDebug.collectAsState()
     val context = androidx.compose.ui.platform.LocalContext.current
 
     var selectedSourceIndex by remember { mutableIntStateOf(0) }
@@ -204,6 +205,23 @@ fun TabletLiveScreen(
                             }
                         )
                     }
+                }
+            }
+
+            // ===== 调试信息 =====
+            if (liveDebug.isNotEmpty()) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)
+                ) {
+                    Text(
+                        liveDebug,
+                        fontSize = 10.sp,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.padding(8.dp),
+                        lineHeight = 14.sp
+                    )
                 }
             }
         }
