@@ -937,9 +937,14 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
 
     fun loadLiveSources() {
         viewModelScope.launch {
+            val url = videoServerUrl.value
+            if (url.isBlank()) {
+                _liveLoading.value = false
+                return@launch
+            }
             _liveLoading.value = true
             try {
-                val api = VideoApiClient.getApi(videoServerUrl.value)
+                val api = VideoApiClient.getApi(url)
                 val response = withContext(Dispatchers.IO) { api.getLiveSources() }
                 if (response.isSuccessful) {
                     _liveSources.value = response.body() ?: emptyList()
