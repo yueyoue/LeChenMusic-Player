@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lechenmusic.data.model.Album
 import com.lechenmusic.data.model.Audiobook
+import com.lechenmusic.data.model.Playlist
 import com.lechenmusic.data.model.Song
 import com.lechenmusic.ui.MainViewModel
 import com.lechenmusic.ui.components.CoverImage
@@ -36,12 +37,14 @@ fun TabletFavoritesScreen(
     responsiveConfig: ResponsiveConfig,
     onSongClick: (Song, List<Song>) -> Unit,
     onAlbumClick: (String) -> Unit,
-    onAudiobookClick: (String) -> Unit
+    onAudiobookClick: (String) -> Unit,
+    onPlaylistClick: (String) -> Unit = {}
 ) {
     val starredSongs by viewModel.starredSongs.collectAsState()
     val starredAlbums by viewModel.starredAlbums.collectAsState()
     val starredAudiobooks by viewModel.starredAudiobooks.collectAsState()
     val starredArtists by viewModel.starredArtists.collectAsState()
+    val starredPlaylists by viewModel.starredPlaylists.collectAsState()
     val serverUrl by viewModel.serverUrl.collectAsState()
     val username by viewModel.username.collectAsState()
     val password by viewModel.password.collectAsState()
@@ -50,7 +53,7 @@ fun TabletFavoritesScreen(
     var searchText by remember { mutableStateOf("") }
     var isSearchActive by remember { mutableStateOf(false) }
 
-    val tabs = listOf("单曲" to starredSongs.size, "专辑" to starredAlbums.size, "歌手" to starredArtists.size, "有声书" to starredAudiobooks.size)
+    val tabs = listOf("单曲" to starredSongs.size, "歌单" to starredPlaylists.size, "歌手" to starredArtists.size, "有声书" to starredAudiobooks.size)
 
     Column(modifier = Modifier.fillMaxSize()) {
         // ===== 顶部: 标题 + Tab栏 + 搜索框 =====
@@ -165,7 +168,7 @@ fun TabletFavoritesScreen(
             // 统计
             when (selectedTab) {
                 0 -> Text("共 ${starredSongs.size} 首", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                1 -> Text("共 ${starredAlbums.size} 张专辑", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                1 -> Text("共 ${starredPlaylists.size} 个歌单", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 2 -> Text("歌手收藏", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 3 -> Text("共 ${starredAudiobooks.size} 本有声书", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
@@ -181,13 +184,13 @@ fun TabletFavoritesScreen(
                 password = password,
                 onSongClick = onSongClick
             )
-            1 -> AlbumsTab(
-                albums = starredAlbums,
+            1 -> PlaylistsTab(
+                playlists = starredPlaylists,
                 responsiveConfig = responsiveConfig,
                 serverUrl = serverUrl,
                 username = username,
                 password = password,
-                onAlbumClick = onAlbumClick
+                onPlaylistClick = onPlaylistClick
             )
             2 -> ArtistsTab(
                 artists = starredArtists,
@@ -508,6 +511,62 @@ private fun ArtistsTab(
                 )
                 Text(
                     "${artist.albumCount} 张专辑",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1
+                )
+            }
+        }
+    }
+}
+
+// ==================== 歌单 Tab ====================
+@Composable
+private fun PlaylistsTab(
+    playlists: List<Playlist>,
+    responsiveConfig: ResponsiveConfig,
+    serverUrl: String,
+    username: String,
+    password: String,
+    onPlaylistClick: (String) -> Unit
+) {
+    if (playlists.isEmpty()) {
+        EmptyFavorites("暂无收藏歌单")
+        return
+    }
+
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(responsiveConfig.gridColumns.coerceIn(3, 5)),
+        contentPadding = PaddingValues(
+            start = responsiveConfig.contentPadding,
+            end = responsiveConfig.contentPadding,
+            bottom = 160.dp
+        ),
+        horizontalArrangement = Arrangement.spacedBy(responsiveConfig.itemSpacing),
+        verticalArrangement = Arrangement.spacedBy(responsiveConfig.itemSpacing)
+    ) {
+        items(playlists) { playlist ->
+            Column(modifier = Modifier.clickable { onPlaylistClick(playlist.id) }) {
+                CoverImage(
+                    coverArtId = playlist.coverArt,
+                    serverUrl = serverUrl,
+                    username = username,
+                    password = password,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(1f)
+                        .clip(RoundedCornerShape(14.dp))
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    playlist.name,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    "${playlist.songCount} 首 · ${playlist.owner}",
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1

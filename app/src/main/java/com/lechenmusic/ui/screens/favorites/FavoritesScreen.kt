@@ -43,7 +43,7 @@ fun FavoritesScreen(
     val password by viewModel.password.collectAsState()
 
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("音乐", "专辑", "歌单", "有声书")
+    val tabs = listOf("音乐", "歌单", "有声书")
 
     Column(modifier = Modifier.fillMaxSize()) {
         Text(
@@ -76,11 +76,12 @@ fun FavoritesScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
+        val starredPlaylists by viewModel.starredPlaylists.collectAsState()
+
         when (selectedTab) {
             0 -> MusicTab(starredSongs, serverUrl, username, password, onSongClick)
-            1 -> AlbumsTab(starredAlbums, serverUrl, username, password, onAlbumClick)
-            2 -> PlaylistsTab(playlists, serverUrl, username, password, onPlaylistClick)
-            3 -> AudiobooksTab(starredAudiobooks, serverUrl, username, password, onAudiobookClick)
+            1 -> PlaylistsTab(starredPlaylists, serverUrl, username, password, onPlaylistClick)
+            2 -> AudiobooksTab(starredAudiobooks, serverUrl, username, password, onAudiobookClick)
         }
     }
 }

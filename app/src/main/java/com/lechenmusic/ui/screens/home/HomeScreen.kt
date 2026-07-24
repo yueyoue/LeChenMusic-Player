@@ -2523,7 +2523,7 @@ private fun TabletVideoHomeContent(
                 }
             }
 
-            // 热门电影 (4列网格 2:3卡片)
+            // 热门电影 (横向卡片滚动)
             if (hotMovies.isNotEmpty()) {
                 item {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -2531,52 +2531,59 @@ private fun TabletVideoHomeContent(
                         Text("查看全部 ›", fontSize = config.bodyFontSize, color = MaterialTheme.colorScheme.secondary, modifier = Modifier.clickable { onNavigateToVideoCategory("movie") })
                     }
                 }
-                val movieRows = hotMovies.take(8).chunked(4)
-                items(movieRows) { row ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(gap), modifier = Modifier.fillMaxWidth()) {
-                        row.forEach { video ->
-                            TabletVideoMovieCard(video = video, config = config, modifier = Modifier.weight(1f)) { navigateVideo(video) }
-                        }
-                        repeat(4 - row.size) { Spacer(modifier = Modifier.weight(1f)) }
-                    }
-                }
-            }
-
-            // 精品剧集 + 热门综艺 (左右两列, 横向卡片)
-            if (hotTv.isNotEmpty() || hotVariety.isNotEmpty()) {
                 item {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap * 2)) {
-                        // 精品剧集
-                        Column(modifier = Modifier.weight(1f)) {
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                                Text("精品剧集", fontSize = config.sectionTitleSize, fontWeight = FontWeight.Bold)
-                                Text("查看更多", fontSize = config.captionFontSize, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.clickable { onNavigateToVideoCategory("tv") })
-                            }
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                                hotTv.take(4).forEach { video ->
-                                    TabletVideoListCard(video = video, config = config) { navigateVideo(video) }
-                                }
-                            }
-                        }
-                        // 热门综艺
-                        Column(modifier = Modifier.weight(1f)) {
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                                Text("热门综艺", fontSize = config.sectionTitleSize, fontWeight = FontWeight.Bold)
-                                Text("查看更多", fontSize = config.captionFontSize, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.clickable { onNavigateToVideoCategory("variety") })
-                            }
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                                hotVariety.take(4).forEach { video ->
-                                    TabletVideoListCard(video = video, config = config) { navigateVideo(video) }
-                                }
-                            }
+                    androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        items(hotMovies) { video ->
+                            com.lechenmusic.ui.screens.video.VideoHorizontalCard(
+                                video = video,
+                                onClick = { navigateVideo(video) }
+                            )
                         }
                     }
                 }
             }
 
-            // 热门动漫 (4列网格 2:3卡片)
+            // 热门剧集 (横向卡片滚动)
+            if (hotTv.isNotEmpty()) {
+                item {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Text("热门剧集", fontSize = config.sectionTitleSize, fontWeight = FontWeight.Bold)
+                        Text("查看全部 ›", fontSize = config.bodyFontSize, color = MaterialTheme.colorScheme.secondary, modifier = Modifier.clickable { onNavigateToVideoCategory("tv") })
+                    }
+                }
+                item {
+                    androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        items(hotTv) { video ->
+                            com.lechenmusic.ui.screens.video.VideoHorizontalCard(
+                                video = video,
+                                onClick = { navigateVideo(video) }
+                            )
+                        }
+                    }
+                }
+            }
+
+            // 热门综艺 (横向卡片滚动)
+            if (hotVariety.isNotEmpty()) {
+                item {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Text("热门综艺", fontSize = config.sectionTitleSize, fontWeight = FontWeight.Bold)
+                        Text("查看全部 ›", fontSize = config.bodyFontSize, color = MaterialTheme.colorScheme.secondary, modifier = Modifier.clickable { onNavigateToVideoCategory("variety") })
+                    }
+                }
+                item {
+                    androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        items(hotVariety) { video ->
+                            com.lechenmusic.ui.screens.video.VideoHorizontalCard(
+                                video = video,
+                                onClick = { navigateVideo(video) }
+                            )
+                        }
+                    }
+                }
+            }
+
+            // 热门动漫 (横向卡片滚动)
             if (hotAnime.isNotEmpty()) {
                 item {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -2584,13 +2591,14 @@ private fun TabletVideoHomeContent(
                         Text("查看全部 ›", fontSize = config.bodyFontSize, color = MaterialTheme.colorScheme.secondary, modifier = Modifier.clickable { onNavigateToVideoCategory("anime") })
                     }
                 }
-                val animeRows = hotAnime.take(8).chunked(4)
-                items(animeRows) { row ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(gap), modifier = Modifier.fillMaxWidth()) {
-                        row.forEach { video ->
-                            TabletVideoMovieCard(video = video, config = config, modifier = Modifier.weight(1f)) { navigateVideo(video) }
+                item {
+                    androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        items(hotAnime) { video ->
+                            com.lechenmusic.ui.screens.video.VideoHorizontalCard(
+                                video = video,
+                                onClick = { navigateVideo(video) }
+                            )
                         }
-                        repeat(4 - row.size) { Spacer(modifier = Modifier.weight(1f)) }
                     }
                 }
             }

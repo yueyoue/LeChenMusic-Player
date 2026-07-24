@@ -62,6 +62,18 @@ fun TabletArtistDetailScreen(
                 .padding(horizontal = 32.dp, vertical = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // 返回按钮
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.Default.ArrowBack, contentDescription = "返回", tint = MaterialTheme.colorScheme.onSurface)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
             // 歌手大图
             Box(
                 modifier = Modifier

@@ -40,9 +40,11 @@ fun TabletVideoDetailScreen(
 ) {
     val detail by viewModel.videoDetail.collectAsState()
     val loading by viewModel.detailLoading.collectAsState()
+    val allSearchSources by viewModel.allSearchSources.collectAsState()
 
     LaunchedEffect(source, videoId) {
         viewModel.loadDetail(source, videoId)
+        viewModel.loadFavorites()
     }
 
     if (loading) {
@@ -53,11 +55,31 @@ fun TabletVideoDetailScreen(
     }
 
     val video = detail ?: return
-    val sources = video.toSources()
+
+    // Use allSearchSources if available (from searchAndPlay), otherwise fallback to video.toSources()
+    val videoSources = video.toSources()
+    val displaySources = if (allSearchSources.size > 1) {
+        allSearchSources
+            .groupBy { it.source }
+            .values.map { group -> group.first() }
+            .take(20)
+            .map { info ->
+                com.lechenmusic.data.model.VideoSource(
+                    sourceName = info.displaySourceName.ifBlank { info.source },
+                    source = info.source,
+                    episodes = info.episodes.mapIndexed { idx, url ->
+                        com.lechenmusic.data.model.VideoEpisode(index = idx, title = info.episodesTitles.getOrNull(idx) ?: "第${idx + 1}集", url = url)
+                    }
+                )
+            }
+    } else {
+        videoSources
+    }
+
     var selectedSource by remember { mutableIntStateOf(0) }
     var selectedEpisode by remember { mutableIntStateOf(0) }
 
-    val currentSource = sources.getOrNull(selectedSource)
+    val currentSource = displaySources.getOrNull(selectedSource)
     val episodes = currentSource?.episodes ?: emptyList()
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -271,7 +293,7 @@ fun TabletVideoDetailScreen(
                     .fillMaxHeight()
             ) {
                 // 片源选择面板
-                if (sources.size > 1) {
+                if (displaySources.size > 1) {
                     Surface(
                         shape = RoundedCornerShape(16.dp),
                         color = MaterialTheme.colorScheme.surfaceContainer,
@@ -285,7 +307,7 @@ fun TabletVideoDetailScreen(
                                 Text("切换播放线路", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                             }
                             Spacer(modifier = Modifier.height(12.dp))
-                            sources.forEachIndexed { index, src ->
+                            displaySources.forEachIndexed { index, src ->
                                 val isSelected = index == selectedSource
                                 Surface(
                                     shape = RoundedCornerShape(12.dp),
@@ -295,7 +317,15 @@ fun TabletVideoDetailScreen(
                                     else androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .clickable { selectedSource = index; selectedEpisode = 0 }
+                                        .clickable {
+                                            selectedSource = index
+                                            selectedEpisode = 0
+                                            // Also switch the video detail source
+                                            val info = allSearchSources.firstOrNull { it.source == src.source }
+                                            if (info != null && info.episodes.isNotEmpty()) {
+                                                viewModel.switchSource(info)
+                                            }
+                                        }
                                         .padding(vertical = 2.dp)
                                 ) {
                                     Row(
@@ -308,6 +338,7 @@ fun TabletVideoDetailScreen(
                                             Spacer(modifier = Modifier.width(8.dp))
                                             Text(src.sourceName, fontSize = 14.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
                                         }
+                                        Text("${src.episodes.size}集", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                         if (isSelected) {
                                             Surface(shape = RoundedCornerShape(4.dp), color = MaterialTheme.colorScheme.secondaryContainer) {
                                                 Text("当前", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))

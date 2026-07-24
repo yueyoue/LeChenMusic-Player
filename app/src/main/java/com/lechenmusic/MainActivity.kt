@@ -485,14 +485,16 @@ fun NavGraphBuilder.sharedNavRoutes(
                 responsiveConfig = responsiveCfg,
                 onSongClick = { s, p -> viewModel.playSong(s, p) },
                 onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) },
-                onAudiobookClick = { navController.navigate(Screen.AudiobookDetail.createRoute(it)) }
+                onAudiobookClick = { navController.navigate(Screen.AudiobookDetail.createRoute(it)) },
+                onPlaylistClick = { navController.navigate(Screen.PlaylistDetail.createRoute(it)) }
             )
         } else {
             FavoritesScreen(
                 viewModel = viewModel,
                 onSongClick = { s, p -> viewModel.playSong(s, p) },
                 onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) },
-                onAudiobookClick = { navController.navigate(Screen.AudiobookDetail.createRoute(it)) }
+                onAudiobookClick = { navController.navigate(Screen.AudiobookDetail.createRoute(it)) },
+                onPlaylistClick = { navController.navigate(Screen.PlaylistDetail.createRoute(it)) }
             )
         }
     }

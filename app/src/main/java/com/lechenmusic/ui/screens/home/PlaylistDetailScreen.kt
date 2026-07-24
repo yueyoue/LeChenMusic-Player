@@ -226,8 +226,8 @@ fun PlaylistDetailScreen(
                 password = password,
                 playlists = playlists,
                 onClick = { onSongClick(song, currentPlaylist.songs) },
-                onStar = { viewModel.star(song.id) },
-                onUnstar = { viewModel.unstar(song.id) },
+                onStar = { viewModel.star(song.id); Toast.makeText(context, "收藏成功", Toast.LENGTH_SHORT).show() },
+                onUnstar = { viewModel.unstar(song.id); Toast.makeText(context, "已取消收藏", Toast.LENGTH_SHORT).show() },
                 onAddToPlaylist = { plId -> viewModel.addToPlaylist(plId, song.id, currentPlaylist.owner) },
                 onCreatePlaylist = { name -> viewModel.createPlaylistAndAddSong(name, song.id) },
                 onAddToQueue = {
