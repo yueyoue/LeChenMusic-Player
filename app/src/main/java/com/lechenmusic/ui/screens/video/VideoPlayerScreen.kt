@@ -46,6 +46,11 @@ fun VideoPlayerScreen(
     sources: List<VideoSource>,
     initialSource: Int = 0,
     initialEpisode: Int = 0,
+    videoSource: String = "",
+    videoId: String = "",
+    videoCover: String = "",
+    videoYear: String = "",
+    videoViewModel: com.lechenmusic.ui.VideoViewModel? = null,
     onBack: () -> Unit
 ) {
     // Bug修复：sources 为空时显示提示而不是闪退
@@ -97,6 +102,24 @@ fun VideoPlayerScreen(
     var isFullscreen by remember { mutableStateOf(true) }
     var showSpeedMenu by remember { mutableStateOf(false) }
     var showEpisodePanel by remember { mutableStateOf(false) }
+
+    // Play record saving (reference Selene-Source _saveProgress)
+    var lastSaveTime by remember { mutableStateOf(0L) }
+    var lastSavePosition by remember { mutableLongStateOf(0L) }
+    fun savePlayRecordNow() {
+        if (videoViewModel != null && videoId.isNotBlank() && currentPosition > 1000) {
+            videoViewModel.savePlayRecord(
+                com.lechenmusic.data.model.PlayRecordRequest(
+                    source = videoSource, id = videoId, title = videoTitle,
+                    cover = videoCover, year = videoYear,
+                    episode_index = selectedEpisode + 1,
+                    total_episodes = sources.getOrNull(selectedSource)?.episodes?.size ?: 0,
+                    play_time = (currentPosition / 1000).toInt(),
+                    total_time = (duration / 1000).toInt(), type = "tv"
+                )
+            )
+        }
+    }
 
     // 手势控制状态
     var brightnessOffset by remember { mutableFloatStateOf(0f) }
@@ -158,6 +181,22 @@ fun VideoPlayerScreen(
         }
     }
 
+    // Periodic play record save (every 10s, reference Selene-Source)
+    LaunchedEffect(selectedSource, selectedEpisode) {
+        while (true) {
+            kotlinx.coroutines.delay(10000)
+            if (isPlaying && duration > 0 && currentPosition > 1000) {
+                val now = System.currentTimeMillis()
+                val posSec = (currentPosition / 1000).toInt()
+                if (now - lastSaveTime >= 10000 && posSec != lastSavePosition.toInt()) {
+                    lastSaveTime = now
+                    lastSavePosition = posSec.toLong()
+                    savePlayRecordNow()
+                }
+            }
+        }
+    }
+
     // 监听播放状态
     DisposableEffect(exoPlayer) {
         val listener = object : Player.Listener {
@@ -201,6 +240,7 @@ fun VideoPlayerScreen(
         }
         exoPlayer.addListener(listener)
         onDispose {
+            savePlayRecordNow()
             exoPlayer.removeListener(listener)
             exoPlayer.release()
             activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -342,7 +382,7 @@ fun VideoPlayerScreen(
                     .padding(horizontal = 12.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = onBack) {
+                IconButton(onClick = { savePlayRecordNow(); onBack() }) {
                     Icon(Icons.Default.ArrowBack, "返回", tint = Color.White)
                 }
                 Column(modifier = Modifier.weight(1f)) {
