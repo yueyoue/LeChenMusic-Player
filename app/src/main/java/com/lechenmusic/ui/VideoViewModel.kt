@@ -550,6 +550,18 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
     private val _switchSourceVersion = MutableStateFlow(0)
     val switchSourceVersion: StateFlow<Int> = _switchSourceVersion.asStateFlow()
 
+    // 切换源时保存的播放位置（毫秒），用于切换源后从同一位置继续播放
+    private val _resumePositionMs = MutableStateFlow(0L)
+    val resumePositionMs: StateFlow<Long> = _resumePositionMs.asStateFlow()
+
+    fun setResumePosition(ms: Long) {
+        _resumePositionMs.value = ms
+    }
+
+    fun clearResumePosition() {
+        _resumePositionMs.value = 0L
+    }
+
     fun switchSource(sourceInfo: VideoInfo) {
         val detail = VideoDetail(
             id = sourceInfo.id,

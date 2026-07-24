@@ -160,6 +160,19 @@ fun VideoPlayerScreen(
                 exoPlayer.prepare()
                 exoPlayer.playWhenReady = true
                 isPlaying = true
+                // 切换源时从上次位置继续播放
+                val resumeMs = videoViewModel?.resumePositionMs?.value ?: 0L
+                if (resumeMs > 0) {
+                    exoPlayer.addListener(object : Player.Listener {
+                        override fun onPlaybackStateChanged(state: Int) {
+                            if (state == Player.STATE_READY) {
+                                exoPlayer.seekTo(resumeMs)
+                                videoViewModel?.clearResumePosition()
+                                exoPlayer.removeListener(this)
+                            }
+                        }
+                    })
+                }
             } catch (e: Exception) {
                 try {
                     logFile.appendText("[Player] ExoPlayer 异常: ${e.javaClass.simpleName}: ${e.message}\n")
@@ -243,6 +256,10 @@ fun VideoPlayerScreen(
         exoPlayer.addListener(listener)
         onDispose {
             savePlayRecordNow()
+            // 保存播放位置到 ViewModel（平板切换源时用）
+            if (exoPlayer.currentPosition > 0) {
+                videoViewModel?.setResumePosition(exoPlayer.currentPosition)
+            }
             exoPlayer.removeListener(listener)
             exoPlayer.release()
             activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
