@@ -258,27 +258,52 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 val doubanApi = DoubanApiClient.getApi()
 
-                // 用 recent_hot 接口（recommend+tags 返回空）
-                val moviesResp = withContext(Dispatchers.IO) {
-                    doubanApi.getRecentHot("movie", limit = 15, category = "\u70ED\u95E8", type = "\u5168\u90E8")
+                // 参考 Selene-Source: 用 recent_hot 接口，每个请求独立 try-catch
+                // 热门电影: kind=movie, category=热门, type=全部
+                val moviesResp = try {
+                    withContext(Dispatchers.IO) {
+                        doubanApi.getRecentHot("movie", limit = 15, category = "\u70ED\u95E8", type = "\u5168\u90E8")
+                    }
+                } catch (e: Exception) {
+                    logDebug("loadHomeData", "热门电影加载失败: ${e.message}")
+                    null
                 }
-                val tvResp = withContext(Dispatchers.IO) {
-                    doubanApi.getRecentHot("tv", limit = 15, category = "\u6700\u8FD1\u70ED\u95E8", type = "tv")
+                // 热门剧集: kind=tv, category=最近热门, type=tv
+                val tvResp = try {
+                    withContext(Dispatchers.IO) {
+                        doubanApi.getRecentHot("tv", limit = 15, category = "\u6700\u8FD1\u70ED\u95E8", type = "tv")
+                    }
+                } catch (e: Exception) {
+                    logDebug("loadHomeData", "热门剧集加载失败: ${e.message}")
+                    null
                 }
-                val animeResp = withContext(Dispatchers.IO) {
-                    doubanApi.getRecentHot("anime", limit = 15, category = "\u65E5\u672C", type = "\u52A8\u6F2B")
+                // 热门综艺: kind=tv, category=show, type=show (参考 Selene-Source)
+                val showResp = try {
+                    withContext(Dispatchers.IO) {
+                        doubanApi.getRecentHot("tv", limit = 15, category = "show", type = "show")
+                    }
+                } catch (e: Exception) {
+                    logDebug("loadHomeData", "热门综艺加载失败: ${e.message}")
+                    null
                 }
-                val showResp = withContext(Dispatchers.IO) {
-                    doubanApi.getRecentHot("show", limit = 15, category = "\u7EFC\u827A", type = "show")
+                // 热门动漫: kind=tv, category=\u65E5\u672C, type=\u52A8\u6F2B (用tv kind)
+                val animeResp = try {
+                    withContext(Dispatchers.IO) {
+                        doubanApi.getRecentHot("tv", limit = 15, category = "\u65E5\u672C", type = "\u52A8\u6F2B")
+                    }
+                } catch (e: Exception) {
+                    logDebug("loadHomeData", "热门动漫加载失败: ${e.message}")
+                    null
                 }
 
                 _homeData.value = HomeRecommendData(
                     continueWatch = _playRecords.value,
-                    hotMovies = moviesResp.body()?.items?.map { it.toVideoInfo("movie") } ?: emptyList(),
-                    hotTvShows = tvResp.body()?.items?.map { it.toVideoInfo("tv") } ?: emptyList(),
-                    hotAnime = animeResp.body()?.items?.map { it.toVideoInfo("anime") } ?: emptyList(),
-                    hotVariety = showResp.body()?.items?.map { it.toVideoInfo("show") } ?: emptyList()
+                    hotMovies = moviesResp?.body()?.items?.map { it.toVideoInfo("movie") } ?: emptyList(),
+                    hotTvShows = tvResp?.body()?.items?.map { it.toVideoInfo("tv") } ?: emptyList(),
+                    hotAnime = animeResp?.body()?.items?.map { it.toVideoInfo("anime") } ?: emptyList(),
+                    hotVariety = showResp?.body()?.items?.map { it.toVideoInfo("show") } ?: emptyList()
                 )
+                logDebug("loadHomeData", "首页数据: movies=${_homeData.value?.hotMovies?.size} tv=${_homeData.value?.hotTvShows?.size} variety=${_homeData.value?.hotVariety?.size} anime=${_homeData.value?.hotAnime?.size}")
             } catch (e: Exception) {
                 _homeError.value = "加载失败: ${e.message}"
                 reportVideoError("loadHomeData", "首页推荐加载失败", e)
@@ -690,9 +715,10 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
 
             try {
                 val doubanApi = DoubanApiClient.getApi()
+                // 参考 Selene-Source: anime 和 variety 都用 tv kind
                 val doubanKind = when (kind) {
-                    "anime" -> "anime"
-                    "variety" -> "show"
+                    "anime" -> "tv"
+                    "variety" -> "tv"
                     else -> kind
                 }
 
@@ -758,12 +784,12 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /** 无筛选时的默认参数 */
+    /** 无筛选时的默认参数（参考 Selene-Source） */
     private fun getDefaultParams(kind: String): Pair<String, String> = when (kind) {
         "movie" -> "\u70ED\u95E8" to "\u5168\u90E8"
         "tv" -> "\u6700\u8FD1\u70ED\u95E8" to "tv"
         "anime" -> "\u65E5\u672C" to "\u52A8\u6F2B"
-        "variety" -> "\u7EFC\u827A" to "show"
+        "variety" -> "show" to "show"
         else -> "\u70ED\u95E8" to "\u5168\u90E8"
     }
 
