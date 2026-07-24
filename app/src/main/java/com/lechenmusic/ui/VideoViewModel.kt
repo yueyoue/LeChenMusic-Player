@@ -1062,10 +1062,21 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                 }
 
                 sb.appendLine("M3U内容长度: ${responseBody.length}")
+                sb.appendLine("M3U前200字: ${responseBody.take(200).replace("\n", " | ")}")
 
                 // 解析 M3U 内容
-                val channels = parseM3U(sourceKey, responseBody)
+                val channels = try {
+                    parseM3U(sourceKey, responseBody)
+                } catch (e: Exception) {
+                    sb.appendLine("M3U解析异常: ${e.javaClass.simpleName}: ${e.message}")
+                    emptyList()
+                }
                 sb.appendLine("解析到 ${channels.size} 个频道")
+                if (channels.isEmpty()) {
+                    sb.appendLine("M3U内容可能格式不对")
+                } else {
+                    channels.take(3).forEach { sb.appendLine("  频道: ${ch.name} | ${ch.url.take(50)}") }
+                }
 
                 // 按 group 分组
                 val grouped = channels.groupBy { it.group.ifBlank { "未分组" } }
