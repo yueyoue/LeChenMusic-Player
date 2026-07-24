@@ -38,6 +38,7 @@ fun LiveScreen(
     val liveSources by viewModel.liveSources.collectAsState()
     val liveChannels by viewModel.liveChannels.collectAsState()
     val isLoading by viewModel.liveLoading.collectAsState()
+    val liveDebug by viewModel.liveDebug.collectAsState()
     val context = androidx.compose.ui.platform.LocalContext.current
 
     var selectedSourceIndex by remember { mutableIntStateOf(0) }
@@ -274,18 +275,36 @@ fun LiveScreen(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = 100.dp)
             ) {
-                items(channels) { channel ->
+                items(channels, key = { it.url }) { channel ->
                     LiveChannelItem(
                         channel = channel,
                         isSelected = selectedChannel?.url == channel.url,
                         onClick = {
                             selectedChannel = channel
-                            exoPlayer.setMediaItem(MediaItem.fromUri(channel.url))
-                            exoPlayer.prepare()
-                            exoPlayer.playWhenReady = true
+                            try {
+                                if (channel.url.isNotBlank()) {
+                                    exoPlayer.setMediaItem(MediaItem.fromUri(channel.url))
+                                    exoPlayer.prepare()
+                                    exoPlayer.playWhenReady = true
+                                }
+                            } catch (e: Exception) {
+                                android.util.Log.e("LiveScreen", "ExoPlayer error: ${e.message}")
+                            }
                         }
                     )
                 }
+            }
+        }
+
+        // Debug overlay
+        if (liveDebug.isNotBlank()) {
+            Surface(
+                modifier = Modifier.fillMaxWidth().padding(8.dp),
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.errorContainer
+            ) {
+                Text(liveDebug, fontSize = 11.sp, modifier = Modifier.padding(12.dp),
+                    color = MaterialTheme.colorScheme.onErrorContainer, lineHeight = 16.sp)
             }
         }
     }
