@@ -944,12 +944,13 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
             val user = videoUsername.value
             val pass = videoPassword.value
             val sb = StringBuilder()
-            sb.appendLine("URL: $url")
-            sb.appendLine("用户: $user")
+            sb.appendLine("1. 检查配置...")
+            sb.appendLine("URL: '${url}'")
+            sb.appendLine("用户: '${user}'")
             sb.appendLine("已登录: ${_isLoggedIn.value}")
 
             if (url.isBlank()) {
-                sb.appendLine("❌ URL为空")
+                sb.appendLine("❌ URL为空，无法加载")
                 _liveDebug.value = sb.toString()
                 _liveLoading.value = false
                 return@launch
