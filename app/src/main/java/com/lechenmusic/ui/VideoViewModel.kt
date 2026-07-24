@@ -942,6 +942,22 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                 _liveLoading.value = false
                 return@launch
             }
+            // 未登录时先自动登录
+            if (!_isLoggedIn.value) {
+                val user = videoUsername.value
+                val pass = videoPassword.value
+                if (user.isNotBlank() && pass.isNotBlank()) {
+                    try {
+                        val api = VideoApiClient.getApi(url)
+                        val resp = withContext(Dispatchers.IO) {
+                            api.login(mapOf("username" to user, "password" to pass))
+                        }
+                        if (resp.isSuccessful && resp.body()?.ok == true) {
+                            _isLoggedIn.value = true
+                        }
+                    } catch (_: Exception) {}
+                }
+            }
             _liveLoading.value = true
             try {
                 val api = VideoApiClient.getApi(url)
