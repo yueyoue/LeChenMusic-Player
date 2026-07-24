@@ -527,13 +527,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             // Load starred songs
-            repository.getStarred().onSuccess { 
-                _starredSongs.value = it.songs
-                _starredAlbums.value = it.albums
-                _starredPlaylists.value = it.playlists
-                _starredArtists.value = it.artists ?: emptyList()
+            try {
+                val starredResult = repository.getStarred()
+                if (starredResult.isSuccess) {
+                    val starred = starredResult.getOrNull()
+                    _starredSongs.value = starred?.songs ?: emptyList()
+                    _starredAlbums.value = starred?.albums ?: emptyList()
+                    _starredPlaylists.value = starred?.playlists ?: emptyList()
+                    _starredArtists.value = starred?.artists ?: emptyList()
+                    android.util.Log.d("LeChenMusic", "getStarred: songs=${starred?.songs?.size} albums=${starred?.albums?.size} playlists=${starred?.playlists?.size}")
+                } else {
+                    android.util.Log.e("LeChenMusic", "getStarred FAILED: ${starredResult.exceptionOrNull()?.message}")
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("LeChenMusic", "getStarred EXCEPTION: ${e.message}")
             }
-            loadStarredAudiobooks()
+            try { loadStarredAudiobooks() } catch (e: Exception) { android.util.Log.e("LeChenMusic", "loadStarredAudiobooks EXCEPTION: ${e.message}") }
             loadAudiobooks()
             loadNarrators()
             loadSlides()
