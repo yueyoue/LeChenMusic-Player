@@ -186,25 +186,30 @@ class MusicRepository {
 
     suspend fun getStarred(): Result<StarredData> {
         return try {
+            android.util.Log.d("LeChenMusic", "getStarred: calling getStarred2...")
             val response = api!!.getStarred(username, password)
             val body = response.subsonicResponse
+            android.util.Log.d("LeChenMusic", "getStarred: status=${body.status} error=${body.error?.message}")
             val starred = body.starred2 ?: body.starred
-            // getStarred2 may not return playlist field; derive from getPlaylists
+            android.util.Log.d("LeChenMusic", "getStarred: starred2=${body.starred2!=null} starred=${body.starred!=null}")
+            android.util.Log.d("LeChenMusic", "getStarred: songs=${starred?.song?.size} albums=${starred?.album?.size} artists=${starred?.artist?.size} playlists=${starred?.playlist?.size}")
             var playlists = starred?.playlist ?: emptyList()
             if (playlists.isEmpty()) {
+                android.util.Log.d("LeChenMusic", "getStarred: playlists empty, trying getPlaylists fallback...")
                 try {
                     val allPlaylists = api!!.getPlaylists(username, password)
-                    playlists = (allPlaylists.subsonicResponse.playlists?.playlist ?: emptyList())
-                        .filter { it.isStarred }
-                } catch (_: Exception) {}
+                    val allPl = allPlaylists.subsonicResponse.playlists?.playlist ?: emptyList()
+                    playlists = allPl.filter { it.isStarred }
+                    android.util.Log.d("LeChenMusic", "getStarred: getPlaylists ${allPl.size} total, ${playlists.size} starred")
+                } catch (e: Exception) {
+                    android.util.Log.e("LeChenMusic", "getStarred: getPlaylists fallback failed: ${e.message}")
+                }
             }
-            Result.success(StarredData(
-                songs = starred?.song ?: emptyList(),
-                albums = starred?.album ?: emptyList(),
-                artists = starred?.artist ?: emptyList(),
-                playlists = playlists
-            ))
+            val result = StarredData(songs = starred?.song ?: emptyList(), albums = starred?.album ?: emptyList(), artists = starred?.artist ?: emptyList(), playlists = playlists)
+            android.util.Log.d("LeChenMusic", "getStarred FINAL: songs=${result.songs.size} albums=${result.albums.size} playlists=${result.playlists.size} artists=${result.artists.size}")
+            Result.success(result)
         } catch (e: Exception) {
+            android.util.Log.e("LeChenMusic", "getStarred EXCEPTION: ${e.javaClass.simpleName}: ${e.message}")
             Result.failure(e)
         }
     }
