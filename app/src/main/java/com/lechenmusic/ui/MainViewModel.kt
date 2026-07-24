@@ -1025,9 +1025,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
                 // Sync starred
                 _syncStatus.value = "同步收藏 (3/4)..."
-                repository.getStarred().onSuccess { 
+                repository.getStarred().onSuccess {
                     _starredSongs.value = it.songs
                     _starredAlbums.value = it.albums
+                    _starredPlaylists.value = it.playlists
+                    _starredArtists.value = it.artists ?: emptyList()
                 }
                 loadStarredAudiobooks()
 
