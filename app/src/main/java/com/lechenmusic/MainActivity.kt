@@ -174,6 +174,13 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
+    // 从视频播放器返回首页时刷新最近播放记录
+    LaunchedEffect(currentRoute) {
+        if (currentRoute == Screen.Home.route || currentRoute == Screen.Video.route) {
+            videoViewModel.loadPlayRecords()
+        }
+    }
+
     data class BottomTab(val route: String, val label: String, val icon: ImageVector)
     val tabs = listOf(
         BottomTab(Screen.Home.route, "首页", Icons.Default.Home),

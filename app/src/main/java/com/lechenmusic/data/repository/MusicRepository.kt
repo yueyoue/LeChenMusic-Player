@@ -414,10 +414,11 @@ class MusicRepository {
         return try {
             android.util.Log.d("LeChenMusic", "star: id=$id, server=$serverUrl, user=$username")
             val resp = api!!.star(username, password, id)
-            android.util.Log.d("LeChenMusic", "star: status=${resp.status} error=${resp.error?.message}")
-            if (resp.status != "ok") {
-                android.util.Log.e("LeChenMusic", "star FAILED: ${resp.error?.message}")
-                Result.failure(Exception(resp.error?.message ?: "star failed"))
+            val body = resp.subsonicResponse
+            android.util.Log.d("LeChenMusic", "star: status=${body.status} error=${body.error?.message}")
+            if (body.status != "ok") {
+                android.util.Log.e("LeChenMusic", "star FAILED: ${body.error?.message}")
+                Result.failure(Exception(body.error?.message ?: "star failed"))
             } else {
                 Result.success(Unit)
             }
@@ -431,9 +432,10 @@ class MusicRepository {
         return try {
             android.util.Log.d("LeChenMusic", "unstar: id=$id")
             val resp = api!!.unstar(username, password, id)
-            android.util.Log.d("LeChenMusic", "unstar: status=${resp.status} error=${resp.error?.message}")
-            if (resp.status != "ok") {
-                Result.failure(Exception(resp.error?.message ?: "unstar failed"))
+            val body = resp.subsonicResponse
+            android.util.Log.d("LeChenMusic", "unstar: status=${body.status} error=${body.error?.message}")
+            if (body.status != "ok") {
+                Result.failure(Exception(body.error?.message ?: "unstar failed"))
             } else {
                 Result.success(Unit)
             }
