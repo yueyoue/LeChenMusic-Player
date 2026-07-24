@@ -358,6 +358,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     repository.authenticateNavidrome()
                     settings.saveLogin(serverUrl, username, password)
                     _isLoggedIn.value = true
+                    // 首次登录自动填写影视服务器账号密码
+                    val currentVideoUrl = settings.videoServerUrl.first()
+                    if (currentVideoUrl.isBlank()) {
+                        settings.saveVideoLogin("http://j.tthsdd.top:3000", username, password)
+                    }
                     loadHomeData()
                 } else {
                     _loginError.value = result.exceptionOrNull()?.message ?: "连接失败"
