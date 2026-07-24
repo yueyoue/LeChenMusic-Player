@@ -412,18 +412,33 @@ class MusicRepository {
 
     suspend fun star(id: String): Result<Unit> {
         return try {
-            api!!.star(username, password, id)
-            Result.success(Unit)
+            android.util.Log.d("LeChenMusic", "star: id=$id, server=$serverUrl, user=$username")
+            val resp = api!!.star(username, password, id)
+            android.util.Log.d("LeChenMusic", "star: status=${resp.status} error=${resp.error?.message}")
+            if (resp.status != "ok") {
+                android.util.Log.e("LeChenMusic", "star FAILED: ${resp.error?.message}")
+                Result.failure(Exception(resp.error?.message ?: "star failed"))
+            } else {
+                Result.success(Unit)
+            }
         } catch (e: Exception) {
+            android.util.Log.e("LeChenMusic", "star EXCEPTION: ${e.javaClass.simpleName}: ${e.message}")
             Result.failure(e)
         }
     }
 
     suspend fun unstar(id: String): Result<Unit> {
         return try {
-            api!!.unstar(username, password, id)
-            Result.success(Unit)
+            android.util.Log.d("LeChenMusic", "unstar: id=$id")
+            val resp = api!!.unstar(username, password, id)
+            android.util.Log.d("LeChenMusic", "unstar: status=${resp.status} error=${resp.error?.message}")
+            if (resp.status != "ok") {
+                Result.failure(Exception(resp.error?.message ?: "unstar failed"))
+            } else {
+                Result.success(Unit)
+            }
         } catch (e: Exception) {
+            android.util.Log.e("LeChenMusic", "unstar EXCEPTION: ${e.javaClass.simpleName}: ${e.message}")
             Result.failure(e)
         }
     }

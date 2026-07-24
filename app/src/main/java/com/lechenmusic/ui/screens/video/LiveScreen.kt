@@ -86,11 +86,12 @@ fun LiveScreen(
     }
 
     val groups = liveChannels
-    // 安全重置 selectedGroupIndex
-    LaunchedEffect(groups.size) {
-        if (selectedGroupIndex >= groups.size) {
-            selectedGroupIndex = 0
-        }
+    // 同步重置 selectedGroupIndex（必须在组合阶段，不能用 LaunchedEffect）
+    if (groups.isNotEmpty() && selectedGroupIndex >= groups.size) {
+        selectedGroupIndex = 0
+    }
+    if (groups.isEmpty()) {
+        selectedGroupIndex = 0
     }
     val currentGroup = groups.getOrNull(selectedGroupIndex)
 

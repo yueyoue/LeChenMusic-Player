@@ -1386,6 +1386,7 @@ fun loadAudiobooks() {
     }
 
     fun star(id: String) {
+        android.util.Log.d("LeChenMusic", "ViewModel.star: id=$id")
         // Optimistic update
         val current = _currentAlbum.value
         if (current != null && current.id == id) {
@@ -1393,12 +1394,18 @@ fun loadAudiobooks() {
         }
         viewModelScope.launch(Dispatchers.IO) {
             repository.star(id).onSuccess {
+                android.util.Log.d("LeChenMusic", "ViewModel.star SUCCESS: id=$id, refreshing starred...")
                 repository.getStarred().onSuccess {
                     _starredSongs.value = it.songs
                     _starredAlbums.value = it.albums
                     _starredPlaylists.value = it.playlists
+                    _starredArtists.value = it.artists
+                    android.util.Log.d("LeChenMusic", "ViewModel.star REFRESHED: songs=${it.songs.size} albums=${it.albums.size}")
+                }.onFailure { e ->
+                    android.util.Log.e("LeChenMusic", "ViewModel.star REFRESH FAILED: ${e.message}")
                 }
-            }.onFailure {
+            }.onFailure { e ->
+                android.util.Log.e("LeChenMusic", "ViewModel.star FAILED: ${e.message}")
                 if (current != null) _currentAlbum.value = current
             }
         }
