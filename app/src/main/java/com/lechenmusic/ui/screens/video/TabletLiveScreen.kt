@@ -41,6 +41,7 @@ fun TabletLiveScreen(
     val liveLoading by viewModel.liveLoading.collectAsState()
     val context = androidx.compose.ui.platform.LocalContext.current
 
+    var selectedSourceIndex by remember { mutableIntStateOf(0) }
     var selectedGroupIndex by remember { mutableIntStateOf(0) }
     var selectedChannel by remember { mutableStateOf<LiveChannel?>(null) }
     var isPlaying by remember { mutableStateOf(false) }
@@ -63,10 +64,13 @@ fun TabletLiveScreen(
 
     LaunchedEffect(Unit) { viewModel.loadLiveSources() }
 
-    // 加载频道
-    LaunchedEffect(liveSources) {
-        if (liveSources.isNotEmpty() && liveChannels.isEmpty()) {
-            viewModel.loadLiveChannels(liveSources.first().source)
+    // 加载频道（根据选中的源）
+    LaunchedEffect(selectedSourceIndex, liveSources) {
+        if (liveSources.isNotEmpty()) {
+            val source = liveSources.getOrNull(selectedSourceIndex)
+            if (source != null) {
+                viewModel.loadLiveChannels(source.source)
+            }
         }
     }
 
@@ -81,7 +85,7 @@ fun TabletLiveScreen(
                 .background(MaterialTheme.colorScheme.surfaceContainerLow)
                 .padding(horizontal = responsiveConfig.contentPadding)
         ) {
-            // 标题 + 搜索
+            // 标题
             Row(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -89,6 +93,70 @@ fun TabletLiveScreen(
             ) {
                 Text("电视直播", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 Icon(Icons.Default.Search, "搜索", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+
+            // 直播源选择
+            if (liveSources.size > 1) {
+                var sourceExpanded by remember { mutableStateOf(false) }
+                Box(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
+                    Surface(
+                        onClick = { sourceExpanded = true },
+                        shape = RoundedCornerShape(10.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,\n                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Router, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    liveSources.getOrNull(selectedSourceIndex)?.name ?: "选择直播源",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                            Icon(Icons.Default.ArrowDropDown, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+                        }
+                    }
+                    DropdownMenu(expanded = sourceExpanded, onDismissRequest = { sourceExpanded = false }) {
+                        liveSources.forEachIndexed { index, source ->
+                            DropdownMenuItem(
+                                text = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(source.name)
+                                        if (index == selectedSourceIndex) {
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Icon(Icons.Default.Check, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
+                                        }
+                                    }
+                                },
+                                onClick = {
+                                    selectedSourceIndex = index
+                                    selectedGroupIndex = 0
+                                    selectedChannel = null
+                                    sourceExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+            } else if (liveSources.size == 1) {
+                // 只有一个源时显示名称
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.Router, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        liveSources.first().name,
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
 
             // 分类标签
