@@ -189,11 +189,20 @@ class MusicRepository {
             val response = api!!.getStarred(username, password)
             val body = response.subsonicResponse
             val starred = body.starred2 ?: body.starred
+            // getStarred2 may not return playlist field; derive from getPlaylists
+            var playlists = starred?.playlist ?: emptyList()
+            if (playlists.isEmpty()) {
+                try {
+                    val allPlaylists = api!!.getPlaylists(username, password)
+                    playlists = (allPlaylists.subsonicResponse.playlists?.playlist ?: emptyList())
+                        .filter { it.isStarred }
+                } catch (_: Exception) {}
+            }
             Result.success(StarredData(
                 songs = starred?.song ?: emptyList(),
                 albums = starred?.album ?: emptyList(),
                 artists = starred?.artist ?: emptyList(),
-                playlists = starred?.playlist ?: emptyList()
+                playlists = playlists
             ))
         } catch (e: Exception) {
             Result.failure(e)
