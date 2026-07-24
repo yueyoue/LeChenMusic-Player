@@ -1075,7 +1075,7 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                 if (channels.isEmpty()) {
                     sb.appendLine("M3U内容可能格式不对")
                 } else {
-                    channels.take(3).forEach { sb.appendLine("  频道: ${ch.name} | ${ch.url.take(50)}") }
+                    channels.take(3).forEach { ch -> sb.appendLine("  频道: ${ch.name} | ${ch.url.take(50)}") }
                 }
 
                 // 按 group 分组
