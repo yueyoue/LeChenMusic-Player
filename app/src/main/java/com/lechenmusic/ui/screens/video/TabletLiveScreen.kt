@@ -96,7 +96,7 @@ fun TabletLiveScreen(
             }
 
             // 直播源选择
-            if (liveSources.size > 1) {
+            if (liveSources.isNotEmpty()) {
                 var sourceExpanded by remember { mutableStateOf(false) }
                 Box(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
                     Surface(
@@ -143,20 +143,6 @@ fun TabletLiveScreen(
                             )
                         }
                     }
-                }
-            } else if (liveSources.size == 1) {
-                // 只有一个源时显示名称
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Default.Router, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        liveSources.first().name,
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
                 }
             }
 
