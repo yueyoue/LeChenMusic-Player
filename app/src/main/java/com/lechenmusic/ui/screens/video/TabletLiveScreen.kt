@@ -193,7 +193,7 @@ fun TabletLiveScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     contentPadding = PaddingValues(bottom = 100.dp)
                 ) {
-                    items(channels) { channel ->
+                    items(channels, key = { it.url }) { channel ->
                         val isSelected = selectedChannel?.url == channel.url
                         ChannelListItem(
                             channel = channel,
