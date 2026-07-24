@@ -50,6 +50,7 @@ fun VideoPlayerScreen(
     videoId: String = "",
     videoCover: String = "",
     videoYear: String = "",
+    videoSourceName: String = "",
     videoViewModel: com.lechenmusic.ui.VideoViewModel? = null,
     onBack: () -> Unit
 ) {
@@ -112,7 +113,8 @@ fun VideoPlayerScreen(
                 com.lechenmusic.data.model.PlayRecordRequest(
                     source = videoSource, id = videoId, title = videoTitle,
                     cover = videoCover, year = videoYear,
-                    episode_index = selectedEpisode + 1,
+                    sourceName = videoSourceName,
+                    index = selectedEpisode + 1,
                     total_episodes = sources.getOrNull(selectedSource)?.episodes?.size ?: 0,
                     play_time = (currentPosition / 1000).toInt(),
                     total_time = (duration / 1000).toInt(), type = "tv"

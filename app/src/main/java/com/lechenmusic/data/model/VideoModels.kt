@@ -181,7 +181,8 @@ data class PlayRecordRequest(
     val title: String = "",
     val cover: String = "",
     val year: String = "",
-    val episode_index: Int = 0,
+    @SerializedName("source_name") val sourceName: String = "",
+    val index: Int = 1,
     val total_episodes: Int = 0,
     val play_time: Int = 0,
     val total_time: Int = 0,
@@ -197,6 +198,7 @@ data class PlayRecordSaveRequest(
 // ==================== 直播 ====================
 
 data class LiveSourcesResponse(
+    val success: Boolean = false,
     val code: Int = 0,
     val msg: String = "",
     val data: List<LiveSource> = emptyList()

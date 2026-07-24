@@ -51,7 +51,7 @@ interface LunaTvApi {
     suspend fun deletePlayRecord(@Body request: Map<String, String>): Response<Map<String, Any>>
 
     @GET("api/live/sources")
-    suspend fun getLiveSources(): Response<List<LiveSource>>
+    suspend fun getLiveSources(): Response<LiveSourcesResponse>
 
     @GET("api/live/channels")
     suspend fun getLiveChannels(@Query("source") source: String): Response<List<LiveChannelGroup>>

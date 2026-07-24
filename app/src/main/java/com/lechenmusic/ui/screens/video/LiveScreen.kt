@@ -86,6 +86,12 @@ fun LiveScreen(
     }
 
     val groups = liveChannels
+    // 安全重置 selectedGroupIndex
+    LaunchedEffect(groups.size) {
+        if (selectedGroupIndex >= groups.size) {
+            selectedGroupIndex = 0
+        }
+    }
     val currentGroup = groups.getOrNull(selectedGroupIndex)
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -229,8 +235,9 @@ fun LiveScreen(
 
         // 分组 Tab
         if (groups.size > 1) {
+            val safeGroupIndex = selectedGroupIndex.coerceIn(0, (groups.size - 1).coerceAtLeast(0))
             ScrollableTabRow(
-                selectedTabIndex = selectedGroupIndex.coerceIn(0, groups.size - 1),
+                selectedTabIndex = safeGroupIndex,
                 modifier = Modifier.fillMaxWidth(),
                 containerColor = MaterialTheme.colorScheme.surface,
                 edgePadding = 16.dp,

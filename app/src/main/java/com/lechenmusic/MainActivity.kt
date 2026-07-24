@@ -1069,6 +1069,7 @@ fun NavGraphBuilder.sharedNavRoutes(
                 videoId = detail!!.id,
                 videoCover = detail!!.displayCover,
                 videoYear = detail!!.year,
+                videoSourceName = detail!!.displaySourceName,
                 videoViewModel = videoViewModel,
                 onBack = onBack
             )
@@ -1092,6 +1093,7 @@ fun NavGraphBuilder.sharedNavRoutes(
             videoId = detail?.id ?: "",
             videoCover = detail?.displayCover ?: "",
             videoYear = detail?.year ?: "",
+            videoSourceName = detail?.displaySourceName ?: "",
             videoViewModel = videoViewModel,
             onBack = onBack
         )

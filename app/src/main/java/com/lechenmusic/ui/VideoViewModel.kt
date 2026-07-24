@@ -987,7 +987,8 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                 val response = withContext(Dispatchers.IO) { api.getLiveSources() }
                 sb.appendLine("直播源响应: ${response.code()} successful=${response.isSuccessful}")
                 if (response.isSuccessful) {
-                    val sources = (response.body() ?: emptyList()).filter { !it.disabled }
+                    val sourcesResp = response.body()
+                    val sources = (sourcesResp?.data ?: emptyList()).filter { !it.disabled }
                     _liveSources.value = sources
                     sb.appendLine("✅ 源数量: ${sources.size}")
                     sources.forEach { sb.appendLine("  - ${it.name}: key=${it.key}, url=${it.url.take(60)}") }
