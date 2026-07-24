@@ -165,6 +165,7 @@ fun HomeScreen(
                             onNavigateToAudiobook = onNavigateToAudiobook,
                             onNavigateToAudiobookDetail = onNavigateToAudiobookDetail,
                             onNavigateToNarrator = onNavigateToNarrator,
+                            responsiveConfig = config,
                             onNavigateToNarratorList = onNavigateToNarratorList
                         )
                     }
@@ -460,6 +461,7 @@ fun HomeScreen(
                             onNavigateToAudiobook = onNavigateToAudiobook,
                             onNavigateToAudiobookDetail = onNavigateToAudiobookDetail,
                             onNavigateToNarrator = onNavigateToNarrator,
+                            responsiveConfig = config,
                             onNavigateToNarratorList = onNavigateToNarratorList
                         )
                     }

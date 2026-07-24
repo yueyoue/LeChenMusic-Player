@@ -43,11 +43,13 @@ fun TabletAudiobookHomeContent(
     username: String,
     password: String,
     slides: List<com.lechenmusic.data.model.SlideConfig> = emptyList(),
+    responsiveConfig: com.lechenmusic.ui.responsive.ResponsiveConfig? = null,
     onNavigateToAudiobook: (String?) -> Unit,
     onNavigateToAudiobookDetail: (String) -> Unit,
     onNavigateToNarrator: (String) -> Unit,
     onNavigateToNarratorList: () -> Unit
 ) {
+    val cardSize = responsiveConfig?.albumCardSize ?: 150.dp
     val narrators by viewModel.narrators.collectAsState()
 
     LazyColumn(
@@ -278,7 +280,7 @@ fun TabletAudiobookHomeContent(
             if (novelBooks.isNotEmpty()) {
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     items(novelBooks.take(8)) { book ->
-                        AudiobookCompactCard(
+                        AudiobookCompactCard(cardSize = cardSize,
                             book = book,
                             serverUrl = serverUrl,
                             username = username,
@@ -317,7 +319,7 @@ fun TabletAudiobookHomeContent(
             if (xiangshengBooks.isNotEmpty()) {
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     items(xiangshengBooks.take(8)) { book ->
-                        AudiobookCompactCard(
+                        AudiobookCompactCard(cardSize = cardSize,
                             book = book,
                             serverUrl = serverUrl,
                             username = username,
@@ -356,7 +358,7 @@ fun TabletAudiobookHomeContent(
             if (pingshuBooks.isNotEmpty()) {
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     items(pingshuBooks.take(8)) { book ->
-                        AudiobookCompactCard(
+                        AudiobookCompactCard(cardSize = cardSize,
                             book = book,
                             serverUrl = serverUrl,
                             username = username,
@@ -395,7 +397,7 @@ fun TabletAudiobookHomeContent(
             if (childBooks.isNotEmpty()) {
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     items(childBooks.take(8)) { book ->
-                        AudiobookCompactCard(
+                        AudiobookCompactCard(cardSize = cardSize,
                             book = book,
                             serverUrl = serverUrl,
                             username = username,
@@ -451,7 +453,7 @@ fun TabletAudiobookHomeContent(
             item {
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     items(starredAudiobooks.take(8)) { book ->
-                        AudiobookCompactCard(
+                        AudiobookCompactCard(cardSize = cardSize,
                             book = book,
                             serverUrl = serverUrl,
                             username = username,
@@ -831,11 +833,12 @@ private fun AudiobookCompactCard(
     serverUrl: String,
     username: String,
     password: String,
+    cardSize: androidx.compose.ui.unit.Dp = 150.dp,
     onClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
-            .width(192.dp)
+            .width(cardSize)
             .clickable { onClick() }
     ) {
         Surface(
