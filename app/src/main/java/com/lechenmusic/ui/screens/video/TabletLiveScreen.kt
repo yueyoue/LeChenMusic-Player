@@ -70,7 +70,7 @@ fun TabletLiveScreen(
         if (liveSources.isNotEmpty()) {
             val source = liveSources.getOrNull(selectedSourceIndex)
             if (source != null) {
-                viewModel.loadLiveChannels(source.source)
+                viewModel.loadLiveChannels(source.key)
             }
         }
     }
