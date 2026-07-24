@@ -1065,6 +1065,11 @@ fun NavGraphBuilder.sharedNavRoutes(
                 sources = sources,
                 initialSource = 0,
                 initialEpisode = 0,
+                videoSource = detail!!.source,
+                videoId = detail!!.id,
+                videoCover = detail!!.displayCover,
+                videoYear = detail!!.year,
+                videoViewModel = videoViewModel,
                 onBack = onBack
             )
         } else {
@@ -1083,6 +1088,11 @@ fun NavGraphBuilder.sharedNavRoutes(
             sources = sources,
             initialSource = sources.indexOfFirst { it.source == source }.coerceAtLeast(0),
             initialEpisode = episodeIndex,
+            videoSource = detail?.source ?: source,
+            videoId = detail?.id ?: "",
+            videoCover = detail?.displayCover ?: "",
+            videoYear = detail?.year ?: "",
+            videoViewModel = videoViewModel,
             onBack = onBack
         )
     }
