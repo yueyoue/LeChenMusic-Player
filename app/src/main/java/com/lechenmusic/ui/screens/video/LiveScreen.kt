@@ -227,7 +227,7 @@ fun LiveScreen(
                 modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                groups.size.forEach { index ->
+                groups.indices.forEach { index ->
                     val group = groups[index]
                     val isSelected = selectedGroupIndex == index
                     Surface(
