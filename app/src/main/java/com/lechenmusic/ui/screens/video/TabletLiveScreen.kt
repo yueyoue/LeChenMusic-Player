@@ -148,12 +148,13 @@ fun TabletLiveScreen(
                 }
             }
 
-            // 分类标签
-            Row(
+            // 分类标签（横向滚动，避免空间浪费）
+            androidx.compose.foundation.lazy.LazyRow(
                 modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                groups.forEachIndexed { index, group ->
+                items(groups.size) { index ->
+                    val group = groups[index]
                     val isSelected = selectedGroupIndex == index
                     Surface(
                         onClick = {
@@ -293,6 +294,12 @@ fun TabletLiveScreen(
                                 ) {
                                     Icon(Icons.Default.Close, "停止", tint = Color.White, modifier = Modifier.size(20.dp))
                                 }
+                                IconButton(
+                                    onClick = { /* TODO: 全屏播放 */ },
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Icon(Icons.Default.Fullscreen, "全屏", tint = Color.White, modifier = Modifier.size(20.dp))
+                                }
                             }
                         }
 
@@ -417,7 +424,7 @@ private fun ChannelListItem(
             modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Logo
+            // Logo (使用 Fit 避免台标被裁剪)
             if (channel.logo.isNotBlank()) {
                 AsyncImage(
                     model = channel.logo,
@@ -425,7 +432,7 @@ private fun ChannelListItem(
                     modifier = Modifier
                         .size(48.dp)
                         .clip(RoundedCornerShape(10.dp)),
-                    contentScale = ContentScale.Crop
+                    contentScale = ContentScale.Fit
                 )
             } else {
                 Surface(

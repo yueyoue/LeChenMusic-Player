@@ -58,14 +58,23 @@ fun TabletAudiobookHomeContent(
     ) {
         item { Spacer(modifier = Modifier.height(16.dp)) }
 
-        // ===== 幻灯片 (Issue 12: 还原幻灯片) =====
-        if (slides.isNotEmpty()) {
+        // ===== 幻灯片 (Issue 12: 还原幻灯片，无服务端配置时用有声书封面作 fallback) =====
+        val effectiveSlides = slides.ifEmpty {
+            audiobooks.take(5).map { book ->
+                com.lechenmusic.data.model.SlideConfig(
+                    title = book.title,
+                    imageUrl = "",
+                    link = book.id
+                )
+            }
+        }
+        if (effectiveSlides.isNotEmpty()) {
             item {
-                val pagerState = rememberPagerState(pageCount = { slides.size })
+                val pagerState = rememberPagerState(pageCount = { effectiveSlides.size })
                 LaunchedEffect(Unit) {
                     while (true) {
                         kotlinx.coroutines.delay(5000)
-                        val nextPage = (pagerState.currentPage + 1) % slides.size
+                        val nextPage = (pagerState.currentPage + 1) % effectiveSlides.size
                         pagerState.animateScrollToPage(nextPage)
                     }
                 }
@@ -76,7 +85,7 @@ fun TabletAudiobookHomeContent(
                         .clip(RoundedCornerShape(20.dp))
                 ) {
                     HorizontalPager(state = pagerState) { page ->
-                        val slide = slides[page]
+                        val slide = effectiveSlides[page]
                         Box(modifier = Modifier.fillMaxSize()) {
                             if (slide.imageUrl.isNotBlank()) {
                                 AsyncImage(
@@ -85,6 +94,17 @@ fun TabletAudiobookHomeContent(
                                     modifier = Modifier.fillMaxSize(),
                                     contentScale = ContentScale.Crop
                                 )
+                            } else if (slide.link.isNotBlank()) {
+                                // Fallback: 使用有声书封面
+                                val coverUrl = getAudiobookCoverUrl(serverUrl, username, password, slide.link)
+                                if (coverUrl != null) {
+                                    AsyncImage(
+                                        model = coverUrl,
+                                        contentDescription = null,
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                }
                             }
                             Box(
                                 modifier = Modifier
@@ -116,7 +136,7 @@ fun TabletAudiobookHomeContent(
                             .padding(12.dp),
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        repeat(slides.size) { index ->
+                        repeat(effectiveSlides.size) { index ->
                             Box(
                                 modifier = Modifier
                                     .size(if (pagerState.currentPage == index) 8.dp else 6.dp)

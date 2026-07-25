@@ -166,24 +166,16 @@ fun LiveScreen(
                     }
                 }
             } else {
-                // 播放器占位（实际需要嵌入 PlayerView）
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            Icons.Default.PlayArrow,
-                            null,
-                            tint = Color.White.copy(alpha = 0.7f),
-                            modifier = Modifier.size(48.dp)
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            selectedChannel?.name ?: "",
-                            color = Color.White,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
+                // ExoPlayer 渲染（参考平板UI实现）
+                androidx.compose.ui.viewinterop.AndroidView(
+                    factory = { ctx ->
+                        androidx.media3.ui.PlayerView(ctx).apply {
+                            player = exoPlayer
+                            useController = false
+                        }
+                    },
+                    modifier = Modifier.fillMaxSize()
+                )
 
                 // 播放/暂停按钮
                 IconButton(

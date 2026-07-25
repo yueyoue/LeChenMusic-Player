@@ -53,7 +53,7 @@ fun TabletFavoritesScreen(
     var searchText by remember { mutableStateOf("") }
     var isSearchActive by remember { mutableStateOf(false) }
 
-    val tabs = listOf("单曲" to starredSongs.size, "歌单" to starredPlaylists.size, "歌手" to starredArtists.size, "有声书" to starredAudiobooks.size)
+    val tabs = listOf("单曲" to starredSongs.size, "专辑" to starredAlbums.size, "歌单" to starredPlaylists.size, "有声书" to starredAudiobooks.size)
 
     Column(modifier = Modifier.fillMaxSize()) {
         // ===== 顶部: 标题 + Tab栏 + 搜索框 =====
@@ -168,8 +168,8 @@ fun TabletFavoritesScreen(
             // 统计
             when (selectedTab) {
                 0 -> Text("共 ${starredSongs.size} 首", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                1 -> Text("共 ${starredPlaylists.size} 个歌单", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                2 -> Text("歌手收藏", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                1 -> Text("共 ${starredAlbums.size} 张专辑", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                2 -> Text("共 ${starredPlaylists.size} 个歌单", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 3 -> Text("共 ${starredAudiobooks.size} 本有声书", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
@@ -184,20 +184,21 @@ fun TabletFavoritesScreen(
                 password = password,
                 onSongClick = onSongClick
             )
-            1 -> PlaylistsTab(
+            1 -> AlbumsTab(
+                albums = starredAlbums,
+                responsiveConfig = responsiveConfig,
+                serverUrl = serverUrl,
+                username = username,
+                password = password,
+                onAlbumClick = onAlbumClick
+            )
+            2 -> PlaylistsTab(
                 playlists = starredPlaylists,
                 responsiveConfig = responsiveConfig,
                 serverUrl = serverUrl,
                 username = username,
                 password = password,
                 onPlaylistClick = onPlaylistClick
-            )
-            2 -> ArtistsTab(
-                artists = starredArtists,
-                responsiveConfig = responsiveConfig,
-                serverUrl = serverUrl,
-                username = username,
-                password = password
             )
             3 -> AudiobooksTab(
                 audiobooks = starredAudiobooks,

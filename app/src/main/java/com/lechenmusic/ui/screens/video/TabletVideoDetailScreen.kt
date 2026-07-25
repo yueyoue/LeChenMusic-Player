@@ -122,11 +122,16 @@ fun TabletVideoDetailScreen(
     }
 
     val videoSources = video.toSources()
-    val displaySources = if (allSearchSources.size > 1) {
-        allSearchSources
+    // 只显示与当前影片标题匹配的源（参考手机UI逻辑）
+    val normalizedTitle = video.title.replace(" ", "").lowercase()
+    val relevantSources = allSearchSources.filter { src ->
+        val srcTitle = src.title.replace(" ", "").lowercase()
+        srcTitle == normalizedTitle || srcTitle.contains(normalizedTitle) || normalizedTitle.contains(srcTitle)
+    }
+    val displaySources = if (relevantSources.size > 1) {
+        relevantSources
             .groupBy { it.source }
             .values.map { group -> group.first() }
-            .take(20)
             .map { info ->
                 com.lechenmusic.data.model.VideoSource(
                     sourceName = info.displaySourceName.ifBlank { info.source },
@@ -308,9 +313,19 @@ fun TabletVideoDetailScreen(
 
                 if (video.desc.isNotBlank()) {
                     var descExpanded by remember { mutableStateOf(false) }
-                    Text(video.desc, fontSize = 15.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, lineHeight = 24.sp, maxLines = if (descExpanded) Int.MAX_VALUE else 3, overflow = TextOverflow.Ellipsis)
-                    if (video.desc.length > 100) {
-                        Text(if (descExpanded) "收起" else "展开全部", fontSize = 13.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.clickable { descExpanded = !descExpanded }.padding(top = 4.dp))
+                    Column {
+                        Text(video.desc, fontSize = 15.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, lineHeight = 24.sp, maxLines = if (descExpanded) Int.MAX_VALUE else 3, overflow = TextOverflow.Ellipsis)
+                        if (video.desc.length > 100) {
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                if (descExpanded) "收起" else "展开全部",
+                                fontSize = 13.sp,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier
+                                    .clickable { descExpanded = !descExpanded }
+                                    .padding(vertical = 4.dp)
+                            )
+                        }
                     }
                 }
 
@@ -367,22 +382,23 @@ fun TabletVideoDetailScreen(
                             sourceSpeeds = sourceSpeeds,
                             speedTesting = speedTesting,
                             onSourceSelect = { index, info ->
+                                // 保存当前播放位置（参考手机UI实现）
+                                val savedPosition = exoPlayer.currentPosition.coerceAtLeast(0L)
                                 selectedSource = index
                                 selectedEpisode = 0
                                 viewModel.switchSource(info)
-                                // 切换源后自动播放第一集（从上次位置继续）
+                                // 切换源后从上次位置继续播放
                                 val ep = info.episodes.firstOrNull()
                                 if (ep != null && ep.isNotBlank()) {
+                                    exoPlayer.stop()
                                     exoPlayer.setMediaItem(MediaItem.fromUri(ep))
                                     exoPlayer.prepare()
                                     exoPlayer.playWhenReady = true
-                                    val resumeMs = viewModel.resumePositionMs.value
-                                    if (resumeMs > 0) {
+                                    if (savedPosition > 0) {
                                         exoPlayer.addListener(object : Player.Listener {
                                             override fun onPlaybackStateChanged(state: Int) {
                                                 if (state == Player.STATE_READY) {
-                                                    exoPlayer.seekTo(resumeMs)
-                                                    viewModel.clearResumePosition()
+                                                    exoPlayer.seekTo(savedPosition)
                                                     exoPlayer.removeListener(this)
                                                 }
                                             }

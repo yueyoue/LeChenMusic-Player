@@ -171,6 +171,13 @@ fun HomeScreen(
                     }
                 }
                 "video" -> {
+                    // 加载影视数据（包括播放记录）
+                    androidx.compose.runtime.LaunchedEffect(isVideoLoggedIn) {
+                        if (isVideoLoggedIn) {
+                            videoViewModel?.loadHomeData()
+                            videoViewModel?.loadPlayRecords()
+                        }
+                    }
                     Scaffold(modifier = Modifier.fillMaxSize()) { _ ->
                         TabletVideoHomeContent(
                             config = config!!,
@@ -2585,11 +2592,11 @@ private fun TabletVideoHomeContent(
                 }
             }
 
-            // 热门动漫 (横向卡片滚动)
+            // 新番放送 (横向卡片滚动，参考 Selene-Source)
             if (hotAnime.isNotEmpty()) {
                 item {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text("热门动漫", fontSize = config.sectionTitleSize, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        Text("\uD83C\uDF8C 新番放送", fontSize = config.sectionTitleSize, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                         Text("查看全部 ›", fontSize = config.bodyFontSize, color = MaterialTheme.colorScheme.secondary, modifier = Modifier.clickable { onNavigateToVideoCategory("anime") })
                     }
                 }
