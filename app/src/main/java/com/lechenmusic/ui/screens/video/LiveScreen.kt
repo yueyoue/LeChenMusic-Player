@@ -307,6 +307,7 @@ fun LiveScreen(
                                 }
                             }
                         )
+                    }
                 }
             }
         }
