@@ -95,10 +95,10 @@ fun TabletAudiobookHomeContent(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("继续收听", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text("继续收听", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                 Text(
                     "最近播放 ›",
-                    fontSize = 14.sp,
+                    fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.clickable { onNavigateToAudiobook(null) }
                 )
@@ -196,10 +196,10 @@ fun TabletAudiobookHomeContent(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("演播者", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text("演播者", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                 Text(
                     "全部 ›",
-                    fontSize = 14.sp,
+                    fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.clickable { onNavigateToNarratorList() }
                 )
@@ -228,10 +228,10 @@ fun TabletAudiobookHomeContent(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("有声小说", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text("有声小说", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                 Text(
                     "更多 ›",
-                    fontSize = 14.sp,
+                    fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.clickable { onNavigateToAudiobook("有声读物") }
                 )
@@ -267,10 +267,10 @@ fun TabletAudiobookHomeContent(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("相声", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text("相声", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                 Text(
                     "更多 ›",
-                    fontSize = 14.sp,
+                    fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.clickable { onNavigateToAudiobook("相声") }
                 )
@@ -306,10 +306,10 @@ fun TabletAudiobookHomeContent(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("评书", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text("评书", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                 Text(
                     "更多 ›",
-                    fontSize = 14.sp,
+                    fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.clickable { onNavigateToAudiobook("评书") }
                 )
@@ -345,10 +345,10 @@ fun TabletAudiobookHomeContent(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("儿童", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text("儿童", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                 Text(
                     "更多 ›",
-                    fontSize = 14.sp,
+                    fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.clickable { onNavigateToAudiobook("儿童") }
                 )
@@ -379,7 +379,7 @@ fun TabletAudiobookHomeContent(
 
         // ===== 热门榜单 =====
         item {
-            Text("热门榜单", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text("热门榜单", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             Spacer(modifier = Modifier.height(12.dp))
             val popular = audiobooks.sortedByDescending { it.chapterCount }.take(5)
             popular.forEachIndexed { index, book ->
@@ -403,7 +403,7 @@ fun TabletAudiobookHomeContent(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("我的收藏", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    Text("我的收藏", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                     Text(
                         "全部 ›",
                         fontSize = 14.sp,
