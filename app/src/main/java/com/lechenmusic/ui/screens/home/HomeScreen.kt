@@ -100,6 +100,12 @@ fun HomeScreen(
     val videoHomeLoading = videoViewModel?.homeLoading?.collectAsState()?.value ?: false
     val videoPlayRecords = videoViewModel?.playRecords?.collectAsState()?.value ?: emptyList()
 
+    // 追踪当前屏幕（用于崩溃定位）
+    androidx.compose.runtime.SideEffect {
+        com.lechenmusic.ErrorReporter.setCurrentScreen("HomeScreen_$homeMode")
+        com.lechenmusic.ErrorReporter.setExtraContext("playRecords=${videoPlayRecords.size}")
+    }
+
     // 判断是否使用平板布局
     val config = responsiveConfig
     val isTablet = config != null && (config.isMedium || config.isExpanded)

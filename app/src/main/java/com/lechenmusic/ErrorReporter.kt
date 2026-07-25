@@ -30,39 +30,49 @@ object ErrorReporter {
             context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "unknown"
         } catch (_: Exception) { "unknown" }
 
-        // Set global uncaught exception handler
+        // Set global uncaught exception handler with detailed context
         val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
             try {
+                val crashInfo = buildString {
+                    appendLine("[${java.text.SimpleDateFormat("HH:mm:ss.SSS", java.util.Locale.getDefault()).format(java.util.Date())}] CRASH on ${thread.name}: ${throwable.message}")
+                    appendLine("  Exception: ${throwable.javaClass.name}")
+                    // 获取完整堆栈（不限制长度）
+                    val sw = java.io.StringWriter()
+                    throwable.printStackTrace(java.io.PrintWriter(sw))
+                    appendLine(sw.toString())
+                    appendLine("  Current screen: ${_currentScreen}")
+                    appendLine("  Extra context: ${_extraContext}")
+                }
+                // 写入本地文件
+                try {
+                    val logFile = java.io.File(context.getExternalFilesDir(null), "crash_log.txt")
+                    logFile.appendText(crashInfo + "\n")
+                } catch (_: Exception) {}
+                // 发送到服务器
                 sendErrorSync(
                     level = "crash",
                     message = throwable.message ?: "Unknown crash",
                     stack = getStackTrace(throwable),
-                    screen = "uncaught_${thread.name}"
+                    screen = "uncaught_${thread.name}_$_currentScreen"
                 )
             } catch (_: Exception) {}
-            // Call original handler (shows system crash dialog)
             defaultHandler?.uncaughtException(thread, throwable)
         }
 
-        // Set global coroutine exception handler
-        val currentDefault = Thread.getDefaultUncaughtExceptionHandler()
-        Thread.setDefaultUncaughtExceptionHandler(
-            Thread.UncaughtExceptionHandler { thread, throwable ->
-                try {
-                    sendErrorSync(
-                        level = "crash",
-                        message = throwable.message ?: "Unknown crash",
-                        stack = getStackTrace(throwable),
-                        screen = "coroutine_${thread.name}"
-                    )
-                } catch (_: Exception) {}
-                // Let default handler take over
-                currentDefault?.uncaughtException(thread, throwable)
-            }
-        )
-
         Log.i(TAG, "ErrorReporter initialized for $server")
+    }
+
+    // 当前屏幕追踪
+    private var _currentScreen = "unknown"
+    private var _extraContext = ""
+
+    fun setCurrentScreen(screen: String) {
+        _currentScreen = screen
+    }
+
+    fun setExtraContext(context: String) {
+        _extraContext = context
     }
 
     /**

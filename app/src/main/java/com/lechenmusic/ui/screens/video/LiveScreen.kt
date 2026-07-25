@@ -41,6 +41,12 @@ fun LiveScreen(
     val liveDebug by viewModel.liveDebug.collectAsState()
     val context = androidx.compose.ui.platform.LocalContext.current
 
+    // 追踪当前屏幕（用于崩溃定位）
+    androidx.compose.runtime.SideEffect {
+        com.lechenmusic.ErrorReporter.setCurrentScreen("LiveScreen")
+        com.lechenmusic.ErrorReporter.setExtraContext("groups=${liveChannels.size}, loading=$isLoading")
+    }
+
     var selectedSourceIndex by remember { mutableIntStateOf(0) }
     var selectedChannel by remember { mutableStateOf<LiveChannel?>(null) }
     var selectedGroupIndex by remember { mutableIntStateOf(0) }
@@ -290,14 +296,13 @@ fun LiveScreen(
                 Text("暂无频道", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         } else {
-            // 使用 key 强制切换分组时重建 LazyColumn
-            androidx.compose.runtime.key(currentGroup?.name ?: "") {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(bottom = 100.dp)
-                ) {
-                    items(channels, key = { "${it.url}_${it.name}" }) { channel ->
-                        LiveChannelItem(
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(bottom = 100.dp)
+            ) {
+                items(channels.size) { index ->
+                    val channel = channels[index]
+                    LiveChannelItem(
                             channel = channel,
                             isSelected = selectedChannel?.url == channel.url,
                             onClick = {
@@ -316,7 +321,6 @@ fun LiveScreen(
                     }
                 }
             }
-        }
 
         // Debug overlay
         if (liveDebug.isNotBlank()) {
