@@ -2434,7 +2434,6 @@ private fun TabletVideoHomeContent(
         ) {
             // ===== 影视分类 Tab 按钮行 =====
             item {
-                var selectedCategoryTab by remember { mutableIntStateOf(0) }
                 val categoryTabs = listOf(
                     "电影" to "movie",
                     "剧集" to "tv",
@@ -2447,35 +2446,18 @@ private fun TabletVideoHomeContent(
                         .fillMaxWidth()
                         .horizontalScroll(rememberScrollState())
                         .padding(bottom = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(32.dp)
+                    horizontalArrangement = Arrangement.spacedBy(24.dp)
                 ) {
-                    categoryTabs.forEachIndexed { index, (label, _) ->
-                        val isSelected = selectedCategoryTab == index
-                        Column(
+                    categoryTabs.forEach { (label, type) ->
+                        Text(
+                            text = label,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Normal,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier
-                                .clickable {
-                                    selectedCategoryTab = index
-                                    onNavigateToVideoCategory(categoryTabs[index].second)
-                                }
+                                .clickable { onNavigateToVideoCategory(type) }
                                 .padding(bottom = 8.dp)
-                        ) {
-                            Text(
-                                text = label,
-                                fontSize = 20.sp,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                color = if (isSelected) MaterialTheme.colorScheme.primary
-                                    else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            if (isSelected) {
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(2.dp)
-                                        .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(1.dp))
-                                )
-                            }
-                        }
+                        )
                     }
                 }
             }
