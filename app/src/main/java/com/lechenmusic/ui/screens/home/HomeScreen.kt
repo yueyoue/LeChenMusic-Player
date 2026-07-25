@@ -340,11 +340,11 @@ fun HomeScreen(
                             )
                         }
                         item {
-                            LazyRow(
-                                contentPadding = PaddingValues(horizontal = 16.dp),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            Row(
+                                modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                items(playlists.take(5), key = { it.id }) {
+                                playlists.take(5).forEach { it ->
                                     PlCard(
                                         it,
                                         serverUrl,
@@ -377,11 +377,11 @@ fun HomeScreen(
                             SecHd("\uD83D\uDD04 最近更新", "更多 ›", onNavigateToRecentPlayed)
                         }
                         item {
-                            LazyRow(
-                                contentPadding = PaddingValues(horizontal = 16.dp),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            Row(
+                                modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                items(randomAlbums, key = { it.id }) {
+                                randomAlbums.forEach { it ->
                                     AlbumCard2(
                                         it,
                                         serverUrl,
@@ -533,11 +533,11 @@ fun HomeScreen(
                     item {
                         val narrators by viewModel.narrators.collectAsState()
                         if (narrators.isNotEmpty()) {
-                            LazyRow(
-                                contentPadding = PaddingValues(horizontal = 16.dp),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            Row(
+                                modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                items(narrators.take(8), key = { it.name }) { narr ->
+                                narrators.take(8).forEach { narr ->
                                     NarrItem(
                                         name = narr.name,
                                         count = "${narr.count}部作品",
@@ -560,12 +560,12 @@ fun HomeScreen(
                     item { SecHd("\uD83C\uDD95 最近更新", "更多 ›") { onNavigateToAudiobook(null) } }
                     if (audiobooks.isNotEmpty()) {
                         item {
-                            LazyRow(
-                                contentPadding = PaddingValues(horizontal = 16.dp),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            Row(
+                                modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
                                 val recent = audiobooks.sortedByDescending { it.updatedAt }.take(5)
-                                items(recent, key = { it.id }) {
+                                recent.forEach { it ->
                                     AbGridCard(
                                         it,
                                         serverUrl,
@@ -587,11 +587,11 @@ fun HomeScreen(
                     item {
                         val novelBooks = audiobooks.filter { it.genre == "有声读物" || it.genre.isEmpty() }
                         if (novelBooks.isNotEmpty()) {
-                            LazyRow(
-                                contentPadding = PaddingValues(horizontal = 16.dp),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            Row(
+                                modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                itemsIndexed(novelBooks.take(4)) { i, b ->
+                                novelBooks.take(4).forEachIndexed { i, b ->
                                     RankCard(
                                         b,
                                         i + 1,
@@ -612,11 +612,11 @@ fun HomeScreen(
                     item {
                         val xiangshengBooks = audiobooks.filter { it.genre == "相声" }
                         if (xiangshengBooks.isNotEmpty()) {
-                            LazyRow(
-                                contentPadding = PaddingValues(horizontal = 16.dp),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            Row(
+                                modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                items(xiangshengBooks.take(5), key = { it.id }) {
+                                xiangshengBooks.take(5).forEach { it ->
                                     AbGridCard(
                                         it,
                                         serverUrl,
@@ -636,11 +636,11 @@ fun HomeScreen(
                     item {
                         val pingshuBooks = audiobooks.filter { it.genre == "评书" }
                         if (pingshuBooks.isNotEmpty()) {
-                            LazyRow(
-                                contentPadding = PaddingValues(horizontal = 16.dp),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            Row(
+                                modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                items(pingshuBooks.take(5), key = { it.id }) {
+                                pingshuBooks.take(5).forEach { it ->
                                     AbGridCard(
                                         it,
                                         serverUrl,
@@ -660,11 +660,11 @@ fun HomeScreen(
                     item {
                         val childBooks = audiobooks.filter { it.genre == "儿童" }
                         if (childBooks.isNotEmpty()) {
-                            LazyRow(
-                                contentPadding = PaddingValues(horizontal = 16.dp),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            Row(
+                                modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                items(childBooks.take(5), key = { it.id }) {
+                                childBooks.take(5).forEach { it ->
                                     AbGridCard(
                                         it,
                                         serverUrl,
@@ -683,11 +683,11 @@ fun HomeScreen(
                     item { SecHd("❤️ 我的收藏", "更多 ›") { onNavigateToAudiobook("starred") } }
                     if (starredAudiobooks.isNotEmpty()) {
                         item {
-                            LazyRow(
-                                contentPadding = PaddingValues(horizontal = 16.dp),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            Row(
+                                modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                items(starredAudiobooks.take(5), key = { it.id }) {
+                                starredAudiobooks.take(5).forEach { it ->
                                     AbGridCard(
                                         it,
                                         serverUrl,
@@ -754,12 +754,11 @@ fun HomeScreen(
                             var selectedVideoTab by remember { mutableIntStateOf(0) }
                             val videoTabs = listOf("\uD83C\uDFAE 推荐", "\uD83C\uDFAC 电影", "\uD83D\uDCFA 剧集", "\uD83C\uDF8C 动漫", "\uD83C\uDFAD 综艺", "\uD83D\uDCFA 直播")
                             Column {
-                                androidx.compose.foundation.lazy.LazyRow(
-                                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                                    contentPadding = PaddingValues(horizontal = 12.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                Row(
+                                    modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                                 ) {
-                                    items(videoTabs.size) { index ->
+                                    videoTabs.indices.forEach { index ->
                                         val isSelected = selectedVideoTab == index
                                         Surface(
                                             onClick = {
@@ -797,11 +796,11 @@ fun HomeScreen(
                                 SecHd("\u23F0 最近观看", "")
                             }
                             item {
-                                LazyRow(
-                                    contentPadding = PaddingValues(horizontal = 16.dp),
+                                Row(
+                                    modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
                                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                                 ) {
-                                    items(videoPlayRecords.take(10), key = { "${it.source}_${it.videoIdRaw}" }) { record ->
+                                    videoPlayRecords.take(10), key = { "${it.source}_${it.videoIdRaw}" }.forEach { record ->
                                         com.lechenmusic.ui.screens.video.VideoHorizontalCard(
                                             video = com.lechenmusic.data.model.VideoInfo(
                                                 id = record.videoIdRaw,
@@ -826,11 +825,11 @@ fun HomeScreen(
                         if (hotMovies.isNotEmpty()) {
                             item { SecHd("\uD83C\uDFAC 热门电影", "") }
                             item {
-                                LazyRow(
-                                    contentPadding = PaddingValues(horizontal = 16.dp),
+                                Row(
+                                    modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
                                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                                 ) {
-                                    items(hotMovies, key = { "movie_${it.source}_${it.id}" }) { video ->
+                                    hotMovies.forEach { video ->
                                         com.lechenmusic.ui.screens.video.VideoHorizontalCard(
                                             video = video,
                                             onClick = {
@@ -853,11 +852,11 @@ fun HomeScreen(
                         if (hotTv.isNotEmpty()) {
                             item { SecHd("\uD83D\uDCFA 热门剧集", "") }
                             item {
-                                LazyRow(
-                                    contentPadding = PaddingValues(horizontal = 16.dp),
+                                Row(
+                                    modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
                                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                                 ) {
-                                    items(hotTv, key = { "tv_${it.source}_${it.id}" }) { video ->
+                                    hotTv.forEach { video ->
                                         com.lechenmusic.ui.screens.video.VideoHorizontalCard(
                                             video = video,
                                             onClick = {
@@ -879,11 +878,11 @@ fun HomeScreen(
                         if (hotVariety.isNotEmpty()) {
                             item { SecHd("\uD83C\uDFAD 热门综艺", "") }
                             item {
-                                LazyRow(
-                                    contentPadding = PaddingValues(horizontal = 16.dp),
+                                Row(
+                                    modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
                                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                                 ) {
-                                    items(hotVariety, key = { "variety_${it.source}_${it.id}" }) { video ->
+                                    hotVariety.forEach { video ->
                                         com.lechenmusic.ui.screens.video.VideoHorizontalCard(
                                             video = video,
                                             onClick = {
