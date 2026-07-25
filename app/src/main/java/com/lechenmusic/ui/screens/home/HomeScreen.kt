@@ -479,7 +479,7 @@ fun HomeScreen(
                         SecHd("⏱️ 继续收听", "全部 ›") {}
                     }
                     if (booksWithProgress.isNotEmpty()) {
-                        items(booksWithProgress.take(20), key = { it.book.id }) { bwp ->
+                        items(booksWithProgress.take(20), key = { it.id }) { bwp ->
                             ContCard(
                                 bwp.toAudiobook(),
                                 serverUrl,
@@ -565,7 +565,7 @@ fun HomeScreen(
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
                                 val recent = audiobooks.sortedByDescending { it.updatedAt }.take(5)
-                                items(recent, key = { "${it.source}_${it.videoIdRaw}" }) {
+                                items(recent, key = { it.id }) {
                                     AbGridCard(
                                         it,
                                         serverUrl,
