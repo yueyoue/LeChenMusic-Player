@@ -176,8 +176,10 @@ data class VideoPlayRecord(
 }
 
 data class PlayRecordRequest(
-    val source: String,
-    val id: String,
+    // source 和 id 不序列化到 record body（LunaTV 服务器拒绝含 source/id 的 record）
+    // 它们仅用于构造 key 字段
+    @Transient val source: String = "",
+    @Transient val id: String = "",
     val title: String = "",
     val cover: String = "",
     val year: String = "",

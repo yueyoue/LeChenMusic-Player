@@ -8,8 +8,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
+
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -158,103 +157,6 @@ fun TabletAudiobookHomeContent(
                 }
             }
         }
-        item { Spacer(modifier = Modifier.height(24.dp)) }
-
-        // ===== 幻灯片 (Issue 12: 还原幻灯片，无服务端配置时用有声书封面作 fallback) =====
-        val effectiveSlides = slides.ifEmpty {
-            audiobooks.take(5).map { book ->
-                com.lechenmusic.data.model.SlideConfig(
-                    title = book.title,
-                    imageUrl = "",
-                    link = book.id
-                )
-            }
-        }
-        if (effectiveSlides.isNotEmpty()) {
-            item {
-                val pagerState = rememberPagerState(pageCount = { effectiveSlides.size })
-                LaunchedEffect(Unit) {
-                    while (true) {
-                        kotlinx.coroutines.delay(5000)
-                        val nextPage = (pagerState.currentPage + 1) % effectiveSlides.size
-                        pagerState.animateScrollToPage(nextPage)
-                    }
-                }
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp)
-                        .clip(RoundedCornerShape(20.dp))
-                ) {
-                    HorizontalPager(state = pagerState) { page ->
-                        val slide = effectiveSlides[page]
-                        Box(modifier = Modifier.fillMaxSize()) {
-                            if (slide.imageUrl.isNotBlank()) {
-                                AsyncImage(
-                                    model = slide.imageUrl,
-                                    contentDescription = null,
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Crop
-                                )
-                            } else if (slide.link.isNotBlank()) {
-                                // Fallback: 使用有声书封面
-                                val coverUrl = getAudiobookCoverUrl(serverUrl, username, password, slide.link)
-                                if (coverUrl != null) {
-                                    AsyncImage(
-                                        model = coverUrl,
-                                        contentDescription = null,
-                                        modifier = Modifier.fillMaxSize(),
-                                        contentScale = ContentScale.Crop
-                                    )
-                                }
-                            }
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(
-                                        Brush.verticalGradient(
-                                            listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f))
-                                        )
-                                    )
-                            )
-                            Column(
-                                modifier = Modifier
-                                    .align(Alignment.BottomStart)
-                                    .padding(20.dp)
-                            ) {
-                                Text(
-                                    slide.title,
-                                    fontSize = 20.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White
-                                )
-                            }
-                        }
-                    }
-                    // 页面指示器
-                    Row(
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        repeat(effectiveSlides.size) { index ->
-                            Box(
-                                modifier = Modifier
-                                    .size(if (pagerState.currentPage == index) 8.dp else 6.dp)
-                                    .clip(CircleShape)
-                                    .background(
-                                        if (pagerState.currentPage == index) Color.White
-                                        else Color.White.copy(alpha = 0.4f)
-                                    )
-                            )
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(24.dp))
-            }
-        }
-
         // ===== 热门分类 (Issue 8: 改为有声小说、相声、评书、儿童，修复边框) =====
         item {
             Text("热门分类", fontSize = 20.sp, fontWeight = FontWeight.Bold)
