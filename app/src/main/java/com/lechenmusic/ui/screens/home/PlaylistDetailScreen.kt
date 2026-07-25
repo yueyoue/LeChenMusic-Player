@@ -18,11 +18,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lechenmusic.data.model.Song
 import com.lechenmusic.ui.MainViewModel
+import com.lechenmusic.ui.responsive.ResponsiveConfig
 import com.lechenmusic.ui.components.SongItemWithMenu
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlaylistDetailScreen(
+    responsiveConfig: ResponsiveConfig? = null,
     viewModel: MainViewModel,
     playlistId: String,
     onBack: () -> Unit,

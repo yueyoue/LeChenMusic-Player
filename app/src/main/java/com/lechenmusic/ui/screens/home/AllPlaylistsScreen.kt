@@ -19,10 +19,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lechenmusic.data.model.Playlist
 import com.lechenmusic.ui.MainViewModel
+import com.lechenmusic.ui.responsive.ResponsiveConfig
 import com.lechenmusic.ui.components.CoverImage
 
 @Composable
 fun AllPlaylistsScreen(
+    responsiveConfig: ResponsiveConfig? = null,
     viewModel: MainViewModel,
     onBack: () -> Unit,
     onPlaylistClick: (String) -> Unit
