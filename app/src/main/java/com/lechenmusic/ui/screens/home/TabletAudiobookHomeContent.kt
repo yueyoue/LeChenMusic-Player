@@ -23,6 +23,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -88,7 +89,7 @@ fun TabletAudiobookHomeContent(
             }
         }
 
-        // ===== 继续收听 + 幻灯片 (模板布局：左侧大卡片 + 右侧继续收听) =====
+        // ===== 继续收听 (横向网格显示，和有声小说一样) =====
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -103,90 +104,30 @@ fun TabletAudiobookHomeContent(
                     modifier = Modifier.clickable { onNavigateToAudiobook(null) }
                 )
             }
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
         }
-
-        val booksWithProgress = audiobookWithProgress.filter { it.progress != null && !it.progress.completed }
         item {
-            if (booksWithProgress.isNotEmpty()) {
-                // 有进度数据：左侧大卡片 + 右侧列表
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    // 左侧: 大卡片 (500x240)
-                    val firstBwp = booksWithProgress.first()
-                    ContinueListeningLargeCard(
-                        book = firstBwp.toAudiobook(),
-                        progress = firstBwp.progress,
-                        serverUrl = serverUrl,
-                        username = username,
-                        password = password,
-                        onClick = {
-                            viewModel.resumeAudiobook(firstBwp.toAudiobook())
-                            onNavigateToAudiobookDetail(firstBwp.id)
-                        }
-                    )
-                    // 右侧: 列表显示
-                    Column(
-                        modifier = Modifier.weight(1f).height(240.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        booksWithProgress.drop(1).take(4).forEach { bwp ->
-                            ContinueListeningListRow(
-                                book = bwp.toAudiobook(),
-                                progress = bwp.progress,
-                                serverUrl = serverUrl,
-                                username = username,
-                                password = password,
-                                onClick = {
-                                    viewModel.resumeAudiobook(bwp.toAudiobook())
-                                    onNavigateToAudiobookDetail(bwp.id)
-                                }
-                            )
-                        }
-                    }
-                }
-            } else if (audiobooks.isNotEmpty()) {
-                // 无进度数据：显示最近更新的有声书作为推荐
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    val firstBook = audiobooks.first()
-                    ContinueListeningLargeCard(
-                        book = firstBook,
-                        progress = null,
-                        serverUrl = serverUrl,
-                        username = username,
-                        password = password,
-                        onClick = { onNavigateToAudiobookDetail(firstBook.id) }
-                    )
-                    Column(
-                        modifier = Modifier.weight(1f).height(240.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        audiobooks.drop(1).take(4).forEach { book ->
-                            ContinueListeningListRow(
-                                book = book,
-                                progress = null,
-                                serverUrl = serverUrl,
-                                username = username,
-                                password = password,
-                                onClick = { onNavigateToAudiobookDetail(book.id) }
-                            )
-                        }
+            val booksWithProgress = audiobookWithProgress.filter { it.progress != null && !it.progress.completed }
+            val continueBooks = if (booksWithProgress.isNotEmpty()) booksWithProgress.map { it.toAudiobook() } else audiobooks.take(8)
+            if (continueBooks.isNotEmpty()) {
+                androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    items(continueBooks.take(8)) { book ->
+                        AudiobookCompactCard(
+                            cardSize = cardSize,
+                            book = book,
+                            serverUrl = serverUrl,
+                            username = username,
+                            password = password,
+                            onClick = { onNavigateToAudiobookDetail(book.id) }
+                        )
                     }
                 }
             } else {
-                // 完全无数据
-                Box(
-                    modifier = Modifier.fillMaxWidth().height(240.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("暂无有声书", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                    Text("暂无收听记录", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
+            Spacer(modifier = Modifier.height(16.dp))
         }
 
         // ===== 演播者 (Issue 9: 去掉背景框，上面头像下面名字，头像改大) =====
@@ -211,6 +152,7 @@ fun TabletAudiobookHomeContent(
                         NarratorAvatarCard(
                             name = narr.name,
                             count = "${narr.count}部",
+                            serverUrl = serverUrl,
                             onClick = { onNavigateToNarrator(narr.name) }
                         )
                     }
@@ -749,29 +691,26 @@ private fun CategoryGlassCard(
 private fun NarratorAvatarCard(
     name: String,
     count: String,
+    serverUrl: String,
     onClick: () -> Unit
 ) {
+    val avatarUrl = com.lechenmusic.data.api.SubsonicApi.getNarratorAvatarUrl(serverUrl, name)
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .width(80.dp)
             .clickable { onClick() }
     ) {
-        // 头像 (改大)
-        Surface(
-            shape = CircleShape,
-            modifier = Modifier.size(64.dp),
-            color = MaterialTheme.colorScheme.primaryContainer
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Text(
-                    name.take(1),
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            }
-        }
+        // 头像
+        AsyncImage(
+            model = avatarUrl,
+            contentDescription = name,
+            modifier = Modifier
+                .size(64.dp)
+                .clip(CircleShape),
+            contentScale = ContentScale.Crop,
+            error = painterResource(android.R.drawable.ic_menu_gallery)
+        )
         Spacer(modifier = Modifier.height(8.dp))
         // 名字
         Text(
@@ -839,7 +778,7 @@ private fun AudiobookCompactCard(
             overflow = TextOverflow.Ellipsis
         )
         Text(
-            if (book.chapterCount > 0) "更新至 ${book.chapterCount} 集" else "完结",
+            if (book.chapterCount > 0) "${book.chapterCount} 集" else "完结",
             fontSize = 11.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1
