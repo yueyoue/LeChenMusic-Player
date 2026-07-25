@@ -17,3 +17,4 @@ APK/
 release-artifact.zip
 *.apk
 # trigger build
+.openclaw/
