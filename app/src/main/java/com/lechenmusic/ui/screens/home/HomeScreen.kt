@@ -754,7 +754,7 @@ fun HomeScreen(
                         // 横向分类导航菜单
                         item {
                             var selectedVideoTab by remember { mutableIntStateOf(0) }
-                            val videoTabs = listOf("\uD83C\uDFAE 推荐", "\uD83C\uDFAC 电影", "\uD83D\uDCFA 剧集", "\uD83C\uDF8C 动漫", "\uD83C\uDFAD 综艺", "\uD83D\uDCFA 直播")
+                            val videoTabs = listOf("\uD83C\uDFAE 推荐", "\uD83C\uDFAC 电影", "\uD83D\uDCFA 剧集", "\uD83C\uDF8C 动漫", "\uD83C\uDFAD 综艺")
                             Column {
                                 Row(
                                     modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
@@ -771,7 +771,6 @@ fun HomeScreen(
                                                     2 -> onNavigateToVideoCategory("tv")
                                                     3 -> onNavigateToVideoCategory("anime")
                                                     4 -> onNavigateToVideoCategory("variety")
-                                                    5 -> onNavigateToLive()
                                                 }
                                             },
                                             shape = RoundedCornerShape(20.dp),
