@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.lechenmusic.data.model.Audiobook
 import com.lechenmusic.ui.MainViewModel
+import com.lechenmusic.ui.responsive.ResponsiveConfig
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.ImeAction
 
@@ -32,6 +33,7 @@ import androidx.compose.ui.text.input.ImeAction
 fun AudiobookScreen(
     viewModel: MainViewModel,
     genreFilter: String? = null,
+    responsiveConfig: ResponsiveConfig? = null,
     onBack: () -> Unit,
     onAudiobookClick: (String) -> Unit
 ) {

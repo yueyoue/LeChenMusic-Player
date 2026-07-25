@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import com.lechenmusic.ui.responsive.ResponsiveConfig
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -41,6 +42,7 @@ import com.lechenmusic.ui.screens.player.PlayerProgressBar
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AudiobookPlayerScreen(
+    responsiveConfig: ResponsiveConfig? = null,
     book: Audiobook,
     chapters: List<AudiobookChapter>,
     currentChapterIndex: Int,

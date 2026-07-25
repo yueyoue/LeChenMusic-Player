@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.sp
 import com.lechenmusic.data.model.Audiobook
 import com.lechenmusic.data.model.AudiobookChapter
 import com.lechenmusic.ui.MainViewModel
+import com.lechenmusic.ui.responsive.ResponsiveConfig
 import coil.compose.AsyncImage
 import com.lechenmusic.ui.screens.audiobook.getAudiobookCoverUrl
 
@@ -26,6 +27,7 @@ import com.lechenmusic.ui.screens.audiobook.getAudiobookCoverUrl
 fun AudiobookDetailScreen(
     viewModel: MainViewModel,
     audiobookId: String,
+    responsiveConfig: ResponsiveConfig? = null,
     onBack: () -> Unit,
     onPlayChapter: (Audiobook, AudiobookChapter, List<AudiobookChapter>) -> Unit
 ) {

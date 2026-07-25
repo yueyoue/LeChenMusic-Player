@@ -771,14 +771,37 @@ fun NavGraphBuilder.sharedNavRoutes(
                             if (queueSongs.isEmpty()) {
                                 Text("播放队列为空")
                             } else {
+                                val currentIndex by viewModel.playerManager.currentIndex.collectAsState()
                                 LazyColumn(modifier = Modifier.heightIn(max = 400.dp)) {
-                                    items(queueSongs) { song ->
+                                    items(queueSongs.size) { index ->
+                                        val song = queueSongs[index]
+                                        val isCurrent = index == currentIndex
                                         Row(
-                                            modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                                            modifier = Modifier.fillMaxWidth()
+                                                .clickable {
+                                                    viewModel.playerManager.playSong(song, queueSongs)
+                                                    showQueueDialog = false
+                                                }
+                                                .background(
+                                                    if (isCurrent) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else Color.Transparent,
+                                                    RoundedCornerShape(8.dp)
+                                                )
+                                                .padding(horizontal = 12.dp, vertical = 8.dp),
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            Text(song.title, fontSize = 14.sp, modifier = Modifier.weight(1f), maxLines = 1)
-                                            Text(song.artist, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                                            if (isCurrent) {
+                                                Icon(Icons.Default.PlayArrow, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                                            } else {
+                                                Text("${index + 1}", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.width(24.dp))
+                                            }
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(song.title, fontSize = 14.sp, fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal, maxLines = 1)
+                                                Text(song.artist, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                                            }
+                                            if (song.duration > 0) {
+                                                Text("${song.duration / 60}:${"%02d".format(song.duration % 60)}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                            }
                                         }
                                     }
                                 }

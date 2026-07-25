@@ -24,11 +24,13 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.lechenmusic.data.api.SubsonicApi
 import com.lechenmusic.ui.MainViewModel
+import com.lechenmusic.ui.responsive.ResponsiveConfig
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AudiobookNarratorListScreen(
     viewModel: MainViewModel,
+    responsiveConfig: ResponsiveConfig? = null,
     onBack: () -> Unit,
     onNarratorClick: (String) -> Unit
 ) {
