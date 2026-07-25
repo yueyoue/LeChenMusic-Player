@@ -2432,6 +2432,54 @@ private fun TabletVideoHomeContent(
             contentPadding = PaddingValues(start = pad, end = gap, top = 8.dp, bottom = 100.dp),
             verticalArrangement = Arrangement.spacedBy(gap)
         ) {
+            // ===== 影视分类 Tab 按钮行 =====
+            item {
+                var selectedCategoryTab by remember { mutableIntStateOf(0) }
+                val categoryTabs = listOf(
+                    "电影" to "movie",
+                    "剧集" to "tv",
+                    "动漫" to "anime",
+                    "综艺" to "variety",
+                    "短剧" to "short"
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(bottom = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(32.dp)
+                ) {
+                    categoryTabs.forEachIndexed { index, (label, _) ->
+                        val isSelected = selectedCategoryTab == index
+                        Column(
+                            modifier = Modifier
+                                .clickable {
+                                    selectedCategoryTab = index
+                                    onNavigateToVideoCategory(categoryTabs[index].second)
+                                }
+                                .padding(bottom = 8.dp)
+                        ) {
+                            Text(
+                                text = label,
+                                fontSize = 20.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                color = if (isSelected) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            if (isSelected) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(2.dp)
+                                        .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(1.dp))
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
             // Hero 横幅 (21:9, rounded-3xl)
             val heroVideo = hotMovies.firstOrNull() ?: hotTv.firstOrNull()
             if (heroVideo != null) {
