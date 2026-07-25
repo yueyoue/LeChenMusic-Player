@@ -1083,24 +1083,21 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                     .addHeader("User-Agent", userAgent)
                     .build()
 
-                val responseBody = withContext(Dispatchers.IO) {
-                    client.newCall(request).execute().use { resp ->
-                        if (resp.isSuccessful) resp.body?.source() else null
-                    }
-                }
-
-                if (responseBody == null) {
-                    sb.appendLine("❌ M3U请求失败或响应为空")
-                    _liveDebug.value = sb.toString()
-                    _liveLoading.value = false
-                    return@launch
-                }
-
-                // 流式解析 M3U（避免 OOM）
+                // 流式解析 M3U（避免 OOM）- 在连接关闭前逐行读取
                 val channels = try {
-                    parseM3UFromSource(sourceKey, responseBody)
+                    withContext(Dispatchers.IO) {
+                        client.newCall(request).execute().use { resp ->
+                            if (resp.isSuccessful) {
+                                resp.body?.source()?.let { src ->
+                                    parseM3UFromSource(sourceKey, src)
+                                } ?: emptyList()
+                            } else {
+                                emptyList()
+                            }
+                        }
+                    }
                 } catch (e: Exception) {
-                    sb.appendLine("M3U解析异常: ${e.javaClass.simpleName}: ${e.message}")
+                    sb.appendLine("M3U请求/解析异常: ${e.javaClass.simpleName}: ${e.message}")
                     emptyList()
                 }
                 sb.appendLine("解析到 ${channels.size} 个频道")
