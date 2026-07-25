@@ -238,7 +238,6 @@ fun VideoCategoryScreen(
 
                 // 筛选 pills
                 if (filterPills.isNotEmpty()) {
-                    Text("筛选", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 6.dp))
                     Row(
                         modifier = Modifier.horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
