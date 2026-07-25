@@ -328,9 +328,9 @@ fun HomeScreen(
                     if (newestAlbums.isNotEmpty()) {
                         item {
                             SecHd(
-                                "\uD83C\uDD95 最新专辑",
+                                "\uD83C\uDD95 精选歌单",
                                 "更多 ›",
-                                onNavigateToAlbums
+                                onNavigateToAllPlaylists
                             )
                         }
                         item {
@@ -393,9 +393,7 @@ fun HomeScreen(
                     // Random albums
                     if (randomAlbums.isNotEmpty()) {
                         item {
-                            SecHd("\uD83C\uDFB2 随机专辑", "换一批 ↻") {
-                                viewModel.refreshRandomAlbums()
-                            }
+                            SecHd("\uD83D\uDD04 最近更新", "更多 ›", onNavigateToRecentPlayed)
                         }
                         item {
                             LazyRow(
@@ -2263,7 +2261,7 @@ private fun TabletMusicHomeContent(
 
             // ===== Latest Albums =====
             if (newestAlbums.isNotEmpty()) {
-                item { TabletSecHd("最新专辑", "更多 ›", config, onNavigateToAlbums) }
+                item { TabletSecHd("精选歌单", "更多 ›", config, onNavigateToAllPlaylists) }
                 item {
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(gap)) {
                         items(newestAlbums) { TabletAlbumCard(it, serverUrl, username, password, config) { onAlbumClick(it.id) } }
@@ -2299,7 +2297,7 @@ private fun TabletMusicHomeContent(
 
             // ===== Random Albums =====
             if (randomAlbums.isNotEmpty()) {
-                item { TabletSecHd("随机专辑", "换一批 ↻", config) { viewModel.refreshRandomAlbums() } }
+                item { TabletSecHd("最近更新", "更多 ›", config, onNavigateToRecentPlayed) }
                 item {
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(gap)) {
                         items(randomAlbums) { TabletAlbumCard(it, serverUrl, username, password, config) { onAlbumClick(it.id) } }
