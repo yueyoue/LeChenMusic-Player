@@ -24,18 +24,23 @@ import com.lechenmusic.ui.MainViewModel
 import com.lechenmusic.ui.VideoViewModel
 import com.lechenmusic.ui.components.AlbumCard
 import com.lechenmusic.ui.components.SongItem
+import com.lechenmusic.ui.responsive.ResponsiveConfig
 import com.lechenmusic.ui.screens.audiobook.getAudiobookCoverUrl
 
 @Composable
 fun SearchScreen(
     viewModel: MainViewModel,
     videoViewModel: VideoViewModel? = null,
+    responsiveConfig: ResponsiveConfig? = null,
     onSongClick: (Song, List<Song>) -> Unit,
     onAlbumClick: (String) -> Unit,
     onArtistClick: (String) -> Unit,
     onAudiobookClick: (String) -> Unit = {},
     onVideoClick: (String, String) -> Unit = { _, _ -> }
 ) {
+    val config = responsiveConfig
+    val isTablet = config != null && (config.isMedium || config.isExpanded)
+    val pad = config?.contentPadding ?: 20.dp
     val searchResults by viewModel.searchResults.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val serverUrl by viewModel.serverUrl.collectAsState()

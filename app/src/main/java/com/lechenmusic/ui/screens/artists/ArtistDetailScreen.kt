@@ -24,11 +24,13 @@ import com.lechenmusic.data.model.Song
 import com.lechenmusic.ui.MainViewModel
 import com.lechenmusic.ui.components.AlbumCard
 import com.lechenmusic.ui.components.CoverImage
+import com.lechenmusic.ui.responsive.ResponsiveConfig
 
 @Composable
 fun ArtistDetailScreen(
     viewModel: MainViewModel,
     artistId: String,
+    responsiveConfig: ResponsiveConfig? = null,
     onBack: () -> Unit,
     onAlbumClick: (String) -> Unit,
     onSongClick: (Song, List<Song>) -> Unit

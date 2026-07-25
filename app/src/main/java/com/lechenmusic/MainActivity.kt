@@ -536,9 +536,11 @@ fun NavGraphBuilder.sharedNavRoutes(
     }
 
     composable(Screen.Search.route) {
+        val responsiveCfg = com.lechenmusic.ui.responsive.rememberResponsiveConfig(windowSizeClass)
         SearchScreen(
             viewModel = viewModel,
             videoViewModel = videoViewModel,
+            responsiveConfig = responsiveCfg,
             onSongClick = { s, p -> viewModel.playSong(s, p) },
             onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) },
             onArtistClick = { navController.navigate(Screen.ArtistDetail.createRoute(it)) },
@@ -559,6 +561,7 @@ fun NavGraphBuilder.sharedNavRoutes(
         } else {
             ArtistsScreen(
                 viewModel = viewModel,
+                responsiveConfig = responsiveCfg,
                 onArtistClick = { navController.navigate(Screen.ArtistDetail.createRoute(it)) }
             )
         }
@@ -576,6 +579,7 @@ fun NavGraphBuilder.sharedNavRoutes(
         } else {
             AlbumsScreen(
                 viewModel = viewModel,
+                responsiveConfig = responsiveCfg,
                 onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) }
             )
         }
@@ -797,9 +801,11 @@ fun NavGraphBuilder.sharedNavRoutes(
 
     composable(Screen.AlbumDetail.route) { backStackEntry ->
         val albumId = backStackEntry.arguments?.getString("albumId") ?: return@composable
+        val responsiveCfg = com.lechenmusic.ui.responsive.rememberResponsiveConfig(windowSizeClass)
         AlbumDetailScreen(
             viewModel = viewModel,
             albumId = albumId,
+            responsiveConfig = responsiveCfg,
             onBack = onBack,
             onSongClick = { s, p -> viewModel.playSong(s, p) },
             onArtistClick = { navController.navigate(Screen.ArtistDetail.createRoute(it)) },
@@ -823,6 +829,7 @@ fun NavGraphBuilder.sharedNavRoutes(
             ArtistDetailScreen(
                 viewModel = viewModel,
                 artistId = artistId,
+                responsiveConfig = responsiveCfg,
                 onBack = onBack,
                 onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) },
                 onSongClick = { s, p -> viewModel.playSong(s, p) }

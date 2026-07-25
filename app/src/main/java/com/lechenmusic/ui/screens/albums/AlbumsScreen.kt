@@ -18,12 +18,17 @@ import androidx.compose.ui.unit.sp
 import com.lechenmusic.data.model.Album
 import com.lechenmusic.ui.MainViewModel
 import com.lechenmusic.ui.components.CoverImage
+import com.lechenmusic.ui.responsive.ResponsiveConfig
 
 @Composable
 fun AlbumsScreen(
     viewModel: MainViewModel,
+    responsiveConfig: ResponsiveConfig? = null,
     onAlbumClick: (String) -> Unit
 ) {
+    val config = responsiveConfig
+    val isTablet = config != null && (config.isMedium || config.isExpanded)
+    val pad = config?.contentPadding ?: 20.dp
     val serverUrl by viewModel.serverUrl.collectAsState()
     val username by viewModel.username.collectAsState()
     val password by viewModel.password.collectAsState()

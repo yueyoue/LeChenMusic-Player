@@ -25,14 +25,19 @@ import coil.compose.AsyncImage
 import com.lechenmusic.data.model.Artist
 import com.lechenmusic.ui.MainViewModel
 import com.lechenmusic.ui.components.CoverImage
+import com.lechenmusic.ui.responsive.ResponsiveConfig
 import kotlinx.coroutines.launch
 import net.sourceforge.pinyin4j.PinyinHelper
 
 @Composable
 fun ArtistsScreen(
     viewModel: MainViewModel,
+    responsiveConfig: ResponsiveConfig? = null,
     onArtistClick: (String) -> Unit
 ) {
+    val config = responsiveConfig
+    val isTablet = config != null && (config.isMedium || config.isExpanded)
+    val pad = config?.contentPadding ?: 20.dp
     val artists by viewModel.artists.collectAsState()
     val serverUrl by viewModel.serverUrl.collectAsState()
     val username by viewModel.username.collectAsState()
