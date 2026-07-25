@@ -344,7 +344,7 @@ fun HomeScreen(
                                 contentPadding = PaddingValues(horizontal = 16.dp),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                items(playlists.take(5)) {
+                                items(playlists.take(5), key = { it.id }) {
                                     PlCard(
                                         it,
                                         serverUrl,
@@ -362,7 +362,7 @@ fun HomeScreen(
                                 viewModel.refreshDailySongs()
                             }
                         }
-                        items(dailySongs.take(5)) {
+                        items(dailySongs.take(5), key = { it.id }) {
                             SongRow(
                                 it,
                                 serverUrl,
@@ -381,7 +381,7 @@ fun HomeScreen(
                                 contentPadding = PaddingValues(horizontal = 16.dp),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                items(randomAlbums) {
+                                items(randomAlbums, key = { it.id }) {
                                     AlbumCard2(
                                         it,
                                         serverUrl,
@@ -401,7 +401,7 @@ fun HomeScreen(
                         )
                     }
                     if (recentPlayedSongs.isNotEmpty()) {
-                        items(recentPlayedSongs.take(5)) {
+                        items(recentPlayedSongs.take(5), key = { it.id }) {
                             SongRow(
                                 it,
                                 serverUrl,
@@ -425,7 +425,7 @@ fun HomeScreen(
                     // Radio
                     item { SecHd("📻 电台", "") }
                     if (radioStations.isNotEmpty()) {
-                        items(radioStations.take(4)) {
+                        items(radioStations.take(4), key = { it.id }) {
                             RadioRow(it) { viewModel.playerManager.playRadioStation(it) }
                         }
                     }
@@ -479,7 +479,7 @@ fun HomeScreen(
                         SecHd("⏱️ 继续收听", "全部 ›") {}
                     }
                     if (booksWithProgress.isNotEmpty()) {
-                        items(booksWithProgress.take(20)) { bwp ->
+                        items(booksWithProgress.take(20), key = { it.book.id }) { bwp ->
                             ContCard(
                                 bwp.toAudiobook(),
                                 serverUrl,
@@ -537,7 +537,7 @@ fun HomeScreen(
                                 contentPadding = PaddingValues(horizontal = 16.dp),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                items(narrators.take(8)) { narr ->
+                                items(narrators.take(8), key = { it.name }) { narr ->
                                     NarrItem(
                                         name = narr.name,
                                         count = "${narr.count}部作品",
@@ -565,7 +565,7 @@ fun HomeScreen(
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
                                 val recent = audiobooks.sortedByDescending { it.updatedAt }.take(5)
-                                items(recent) {
+                                items(recent, key = { "${it.source}_${it.videoIdRaw}" }) {
                                     AbGridCard(
                                         it,
                                         serverUrl,
@@ -616,7 +616,7 @@ fun HomeScreen(
                                 contentPadding = PaddingValues(horizontal = 16.dp),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                items(xiangshengBooks.take(5)) {
+                                items(xiangshengBooks.take(5), key = { it.id }) {
                                     AbGridCard(
                                         it,
                                         serverUrl,
@@ -640,7 +640,7 @@ fun HomeScreen(
                                 contentPadding = PaddingValues(horizontal = 16.dp),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                items(pingshuBooks.take(5)) {
+                                items(pingshuBooks.take(5), key = { it.id }) {
                                     AbGridCard(
                                         it,
                                         serverUrl,
@@ -664,7 +664,7 @@ fun HomeScreen(
                                 contentPadding = PaddingValues(horizontal = 16.dp),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                items(childBooks.take(5)) {
+                                items(childBooks.take(5), key = { it.id }) {
                                     AbGridCard(
                                         it,
                                         serverUrl,
@@ -687,7 +687,7 @@ fun HomeScreen(
                                 contentPadding = PaddingValues(horizontal = 16.dp),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                items(starredAudiobooks.take(5)) {
+                                items(starredAudiobooks.take(5), key = { it.id }) {
                                     AbGridCard(
                                         it,
                                         serverUrl,
@@ -2245,7 +2245,7 @@ private fun TabletMusicHomeContent(
                 item { TabletSecHd("歌单", "更多 ›", config, onNavigateToAllPlaylists) }
                 item {
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(gap)) {
-                        items(playlists.take(8)) { TabletPlaylistCard(it, serverUrl, username, password, config) { onPlaylistClick(it.id) } }
+                        items(playlists.take(8), key = { it.id }) { TabletPlaylistCard(it, serverUrl, username, password, config) { onPlaylistClick(it.id) } }
                     }
                 }
             }
@@ -2272,7 +2272,7 @@ private fun TabletMusicHomeContent(
                 item { TabletSecHd("最近更新", "更多 ›", config, onNavigateToRecentPlayed) }
                 item {
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(gap)) {
-                        items(randomAlbums) { TabletAlbumCard(it, serverUrl, username, password, config) { onAlbumClick(it.id) } }
+                        items(randomAlbums, key = { it.id }) { TabletAlbumCard(it, serverUrl, username, password, config) { onAlbumClick(it.id) } }
                     }
                 }
             }
@@ -2300,7 +2300,7 @@ private fun TabletMusicHomeContent(
             // ===== Radio =====
             item { TabletSecHd("电台", "", config) }
             if (radioStations.isNotEmpty()) {
-                items(radioStations.take(4)) { TabletRadioRow(it, config) { viewModel.playerManager.playRadioStation(it) } }
+                items(radioStations.take(4), key = { it.id }) { TabletRadioRow(it, config) { viewModel.playerManager.playRadioStation(it) } }
             }
         }
     }
