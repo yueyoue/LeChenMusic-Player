@@ -58,6 +58,108 @@ fun TabletAudiobookHomeContent(
     ) {
         item { Spacer(modifier = Modifier.height(16.dp)) }
 
+        // ===== 继续收听 + 幻灯片 (模板布局：左侧大卡片 + 右侧继续收听) =====
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("继续收听", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    "最近播放 ›",
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.clickable { onNavigateToAudiobook(null) }
+                )
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+
+        val booksWithProgress = audiobookWithProgress.filter { it.progress != null && !it.progress.completed }
+        item {
+            if (booksWithProgress.isNotEmpty()) {
+                // 有进度数据：左侧大卡片 + 右侧列表
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // 左侧: 大卡片 (500x240)
+                    val firstBwp = booksWithProgress.first()
+                    ContinueListeningLargeCard(
+                        book = firstBwp.toAudiobook(),
+                        progress = firstBwp.progress,
+                        serverUrl = serverUrl,
+                        username = username,
+                        password = password,
+                        onClick = {
+                            viewModel.resumeAudiobook(firstBwp.toAudiobook())
+                            onNavigateToAudiobookDetail(firstBwp.id)
+                        }
+                    )
+                    // 右侧: 列表显示
+                    Column(
+                        modifier = Modifier.weight(1f).height(240.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        booksWithProgress.drop(1).take(4).forEach { bwp ->
+                            ContinueListeningListRow(
+                                book = bwp.toAudiobook(),
+                                progress = bwp.progress,
+                                serverUrl = serverUrl,
+                                username = username,
+                                password = password,
+                                onClick = {
+                                    viewModel.resumeAudiobook(bwp.toAudiobook())
+                                    onNavigateToAudiobookDetail(bwp.id)
+                                }
+                            )
+                        }
+                    }
+                }
+            } else if (audiobooks.isNotEmpty()) {
+                // 无进度数据：显示最近更新的有声书作为推荐
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    val firstBook = audiobooks.first()
+                    ContinueListeningLargeCard(
+                        book = firstBook,
+                        progress = null,
+                        serverUrl = serverUrl,
+                        username = username,
+                        password = password,
+                        onClick = { onNavigateToAudiobookDetail(firstBook.id) }
+                    )
+                    Column(
+                        modifier = Modifier.weight(1f).height(240.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        audiobooks.drop(1).take(4).forEach { book ->
+                            ContinueListeningListRow(
+                                book = book,
+                                progress = null,
+                                serverUrl = serverUrl,
+                                username = username,
+                                password = password,
+                                onClick = { onNavigateToAudiobookDetail(book.id) }
+                            )
+                        }
+                    }
+                }
+            } else {
+                // 完全无数据
+                Box(
+                    modifier = Modifier.fillMaxWidth().height(240.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("暂无有声书", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+        item { Spacer(modifier = Modifier.height(24.dp)) }
+
         // ===== 幻灯片 (Issue 12: 还原幻灯片，无服务端配置时用有声书封面作 fallback) =====
         val effectiveSlides = slides.ifEmpty {
             audiobooks.take(5).map { book ->
@@ -145,67 +247,6 @@ fun TabletAudiobookHomeContent(
                                         if (pagerState.currentPage == index) Color.White
                                         else Color.White.copy(alpha = 0.4f)
                                     )
-                            )
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(24.dp))
-            }
-        }
-
-        // ===== 继续收听 (横向滚动卡片，模板样式) =====
-        val booksWithProgress = audiobookWithProgress.filter { it.progress != null && !it.progress.completed }
-        if (booksWithProgress.isNotEmpty()) {
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("继续收听", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                    Text(
-                        "最近播放 ›",
-                        fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.clickable { onNavigateToAudiobook(null) }
-                    )
-                }
-                Spacer(modifier = Modifier.height(12.dp))
-            }
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    // 左侧: 大卡片 (500x240)
-                    val firstBwp = booksWithProgress.first()
-                    ContinueListeningLargeCard(
-                        book = firstBwp.toAudiobook(),
-                        progress = firstBwp.progress,
-                        serverUrl = serverUrl,
-                        username = username,
-                        password = password,
-                        onClick = {
-                            viewModel.resumeAudiobook(firstBwp.toAudiobook())
-                            onNavigateToAudiobookDetail(firstBwp.id)
-                        }
-                    )
-                    // 右侧: 列表显示
-                    Column(
-                        modifier = Modifier.weight(1f).height(240.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        booksWithProgress.drop(1).take(4).forEach { bwp ->
-                            ContinueListeningListRow(
-                                book = bwp.toAudiobook(),
-                                progress = bwp.progress,
-                                serverUrl = serverUrl,
-                                username = username,
-                                password = password,
-                                onClick = {
-                                    viewModel.resumeAudiobook(bwp.toAudiobook())
-                                    onNavigateToAudiobookDetail(bwp.id)
-                                }
                             )
                         }
                     }

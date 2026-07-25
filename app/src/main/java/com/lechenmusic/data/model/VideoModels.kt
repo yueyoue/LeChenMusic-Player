@@ -321,3 +321,65 @@ data class SearchResourceResponse(
     val name: String = "",
     val disabled: Boolean = false
 )
+
+// ==================== Bangumi (新番放送) ====================
+
+data class BangumiCalendarResponse(
+    val weekday: BangumiWeekday = BangumiWeekday(),
+    val items: List<BangumiItem> = emptyList()
+)
+
+data class BangumiWeekday(
+    val en: String = "",
+    val cn: String = "",
+    val ja: String = "",
+    val id: Int = 0
+)
+
+data class BangumiItem(
+    val id: Int = 0,
+    val url: String = "",
+    val type: Int = 0,
+    val name: String = "",
+    @SerializedName("name_cn") val nameCn: String? = null,
+    val summary: String = "",
+    @SerializedName("air_date") val airDate: String = "",
+    @SerializedName("air_weekday") val airWeekday: Int = 0,
+    val rating: BangumiRating = BangumiRating(),
+    val rank: Int = 0,
+    val images: BangumiImages = BangumiImages(),
+    val collection: BangumiCollection = BangumiCollection()
+) {
+    fun toVideoInfo(): VideoInfo {
+        val displayTitle = nameCn?.ifEmpty { name } ?: name
+        return VideoInfo(
+            id = id.toString(),
+            source = "bangumi",
+            title = displayTitle,
+            sourceName = "Bangumi",
+            year = airDate.split("-").firstOrNull() ?: "",
+            cover = images.bestImageUrl,
+            rate = if (rating.score > 0) "%.1f".format(rating.score) else null
+        )
+    }
+}
+
+data class BangumiRating(
+    val total: Int = 0,
+    val score: Double = 0.0
+)
+
+data class BangumiImages(
+    val large: String = "",
+    val common: String = "",
+    val medium: String = "",
+    val small: String = "",
+    val grid: String = ""
+) {
+    val bestImageUrl: String
+        get() = large.ifEmpty { common.ifEmpty { medium.ifEmpty { small.ifEmpty { grid } } } }
+}
+
+data class BangumiCollection(
+    val doing: Int = 0
+)

@@ -191,3 +191,37 @@ object DoubanApiClient {
 
     fun getApi(): DoubanApi = _api
 }
+
+/**
+ * Bangumi API 客户端 (新番放送)
+ * 参考 Selene-Source: https://api.bgm.tv/calendar
+ */
+interface BangumiApi {
+    @GET("calendar")
+    suspend fun getCalendar(): Response<List<com.lechenmusic.data.model.BangumiCalendarResponse>>
+}
+
+object BangumiApiClient {
+    private val _api: BangumiApi by lazy {
+        val client = OkHttpClient.Builder()
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .addInterceptor { chain ->
+                val request = chain.request().newBuilder()
+                    .addHeader("User-Agent", "senshinya/selene/1.0.0 (Android)")
+                    .addHeader("Accept", "application/json")
+                    .build()
+                chain.proceed(request)
+            }
+            .build()
+
+        Retrofit.Builder()
+            .baseUrl("https://api.bgm.tv/")
+            .client(client)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(BangumiApi::class.java)
+    }
+
+    fun getApi(): BangumiApi = _api
+}

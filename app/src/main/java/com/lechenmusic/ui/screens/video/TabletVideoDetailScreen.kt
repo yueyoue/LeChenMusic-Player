@@ -53,7 +53,10 @@ fun TabletVideoDetailScreen(
     val allSearchSources by viewModel.allSearchSources.collectAsState()
     val sourceSpeeds by viewModel.sourceSpeeds.collectAsState()
     val speedTesting by viewModel.speedTesting.collectAsState()
+    val switchSourceVersion by viewModel.switchSourceVersion.collectAsState()
     val context = LocalContext.current
+    // 标记是否正在切换源（切换源时跳过 LaunchedEffect(video) 的自动播放，避免重置位置）
+    var isSwitchingSource by remember { mutableStateOf(false) }
 
     LaunchedEffect(source, videoId) {
         viewModel.loadDetail(source, videoId)
@@ -100,7 +103,12 @@ fun TabletVideoDetailScreen(
     val video = detail ?: return
 
     // 当详情变化时自动加载第一个源的第一集
+    // 切换源时跳过（由 SourceList 的 onSourceSelect 处理，避免重置播放位置）
     LaunchedEffect(video) {
+        if (isSwitchingSource) {
+            isSwitchingSource = false
+            return@LaunchedEffect
+        }
         val src = video.toSources().firstOrNull()
         val ep = src?.episodes?.getOrNull(0)
         if (ep != null && ep.url.isNotBlank()) {
@@ -384,6 +392,7 @@ fun TabletVideoDetailScreen(
                             onSourceSelect = { index, info ->
                                 // 保存当前播放位置（参考手机UI实现）
                                 val savedPosition = exoPlayer.currentPosition.coerceAtLeast(0L)
+                                isSwitchingSource = true
                                 selectedSource = index
                                 selectedEpisode = 0
                                 viewModel.switchSource(info)

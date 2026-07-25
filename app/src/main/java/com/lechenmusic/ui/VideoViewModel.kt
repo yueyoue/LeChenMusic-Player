@@ -286,21 +286,35 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                     logDebug("loadHomeData", "热门综艺加载失败: ${e.message}")
                     null
                 }
-                // 热门动漫: kind=tv, category=\u65E5\u672C, type=\u52A8\u6F2B (用tv kind)
-                val animeResp = try {
+                // 新番放送: 使用 Bangumi API (参考 Selene-Source)
+                val animeList = try {
                     withContext(Dispatchers.IO) {
-                        doubanApi.getRecentHot("tv", limit = 15, category = "\u65E5\u672C", type = "\u52A8\u6F2B")
+                        val bangumiApi = com.lechenmusic.data.api.BangumiApiClient.getApi()
+                        val resp = bangumiApi.getCalendar()
+                        if (resp.isSuccessful && resp.body() != null) {
+                            val weekday = java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_WEEK)
+                            val bangumiWeekday = if (weekday == 1) 7 else weekday - 1
+                            val todayItems = resp.body()!!.firstOrNull { it.weekday.id == bangumiWeekday }?.items ?: emptyList()
+                            if (todayItems.isNotEmpty()) {
+                                todayItems.map { it.toVideoInfo() }
+                            } else {
+                                resp.body()!!.flatMap { it.items }.take(15).map { it.toVideoInfo() }
+                            }
+                        } else {
+                            logDebug("loadHomeData", "Bangumi API failed: ${resp.code()}")
+                            emptyList()
+                        }
                     }
                 } catch (e: Exception) {
-                    logDebug("loadHomeData", "热门动漫加载失败: ${e.message}")
-                    null
+                    logDebug("loadHomeData", "Bangumi anime load failed: ${e.message}")
+                    emptyList()
                 }
 
                 _homeData.value = HomeRecommendData(
                     continueWatch = _playRecords.value,
                     hotMovies = moviesResp?.body()?.items?.map { it.toVideoInfo("movie") } ?: emptyList(),
                     hotTvShows = tvResp?.body()?.items?.map { it.toVideoInfo("tv") } ?: emptyList(),
-                    hotAnime = animeResp?.body()?.items?.map { it.toVideoInfo("anime") } ?: emptyList(),
+                    hotAnime = animeList,
                     hotVariety = showResp?.body()?.items?.map { it.toVideoInfo("show") } ?: emptyList()
                 )
                 logDebug("loadHomeData", "首页数据: movies=${_homeData.value?.hotMovies?.size} tv=${_homeData.value?.hotTvShows?.size} variety=${_homeData.value?.hotVariety?.size} anime=${_homeData.value?.hotAnime?.size}")

@@ -46,6 +46,7 @@ fun TabletLiveScreen(
     var selectedGroupIndex by remember { mutableIntStateOf(0) }
     var selectedChannel by remember { mutableStateOf<LiveChannel?>(null) }
     var isPlaying by remember { mutableStateOf(false) }
+    var isFullscreen by remember { mutableStateOf(false) }
 
     // ExoPlayer
     val exoPlayer = remember { ExoPlayer.Builder(context).build() }
@@ -76,6 +77,61 @@ fun TabletLiveScreen(
     }
 
     val groups = liveChannels
+
+    // 全屏模式
+    if (isFullscreen && selectedChannel != null) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black)
+        ) {
+            // ExoPlayer 渲染
+            androidx.compose.ui.viewinterop.AndroidView(
+                factory = { ctx ->
+                    androidx.media3.ui.PlayerView(ctx).apply {
+                        player = exoPlayer
+                        useController = false
+                    }
+                },
+                modifier = Modifier.fillMaxSize()
+            )
+            // 退出全屏按钮
+            IconButton(
+                onClick = { isFullscreen = false },
+                modifier = Modifier.align(Alignment.TopStart).padding(16.dp)
+            ) {
+                Icon(Icons.Default.FullscreenExit, "退出全屏", tint = Color.White)
+            }
+            // 频道名
+            Text(
+                selectedChannel?.name ?: "",
+                color = Color.White,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.align(Alignment.TopStart).padding(start = 56.dp, top = 20.dp)
+            )
+            // 播放/暂停
+            var fsIsPlaying by remember { mutableStateOf(false) }
+            LaunchedEffect(exoPlayer) {
+                while (true) {
+                    fsIsPlaying = exoPlayer.isPlaying
+                    kotlinx.coroutines.delay(200)
+                }
+            }
+            IconButton(
+                onClick = { if (fsIsPlaying) exoPlayer.pause() else exoPlayer.play() },
+                modifier = Modifier.align(Alignment.Center).size(64.dp)
+            ) {
+                Icon(
+                    if (fsIsPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    null,
+                    tint = Color.White,
+                    modifier = Modifier.size(48.dp)
+                )
+            }
+        }
+        return
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Row(modifier = Modifier.fillMaxSize()) {
@@ -295,7 +351,7 @@ fun TabletLiveScreen(
                                     Icon(Icons.Default.Close, "停止", tint = Color.White, modifier = Modifier.size(20.dp))
                                 }
                                 IconButton(
-                                    onClick = { /* TODO: 全屏播放 */ },
+                                    onClick = { isFullscreen = true },
                                     modifier = Modifier.size(36.dp)
                                 ) {
                                     Icon(Icons.Default.Fullscreen, "全屏", tint = Color.White, modifier = Modifier.size(20.dp))
