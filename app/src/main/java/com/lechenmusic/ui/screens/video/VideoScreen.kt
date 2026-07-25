@@ -4,6 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -206,11 +208,11 @@ private fun VideoRecommendTab(
                 item {
                     SectionHeader("继续观看")
                     Spacer(modifier = Modifier.height(8.dp))
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 16.dp),
+                    Row(
+                        modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        items(playRecords.take(10)) { record ->
+                        playRecords.take(10).forEach { record ->
                             ContinueWatchCard(record = record, onClick = {
                                 onRecordClick(record)
                             })
@@ -263,11 +265,11 @@ private fun VideoRecommendTab(
                 item {
                     SectionHeader("🎬 热门电影")
                     Spacer(modifier = Modifier.height(8.dp))
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 16.dp),
+                    Row(
+                        modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        items(hotMovies) { video ->
+                        hotMovies.forEach { video ->
                             VideoHorizontalCard(video = video, onClick = { onVideoClick(video) })
                         }
                     }
@@ -281,11 +283,11 @@ private fun VideoRecommendTab(
                 item {
                     SectionHeader("📺 热门剧集")
                     Spacer(modifier = Modifier.height(8.dp))
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 16.dp),
+                    Row(
+                        modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        items(hotTv) { video ->
+                        hotTv.forEach { video ->
                             VideoHorizontalCard(video = video, onClick = { onVideoClick(video) })
                         }
                     }
@@ -299,11 +301,11 @@ private fun VideoRecommendTab(
                 item {
                     SectionHeader("🎭 热门综艺")
                     Spacer(modifier = Modifier.height(8.dp))
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 16.dp),
+                    Row(
+                        modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        items(hotVariety) { video ->
+                        hotVariety.forEach { video ->
                             VideoHorizontalCard(video = video, onClick = { onVideoClick(video) })
                         }
                     }
@@ -317,11 +319,11 @@ private fun VideoRecommendTab(
                 item {
                     SectionHeader("📱 热门短剧")
                     Spacer(modifier = Modifier.height(8.dp))
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 16.dp),
+                    Row(
+                        modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        items(hotShort) { video ->
+                        hotShort.forEach { video ->
                             VideoHorizontalCard(video = video, onClick = { onVideoClick(video) })
                         }
                     }

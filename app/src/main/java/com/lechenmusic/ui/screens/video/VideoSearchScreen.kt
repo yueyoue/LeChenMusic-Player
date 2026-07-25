@@ -3,6 +3,8 @@ package com.lechenmusic.ui.screens.video
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -97,11 +99,11 @@ fun VideoSearchScreen(
                         modifier = Modifier.clickable { viewModel.clearSearchHistory() }
                     )
                 }
-                LazyRow(
-                    modifier = Modifier.padding(horizontal = 20.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    items(searchHistory) { item ->
+                    searchHistory.forEach { item ->
                         SuggestionChip(
                             onClick = {
                                 query = item
@@ -121,11 +123,11 @@ fun VideoSearchScreen(
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)
             )
             val hotTags = listOf("哪吒", "三体", "庆余年", "流浪地球", "狂飙", "繁花", "漫长的季节", "封神")
-            LazyRow(
-                modifier = Modifier.padding(horizontal = 20.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                items(hotTags) { tag ->
+                hotTags.forEach { tag ->
                     SuggestionChip(
                         onClick = {
                             query = tag

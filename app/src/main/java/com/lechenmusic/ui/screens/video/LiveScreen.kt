@@ -3,6 +3,8 @@ package com.lechenmusic.ui.screens.video
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -221,11 +223,11 @@ fun LiveScreen(
 
         // 分类标签
         if (groups.size > 1) {
-            LazyRow(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                items(groups.size) { index ->
+                groups.size.forEach { index ->
                     val group = groups[index]
                     val isSelected = selectedGroupIndex == index
                     Surface(
