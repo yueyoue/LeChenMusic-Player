@@ -43,6 +43,11 @@
             android:theme="@style/Theme.LeChenMusic"
             android:windowSoftInputMode="adjustResize" />
 
+        <activity
+            android:name=".CrashActivity"
+            android:exported="false"
+            android:theme="@style/Theme.LeChenMusic" />
+
         <service
             android:name=".player.MusicPlaybackService"
             android:foregroundServiceType="mediaPlayback"

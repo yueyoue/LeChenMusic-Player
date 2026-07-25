@@ -32,40 +32,47 @@ object ErrorReporter {
 
         // Set global uncaught exception handler with detailed context
         val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
+        val appContext = context.applicationContext
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
             try {
-                val crashInfo = buildString {
-                    appendLine("[${java.text.SimpleDateFormat("HH:mm:ss.SSS", java.util.Locale.getDefault()).format(java.util.Date())}] CRASH on ${thread.name}: ${throwable.message}")
-                    appendLine("  Exception: ${throwable.javaClass.name}")
-                    // 获取完整堆栈（不限制长度）
-                    val sw = java.io.StringWriter()
-                    throwable.printStackTrace(java.io.PrintWriter(sw))
-                    appendLine(sw.toString())
-                    appendLine("  Current screen: ${_currentScreen}")
-                    appendLine("  Extra context: ${_extraContext}")
-                }
-                // 写入本地文件（多路径尝试，兼容不同 Android 版本）
+                val crashMessage = throwable.message ?: "Unknown crash"
+                val sw = java.io.StringWriter()
+                throwable.printStackTrace(java.io.PrintWriter(sw))
+                val crashStack = sw.toString()
+
+                // 写入 logcat
+                android.util.Log.e("CRASH", "Screen: $_currentScreen\n$crashStack")
+
+                // 写入本地文件
                 try {
-                    val crashText = crashInfo + "\n"
-                    // 尝试外部存储
-                    val extDir = context.getExternalFilesDir(null)
-                    if (extDir != null) {
-                        java.io.File(extDir, "crash_log.txt").appendText(crashText)
-                    }
-                    // 也写入内部存储（更可靠）
-                    java.io.File(context.filesDir, "crash_log.txt").appendText(crashText)
-                    // 也写入标准输出（logcat 可见）
-                    android.util.Log.e("CRASH", crashInfo)
+                    val crashInfo = "[${java.text.SimpleDateFormat("HH:mm:ss.SSS", java.util.Locale.getDefault()).format(java.util.Date())}] CRASH on ${thread.name}: $crashMessage\n  Screen: $_currentScreen\n$crashStack\n"
+                    appContext.getExternalFilesDir(null)?.let { java.io.File(it, "crash_log.txt").appendText(crashInfo) }
+                    java.io.File(appContext.filesDir, "crash_log.txt").appendText(crashInfo)
                 } catch (_: Exception) {}
-                // 发送到服务器（包含屏幕名，方便服务端日志定位）
+
+                // 发送到服务器
                 sendErrorSync(
                     level = "crash",
-                    message = "[${_currentScreen}] ${throwable.message ?: "Unknown crash"}",
-                    stack = getStackTrace(throwable),
+                    message = "[$_currentScreen] $crashMessage",
+                    stack = crashStack,
                     screen = "uncaught_${thread.name}_$_currentScreen"
                 )
+
+                // 弹出崩溃页面
+                try {
+                    val intent = android.content.Intent(appContext, CrashActivity::class.java).apply {
+                        putExtra("crash_message", crashMessage)
+                        putExtra("crash_stack", crashStack)
+                        putExtra("crash_screen", _currentScreen)
+                        addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                    }
+                    appContext.startActivity(intent)
+                } catch (_: Exception) {}
+
             } catch (_: Exception) {}
-            defaultHandler?.uncaughtException(thread, throwable)
+            // 结束当前进程
+            android.os.Process.killProcess(android.os.Process.myPid())
+            java.lang.System.exit(1)
         }
 
         Log.i(TAG, "ErrorReporter initialized for $server")
