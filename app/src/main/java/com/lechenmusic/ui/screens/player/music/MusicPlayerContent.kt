@@ -2,6 +2,7 @@ package com.lechenmusic.ui.screens.player.music
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -51,6 +52,7 @@ import kotlinx.coroutines.withContext
 //   - 底部: 进度条 + 控制按钮（共用）
 // ═══════════════════════════════════════════════════════════
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MusicPlayerContent(
     config: ResponsiveConfig,
