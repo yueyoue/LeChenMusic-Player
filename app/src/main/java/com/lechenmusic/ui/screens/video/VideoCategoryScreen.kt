@@ -127,6 +127,7 @@ private fun getCategoryOptions(categoryType: String): List<FilterOption> {
 fun VideoCategoryScreen(
     viewModel: VideoViewModel,
     categoryType: String,
+    responsiveConfig: com.lechenmusic.ui.responsive.ResponsiveConfig? = null,
     onBack: () -> Unit,
     onVideoClick: (VideoInfo) -> Unit,
     windowSizeClass: WindowSizeClass? = null

@@ -30,6 +30,7 @@ import com.lechenmusic.ui.VideoViewModel
 @Composable
 fun VideoSearchScreen(
     viewModel: VideoViewModel,
+    responsiveConfig: com.lechenmusic.ui.responsive.ResponsiveConfig? = null,
     onBack: () -> Unit,
     onVideoClick: (VideoInfo) -> Unit
 ) {

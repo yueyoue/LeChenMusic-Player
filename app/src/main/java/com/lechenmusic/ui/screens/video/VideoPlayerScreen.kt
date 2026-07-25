@@ -42,6 +42,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VideoPlayerScreen(
+    responsiveConfig: com.lechenmusic.ui.responsive.ResponsiveConfig? = null,
     videoTitle: String,
     sources: List<VideoSource>,
     initialSource: Int = 0,

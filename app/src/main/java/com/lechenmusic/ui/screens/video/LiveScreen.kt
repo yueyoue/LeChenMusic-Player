@@ -35,6 +35,7 @@ import com.lechenmusic.ui.VideoViewModel
 @Composable
 fun LiveScreen(
     viewModel: VideoViewModel,
+    responsiveConfig: com.lechenmusic.ui.responsive.ResponsiveConfig? = null,
     onBack: () -> Unit
 ) {
     val liveSources by viewModel.liveSources.collectAsState()

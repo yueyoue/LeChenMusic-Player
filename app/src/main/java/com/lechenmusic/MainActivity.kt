@@ -1086,6 +1086,7 @@ fun NavGraphBuilder.sharedNavRoutes(
         } else {
             VideoSearchScreen(
                 viewModel = videoViewModel,
+                responsiveConfig = responsiveCfg,
                 onBack = onBack,
                 onVideoClick = { video ->
                     navController.navigate(Screen.VideoDetail.createRoute(video.source, video.id))
@@ -1121,6 +1122,7 @@ fun NavGraphBuilder.sharedNavRoutes(
                 viewModel = videoViewModel,
                 source = source,
                 videoId = videoId,
+                responsiveConfig = responsiveCfg,
                 onBack = onBack,
                 onPlay = { playSource, episodeIndex ->
                     navController.navigate(Screen.VideoPlayerDirect.route)
@@ -1137,6 +1139,7 @@ fun NavGraphBuilder.sharedNavRoutes(
         LaunchedEffect(Unit) {
             viewModel.playerManager.forcePause()
         }
+        val responsiveCfg = com.lechenmusic.ui.responsive.rememberResponsiveConfig(windowSizeClass)
         val detail by videoViewModel.videoDetail.collectAsState()
         if (detail != null) {
             val sources = detail!!.toSources()
@@ -1162,6 +1165,7 @@ fun NavGraphBuilder.sharedNavRoutes(
         val videoTitle = backStackEntry.arguments?.getString("videoTitle") ?: ""
         val source = backStackEntry.arguments?.getString("source") ?: ""
         val episodeIndex = backStackEntry.arguments?.getString("episodeIndex")?.toIntOrNull() ?: 0
+        val responsiveCfg = com.lechenmusic.ui.responsive.rememberResponsiveConfig(windowSizeClass)
         val detail by videoViewModel.videoDetail.collectAsState()
         val sources = detail?.toSources() ?: emptyList()
         VideoPlayerScreen(
@@ -1190,6 +1194,7 @@ fun NavGraphBuilder.sharedNavRoutes(
         } else {
             LiveScreen(
                 viewModel = videoViewModel,
+                responsiveConfig = responsiveCfg,
                 onBack = onBack
             )
         }
@@ -1197,9 +1202,11 @@ fun NavGraphBuilder.sharedNavRoutes(
 
     composable(Screen.VideoCategory.route) { backStackEntry ->
         val type = backStackEntry.arguments?.getString("type") ?: return@composable
+        val responsiveCfg = com.lechenmusic.ui.responsive.rememberResponsiveConfig(windowSizeClass)
         VideoCategoryScreen(
             viewModel = videoViewModel,
             categoryType = type,
+            responsiveConfig = responsiveCfg,
             onBack = onBack,
             onVideoClick = { video ->
                 navController.navigate(Screen.VideoDetail.createRoute(video.source, video.id))

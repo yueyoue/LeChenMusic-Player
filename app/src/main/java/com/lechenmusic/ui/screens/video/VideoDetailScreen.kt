@@ -66,6 +66,7 @@ fun VideoDetailScreen(
     viewModel: VideoViewModel,
     source: String,
     videoId: String,
+    responsiveConfig: com.lechenmusic.ui.responsive.ResponsiveConfig? = null,
     onBack: () -> Unit,
     onPlay: (source: String, episodeIndex: Int) -> Unit,
     onVideoClick: (VideoInfo) -> Unit = {}
