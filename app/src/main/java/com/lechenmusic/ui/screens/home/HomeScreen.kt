@@ -324,47 +324,6 @@ fun HomeScreen(
                             )
                         }
                     }
-                    // Albums
-                    if (newestAlbums.isNotEmpty()) {
-                        item {
-                            SecHd(
-                                "\uD83C\uDD95 精选歌单",
-                                "更多 ›",
-                                onNavigateToAllPlaylists
-                            )
-                        }
-                        item {
-                            LazyRow(
-                                contentPadding = PaddingValues(horizontal = 16.dp),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                items(newestAlbums) {
-                                    AlbumCard2(
-                                        it,
-                                        serverUrl,
-                                        username,
-                                        password
-                                    ) { onAlbumClick(it.id) }
-                                }
-                            }
-                        }
-                    }
-                    // Daily songs
-                    if (dailySongs.isNotEmpty()) {
-                        item {
-                            SecHd("🎯 每日推荐", "换一批 ↻") {
-                                viewModel.refreshDailySongs()
-                            }
-                        }
-                        items(dailySongs.take(5)) {
-                            SongRow(
-                                it,
-                                serverUrl,
-                                username,
-                                password
-                            ) { onSongClick(it, dailySongs) }
-                        }
-                    }
                     // Playlists
                     if (playlists.isNotEmpty()) {
                         item {
@@ -388,6 +347,22 @@ fun HomeScreen(
                                     ) { onPlaylistClick(it.id) }
                                 }
                             }
+                        }
+                    }
+                    // Daily songs
+                    if (dailySongs.isNotEmpty()) {
+                        item {
+                            SecHd("🎯 每日推荐", "换一批 ↻") {
+                                viewModel.refreshDailySongs()
+                            }
+                        }
+                        items(dailySongs.take(5)) {
+                            SongRow(
+                                it,
+                                serverUrl,
+                                username,
+                                password
+                            ) { onSongClick(it, dailySongs) }
                         }
                     }
                     // Random albums
@@ -2259,12 +2234,12 @@ private fun TabletMusicHomeContent(
                 }
             }
 
-            // ===== Latest Albums =====
-            if (newestAlbums.isNotEmpty()) {
-                item { TabletSecHd("精选歌单", "更多 ›", config, onNavigateToAllPlaylists) }
+            // ===== Playlists =====
+            if (playlists.isNotEmpty()) {
+                item { TabletSecHd("歌单", "更多 ›", config, onNavigateToAllPlaylists) }
                 item {
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(gap)) {
-                        items(newestAlbums) { TabletAlbumCard(it, serverUrl, username, password, config) { onAlbumClick(it.id) } }
+                        items(playlists.take(8)) { TabletPlaylistCard(it, serverUrl, username, password, config) { onPlaylistClick(it.id) } }
                     }
                 }
             }
@@ -2285,15 +2260,6 @@ private fun TabletMusicHomeContent(
                 }
             }
 
-            // ===== Playlists =====
-            if (playlists.isNotEmpty()) {
-                item { TabletSecHd("歌单", "更多 ›", config, onNavigateToAllPlaylists) }
-                item {
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(gap)) {
-                        items(playlists.take(8)) { TabletPlaylistCard(it, serverUrl, username, password, config) { onPlaylistClick(it.id) } }
-                    }
-                }
-            }
 
             // ===== Random Albums =====
             if (randomAlbums.isNotEmpty()) {
