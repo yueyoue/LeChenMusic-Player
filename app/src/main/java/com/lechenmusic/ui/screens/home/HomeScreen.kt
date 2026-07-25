@@ -2429,7 +2429,7 @@ private fun TabletVideoHomeContent(
         // ===== 左侧: 主内容区 =====
         LazyColumn(
             modifier = Modifier.weight(1f).fillMaxHeight(),
-            contentPadding = PaddingValues(start = pad, end = gap, top = 8.dp, bottom = 100.dp),
+            contentPadding = PaddingValues(start = pad, end = gap, top = 0.dp, bottom = 100.dp),
             verticalArrangement = Arrangement.spacedBy(gap)
         ) {
             // ===== 影视分类 Tab 按钮行 =====

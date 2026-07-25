@@ -3,11 +3,13 @@ package com.lechenmusic.ui.screens.home
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
 
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -56,6 +58,35 @@ fun TabletAudiobookHomeContent(
         contentPadding = PaddingValues(bottom = 160.dp)
     ) {
         item { Spacer(modifier = Modifier.height(16.dp)) }
+
+        // ===== 分类导航按钮 (有声小说、相声、评书、儿童) =====
+        item {
+            val genreTabs = listOf(
+                "有声小说" to "有声读物",
+                "相声" to "相声",
+                "评书" to "评书",
+                "儿童" to "儿童"
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(bottom = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(24.dp)
+            ) {
+                genreTabs.forEach { (label, genre) ->
+                    Text(
+                        text = label,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Normal,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier
+                            .clickable { onNavigateToAudiobook(genre) }
+                            .padding(bottom = 8.dp)
+                    )
+                }
+            }
+        }
 
         // ===== 继续收听 + 幻灯片 (模板布局：左侧大卡片 + 右侧继续收听) =====
         item {
@@ -156,37 +187,6 @@ fun TabletAudiobookHomeContent(
                     Text("暂无有声书", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
-        }
-        // ===== 热门分类 (Issue 8: 改为有声小说、相声、评书、儿童，修复边框) =====
-        item {
-            Text("热门分类", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(12.dp))
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                val categories = listOf(
-                    "📖" to "有声小说",
-                    "🎤" to "相声",
-                    "🎭" to "评书",
-                    "👶" to "儿童"
-                )
-                categories.forEach { (emoji, label) ->
-                    CategoryGlassCard(
-                        emoji = emoji,
-                        label = label,
-                        modifier = Modifier.weight(1f),
-                        onClick = {
-                            val genre = when (label) {
-                                "有声小说" -> "有声读物"
-                                else -> label
-                            }
-                            onNavigateToAudiobook(genre)
-                        }
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(24.dp))
         }
 
         // ===== 演播者 (Issue 9: 去掉背景框，上面头像下面名字，头像改大) =====
