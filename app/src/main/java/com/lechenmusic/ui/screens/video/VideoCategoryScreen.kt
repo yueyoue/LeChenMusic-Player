@@ -60,7 +60,7 @@ private val movieRegionOptions = listOf(
 
 // ===== 剧集筛选 =====
 private val tvRegionOptions = listOf(
-    FilterOption("全部", "tv"), FilterOption("国产剧", "tv"), FilterOption("美剧", "美剧"),
+    FilterOption("全部", "全部"), FilterOption("国产剧", "国产剧"), FilterOption("美剧", "美剧"),
     FilterOption("日剧", "日剧"), FilterOption("韩剧", "韩剧"),
     FilterOption("港剧", "港剧"), FilterOption("台剧", "台剧"),
     FilterOption("英剧", "英剧"), FilterOption("法剧", "法剧"),
@@ -68,7 +68,7 @@ private val tvRegionOptions = listOf(
 
 // ===== 动漫筛选 =====
 private val animeRegionOptions = listOf(
-    FilterOption("全部", "日本"), FilterOption("日本", "日本"),
+    FilterOption("全部", "全部"), FilterOption("日本", "日本"),
     FilterOption("美国", "美国"), FilterOption("中国大陆", "中国大陆"),
     FilterOption("欧美", "欧美"), FilterOption("韩国", "韩国"),
 )

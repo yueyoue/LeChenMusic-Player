@@ -706,6 +706,10 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
      * - sort: T/U/R/S
      */
     fun fetchDoubanCategory(kind: String, isRefresh: Boolean = true) {
+        // 切换分类时重置筛选条件
+        if (categoryCurrentKind != kind || isRefresh) {
+            _categoryFilters.value = CategoryFilters()
+        }
         categoryCurrentKind = kind
 
         viewModelScope.launch {
@@ -767,7 +771,7 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
 
                 if (response.isSuccessful) {
                     val items = response.body()?.items ?: emptyList()
-                    val mapped = items.map { it.toVideoInfo(doubanKind) }
+                    val mapped = items.map { it.toVideoInfo(kind) }
 
                     if (isRefresh) {
                         _categoryResults.value = mapped
@@ -880,8 +884,9 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                 val hasFilters = filters.category != "\u70ED\u95E8" || filters.region != "\u5168\u90E8" ||
                         filters.year != "\u5168\u90E8" || filters.sort != "T"
                 val doubanKind = when (categoryCurrentKind) {
-                    "anime" -> "anime"
-                    "variety" -> "show"
+                    "anime" -> "tv"
+                    "variety" -> "tv"
+                    "short" -> "tv"
                     else -> categoryCurrentKind
                 }
 
@@ -910,7 +915,7 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
 
                 if (response.isSuccessful) {
                     val items = response.body()?.items ?: emptyList()
-                    val mapped = items.map { it.toVideoInfo(doubanKind) }
+                    val mapped = items.map { it.toVideoInfo(categoryCurrentKind) }
                     _categoryResults.value = _categoryResults.value + mapped
                     categoryPage++
                     _categoryHasMore.value = items.size >= PAGE_SIZE
