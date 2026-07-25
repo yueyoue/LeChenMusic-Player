@@ -235,38 +235,8 @@ fun VideoCategoryScreen(
                         }
                     }
                 }
-
-                // 筛选 pills
-                if (filterPills.isNotEmpty()) {
-                    Text("筛选", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 6.dp))
-                    Row(
-                        modifier = Modifier.horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        filterPills.forEachIndexed { index, pill ->
-                            val currentValue = when (pill.title) {
-                                "类型" -> filters.category
-                                "地区" -> filters.region
-                                "年代" -> filters.year
-                                "排序" -> filters.sort
-                                else -> ""
-                            }
-                            val isDefault = currentValue == "全部" || currentValue == "热门" || currentValue == "T" ||
-                                    currentValue == "tv" || currentValue == "日本" || currentValue == "show"
-                            FilterPillButton(
-                                title = pill.title,
-                                options = pill.options,
-                                selectedValue = currentValue,
-                                isDefault = isDefault,
-                                onClick = { activeFilterIndex = index }
-                            )
-                        }
-                    }
-                }
             }
         }
-
-        Spacer(modifier = Modifier.height(8.dp))
 
         // ========== 内容网格 ==========
         if (isLoading && categoryResults.isEmpty()) {
