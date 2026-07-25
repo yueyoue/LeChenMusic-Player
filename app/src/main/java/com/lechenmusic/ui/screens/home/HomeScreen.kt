@@ -801,7 +801,7 @@ fun HomeScreen(
                                     contentPadding = PaddingValues(horizontal = 16.dp),
                                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                                 ) {
-                                    items(videoPlayRecords.take(10)) { record ->
+                                    items(videoPlayRecords.take(10), key = { "${it.source}_${it.videoIdRaw}" }) { record ->
                                         com.lechenmusic.ui.screens.video.VideoHorizontalCard(
                                             video = com.lechenmusic.data.model.VideoInfo(
                                                 id = record.videoIdRaw,
@@ -830,7 +830,7 @@ fun HomeScreen(
                                     contentPadding = PaddingValues(horizontal = 16.dp),
                                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                                 ) {
-                                    items(hotMovies) { video ->
+                                    items(hotMovies, key = { "movie_${it.source}_${it.id}" }) { video ->
                                         com.lechenmusic.ui.screens.video.VideoHorizontalCard(
                                             video = video,
                                             onClick = {
@@ -857,7 +857,7 @@ fun HomeScreen(
                                     contentPadding = PaddingValues(horizontal = 16.dp),
                                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                                 ) {
-                                    items(hotTv) { video ->
+                                    items(hotTv, key = { "tv_${it.source}_${it.id}" }) { video ->
                                         com.lechenmusic.ui.screens.video.VideoHorizontalCard(
                                             video = video,
                                             onClick = {
@@ -883,7 +883,7 @@ fun HomeScreen(
                                     contentPadding = PaddingValues(horizontal = 16.dp),
                                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                                 ) {
-                                    items(hotVariety) { video ->
+                                    items(hotVariety, key = { "variety_${it.source}_${it.id}" }) { video ->
                                         com.lechenmusic.ui.screens.video.VideoHorizontalCard(
                                             video = video,
                                             onClick = {
@@ -2485,7 +2485,7 @@ private fun TabletVideoHomeContent(
                 }
                 item {
                     androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        items(hotMovies) { video ->
+                        items(hotMovies, key = { "movie_${it.source}_${it.id}" }) { video ->
                             com.lechenmusic.ui.screens.video.VideoHorizontalCard(
                                 video = video,
                                 onClick = { navigateVideo(video) }
@@ -2505,7 +2505,7 @@ private fun TabletVideoHomeContent(
                 }
                 item {
                     androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        items(hotTv) { video ->
+                        items(hotTv, key = { "tv_${it.source}_${it.id}" }) { video ->
                             com.lechenmusic.ui.screens.video.VideoHorizontalCard(
                                 video = video,
                                 onClick = { navigateVideo(video) }
@@ -2525,7 +2525,7 @@ private fun TabletVideoHomeContent(
                 }
                 item {
                     androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        items(hotVariety) { video ->
+                        items(hotVariety, key = { "variety_${it.source}_${it.id}" }) { video ->
                             com.lechenmusic.ui.screens.video.VideoHorizontalCard(
                                 video = video,
                                 onClick = { navigateVideo(video) }
@@ -2562,7 +2562,7 @@ private fun TabletVideoHomeContent(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                     contentPadding = PaddingValues(bottom = 100.dp)
                 ) {
-                    items(videoPlayRecords.take(10)) { record ->
+                    items(videoPlayRecords.take(10), key = { "${it.source}_${it.videoIdRaw}" }) { record ->
                         TabletVideoContinueCard(record = record, config = config) {
                             if (record.source.isNotBlank()) onNavigateToVideoDetail(record.source, record.videoIdRaw)
                         }
