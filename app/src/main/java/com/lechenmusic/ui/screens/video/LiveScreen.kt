@@ -84,7 +84,16 @@ fun LiveScreen(
         }
     }
 
-    val groups = liveChannels
+    // 缓存频道数据，避免 StateFlow 更新导致 mid-frame 崩溃
+    // 只在 LaunchedEffect 中更新，确保数据变化发生在帧之间而非帧内
+    var cachedGroups by remember { mutableStateOf(emptyList<LiveChannelGroup>()) }
+    LaunchedEffect(liveChannels) {
+        if (liveChannels.isNotEmpty()) {
+            cachedGroups = liveChannels
+        }
+    }
+    val groups = if (cachedGroups.isNotEmpty()) cachedGroups else liveChannels
+
     // 安全同步 selectedGroupIndex
     if (groups.isNotEmpty() && selectedGroupIndex >= groups.size) {
         selectedGroupIndex = 0
@@ -97,6 +106,7 @@ fun LiveScreen(
         selectedGroupIndex = safeGroupIndex
     }
     val currentGroup = groups.getOrNull(safeGroupIndex)
+    val channels = currentGroup?.channels ?: emptyList()
 
     Column(modifier = Modifier.fillMaxSize()) {
         // 顶部栏
@@ -287,7 +297,6 @@ fun LiveScreen(
         }
 
         // 频道列表
-        val channels = currentGroup?.channels ?: emptyList()
         if (channels.isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxSize().padding(40.dp),
