@@ -1020,18 +1020,26 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                     sources.forEach { sb.appendLine("  - ${it.name}: key=${it.key}, url=${it.url.take(60)}") }
                     if (sources.isNotEmpty()) {
                         // 参照 Selene-Source: 用第一个源的 key 加载频道
+                        // loadLiveChannels 会在自己的协程中管理 _liveLoading
                         loadLiveChannels(sources.first().key)
+                    } else {
+                        _liveLoading.value = false
                     }
                 } else {
                     sb.appendLine("❌ 请求失败: ${response.code()} ${response.message()}")
                     val errBody = response.errorBody()?.string()
                     if (errBody != null) sb.appendLine("错误: ${errBody.take(200)}")
+                    _liveLoading.value = false
                 }
             } catch (e: Exception) {
                 sb.appendLine("❌ 异常: ${e.message}")
+                _liveLoading.value = false
             }
             _liveDebug.value = sb.toString()
-            _liveLoading.value = false
+            // 注意：不在这里设置 _liveLoading = false
+            // loadLiveChannels 在自己的协程中管理 _liveLoading，
+            // 如果这里也设置会导致 _liveLoading 短暂 false→true 闪烁，
+            // 引起 ScrollableTabRow 崩溃 (ArrayList.remove -1)
         }
     }
 
@@ -1105,8 +1113,9 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                     channels.take(3).forEach { ch -> sb.appendLine("  频道: ${ch.name} | ${ch.url.take(50)}") }
                 }
 
-                // 按 group 分组
-                val grouped = channels.groupBy { it.group.ifBlank { "未分组" } }
+                // 按 group 分组，去重防止 LazyColumn key 冲突导致崩溃
+                val uniqueChannels = channels.distinctBy { it.url }
+                val grouped = uniqueChannels.groupBy { it.group.ifBlank { "未分组" } }
                     .map { (name, chs) -> LiveChannelGroup(name = name, channels = chs) }
 
                 _liveChannels.value = grouped

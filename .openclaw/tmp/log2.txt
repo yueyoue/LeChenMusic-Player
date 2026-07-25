@@ -1,0 +1,15 @@
+[15:36:47.069] [loadHomeData] 首页数据: movies=15 tv=15 variety=15 anime=0
+[15:36:47.156] [loadHomeData] 首页数据: movies=15 tv=15 variety=15 anime=0
+[15:36:48.442] [loadHomeData] 首页数据: movies=15 tv=15 variety=15 anime=0
+[15:36:55.221] [searchAndPlay] 开始搜索: 诺曼底72小时, server=http://j.tthsdd.top:3000
+[15:37:03.268] [searchAndPlay] 搜索返回: 27 个源
+[15:37:03.269] [searchAndPlay] 匹配: title=诺曼底72小时, source=iqiyizyapi.com, eps=1
+[15:37:03.269] [searchAndPlay] VideoDetail OK, episodes=1, sources=23
+[15:37:03.269] [searchAndPlay] 完成, navigateToDetail=true
+[15:37:03.363] [loadDetail] 已有数据,跳过加载: source=iqiyizyapi.com id=79988
+[15:37:25.474] [Player] 加载集数: source=0, ep=0, url=https://play.ly166.com:65/videos/20260619/6a34bedd80eee9b955c44e92/1538a1/index.
+[15:38:22.875] [loadDetail] 已有数据,跳过加载: source=iqiyizyapi.com id=79988
+[15:42:20.722] [loadHomeData] 首页数据: movies=15 tv=15 variety=15 anime=0
+[15:42:21.241] [loadHomeData] 首页数据: movies=15 tv=15 variety=15 anime=0
+[15:42:52.025] [loadHomeData] 首页数据: movies=15 tv=15 variety=15 anime=0
+[15:42:53.299] [loadHomeData] 首页数据: movies=15 tv=15 variety=15 anime=0

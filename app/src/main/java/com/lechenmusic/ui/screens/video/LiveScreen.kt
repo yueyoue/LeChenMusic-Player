@@ -93,7 +93,12 @@ fun LiveScreen(
     if (groups.isEmpty()) {
         selectedGroupIndex = 0
     }
-    val currentGroup = groups.getOrNull(selectedGroupIndex)
+    val safeGroupIndex = selectedGroupIndex.coerceIn(0, (groups.size - 1).coerceAtLeast(0))
+    val currentGroup = groups.getOrNull(safeGroupIndex)
+    // 确保 selectedGroupIndex 与 safeGroupIndex 同步
+    if (selectedGroupIndex != safeGroupIndex && groups.isNotEmpty()) {
+        selectedGroupIndex = safeGroupIndex
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         // 顶部栏
@@ -228,7 +233,6 @@ fun LiveScreen(
 
         // 分组 Tab
         if (groups.size > 1) {
-            val safeGroupIndex = selectedGroupIndex.coerceIn(0, (groups.size - 1).coerceAtLeast(0))
             ScrollableTabRow(
                 selectedTabIndex = safeGroupIndex,
                 modifier = Modifier.fillMaxWidth(),

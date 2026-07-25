@@ -81,26 +81,23 @@ fun TabletLiveScreen(
 
     // 全屏模式
     if (isFullscreen && selectedChannel != null) {
-        // 隐藏系统栏（导航栏 + 状态栏）+ 强制横屏
+        // 隐藏系统栏（导航栏 + 状态栏）+ 强制横屏（兼容 edge-to-edge）
         DisposableEffect(Unit) {
             val activity = context as? android.app.Activity
-            val window = activity?.window
-            window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-            @Suppress("DEPRECATION")
-            window?.decorView?.systemUiVisibility = (
-                android.view.View.SYSTEM_UI_FLAG_FULLSCREEN or
-                android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
-                android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or
-                android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
-                android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
-                android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-            )
+            val window = activity?.window ?: return@DisposableEffect onDispose {}
+            // 禁用 edge-to-edge 以允许完全隐藏系统栏
+            androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, true)
+            window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+            val insetsController = androidx.core.view.WindowInsetsControllerCompat(window, window.decorView)
+            insetsController.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            insetsController.systemBarsBehavior =
+                androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             onDispose {
-                window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-                activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR
-                @Suppress("DEPRECATION")
-                window?.decorView?.systemUiVisibility = android.view.View.SYSTEM_UI_FLAG_VISIBLE
+                window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR
+                insetsController.show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+                androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
             }
         }
         Box(

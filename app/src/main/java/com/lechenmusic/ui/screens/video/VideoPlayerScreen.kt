@@ -256,17 +256,13 @@ fun VideoPlayerScreen(
         exoPlayer.addListener(listener)
         onDispose {
             savePlayRecordNow()
-            // 保存播放位置到 ViewModel（平板切换源时用）
-            if (exoPlayer.currentPosition > 0) {
-                videoViewModel?.setResumePosition(exoPlayer.currentPosition)
-            }
             exoPlayer.removeListener(listener)
             exoPlayer.release()
             activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         }
     }
 
-    // 全屏模式
+    // 全屏模式（使用 WindowInsetsControllerCompat 兼容 edge-to-edge）
     LaunchedEffect(isFullscreen) {
         activity?.requestedOrientation = if (isFullscreen) {
             ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
@@ -274,22 +270,21 @@ fun VideoPlayerScreen(
             // 退出全屏时不强制竖屏，让设备传感器决定方向（平板横屏保持横屏）
             ActivityInfo.SCREEN_ORIENTATION_SENSOR
         }
+        val window = activity?.window ?: return@LaunchedEffect
         if (isFullscreen) {
-            activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
-            // 隐藏导航栏 + 状态栏（沉浸式全屏）
-            @Suppress("DEPRECATION")
-            activity?.window?.decorView?.systemUiVisibility = (
-                android.view.View.SYSTEM_UI_FLAG_FULLSCREEN or
-                android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
-                android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or
-                android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
-                android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
-                android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-            )
+            // 进入全屏：先禁用 edge-to-edge，再隐藏系统栏
+            androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, true)
+            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            val insetsController = androidx.core.view.WindowInsetsControllerCompat(window, window.decorView)
+            insetsController.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            insetsController.systemBarsBehavior =
+                androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         } else {
-            activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
-            @Suppress("DEPRECATION")
-            activity?.window?.decorView?.systemUiVisibility = android.view.View.SYSTEM_UI_FLAG_VISIBLE
+            // 退出全屏：恢复 edge-to-edge，显示系统栏
+            window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            val insetsController = androidx.core.view.WindowInsetsControllerCompat(window, window.decorView)
+            insetsController.show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         }
     }
 
@@ -414,7 +409,14 @@ fun VideoPlayerScreen(
                     .padding(horizontal = 12.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = { savePlayRecordNow(); onBack() }) {
+                IconButton(onClick = {
+                    // 保存播放位置（供详情页恢复）
+                    if (exoPlayer.currentPosition > 0) {
+                        videoViewModel?.setResumePosition(exoPlayer.currentPosition)
+                    }
+                    savePlayRecordNow()
+                    onBack()
+                }) {
                     Icon(Icons.Default.ArrowBack, "返回", tint = Color.White)
                 }
                 Column(modifier = Modifier.weight(1f)) {
