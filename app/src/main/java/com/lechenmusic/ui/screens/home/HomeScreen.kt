@@ -40,6 +40,7 @@ import com.lechenmusic.ui.MainViewModel
 import com.lechenmusic.ui.components.*
 import com.lechenmusic.ui.responsive.ResponsiveConfig
 import com.lechenmusic.ui.screens.audiobook.getAudiobookCoverUrl
+import com.lechenmusic.ui.screens.home.music.MusicHomeContent
 import com.lechenmusic.data.model.VideoInfo
 import com.lechenmusic.data.model.VideoPlayRecord
 import com.lechenmusic.data.model.HomeRecommendData
@@ -121,9 +122,8 @@ fun HomeScreen(
             when (homeMode) {
                 "music" -> {
                     Scaffold(modifier = Modifier.fillMaxSize()) { _ ->
-                        TabletMusicHomeContent(
+                        MusicHomeContent(
                             config = config!!,
-                            viewModel = viewModel,
                             newestAlbums = newestAlbums,
                             randomAlbums = randomAlbums,
                             dailySongs = dailySongs,
@@ -146,16 +146,8 @@ fun HomeScreen(
                             onNavigateToArtists = onNavigateToArtists,
                             onNavigateToAllPlaylists = onNavigateToAllPlaylists,
                             onNavigateToCachedMusic = onNavigateToCachedMusic,
-                            onNavigateToAudiobook = onNavigateToAudiobook,
-                            onNavigateToAudiobookDetail = onNavigateToAudiobookDetail,
-                            onNavigateToNarrator = onNavigateToNarrator,
-                            onNavigateToNarratorList = onNavigateToNarratorList,
-                            onNavigateToVideoDetail = onNavigateToVideoDetail,
-                            onNavigateToVideoPlayer = onNavigateToVideoPlayer,
-                            onNavigateToVideoCategory = onNavigateToVideoCategory,
-                            onNavigateToVideoSearch = onNavigateToVideoSearch,
-                            onNavigateToLive = onNavigateToLive,
-                            videoViewModel = videoViewModel
+                            onRefreshDaily = { viewModel.refreshDailySongs() },
+                            onPlayRadio = { viewModel.playerManager.playRadioStation(it) }
                         )
                     }
                 }
@@ -205,235 +197,85 @@ fun HomeScreen(
                 }
             }
         } else {
-            // ===== 手机布局（原有逻辑） =====
-            Scaffold(
-                modifier = Modifier.fillMaxSize(),
-            ) { padding ->
-            LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(bottom = 80.dp)
-                ) {
-                // Search
-                item {
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
-                            .clickable {
-                                when (homeMode) {
-                                    "audiobook" -> onNavigateToAudiobook(null)
-                                    "video" -> onNavigateToVideoSearch()
-                                    else -> onNavigateToSearch()
-                                }
-                            },
-                        shape = RoundedCornerShape(14.dp),
-                        color = MaterialTheme.colorScheme.surface,
-                        shadowElevation = 2.dp
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 11.dp),
-                            verticalAlignment = Alignment.CenterVertically
+            // ===== 手机布局 =====
+            if (homeMode == "music") {
+                MusicHomeContent(
+                    config = config ?: ResponsiveConfig(
+                        isCompact = true, isMedium = false, isExpanded = false,
+                        isLandscape = false, gridColumns = 2, useRailNav = false,
+                        useDrawerNav = false, contentPadding = 16.dp, cardWidth = 120.dp,
+                        screenWidthDp = 400, albumCardSize = 130.dp, playlistCardSize = 110.dp,
+                        heroHeight = 170.dp, songCoverSize = 46.dp, sectionSpacing = 14.dp,
+                        itemSpacing = 12.dp, titleFontSize = 15.sp, sectionTitleSize = 15.sp,
+                        cardTitleSize = 12.sp, cardSubtitleSize = 11.sp, bodyFontSize = 13.sp,
+                        captionFontSize = 11.sp, recentColumns = 1, heroLayout = "stack"
+                    ),
+                    newestAlbums = newestAlbums, randomAlbums = randomAlbums,
+                    dailySongs = dailySongs, playlists = playlists,
+                    recentPlayedSongs = recentPlayedSongs, radioStations = radioStations,
+                    musicSlides = musicSlides, serverUrl = serverUrl, username = username, password = password,
+                    onAlbumClick = onAlbumClick, onSongClick = onSongClick, onPlaylistClick = onPlaylistClick,
+                    onNavigateToAlbums = onNavigateToAlbums, onNavigateToFavorites = onNavigateToFavorites,
+                    onNavigateToAllSongs = onNavigateToAllSongs, onNavigateToRecentPlayed = onNavigateToRecentPlayed,
+                    onNavigateToRadio = onNavigateToRadio, onNavigateToSearch = onNavigateToSearch,
+                    onNavigateToArtists = onNavigateToArtists, onNavigateToAllPlaylists = onNavigateToAllPlaylists,
+                    onNavigateToCachedMusic = onNavigateToCachedMusic,
+                    onRefreshDaily = { viewModel.refreshDailySongs() },
+                    onPlayRadio = { viewModel.playerManager.playRadioStation(it) },
+                    headerContent = {
+                        // 搜索栏
+                        Surface(
+                            modifier = Modifier.fillMaxWidth().clickable { onNavigateToSearch() },
+                            shape = RoundedCornerShape(14.dp), color = MaterialTheme.colorScheme.surface, shadowElevation = 2.dp
                         ) {
-                            Icon(
-                                Icons.Default.Search,
-                                null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Text(
-                                when (homeMode) {
-                                "music" -> "搜索歌曲、专辑、歌手..."
-                                "audiobook" -> "搜索有声书、演播者..."
-                                "video" -> "搜索影视..."
-                                else -> "搜索..."
-                            },
-                                fontSize = 14.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                            )
-                        }
-                    }
-                }
-
-                // Mode switcher - Task 4: fix background width
-                item {
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 6.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(3.dp)
-                        ) {
-                            ModeBtn(
-                                "\uD83C\uDFB5", "音乐", homeMode == "music",
-                                modifier = Modifier.weight(1f)
-                            ) { viewModel.setHomeMode("music") }
-                            ModeBtn(
-                                "\uD83D\uDCD6", "有声书", homeMode == "audiobook",
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                viewModel.setHomeMode("audiobook")
-                                viewModel.loadAudiobooks()
+                            Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Search, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Text("搜索歌曲、专辑、歌手...", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
                             }
-                            ModeBtn(
-                                "\uD83C\uDFAC", "影视", homeMode == "video",
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                viewModel.setHomeMode("video")
+                        }
+                        Spacer(modifier = Modifier.height(10.dp))
+                        // 模式切换
+                        Surface(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
+                            Row(modifier = Modifier.fillMaxWidth().padding(3.dp)) {
+                                ModeBtn("\uD83C\uDFB5", "音乐", true, modifier = Modifier.weight(1f)) {}
+                                ModeBtn("\uD83D\uDCD6", "有声书", false, modifier = Modifier.weight(1f)) { viewModel.setHomeMode("audiobook"); viewModel.loadAudiobooks() }
+                                ModeBtn("\uD83C\uDFAC", "影视", false, modifier = Modifier.weight(1f)) { viewModel.setHomeMode("video") }
                             }
                         }
                     }
-                }
-
-                // ===== MUSIC MODE =====
-                if (homeMode == "music") {
-                    // Music homepage slides carousel
-                    item {
-                        MusicSlidesCarousel(
-                            slides = musicSlides,
-                            serverUrl = serverUrl,
-                            onSlideClick = { link ->
-                                // Parse link format: "playlist:<id>" or "album:<id>"
-                                when {
-                                    link.startsWith("playlist:") -> {
-                                        val id = link.removePrefix("playlist:")
-                                        onPlaylistClick(id)
-                                    }
-                                    link.startsWith("album:") -> {
-                                        val id = link.removePrefix("album:")
-                                        onAlbumClick(id)
-                                    }
-                                }
-                            }
-                        )
-                    }
-                    // Quick access - Task 3: align with hero boundaries
-                    item {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 20.dp, vertical = 6.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            QuickBtn("\uD83D\uDC64", "歌手", Color(0xFFA78BFA), onNavigateToArtists)
-                            QuickBtn("\uD83D\uDCBF", "专辑", Color(0xFF5352ED), onNavigateToAlbums)
-                            QuickBtn("\uD83D\uDCCB", "歌单", Color(0xFF34D399), onNavigateToAllPlaylists)
-                            QuickBtn("\uD83D\uDCFB", "电台", Color(0xFFFF4D6A), onNavigateToRadio)
-                            QuickBtn(
-                                "\uD83D\uDCE5",
-                                "缓存",
-                                Color(0xFFFBBF24),
-                                onNavigateToCachedMusic
-                            )
-                        }
-                    }
-                    // Playlists
-                    if (playlists.isNotEmpty()) {
+                )
+            } else {
+                // 有声书/影视模式：保留原有 Scaffold
+                Scaffold(modifier = Modifier.fillMaxSize()) { padding ->
+                    LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 80.dp)) {
+                        // Search
                         item {
-                            SecHd(
-                                "\uD83D\uDCCB 歌单",
-                                "更多 ›",
-                                onNavigateToAllPlaylists
-                            )
-                        }
-                        item {
-                            Row(
-                                modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            Surface(
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).clickable {
+                                    when (homeMode) { "audiobook" -> onNavigateToAudiobook(null); "video" -> onNavigateToVideoSearch(); else -> onNavigateToSearch() }
+                                },
+                                shape = RoundedCornerShape(14.dp), color = MaterialTheme.colorScheme.surface, shadowElevation = 2.dp
                             ) {
-                                playlists.take(5).forEach { it ->
-                                    PlCard(
-                                        it,
-                                        serverUrl,
-                                        username,
-                                        password
-                                    ) { onPlaylistClick(it.id) }
+                                Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Search, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Text(when (homeMode) { "audiobook" -> "搜索有声书、演播者..."; "video" -> "搜索影视..."; else -> "搜索..." }, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
                                 }
                             }
                         }
-                    }
-                    // Daily songs
-                    if (dailySongs.isNotEmpty()) {
+                        // Mode switcher
                         item {
-                            SecHd("🎯 每日推荐", "换一批 ↻") {
-                                viewModel.refreshDailySongs()
-                            }
-                        }
-                        items(dailySongs.take(5), key = { it.id }) {
-                            SongRow(
-                                it,
-                                serverUrl,
-                                username,
-                                password
-                            ) { onSongClick(it, dailySongs) }
-                        }
-                    }
-                    // Random albums
-                    if (randomAlbums.isNotEmpty()) {
-                        item {
-                            SecHd("\uD83D\uDD04 最近更新", "更多 ›", onNavigateToRecentPlayed)
-                        }
-                        item {
-                            Row(
-                                modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                randomAlbums.forEach { it ->
-                                    AlbumCard2(
-                                        it,
-                                        serverUrl,
-                                        username,
-                                        password
-                                    ) { onAlbumClick(it.id) }
+                            Surface(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp), shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
+                                Row(modifier = Modifier.fillMaxWidth().padding(3.dp)) {
+                                    ModeBtn("\uD83C\uDFB5", "音乐", homeMode == "music", modifier = Modifier.weight(1f)) { viewModel.setHomeMode("music") }
+                                    ModeBtn("\uD83D\uDCD6", "有声书", homeMode == "audiobook", modifier = Modifier.weight(1f)) { viewModel.setHomeMode("audiobook"); viewModel.loadAudiobooks() }
+                                    ModeBtn("\uD83C\uDFAC", "影视", homeMode == "video", modifier = Modifier.weight(1f)) { viewModel.setHomeMode("video") }
                                 }
                             }
                         }
-                    }
-                    // Recent
-                    item {
-                        SecHd(
-                            "⏱️ 最近播放",
-                            "更多 ›",
-                            onNavigateToRecentPlayed
-                        )
-                    }
-                    if (recentPlayedSongs.isNotEmpty()) {
-                        items(recentPlayedSongs.take(5), key = { it.id }) {
-                            SongRow(
-                                it,
-                                serverUrl,
-                                username,
-                                password
-                            ) { onSongClick(it, recentPlayedSongs) }
-                        }
-                    } else {
-                        item {
-                            Text(
-                                "播放歌曲后将显示在此处",
-                                modifier = Modifier.padding(
-                                    horizontal = 16.dp,
-                                    vertical = 16.dp
-                                ),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontSize = 13.sp
-                            )
-                        }
-                    }
-                    // Radio
-                    item { SecHd("📻 电台", "") }
-                    if (radioStations.isNotEmpty()) {
-                        items(radioStations.take(4), key = { it.id }) {
-                            RadioRow(it) { viewModel.playerManager.playRadioStation(it) }
-                        }
-                    }
-                }
-
-                // ===== AUDIOBOOK MODE =====
+                        // 有声书 + 影视内容
+// ===== AUDIOBOOK MODE =====
                 if (homeMode == "audiobook" && isTablet) {
                     // ===== 平板有声书首页 =====
                     item {
@@ -933,7 +775,7 @@ fun HomeScreen(
                         }
                     }
                 }
-            } // Scaffold
+            }
             } // else (手机布局)
         } // if (isTablet) / else
 
@@ -943,6 +785,7 @@ fun HomeScreen(
         }
 
     }
+}
 }
 
 // ==================== Music Slides Carousel ====================
