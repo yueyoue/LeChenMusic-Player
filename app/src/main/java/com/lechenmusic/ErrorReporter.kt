@@ -49,10 +49,10 @@ object ErrorReporter {
                     val logFile = java.io.File(context.getExternalFilesDir(null), "crash_log.txt")
                     logFile.appendText(crashInfo + "\n")
                 } catch (_: Exception) {}
-                // 发送到服务器
+                // 发送到服务器（包含屏幕名，方便服务端日志定位）
                 sendErrorSync(
                     level = "crash",
-                    message = throwable.message ?: "Unknown crash",
+                    message = "[${_currentScreen}] ${throwable.message ?: "Unknown crash"}",
                     stack = getStackTrace(throwable),
                     screen = "uncaught_${thread.name}_$_currentScreen"
                 )
