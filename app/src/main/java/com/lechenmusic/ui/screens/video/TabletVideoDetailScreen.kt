@@ -118,11 +118,55 @@ fun TabletVideoDetailScreen(
         }
     }
 
-    // 退出时释放播放器 + 保存位置
+    // 定期保存播放记录（参考手机UI VideoDetailScreen 每10秒保存）
+    var selectedEpisode by remember { mutableIntStateOf(0) }
+    LaunchedEffect(video) {
+        while (true) {
+            kotlinx.coroutines.delay(10000)
+            if (exoPlayer.isPlaying && exoPlayer.duration > 0) {
+                viewModel.savePlayRecord(
+                    com.lechenmusic.data.model.PlayRecordRequest(
+                        source = video.source,
+                        id = video.id,
+                        title = video.title,
+                        cover = video.displayCover,
+                        year = video.year,
+                        sourceName = video.displaySourceName,
+                        index = selectedEpisode + 1,
+                        total_episodes = video.episodes.size,
+                        play_time = (exoPlayer.currentPosition / 1000).toInt(),
+                        total_time = (exoPlayer.duration / 1000).toInt(),
+                        type = video.typeName
+                    )
+                )
+            }
+        }
+    }
+
+    // 退出时释放播放器 + 保存位置 + 保存播放记录
     DisposableEffect(Unit) {
         onDispose {
             if (exoPlayer.currentPosition > 0) {
                 viewModel.setResumePosition(exoPlayer.currentPosition)
+            }
+            // 退出时保存播放记录（参考手机UI）
+            val detail = video
+            if (exoPlayer.currentPosition > 1000) {
+                viewModel.savePlayRecord(
+                    com.lechenmusic.data.model.PlayRecordRequest(
+                        source = detail.source,
+                        id = detail.id,
+                        title = detail.title,
+                        cover = detail.displayCover,
+                        year = detail.year,
+                        sourceName = detail.displaySourceName,
+                        index = selectedEpisode + 1,
+                        total_episodes = detail.episodes.size,
+                        play_time = (exoPlayer.currentPosition / 1000).toInt(),
+                        total_time = (exoPlayer.duration / 1000).toInt(),
+                        type = detail.typeName
+                    )
+                )
             }
             exoPlayer.stop()
             exoPlayer.release()
@@ -154,7 +198,7 @@ fun TabletVideoDetailScreen(
     }
 
     var selectedSource by remember { mutableIntStateOf(0) }
-    var selectedEpisode by remember { mutableIntStateOf(0) }
+    // selectedEpisode 在上方声明（用于播放记录保存）
     var rightTab by remember { mutableIntStateOf(0) }
 
     val currentSource = displaySources.getOrNull(selectedSource)
