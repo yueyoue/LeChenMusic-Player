@@ -194,20 +194,6 @@ fun VideoCategoryScreen(
             )
         }
 
-        // 顶部栏
-        TopAppBar(
-            title = {
-                Column {
-                    Text(title, fontWeight = FontWeight.Bold)
-                    if (totalCount > 0) {
-                        Text("来自豆瓣的精选内容", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
-            },
-            navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "返回") } },
-            windowInsets = WindowInsets(0, 0, 0, 0)
-        )
-
         // ========== 筛选区域 ==========
         Surface(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
@@ -215,25 +201,39 @@ fun VideoCategoryScreen(
             tonalElevation = 1.dp
         ) {
             Column(modifier = Modifier.padding(vertical = 12.dp, horizontal = 16.dp)) {
-                // 一级分类(仅电影)
-                if (categoryOpts.isNotEmpty()) {
-                    Row(
-                        modifier = Modifier.horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        categoryOpts.forEach { option ->
-                            FilterChip(
-                                selected = filters.category == option.value,
-                                onClick = { viewModel.updateCategoryFilters(filters.copy(category = option.value)) },
-                                label = { Text(option.label, fontSize = 12.sp) },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                // 返回按钮 + 标题 + 一级分类(同一排)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = onBack, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Default.ArrowBack, "返回", modifier = Modifier.size(18.dp))
+                    }
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(title, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    if (totalCount > 0) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("来自豆瓣的精选内容", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    if (categoryOpts.isNotEmpty()) {
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Row(
+                            modifier = Modifier.horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            categoryOpts.forEach { option ->
+                                FilterChip(
+                                    selected = filters.category == option.value,
+                                    onClick = { viewModel.updateCategoryFilters(filters.copy(category = option.value)) },
+                                    label = { Text(option.label, fontSize = 12.sp) },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                                    )
                                 )
-                            )
+                            }
                         }
                     }
-                    Spacer(modifier = Modifier.height(10.dp))
                 }
 
                 // 筛选 pills
