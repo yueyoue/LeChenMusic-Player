@@ -283,13 +283,22 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                     logDebug("loadHomeData", "\u70ED\u95E8\u7EFC\u827A\u52A0\u8F7D\u5931\u8D25: ${e.message}")
                     null
                 }
+                val shortResp = try {
+                    withContext(Dispatchers.IO) {
+                        doubanApi.getRecentHot("tv", limit = 15, category = "\u70ED\u95E8", type = "\u5168\u90E8")
+                    }
+                } catch (e: Exception) {
+                    logDebug("loadHomeData", "\u70ED\u95E8\u77ED\u5267\u52A0\u8F7D\u5931\u8D25: ${e.message}")
+                    null
+                }
 
                 _homeData.value = HomeRecommendData(
                     continueWatch = _playRecords.value,
                     hotMovies = moviesResp?.body()?.items?.map { it.toVideoInfo("movie") } ?: emptyList(),
                     hotTvShows = tvResp?.body()?.items?.map { it.toVideoInfo("tv") } ?: emptyList(),
                     hotAnime = emptyList(),
-                    hotVariety = showResp?.body()?.items?.map { it.toVideoInfo("show") } ?: emptyList()
+                    hotVariety = showResp?.body()?.items?.map { it.toVideoInfo("show") } ?: emptyList(),
+                    hotShortDrama = shortResp?.body()?.items?.map { it.toVideoInfo("short") } ?: emptyList()
                 )
                 logDebug("loadHomeData", "首页数据: movies=${_homeData.value?.hotMovies?.size} tv=${_homeData.value?.hotTvShows?.size} variety=${_homeData.value?.hotVariety?.size} anime=${_homeData.value?.hotAnime?.size}")
             } catch (e: Exception) {
@@ -719,6 +728,7 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                 val doubanKind = when (kind) {
                     "anime" -> "tv"
                     "variety" -> "tv"
+                    "short" -> "tv"
                     else -> kind
                 }
 
@@ -790,6 +800,7 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
         "tv" -> "\u6700\u8FD1\u70ED\u95E8" to "tv"
         "anime" -> "\u65E5\u672C" to "\u52A8\u6F2B"
         "variety" -> "show" to "show"
+        "short" -> "\u70ED\u95E8" to "\u5168\u90E8"
         else -> "\u70ED\u95E8" to "\u5168\u90E8"
     }
 
@@ -838,6 +849,12 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
             }
             "variety" -> {
                 tags.add("\u7EFC\u827A")
+                if (filters.year != "\u5168\u90E8") {
+                    tags.add(filters.year)
+                }
+            }
+            "short" -> {
+                tags.add("\u77ED\u5267")
                 if (filters.year != "\u5168\u90E8") {
                     tags.add(filters.year)
                 }

@@ -2424,14 +2424,12 @@ private fun TabletVideoHomeContent(
     val hotTv = videoHomeData?.hotTvShows ?: emptyList()
     val hotVariety = videoHomeData?.hotVariety ?: emptyList()
 
-    // 主内容 + 右侧最近播放面板
-    Row(modifier = Modifier.fillMaxSize()) {
-        // ===== 左侧: 主内容区 =====
-        LazyColumn(
-            modifier = Modifier.weight(1f).fillMaxHeight(),
-            contentPadding = PaddingValues(start = pad, end = gap, top = 0.dp, bottom = 100.dp),
-            verticalArrangement = Arrangement.spacedBy(gap)
-        ) {
+    // 主内容
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(start = pad, end = pad, top = 0.dp, bottom = 100.dp),
+        verticalArrangement = Arrangement.spacedBy(gap)
+    ) {
             // ===== 影视分类 Tab 按钮行 =====
             item {
                 val categoryTabs = listOf(
@@ -2505,6 +2503,35 @@ private fun TabletVideoHomeContent(
                 }
             }
 
+            // 继续播放 (横向卡片滚动)
+            if (videoPlayRecords.isNotEmpty()) {
+                item {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Text("继续播放", fontSize = config.sectionTitleSize, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+                item {
+                    androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        items(videoPlayRecords.take(10), key = { "${it.source}_${it.videoIdRaw}" }) { record ->
+                            com.lechenmusic.ui.screens.video.VideoHorizontalCard(
+                                video = com.lechenmusic.data.model.VideoInfo(
+                                    id = record.videoIdRaw,
+                                    source = record.source,
+                                    title = record.title,
+                                    cover = record.cover,
+                                    year = record.year,
+                                    type = record.type,
+                                    totalEpisodes = record.displayTotalEpisodes,
+                                    playTime = record.displayPlayTime,
+                                    totalTime = record.displayTotalTime
+                                ),
+                                onClick = { if (record.source.isNotBlank()) onNavigateToVideoDetail(record.source, record.videoIdRaw) }
+                            )
+                        }
+                    }
+                }
+            }
+
             // 热门电影 (横向卡片滚动)
             if (hotMovies.isNotEmpty()) {
                 item {
@@ -2570,37 +2597,6 @@ private fun TabletVideoHomeContent(
                 item { Box(modifier = Modifier.fillMaxWidth().padding(20.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(modifier = Modifier.size(32.dp)) } }
             }
         }
-
-        // ===== 右侧: 最近播放面板 =====
-        if (videoPlayRecords.isNotEmpty()) {
-            Column(
-                modifier = Modifier
-                    .width(300.dp)
-                    .fillMaxHeight()
-                    .padding(start = gap, end = pad, top = 8.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("最近播放", fontSize = config.sectionTitleSize, fontWeight = FontWeight.SemiBold)
-                    Icon(Icons.Default.Schedule, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
-                }
-                LazyColumn(
-                    modifier = Modifier.fillMaxHeight(),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                    contentPadding = PaddingValues(bottom = 100.dp)
-                ) {
-                    items(videoPlayRecords.take(10), key = { "${it.source}_${it.videoIdRaw}" }) { record ->
-                        TabletVideoContinueCard(record = record, config = config) {
-                            if (record.source.isNotBlank()) onNavigateToVideoDetail(record.source, record.videoIdRaw)
-                        }
-                    }
-                }
-            }
-        }
-    }
 
     // 空状态
     if (!videoHomeLoading && hotMovies.isEmpty() && hotTv.isEmpty() && videoPlayRecords.isEmpty()) {

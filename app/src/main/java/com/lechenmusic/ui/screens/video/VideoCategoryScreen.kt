@@ -107,6 +107,9 @@ private fun getFilterPills(categoryType: String): List<FilterPillDef> {
         "variety" -> listOf(
             FilterPillDef("年代", yearOptions),
         )
+        "short" -> listOf(
+            FilterPillDef("年代", yearOptions),
+        )
         else -> emptyList()
     }
 }
