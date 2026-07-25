@@ -115,6 +115,19 @@ fun TabletVideoDetailScreen(
             exoPlayer.setMediaItem(MediaItem.fromUri(ep.url))
             exoPlayer.prepare()
             exoPlayer.playWhenReady = true
+            // 从全屏播放器返回时，恢复到之前播放的位置
+            val resumeMs = viewModel.resumePositionMs.value
+            if (resumeMs > 0) {
+                exoPlayer.addListener(object : Player.Listener {
+                    override fun onPlaybackStateChanged(state: Int) {
+                        if (state == Player.STATE_READY) {
+                            exoPlayer.seekTo(resumeMs)
+                            viewModel.clearResumePosition()
+                            exoPlayer.removeListener(this)
+                        }
+                    }
+                })
+            }
         }
     }
 
@@ -266,7 +279,13 @@ fun TabletVideoDetailScreen(
                             Spacer(modifier = Modifier.size(40.dp))
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 IconButton(
-                                    onClick = { onPlay(video.source, selectedEpisode) },
+                                    onClick = {
+                                        // 全屏前保存当前播放位置，以便全屏播放器继续播放
+                                        if (exoPlayer.currentPosition > 0) {
+                                            viewModel.setResumePosition(exoPlayer.currentPosition)
+                                        }
+                                        onPlay(video.source, selectedEpisode)
+                                    },
                                     modifier = Modifier.size(40.dp)
                                 ) {
                                     Icon(Icons.Default.Fullscreen, "全屏", tint = Color.White, modifier = Modifier.size(22.dp))

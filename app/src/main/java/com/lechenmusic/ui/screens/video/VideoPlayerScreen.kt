@@ -271,12 +271,25 @@ fun VideoPlayerScreen(
         activity?.requestedOrientation = if (isFullscreen) {
             ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
         } else {
-            ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            // 退出全屏时不强制竖屏，让设备传感器决定方向（平板横屏保持横屏）
+            ActivityInfo.SCREEN_ORIENTATION_SENSOR
         }
         if (isFullscreen) {
             activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+            // 隐藏导航栏 + 状态栏（沉浸式全屏）
+            @Suppress("DEPRECATION")
+            activity?.window?.decorView?.systemUiVisibility = (
+                android.view.View.SYSTEM_UI_FLAG_FULLSCREEN or
+                android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+                android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or
+                android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
+                android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
+                android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+            )
         } else {
             activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+            @Suppress("DEPRECATION")
+            activity?.window?.decorView?.systemUiVisibility = android.view.View.SYSTEM_UI_FLAG_VISIBLE
         }
     }
 
