@@ -311,24 +311,6 @@ private fun VideoRecommendTab(
                 }
             }
 
-            // 新番放送
-            val hotAnime = homeData?.hotAnime
-            if (!hotAnime.isNullOrEmpty()) {
-                item {
-                    SectionHeader("🌸 新番放送")
-                    Spacer(modifier = Modifier.height(8.dp))
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        items(hotAnime) { video ->
-                            VideoHorizontalCard(video = video, onClick = { onVideoClick(video) })
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
-                }
-            }
-
             // 热门短剧
             val hotShort = homeData?.hotShortDrama
             if (!hotShort.isNullOrEmpty()) {

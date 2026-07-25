@@ -1035,7 +1035,11 @@ fun NavGraphBuilder.sharedNavRoutes(
                 source = source,
                 videoId = videoId,
                 responsiveConfig = responsiveCfg,
-                onBack = onBack,
+                onBack = {
+                    // 返回时立即刷新播放记录（平板UI需要显式刷新）
+                    videoViewModel.loadPlayRecords()
+                    onBack()
+                },
                 onPlay = { playSource, episodeIndex ->
                     navController.navigate(Screen.VideoPlayerDirect.route)
                 },

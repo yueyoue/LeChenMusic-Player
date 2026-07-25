@@ -259,62 +259,41 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                 val doubanApi = DoubanApiClient.getApi()
 
                 // 参考 Selene-Source: 用 recent_hot 接口，每个请求独立 try-catch
-                // 热门电影: kind=movie, category=热门, type=全部
-                val moviesResp = try {
-                    withContext(Dispatchers.IO) {
+                // 所有请求并行执行，避免一个慢请求拖慢整体
+                val moviesDeferred = viewModelScope.async(Dispatchers.IO) {
+                    try {
                         doubanApi.getRecentHot("movie", limit = 15, category = "\u70ED\u95E8", type = "\u5168\u90E8")
+                    } catch (e: Exception) {
+                        logDebug("loadHomeData", "\u70ED\u95E8\u7535\u5F71\u52A0\u8F7D\u5931\u8D25: ${e.message}")
+                        null
                     }
-                } catch (e: Exception) {
-                    logDebug("loadHomeData", "热门电影加载失败: ${e.message}")
-                    null
                 }
-                // 热门剧集: kind=tv, category=最近热门, type=tv
-                val tvResp = try {
-                    withContext(Dispatchers.IO) {
+                val tvDeferred = viewModelScope.async(Dispatchers.IO) {
+                    try {
                         doubanApi.getRecentHot("tv", limit = 15, category = "\u6700\u8FD1\u70ED\u95E8", type = "tv")
+                    } catch (e: Exception) {
+                        logDebug("loadHomeData", "\u70ED\u95E8\u5267\u96C6\u52A0\u8F7D\u5931\u8D25: ${e.message}")
+                        null
                     }
-                } catch (e: Exception) {
-                    logDebug("loadHomeData", "热门剧集加载失败: ${e.message}")
-                    null
                 }
-                // 热门综艺: kind=tv, category=show, type=show (参考 Selene-Source)
-                val showResp = try {
-                    withContext(Dispatchers.IO) {
+                val showDeferred = viewModelScope.async(Dispatchers.IO) {
+                    try {
                         doubanApi.getRecentHot("tv", limit = 15, category = "show", type = "show")
+                    } catch (e: Exception) {
+                        logDebug("loadHomeData", "\u70ED\u95E8\u7EFC\u827A\u52A0\u8F7D\u5931\u8D25: ${e.message}")
+                        null
                     }
-                } catch (e: Exception) {
-                    logDebug("loadHomeData", "热门综艺加载失败: ${e.message}")
-                    null
                 }
-                // 新番放送: 使用 Bangumi API (参考 Selene-Source)
-                val animeList = try {
-                    withContext(Dispatchers.IO) {
-                        val bangumiApi = com.lechenmusic.data.api.BangumiApiClient.getApi()
-                        val resp = bangumiApi.getCalendar()
-                        if (resp.isSuccessful && resp.body() != null) {
-                            val weekday = java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_WEEK)
-                            val bangumiWeekday = if (weekday == 1) 7 else weekday - 1
-                            val todayItems = resp.body()!!.firstOrNull { it.weekday.id == bangumiWeekday }?.items ?: emptyList()
-                            if (todayItems.isNotEmpty()) {
-                                todayItems.map { it.toVideoInfo() }
-                            } else {
-                                resp.body()!!.flatMap { it.items }.take(15).map { it.toVideoInfo() }
-                            }
-                        } else {
-                            logDebug("loadHomeData", "Bangumi API failed: ${resp.code()}")
-                            emptyList()
-                        }
-                    }
-                } catch (e: Exception) {
-                    logDebug("loadHomeData", "Bangumi anime load failed: ${e.message}")
-                    emptyList()
-                }
+
+                val moviesResp = moviesDeferred.await()
+                val tvResp = tvDeferred.await()
+                val showResp = showDeferred.await()
 
                 _homeData.value = HomeRecommendData(
                     continueWatch = _playRecords.value,
                     hotMovies = moviesResp?.body()?.items?.map { it.toVideoInfo("movie") } ?: emptyList(),
                     hotTvShows = tvResp?.body()?.items?.map { it.toVideoInfo("tv") } ?: emptyList(),
-                    hotAnime = animeList,
+                    hotAnime = emptyList(),
                     hotVariety = showResp?.body()?.items?.map { it.toVideoInfo("show") } ?: emptyList()
                 )
                 logDebug("loadHomeData", "首页数据: movies=${_homeData.value?.hotMovies?.size} tv=${_homeData.value?.hotTvShows?.size} variety=${_homeData.value?.hotVariety?.size} anime=${_homeData.value?.hotAnime?.size}")

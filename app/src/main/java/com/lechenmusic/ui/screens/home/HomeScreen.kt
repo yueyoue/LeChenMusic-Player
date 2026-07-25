@@ -921,32 +921,6 @@ fun HomeScreen(
                             }
                         }
 
-                        // 5. 热门动漫
-                        val hotAnime = videoHomeData?.hotAnime ?: emptyList()
-                        if (hotAnime.isNotEmpty()) {
-                            item { SecHd("\uD83C\uDF8C 热门动漫", "") }
-                            item {
-                                LazyRow(
-                                    contentPadding = PaddingValues(horizontal = 16.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                                ) {
-                                    items(hotAnime) { video ->
-                                        com.lechenmusic.ui.screens.video.VideoHorizontalCard(
-                                            video = video,
-                                            onClick = {
-                                                if (video.source.isNotBlank()) {
-                                                    onNavigateToVideoDetail(video.source, video.id)
-                                                } else {
-                                                    videoViewModel?.searchAndPlay(video.title, video.id, video.year)
-                                                    
-                                                }
-                                            }
-                                        )
-                                    }
-                                }
-                            }
-                        }
-
                         // 加载指示器
                         if (videoHomeLoading) {
                             item {
@@ -2479,7 +2453,6 @@ private fun TabletVideoHomeContent(
     val hotMovies = videoHomeData?.hotMovies ?: emptyList()
     val hotTv = videoHomeData?.hotTvShows ?: emptyList()
     val hotVariety = videoHomeData?.hotVariety ?: emptyList()
-    val hotAnime = videoHomeData?.hotAnime ?: emptyList()
 
     // 主内容 + 右侧最近播放面板
     Row(modifier = Modifier.fillMaxSize()) {
@@ -2583,26 +2556,6 @@ private fun TabletVideoHomeContent(
                 item {
                     androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         items(hotVariety) { video ->
-                            com.lechenmusic.ui.screens.video.VideoHorizontalCard(
-                                video = video,
-                                onClick = { navigateVideo(video) }
-                            )
-                        }
-                    }
-                }
-            }
-
-            // 新番放送 (横向卡片滚动，参考 Selene-Source)
-            if (hotAnime.isNotEmpty()) {
-                item {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text("\uD83C\uDF8C 新番放送", fontSize = config.sectionTitleSize, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                        Text("查看全部 ›", fontSize = config.bodyFontSize, color = MaterialTheme.colorScheme.secondary, modifier = Modifier.clickable { onNavigateToVideoCategory("anime") })
-                    }
-                }
-                item {
-                    androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        items(hotAnime) { video ->
                             com.lechenmusic.ui.screens.video.VideoHorizontalCard(
                                 video = video,
                                 onClick = { navigateVideo(video) }
