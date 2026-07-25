@@ -85,41 +85,101 @@ fun MusicHomeContent(
 ) {
     val pad = config.contentPadding
     val gap = config.itemSpacing
+    val isTablet = config.isMedium || config.isExpanded
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = pad, end = pad, top = pad, bottom = 100.dp),
-        verticalArrangement = Arrangement.spacedBy(config.sectionSpacing)
-    ) {
-        // ── 0. 头部（搜索栏+模式切换，仅手机） ──
-        if (headerContent != null) {
-            item { headerContent() }
-        }
+    if (isTablet) {
+        // ═══ 平板布局：左侧主内容 + 右侧边栏 ═══
+        Row(modifier = Modifier.fillMaxSize().padding(start = pad, end = pad, top = pad)) {
+            // ── 左侧主内容 ──
+            LazyColumn(
+                modifier = Modifier.weight(1f).fillMaxHeight(),
+                contentPadding = PaddingValues(end = gap, bottom = 100.dp),
+                verticalArrangement = Arrangement.spacedBy(config.sectionSpacing)
+            ) {
+                // Hero
+                item {
+                    MusicHero(
+                        slides = musicSlides, serverUrl = serverUrl,
+                        heroHeight = config.heroHeight, titleSize = config.sectionTitleSize, bodySize = config.bodyFontSize
+                    )
+                }
+                // 快捷入口
+                item {
+                    QuickActions(
+                        iconSize = 48.dp, labelSize = config.cardSubtitleSize, gap = 12.dp,
+                        onArtists = onNavigateToArtists, onAlbums = onNavigateToAlbums,
+                        onPlaylists = onNavigateToAllPlaylists, onRadio = onNavigateToRadio, onCached = onNavigateToCachedMusic
+                    )
+                }
+                // 歌单广场
+                item { SectionHead(title = "歌单广场", action = "更多 ›", titleSize = config.sectionTitleSize, captionSize = config.captionFontSize, onClick = onNavigateToAllPlaylists) }
+                item { PlaylistRow(playlists = playlists, coverSize = config.playlistCardSize, titleSize = config.cardTitleSize, subtitleSize = config.cardSubtitleSize, gap = gap, serverUrl = serverUrl, username = username, password = password, onClick = onPlaylistClick) }
+                // 每日推荐（双列）
+                item { SectionHead(title = "每日推荐", action = "换一批 ↻", titleSize = config.sectionTitleSize, captionSize = config.captionFontSize, onClick = onRefreshDaily) }
+                val chunkedSongs = dailySongs.take(6).chunked(2)
+                items(chunkedSongs.size) { rowIdx ->
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap)) {
+                        chunkedSongs[rowIdx].forEach { song ->
+                            Box(modifier = Modifier.weight(1f)) {
+                                SongListItem(song = song, serverUrl = serverUrl, username = username, password = password, titleSize = config.bodyFontSize, subtitleSize = config.captionFontSize, coverSize = config.songCoverSize, onClick = { onSongClick(song, dailySongs) })
+                            }
+                        }
+                        if (chunkedSongs[rowIdx].size < 2) Spacer(modifier = Modifier.weight(1f))
+                    }
+                }
+                // 最新专辑
+                item { SectionHead(title = "最新专辑", action = "更多 ›", titleSize = config.sectionTitleSize, captionSize = config.captionFontSize, onClick = onNavigateToAlbums) }
+                item { AlbumRow(albums = newestAlbums, coverSize = config.albumCardSize, titleSize = config.cardTitleSize, subtitleSize = config.cardSubtitleSize, gap = gap, serverUrl = serverUrl, username = username, password = password, onClick = onAlbumClick) }
+                // 随机专辑
+                item { SectionHead(title = "随机专辑", action = "换一批 ↻", titleSize = config.sectionTitleSize, captionSize = config.captionFontSize) }
+                item { AlbumRow(albums = randomAlbums, coverSize = config.albumCardSize, titleSize = config.cardTitleSize, subtitleSize = config.cardSubtitleSize, gap = gap, serverUrl = serverUrl, username = username, password = password, onClick = onAlbumClick) }
+            }
 
-        // ── 1. Hero Banner ──
-        item {
-            MusicHero(
-                slides = musicSlides,
-                serverUrl = serverUrl,
-                heroHeight = config.heroHeight,
-                titleSize = config.sectionTitleSize,
-                bodySize = config.bodyFontSize
-            )
+            // ── 右侧边栏 ──
+            LazyColumn(
+                modifier = Modifier.width(280.dp).fillMaxHeight(),
+                contentPadding = PaddingValues(bottom = 100.dp),
+                verticalArrangement = Arrangement.spacedBy(config.sectionSpacing)
+            ) {
+                // 最近播放
+                item { SectionHead(title = "最近播放", action = "更多 ›", titleSize = config.sectionTitleSize, captionSize = config.captionFontSize, onClick = onNavigateToRecentPlayed) }
+                items(recentPlayedSongs.take(6)) { song ->
+                    SongListItem(song = song, serverUrl = serverUrl, username = username, password = password, titleSize = config.cardSubtitleSize, subtitleSize = config.captionFontSize, coverSize = 40.dp, onClick = { onSongClick(song, recentPlayedSongs) })
+                }
+                // 电台
+                item { Spacer(modifier = Modifier.height(8.dp)) }
+                item { SectionHead(title = "电台", action = "更多 ›", titleSize = config.sectionTitleSize, captionSize = config.captionFontSize, onClick = onNavigateToRadio) }
+                item { RadioGrid(stations = radioStations, titleSize = config.cardSubtitleSize, subtitleSize = config.captionFontSize, onClick = onPlayRadio) }
+            }
         }
+    } else {
+        // ═══ 手机布局：单列 ═══
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(start = pad, end = pad, top = pad, bottom = 100.dp),
+            verticalArrangement = Arrangement.spacedBy(config.sectionSpacing)
+        ) {
+            // ── 0. 头部（搜索栏+模式切换） ──
+            if (headerContent != null) {
+                item { headerContent() }
+            }
 
-        // ── 2. 快捷入口 ──
-        item {
-            QuickActions(
-                iconSize = 48.dp,
-                labelSize = config.cardSubtitleSize,
-                gap = 12.dp,
-                onArtists = onNavigateToArtists,
-                onAlbums = onNavigateToAlbums,
-                onPlaylists = onNavigateToAllPlaylists,
-                onRadio = onNavigateToRadio,
-                onCached = onNavigateToCachedMusic
-            )
-        }
+            // ── 1. Hero Banner ──
+            item {
+                MusicHero(
+                    slides = musicSlides, serverUrl = serverUrl,
+                    heroHeight = config.heroHeight, titleSize = config.sectionTitleSize, bodySize = config.bodyFontSize
+                )
+            }
+
+            // ── 2. 快捷入口 ──
+            item {
+                QuickActions(
+                    iconSize = 48.dp, labelSize = config.cardSubtitleSize, gap = 12.dp,
+                    onArtists = onNavigateToArtists, onAlbums = onNavigateToAlbums,
+                    onPlaylists = onNavigateToAllPlaylists, onRadio = onNavigateToRadio, onCached = onNavigateToCachedMusic
+                )
+            }
 
         // ── 3. 为你精选 ──
         item {
@@ -237,6 +297,7 @@ fun MusicHomeContent(
             )
         }
     }
+    } // else (手机布局)
 }
 
 
