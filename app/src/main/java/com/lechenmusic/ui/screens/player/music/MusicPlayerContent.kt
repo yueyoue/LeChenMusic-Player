@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -119,20 +121,69 @@ fun MusicPlayerContent(
                     }
                 }
             } else {
-                // 手机：竖排
-                Column(
-                    modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                // ── 手机：HorizontalPager 左右滑动 ──
+                val pagerState = rememberPagerState(pageCount = { 2 })
+
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier.weight(1f).fillMaxWidth()
+                ) { page ->
+                    when (page) {
+                        0 -> {
+                            // ── 第1页：封面 + 歌曲名 ──
+                            Column(
+                                modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                CoverImageDisplay(coverUrl = coverUrl, size = 260)
+                                Spacer(modifier = Modifier.height(32.dp))
+                                SongInfo(
+                                    song = song, titleSize = 22.sp, artistSize = 14.sp,
+                                    onArtistClick = { if (song.artistId.isNotBlank()) onNavigateToArtist(song.artistId) },
+                                    center = true
+                                )
+                            }
+                        }
+                        1 -> {
+                            // ── 第2页：歌词 ──
+                            Column(
+                                modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                // 顶部小封面 + 歌曲名
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    CoverImageDisplay(coverUrl = coverUrl, size = 48)
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column {
+                                        Text(song.title, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        Text(song.artist, fontSize = 12.sp, color = Color.White.copy(alpha = 0.6f))
+                                    }
+                                }
+                                // 歌词
+                                LyricsPanel(lrcLines = lrcLines, plainLines = plainLines, currentPosition = currentPosition, modifier = Modifier.weight(1f))
+                            }
+                        }
+                    }
+                }
+
+                // 页码指示器
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                    horizontalArrangement = Arrangement.Center
                 ) {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    // 封面
-                    CoverImageDisplay(coverUrl = coverUrl, size = 260)
-                    Spacer(modifier = Modifier.height(28.dp))
-                    // 歌曲信息
-                    SongInfo(song = song, titleSize = 22.sp, artistSize = 14.sp, onArtistClick = { if (song.artistId.isNotBlank()) onNavigateToArtist(song.artistId) }, center = true)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    // 歌词（可滚动）
-                    LyricsPanel(lrcLines = lrcLines, plainLines = plainLines, currentPosition = currentPosition, modifier = Modifier.weight(1f))
+                    repeat(2) { idx ->
+                        Box(
+                            modifier = Modifier
+                                .padding(horizontal = 4.dp)
+                                .size(if (pagerState.currentPage == idx) 8.dp else 6.dp)
+                                .clip(CircleShape)
+                                .background(if (pagerState.currentPage == idx) Color.White else Color.White.copy(alpha = 0.4f))
+                        )
+                    }
                 }
             }
 
@@ -298,39 +349,22 @@ private fun PlayerControls(
             }
             Spacer(modifier = Modifier.height(8.dp))
 
-            // 控制按钮
+            // ── 控制按钮：以播放键为中心均匀分布 ──
+            // 第1行：主控制（均匀分布）
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
+                horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // 收藏
-                IconButton(onClick = onToggleStar) {
-                    Icon(if (isStarred) Icons.Default.Favorite else Icons.Default.FavoriteBorder, "收藏",
-                        tint = if (isStarred) Color(0xFFFF4D6A) else Color.White.copy(alpha = 0.7f), modifier = Modifier.size(24.dp))
-                }
-                // 定时
-                var showTimer by remember { mutableStateOf(false) }
-                IconButton(onClick = { showTimer = true }) {
-                    Icon(Icons.Default.Timer, "定时", tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(24.dp))
-                }
-                DropdownMenu(expanded = showTimer, onDismissRequest = { showTimer = false }) {
-                    listOf(15, 30, 45, 60, 90).forEach { min ->
-                        DropdownMenuItem(text = { Text("${min}分钟后") }, onClick = { showTimer = false })
-                    }
-                }
-
-                Spacer(modifier = Modifier.width(16.dp))
-
                 // 随机
-                IconButton(onClick = onToggleShuffle) {
-                    Icon(Icons.Default.Shuffle, "随机", tint = if (shuffleMode) Color.White else Color.White.copy(alpha = 0.5f), modifier = Modifier.size(22.dp))
+                IconButton(onClick = onToggleShuffle, modifier = Modifier.size(44.dp)) {
+                    Icon(Icons.Default.Shuffle, "随机", tint = if (shuffleMode) Color.White else Color.White.copy(alpha = 0.4f), modifier = Modifier.size(20.dp))
                 }
                 // 上一首
-                IconButton(onClick = onPrevious) {
+                IconButton(onClick = onPrevious, modifier = Modifier.size(48.dp)) {
                     Icon(Icons.Default.SkipPrevious, "上一首", tint = Color.White, modifier = Modifier.size(32.dp))
                 }
-                // 播放/暂停
+                // 播放/暂停（居中，最大）
                 FilledIconButton(
                     onClick = onPlayPause,
                     modifier = Modifier.size(56.dp),
@@ -340,26 +374,46 @@ private fun PlayerControls(
                     Icon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, if (isPlaying) "暂停" else "播放", modifier = Modifier.size(28.dp))
                 }
                 // 下一首
-                IconButton(onClick = onNext) {
+                IconButton(onClick = onNext, modifier = Modifier.size(48.dp)) {
                     Icon(Icons.Default.SkipNext, "下一首", tint = Color.White, modifier = Modifier.size(32.dp))
                 }
                 // 循环
-                IconButton(onClick = onToggleRepeat) {
+                IconButton(onClick = onToggleRepeat, modifier = Modifier.size(44.dp)) {
                     Icon(
                         when (repeatMode) { RepeatMode.ONE -> Icons.Default.RepeatOne; else -> Icons.Default.Repeat },
                         "循环",
-                        tint = if (repeatMode != RepeatMode.OFF) Color.White else Color.White.copy(alpha = 0.5f),
-                        modifier = Modifier.size(22.dp)
+                        tint = if (repeatMode != RepeatMode.OFF) Color.White else Color.White.copy(alpha = 0.4f),
+                        modifier = Modifier.size(20.dp)
                     )
                 }
-
-                Spacer(modifier = Modifier.width(16.dp))
-
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            // 第2行：辅助控制（均匀分布）
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // 收藏
+                IconButton(onClick = onToggleStar, modifier = Modifier.size(40.dp)) {
+                    Icon(if (isStarred) Icons.Default.Favorite else Icons.Default.FavoriteBorder, "收藏",
+                        tint = if (isStarred) Color(0xFFFF4D6A) else Color.White.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
+                }
+                // 定时
+                var showTimer by remember { mutableStateOf(false) }
+                IconButton(onClick = { showTimer = true }, modifier = Modifier.size(40.dp)) {
+                    Icon(Icons.Default.Timer, "定时", tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
+                }
+                DropdownMenu(expanded = showTimer, onDismissRequest = { showTimer = false }) {
+                    listOf(15, 30, 45, 60, 90).forEach { min ->
+                        DropdownMenuItem(text = { Text("${min}分钟后") }, onClick = { showTimer = false })
+                    }
+                }
                 // 添加到
                 var showAddMenu by remember { mutableStateOf(false) }
                 Box {
-                    IconButton(onClick = { showAddMenu = true }) {
-                        Icon(Icons.Default.PlaylistAdd, "添加到", tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(24.dp))
+                    IconButton(onClick = { showAddMenu = true }, modifier = Modifier.size(40.dp)) {
+                        Icon(Icons.Default.PlaylistAdd, "添加到", tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
                     }
                     DropdownMenu(expanded = showAddMenu, onDismissRequest = { showAddMenu = false }) {
                         DropdownMenuItem(text = { Text("添加到歌单") }, onClick = { showAddMenu = false; onShowAddToPlaylist() }, leadingIcon = { Icon(Icons.Default.QueueMusic, null) })
@@ -367,8 +421,8 @@ private fun PlayerControls(
                     }
                 }
                 // 播放队列
-                IconButton(onClick = onShowQueue) {
-                    Icon(Icons.Default.QueueMusic, "播放队列", tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(24.dp))
+                IconButton(onClick = onShowQueue, modifier = Modifier.size(40.dp)) {
+                    Icon(Icons.Default.QueueMusic, "播放队列", tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
                 }
             }
         }
