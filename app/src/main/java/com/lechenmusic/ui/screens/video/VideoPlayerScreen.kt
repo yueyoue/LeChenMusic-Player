@@ -104,6 +104,9 @@ fun VideoPlayerScreen(
     var showSpeedMenu by remember { mutableStateOf(false) }
     var showEpisodePanel by remember { mutableStateOf(false) }
 
+    // 跟踪是否已由按钮保存过位置（避免 DisposableEffect 重复保存）
+    var positionSavedByButton by remember { mutableStateOf(false) }
+
     // Play record saving (reference Selene-Source _saveProgress)
     var lastSaveTime by remember { mutableStateOf(0L) }
     var lastSavePosition by remember { mutableLongStateOf(0L) }
@@ -256,13 +259,17 @@ fun VideoPlayerScreen(
         exoPlayer.addListener(listener)
         onDispose {
             savePlayRecordNow()
+            // 保存播放位置（按钮未保存时由 DisposableEffect 保存）
+            if (!positionSavedByButton && exoPlayer.currentPosition > 0) {
+                videoViewModel?.setResumePosition(exoPlayer.currentPosition)
+            }
             exoPlayer.removeListener(listener)
             exoPlayer.release()
             activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         }
     }
 
-    // 全屏模式（调用 Activity 方法处理沉浸式全屏，兼容 edge-to-edge）
+    // 全屏模式（使用原始 FLAG_FULLSCREEN，兼容性最好）
     LaunchedEffect(isFullscreen) {
         activity?.requestedOrientation = if (isFullscreen) {
             ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
@@ -270,9 +277,9 @@ fun VideoPlayerScreen(
             ActivityInfo.SCREEN_ORIENTATION_SENSOR
         }
         if (isFullscreen) {
-            (activity as? com.lechenmusic.MainActivity)?.enterImmersiveFullscreen()
+            activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
         } else {
-            (activity as? com.lechenmusic.MainActivity)?.exitImmersiveFullscreen()
+            activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
         }
     }
 
@@ -401,6 +408,7 @@ fun VideoPlayerScreen(
                     // 保存播放位置（供详情页恢复）
                     if (exoPlayer.currentPosition > 0) {
                         videoViewModel?.setResumePosition(exoPlayer.currentPosition)
+                        positionSavedByButton = true
                     }
                     savePlayRecordNow()
                     onBack()
@@ -573,6 +581,7 @@ fun VideoPlayerScreen(
                                 // 保存播放位置供详情页恢复
                                 if (exoPlayer.currentPosition > 0) {
                                     videoViewModel?.setResumePosition(exoPlayer.currentPosition)
+                                    positionSavedByButton = true
                                 }
                                 savePlayRecordNow()
                                 onBack()

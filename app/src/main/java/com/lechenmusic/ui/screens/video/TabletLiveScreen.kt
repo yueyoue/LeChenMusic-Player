@@ -81,15 +81,14 @@ fun TabletLiveScreen(
 
     // 全屏模式
     if (isFullscreen && selectedChannel != null) {
-        // 隐藏系统栏（导航栏 + 状态栏）+ 强制横屏（调用 Activity 方法）
+        // 隐藏状态栏 + 强制横屏
         DisposableEffect(Unit) {
-            val mainActivity = context as? com.lechenmusic.MainActivity
             val activity = context as? android.app.Activity
-            mainActivity?.enterImmersiveFullscreen()
             activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+            activity?.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN)
             onDispose {
-                mainActivity?.exitImmersiveFullscreen()
                 activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR
+                activity?.window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN)
             }
         }
         Box(

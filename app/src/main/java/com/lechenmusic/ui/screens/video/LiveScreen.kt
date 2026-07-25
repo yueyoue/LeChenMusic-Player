@@ -4,8 +4,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -27,7 +28,6 @@ import androidx.media3.exoplayer.ExoPlayer
 import coil.compose.AsyncImage
 import com.lechenmusic.data.model.LiveChannel
 import com.lechenmusic.data.model.LiveChannelGroup
-import com.lechenmusic.data.model.LiveSource
 import com.lechenmusic.ui.VideoViewModel
 
 @Composable
@@ -45,8 +45,6 @@ fun LiveScreen(
     var selectedChannel by remember { mutableStateOf<LiveChannel?>(null) }
     var selectedGroupIndex by remember { mutableIntStateOf(0) }
     var isPlaying by remember { mutableStateOf(false) }
-    // 标记是否已完成首次加载（避免初始渲染时 groups 空→有数据导致崩溃）
-    var hasLoadedOnce by remember { mutableStateOf(false) }
 
     // ExoPlayer
     val exoPlayer = remember {
@@ -58,12 +56,7 @@ fun LiveScreen(
     DisposableEffect(Unit) {
         val listener = object : Player.Listener {
             override fun onPlaybackStateChanged(playbackState: Int) {
-                if (playbackState == Player.STATE_READY) {
-                    isPlaying = true
-                }
-                if (playbackState == Player.STATE_ENDED) {
-                    isPlaying = false
-                }
+                isPlaying = playbackState == Player.STATE_READY
             }
         }
         exoPlayer.addListener(listener)
@@ -73,9 +66,7 @@ fun LiveScreen(
         }
     }
 
-    LaunchedEffect(Unit) {
-        viewModel.loadLiveSources()
-    }
+    LaunchedEffect(Unit) { viewModel.loadLiveSources() }
 
     // 加载频道
     LaunchedEffect(selectedSourceIndex, liveSources) {
@@ -88,11 +79,7 @@ fun LiveScreen(
     }
 
     val groups = liveChannels
-    // 标记首次加载完成
-    if (!hasLoadedOnce && groups.isNotEmpty()) {
-        hasLoadedOnce = true
-    }
-    // 同步重置 selectedGroupIndex（必须在组合阶段，不能用 LaunchedEffect）
+    // 安全同步 selectedGroupIndex
     if (groups.isNotEmpty() && selectedGroupIndex >= groups.size) {
         selectedGroupIndex = 0
     }
@@ -100,11 +87,10 @@ fun LiveScreen(
         selectedGroupIndex = 0
     }
     val safeGroupIndex = selectedGroupIndex.coerceIn(0, (groups.size - 1).coerceAtLeast(0))
-    val currentGroup = groups.getOrNull(safeGroupIndex)
-    // 确保 selectedGroupIndex 与 safeGroupIndex 同步
     if (selectedGroupIndex != safeGroupIndex && groups.isNotEmpty()) {
         selectedGroupIndex = safeGroupIndex
     }
+    val currentGroup = groups.getOrNull(safeGroupIndex)
 
     Column(modifier = Modifier.fillMaxSize()) {
         // 顶部栏
@@ -145,7 +131,7 @@ fun LiveScreen(
             }
         }
 
-        if (isLoading) {
+        if (isLoading && groups.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
@@ -163,21 +149,16 @@ fun LiveScreen(
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
-                            Icons.Default.Tv,
-                            null,
+                            Icons.Default.Tv, null,
                             tint = Color.White.copy(alpha = 0.5f),
                             modifier = Modifier.size(48.dp)
                         )
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            "选择频道开始播放",
-                            color = Color.White.copy(alpha = 0.5f),
-                            fontSize = 14.sp
-                        )
+                        Text("选择频道开始播放", color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp)
                     }
                 }
             } else {
-                // ExoPlayer 渲染（参考平板UI实现）
+                // ExoPlayer 渲染
                 androidx.compose.ui.viewinterop.AndroidView(
                     factory = { ctx ->
                         androidx.media3.ui.PlayerView(ctx).apply {
@@ -188,103 +169,128 @@ fun LiveScreen(
                     modifier = Modifier.fillMaxSize()
                 )
 
-                // 播放/暂停按钮
-                IconButton(
-                    onClick = {
-                        if (isPlaying) exoPlayer.pause() else exoPlayer.play()
-                    },
-                    modifier = Modifier.align(Alignment.Center)
+                // 悬浮控制层
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(Color.Black.copy(alpha = 0.4f), Color.Transparent, Color.Black.copy(alpha = 0.6f))
+                            )
+                        )
                 ) {
-                    Icon(
-                        if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        null,
-                        tint = Color.White,
-                        modifier = Modifier.size(48.dp)
-                    )
+                    // 顶部：直播状态 + 停止
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(50))
+                                .background(Color.Black.copy(alpha = 0.4f))
+                                .padding(horizontal = 10.dp, vertical = 5.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier.size(7.dp).clip(CircleShape).background(Color(0xFFFF4D6A))
+                            )
+                            Spacer(modifier = Modifier.width(5.dp))
+                            Text(
+                                "正在直播: ${selectedChannel?.name}",
+                                color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold
+                            )
+                        }
+                        IconButton(
+                            onClick = {
+                                exoPlayer.stop()
+                                selectedChannel = null
+                            },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(Icons.Default.Close, "停止", tint = Color.White, modifier = Modifier.size(18.dp))
+                        }
+                    }
+
+                    // 底部：播放/暂停 + 频道信息
+                    Row(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        FilledIconButton(
+                            onClick = { if (isPlaying) exoPlayer.pause() else exoPlayer.play() },
+                            modifier = Modifier.size(40.dp),
+                            shape = CircleShape,
+                            colors = IconButtonDefaults.filledIconButtonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary
+                            )
+                        ) {
+                            Icon(
+                                if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                null, modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                selectedChannel?.name ?: "",
+                                color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1
+                            )
+                            Text(
+                                selectedChannel?.group ?: "",
+                                color = Color.White.copy(alpha = 0.6f), fontSize = 11.sp
+                            )
+                        }
+                    }
                 }
             }
         }
 
-        // 频道信息
-        selectedChannel?.let { ch ->
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colorScheme.surface
+        // 分类标签（LazyRow，参考平板UI，避免 ScrollableTabRow 崩溃）
+        if (groups.size > 1) {
+            LazyRow(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(ch.name, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                        if (ch.group.isNotBlank()) {
-                            Text(ch.group, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
-                    // EPG 节目单
-                    if (ch.epg.isNotBlank()) {
+                items(groups.size) { index ->
+                    val group = groups[index]
+                    val isSelected = selectedGroupIndex == index
+                    Surface(
+                        onClick = {
+                            selectedGroupIndex = index
+                            selectedChannel = null
+                        },
+                        shape = RoundedCornerShape(50),
+                        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer
+                        else MaterialTheme.colorScheme.surfaceVariant
+                    ) {
                         Text(
-                            "节目单",
+                            group.name,
                             fontSize = 13.sp,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.clickable {
-                                // TODO: 打开 EPG 节目单
-                            }
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                            color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
                         )
                     }
                 }
             }
-            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
         }
 
-        // 分组 Tab
-        if (groups.size > 1) {
-            ScrollableTabRow(
-                selectedTabIndex = safeGroupIndex,
-                modifier = Modifier.fillMaxWidth(),
-                containerColor = MaterialTheme.colorScheme.surface,
-                edgePadding = 16.dp,
-                divider = {}
-            ) {
-                groups.forEachIndexed { index, group ->
-                    Tab(
-                        selected = selectedGroupIndex == index,
-                        onClick = { selectedGroupIndex = index },
-                        text = {
-                            Text(
-                                group.name,
-                                fontSize = 13.sp,
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(20.dp))
-                                    .background(
-                                        if (selectedGroupIndex == index)
-                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-                                        else Color.Transparent
-                                    )
-                                    .padding(horizontal = 12.dp, vertical = 6.dp)
-                            )
-                        }
-                    )
-                }
-            }
-        }
-
-        // 频道列表（使用 key 强制切换分组时重建 LazyColumn，避免动画导致 ArrayList.remove -1 崩溃）
+        // 频道列表
         val channels = currentGroup?.channels ?: emptyList()
-        if (channels.isEmpty() || !hasLoadedOnce) {
+        if (channels.isEmpty()) {
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(40.dp),
+                modifier = Modifier.fillMaxSize().padding(40.dp),
                 contentAlignment = Alignment.Center
             ) {
-                if (isLoading && !hasLoadedOnce) {
-                    CircularProgressIndicator()
-                } else {
-                    Text("暂无频道", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+                Text("暂无频道", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         } else {
+            // 使用 key 强制切换分组时重建 LazyColumn
             androidx.compose.runtime.key(currentGroup?.name ?: "") {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
@@ -332,71 +338,67 @@ private fun LiveChannelItem(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .background(
-                if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-                else Color.Transparent
-            )
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
+    Surface(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        shape = RoundedCornerShape(14.dp),
+        color = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
+        else Color.Transparent,
+        border = if (isSelected) androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
+        else null
     ) {
-        // Logo
-        if (channel.logo.isNotBlank()) {
-            AsyncImage(
-                model = channel.logo,
-                contentDescription = null,
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(8.dp)),
-                contentScale = ContentScale.Crop
-            )
-        } else {
-            Surface(
-                modifier = Modifier.size(40.dp),
-                shape = RoundedCornerShape(8.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        Icons.Default.Tv,
-                        null,
-                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
-                    )
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Logo
+            if (channel.logo.isNotBlank()) {
+                AsyncImage(
+                    model = channel.logo,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(10.dp)),
+                    contentScale = ContentScale.Fit
+                )
+            } else {
+                Surface(
+                    modifier = Modifier.size(48.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(Icons.Default.Tv, null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
+                    }
                 }
             }
-        }
 
-        Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(12.dp))
 
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                channel.name,
-                fontSize = 15.sp,
-                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                color = if (isSelected) MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.onSurface
-            )
-            if (channel.group.isNotBlank()) {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    channel.group,
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    channel.name,
+                    fontSize = 14.sp,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                    color = if (isSelected) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis
                 )
+                if (channel.group.isNotBlank()) {
+                    Text(channel.group, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
-        }
 
-        if (isSelected) {
-            Icon(
-                Icons.Default.PlayCircleFilled,
-                null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(24.dp)
-            )
+            if (isSelected) {
+                Surface(
+                    modifier = Modifier.size(28.dp),
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primary
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(Icons.Default.PlayArrow, "播放中", tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(16.dp))
+                    }
+                }
+            }
         }
     }
 }
