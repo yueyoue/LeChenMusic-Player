@@ -70,6 +70,34 @@ import com.lechenmusic.ui.responsive.rememberResponsiveConfig
 import com.lechenmusic.update.UpdateInfo
 
 class MainActivity : ComponentActivity() {
+
+    /**
+     * 进入沉浸式全屏（隐藏状态栏 + 导航栏）
+     * 先禁用 edge-to-edge，再隐藏系统栏
+     */
+    fun enterImmersiveFullscreen() {
+        val window = window
+        // 禁用 edge-to-edge，让系统栏可以被完全隐藏
+        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, true)
+        window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        val controller = androidx.core.view.WindowInsetsControllerCompat(window, window.decorView)
+        controller.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+        controller.systemBarsBehavior =
+            androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+    }
+
+    /**
+     * 退出沉浸式全屏（恢复系统栏 + edge-to-edge）
+     */
+    fun exitImmersiveFullscreen() {
+        val window = window
+        window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        val controller = androidx.core.view.WindowInsetsControllerCompat(window, window.decorView)
+        controller.show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+        // 恢复 edge-to-edge
+        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()

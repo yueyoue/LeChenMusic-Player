@@ -159,9 +159,8 @@ fun TabletVideoDetailScreen(
     // 退出时释放播放器 + 保存位置 + 保存播放记录
     DisposableEffect(Unit) {
         onDispose {
-            if (exoPlayer.currentPosition > 0) {
-                viewModel.setResumePosition(exoPlayer.currentPosition)
-            }
+            // 注意：不要在这里保存 resumePosition，因为导航到全屏播放器时也会触发 onDispose
+            // resumePosition 由全屏播放器的返回按钮显式保存
             // 退出时保存播放记录（参考手机UI）
             val detail = video
             if (exoPlayer.currentPosition > 1000) {

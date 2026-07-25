@@ -45,6 +45,8 @@ fun LiveScreen(
     var selectedChannel by remember { mutableStateOf<LiveChannel?>(null) }
     var selectedGroupIndex by remember { mutableIntStateOf(0) }
     var isPlaying by remember { mutableStateOf(false) }
+    // 标记是否已完成首次加载（避免初始渲染时 groups 空→有数据导致崩溃）
+    var hasLoadedOnce by remember { mutableStateOf(false) }
 
     // ExoPlayer
     val exoPlayer = remember {
@@ -86,6 +88,10 @@ fun LiveScreen(
     }
 
     val groups = liveChannels
+    // 标记首次加载完成
+    if (!hasLoadedOnce && groups.isNotEmpty()) {
+        hasLoadedOnce = true
+    }
     // 同步重置 selectedGroupIndex（必须在组合阶段，不能用 LaunchedEffect）
     if (groups.isNotEmpty() && selectedGroupIndex >= groups.size) {
         selectedGroupIndex = 0
@@ -263,39 +269,44 @@ fun LiveScreen(
             }
         }
 
-        // 频道列表
+        // 频道列表（使用 key 强制切换分组时重建 LazyColumn，避免动画导致 ArrayList.remove -1 崩溃）
         val channels = currentGroup?.channels ?: emptyList()
-        if (channels.isEmpty()) {
+        if (channels.isEmpty() || !hasLoadedOnce) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(40.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Text("暂无频道", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (isLoading && !hasLoadedOnce) {
+                    CircularProgressIndicator()
+                } else {
+                    Text("暂无频道", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
         } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 100.dp)
-            ) {
-                items(channels, key = { it.url }) { channel ->
-                    LiveChannelItem(
-                        channel = channel,
-                        isSelected = selectedChannel?.url == channel.url,
-                        onClick = {
-                            selectedChannel = channel
-                            try {
-                                if (channel.url.isNotBlank()) {
-                                    exoPlayer.setMediaItem(MediaItem.fromUri(channel.url))
-                                    exoPlayer.prepare()
-                                    exoPlayer.playWhenReady = true
+            androidx.compose.runtime.key(currentGroup?.name ?: "") {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = 100.dp)
+                ) {
+                    items(channels, key = { "${it.url}_${it.name}" }) { channel ->
+                        LiveChannelItem(
+                            channel = channel,
+                            isSelected = selectedChannel?.url == channel.url,
+                            onClick = {
+                                selectedChannel = channel
+                                try {
+                                    if (channel.url.isNotBlank()) {
+                                        exoPlayer.setMediaItem(MediaItem.fromUri(channel.url))
+                                        exoPlayer.prepare()
+                                        exoPlayer.playWhenReady = true
+                                    }
+                                } catch (e: Exception) {
+                                    android.util.Log.e("LiveScreen", "ExoPlayer error: ${e.message}")
                                 }
-                            } catch (e: Exception) {
-                                android.util.Log.e("LiveScreen", "ExoPlayer error: ${e.message}")
                             }
-                        }
-                    )
+                        )
                 }
             }
         }

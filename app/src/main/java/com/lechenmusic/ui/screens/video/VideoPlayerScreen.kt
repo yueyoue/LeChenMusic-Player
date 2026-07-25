@@ -262,29 +262,17 @@ fun VideoPlayerScreen(
         }
     }
 
-    // 全屏模式（使用 WindowInsetsControllerCompat 兼容 edge-to-edge）
+    // 全屏模式（调用 Activity 方法处理沉浸式全屏，兼容 edge-to-edge）
     LaunchedEffect(isFullscreen) {
         activity?.requestedOrientation = if (isFullscreen) {
             ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
         } else {
-            // 退出全屏时不强制竖屏，让设备传感器决定方向（平板横屏保持横屏）
             ActivityInfo.SCREEN_ORIENTATION_SENSOR
         }
-        val window = activity?.window ?: return@LaunchedEffect
         if (isFullscreen) {
-            // 进入全屏：先禁用 edge-to-edge，再隐藏系统栏
-            androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, true)
-            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-            val insetsController = androidx.core.view.WindowInsetsControllerCompat(window, window.decorView)
-            insetsController.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
-            insetsController.systemBarsBehavior =
-                androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            (activity as? com.lechenmusic.MainActivity)?.enterImmersiveFullscreen()
         } else {
-            // 退出全屏：恢复 edge-to-edge，显示系统栏
-            window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-            val insetsController = androidx.core.view.WindowInsetsControllerCompat(window, window.decorView)
-            insetsController.show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
-            androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
+            (activity as? com.lechenmusic.MainActivity)?.exitImmersiveFullscreen()
         }
     }
 
@@ -579,9 +567,18 @@ fun VideoPlayerScreen(
                             Icon(Icons.Default.Lock, "锁定", tint = Color.White)
                         }
 
-                        // 全屏切换
+                        // 全屏切换（当前为全屏时点击退出，返回详情页）
                         IconButton(onClick = {
-                            isFullscreen = !isFullscreen
+                            if (isFullscreen) {
+                                // 保存播放位置供详情页恢复
+                                if (exoPlayer.currentPosition > 0) {
+                                    videoViewModel?.setResumePosition(exoPlayer.currentPosition)
+                                }
+                                savePlayRecordNow()
+                                onBack()
+                            } else {
+                                isFullscreen = true
+                            }
                         }) {
                             Icon(
                                 if (isFullscreen) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,

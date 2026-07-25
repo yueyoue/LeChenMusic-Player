@@ -1085,7 +1085,7 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
 
                 val responseBody = withContext(Dispatchers.IO) {
                     client.newCall(request).execute().use { resp ->
-                        if (resp.isSuccessful) resp.body?.string() else null
+                        if (resp.isSuccessful) resp.body?.source() else null
                     }
                 }
 
@@ -1096,12 +1096,9 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                     return@launch
                 }
 
-                sb.appendLine("M3U内容长度: ${responseBody.length}")
-                sb.appendLine("M3U前200字: ${responseBody.take(200).replace("\n", " | ")}")
-
-                // 解析 M3U 内容
+                // 流式解析 M3U（避免 OOM）
                 val channels = try {
-                    parseM3U(sourceKey, responseBody)
+                    parseM3UFromSource(sourceKey, responseBody)
                 } catch (e: Exception) {
                     sb.appendLine("M3U解析异常: ${e.javaClass.simpleName}: ${e.message}")
                     emptyList()
@@ -1189,6 +1186,58 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
             i++
+        }
+        return channels
+    }
+
+    /**
+     * 流式解析 M3U（避免 OOM）- 从 Okio BufferedSource 逐行读取
+     */
+    private fun parseM3UFromSource(sourceKey: String, source: okio.BufferedSource): List<LiveChannel> {
+        val channels = mutableListOf<LiveChannel>()
+        var currentLine: String? = ""
+        var pendingExtinf: String? = null
+
+        while (!source.exhausted()) {
+            currentLine = source.readUtf8Line() ?: break
+            val line = currentLine.trim()
+            if (line.isEmpty()) continue
+
+            if (line.startsWith("#EXTM3U")) continue
+
+            if (line.startsWith("#EXTINF:")) {
+                pendingExtinf = line
+            } else if (!line.startsWith("#") && pendingExtinf != null) {
+                // 这是 URL 行
+                val extinf = pendingExtinf!!
+                pendingExtinf = null
+
+                val logoMatch = Regex("tvg-logo=\"([^\"]*)\"").find(extinf)
+                val logo = logoMatch?.groupValues?.get(1) ?: ""
+                val groupMatch = Regex("group-title=\"([^\"]*)\"").find(extinf)
+                val group = groupMatch?.groupValues?.get(1) ?: "未分组"
+                val tvgIdMatch = Regex("tvg-id=\"([^\"]*)\"").find(extinf)
+                val tvgId = tvgIdMatch?.groupValues?.get(1) ?: ""
+                val lastComma = extinf.lastIndexOf(',')
+                val title = if (lastComma != -1 && lastComma < extinf.length - 1) {
+                    extinf.substring(lastComma + 1).trim()
+                } else ""
+                val tvgNameMatch = Regex("tvg-name=\"([^\"]*)\"").find(extinf)
+                val tvgName = tvgNameMatch?.groupValues?.get(1) ?: ""
+                val name = title.ifBlank { tvgName }
+
+                if (name.isNotBlank() && line.isNotBlank()) {
+                    channels.add(LiveChannel(
+                        name = name,
+                        url = line,
+                        logo = logo,
+                        group = group,
+                        epg = tvgId
+                    ))
+                }
+            } else if (!line.startsWith("#")) {
+                pendingExtinf = null // 没有 EXTINF 的 URL 行，跳过
+            }
         }
         return channels
     }
