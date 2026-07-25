@@ -11,8 +11,8 @@ android {
         applicationId = "com.lechenmusic"
         minSdk = 26
         targetSdk = 34
-        versionCode = 49
-        versionName = "1.5.4"
+        versionCode = 50
+        versionName = "1.5.5"
         vectorDrawables.useSupportLibrary = true
     }
 
@@ -66,7 +66,7 @@ android {
 
 dependencies {
     // Compose BOM
-    val composeBom = platform("androidx.compose:compose-bom:2024.02.00")
+    val composeBom = platform("androidx.compose:compose-bom:2024.06.00")
     implementation(composeBom)
 
     // Compose
