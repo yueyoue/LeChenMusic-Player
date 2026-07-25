@@ -47,6 +47,7 @@ import com.lechenmusic.ui.screens.home.RadioScreen
 import com.lechenmusic.ui.screens.login.LoginScreen
 import com.lechenmusic.ui.screens.player.PlayerScreen
 import com.lechenmusic.ui.screens.player.TabletPlayerScreen
+import com.lechenmusic.ui.screens.player.music.MusicPlayerContent
 import com.lechenmusic.ui.screens.recent.RecentPlayedScreen
 import com.lechenmusic.ui.screens.search.SearchScreen
 import com.lechenmusic.ui.screens.settings.SettingsScreen
@@ -703,7 +704,8 @@ fun NavGraphBuilder.sharedNavRoutes(
             var showAddToPlaylistDialog by remember { mutableStateOf(false) }
             var showQueueDialog by remember { mutableStateOf(false) }
 
-            TabletPlayerScreen(
+            MusicPlayerContent(
+                config = responsiveCfg,
                 playerManager = viewModel.playerManager,
                 viewModel = viewModel,
                 serverUrl = srvUrl,
@@ -711,7 +713,6 @@ fun NavGraphBuilder.sharedNavRoutes(
                 password = pwd,
                 onBack = onBack,
                 onNavigateToArtist = { navController.navigate(Screen.ArtistDetail.createRoute(it)) },
-                onNavigateToAlbum = { navController.navigate(Screen.AlbumDetail.createRoute(it)) },
                 onShowAddToPlaylist = { showAddToPlaylistDialog = true },
                 onShowQueue = { showQueueDialog = true }
             )
@@ -779,17 +780,17 @@ fun NavGraphBuilder.sharedNavRoutes(
                 )
             }
         } else {
-            PlayerScreen(
+            MusicPlayerContent(
+                config = responsiveCfg,
                 playerManager = viewModel.playerManager,
                 viewModel = viewModel,
                 serverUrl = srvUrl,
                 username = usr,
                 password = pwd,
                 onBack = onBack,
-                onShowPlaylist = { },
-                onShowMore = { },
                 onNavigateToArtist = { navController.navigate(Screen.ArtistDetail.createRoute(it)) },
-                onNavigateToAlbum = { navController.navigate(Screen.AlbumDetail.createRoute(it)) }
+                onShowAddToPlaylist = { },
+                onShowQueue = { }
             )
         }
     }
