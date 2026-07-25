@@ -44,10 +44,18 @@ object ErrorReporter {
                     appendLine("  Current screen: ${_currentScreen}")
                     appendLine("  Extra context: ${_extraContext}")
                 }
-                // 写入本地文件
+                // 写入本地文件（多路径尝试，兼容不同 Android 版本）
                 try {
-                    val logFile = java.io.File(context.getExternalFilesDir(null), "crash_log.txt")
-                    logFile.appendText(crashInfo + "\n")
+                    val crashText = crashInfo + "\n"
+                    // 尝试外部存储
+                    val extDir = context.getExternalFilesDir(null)
+                    if (extDir != null) {
+                        java.io.File(extDir, "crash_log.txt").appendText(crashText)
+                    }
+                    // 也写入内部存储（更可靠）
+                    java.io.File(context.filesDir, "crash_log.txt").appendText(crashText)
+                    // 也写入标准输出（logcat 可见）
+                    android.util.Log.e("CRASH", crashInfo)
                 } catch (_: Exception) {}
                 // 发送到服务器（包含屏幕名，方便服务端日志定位）
                 sendErrorSync(
