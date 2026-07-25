@@ -15,15 +15,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextAlign
 import com.lechenmusic.data.model.Album
 import com.lechenmusic.ui.MainViewModel
 import com.lechenmusic.ui.components.CoverImage
+import kotlinx.coroutines.launch
 import com.lechenmusic.ui.responsive.ResponsiveConfig
 
 @Composable
 fun AlbumsScreen(
     viewModel: MainViewModel,
     responsiveConfig: ResponsiveConfig? = null,
+    onBack: () -> Unit = {},
     onAlbumClick: (String) -> Unit
 ) {
     val config = responsiveConfig
@@ -88,12 +94,16 @@ fun AlbumsScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        Text(
-            "专辑",
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(Icons.Default.ArrowBack, "返回")
+            }
+            Spacer(modifier = Modifier.width(4.dp))
+            Text("专辑", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        }
 
         // Sort tabs
         Row(
@@ -133,13 +143,37 @@ fun AlbumsScreen(
                 CircularProgressIndicator()
             }
         } else {
+            // 按首字母分组
+            val sortedAlbums = remember(albums) { albums.sortedBy { it.name.lowercase() } }
+            val grouped = remember(sortedAlbums) {
+                sortedAlbums.groupBy { album ->
+                    val first = album.name.firstOrNull()?.uppercase() ?: "#"
+                    if (first[0] in 'A'..'Z') first else "#"
+                }.toSortedMap()
+            }
+            val letters = remember(grouped) { grouped.keys.toList() }
+            val gridState = rememberLazyGridState()
+            val coroutineScope = rememberCoroutineScope()
+            // letter -> index in sortedAlbums
+            val letterIndexMap = remember(sortedAlbums) {
+                val map = mutableMapOf<String, Int>()
+                sortedAlbums.forEachIndexed { index, album ->
+                    val letter = album.name.firstOrNull()?.uppercase()?.let { if (it[0] in 'A'..'Z') it else "#" } ?: "#"
+                    if (letter !in map) map[letter] = index
+                }
+                map
+            }
+
+            Box(modifier = Modifier.fillMaxSize()) {
             LazyVerticalGrid(
+                state = gridState,
                 columns = GridCells.Fixed(2),
                 contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                items(albums) { album ->
+                items(sortedAlbums.size) { index ->
+                    val album = sortedAlbums[index]
                     Column(modifier = Modifier.clickable { onAlbumClick(album.id) }) {
                         CoverImage(
                             coverArtId = album.coverArt,
@@ -166,6 +200,35 @@ fun AlbumsScreen(
                     }
                 }
             }
+
+            // A-Z 索引栏
+            if (letters.isNotEmpty()) {
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .padding(end = 4.dp)
+                        .width(24.dp),
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    letters.forEach { letter ->
+                        Text(
+                            text = letter,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.primary,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    val targetIndex = letterIndexMap[letter] ?: return@clickable
+                                    coroutineScope.launch { gridState.animateScrollToItem(targetIndex) }
+                                }
+                                .padding(vertical = 1.dp)
+                        )
+                    }
+                }
+            }
+            } // Box
         }
     }
 }

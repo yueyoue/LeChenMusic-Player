@@ -33,6 +33,7 @@ import net.sourceforge.pinyin4j.PinyinHelper
 fun ArtistsScreen(
     viewModel: MainViewModel,
     responsiveConfig: ResponsiveConfig? = null,
+    onBack: () -> Unit = {},
     onArtistClick: (String) -> Unit
 ) {
     val config = responsiveConfig
@@ -92,12 +93,16 @@ fun ArtistsScreen(
             contentPadding = PaddingValues(bottom = 160.dp)
         ) {
             item {
-                Text(
-                    "歌手",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Default.ArrowBack, "返回")
+                    }
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("歌手", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                }
             }
 
             item {

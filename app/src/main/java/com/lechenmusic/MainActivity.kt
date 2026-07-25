@@ -562,6 +562,7 @@ fun NavGraphBuilder.sharedNavRoutes(
             ArtistsScreen(
                 viewModel = viewModel,
                 responsiveConfig = responsiveCfg,
+                onBack = onBack,
                 onArtistClick = { navController.navigate(Screen.ArtistDetail.createRoute(it)) }
             )
         }
@@ -580,6 +581,7 @@ fun NavGraphBuilder.sharedNavRoutes(
             AlbumsScreen(
                 viewModel = viewModel,
                 responsiveConfig = responsiveCfg,
+                onBack = onBack,
                 onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) }
             )
         }

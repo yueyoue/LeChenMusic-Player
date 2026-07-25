@@ -410,7 +410,6 @@ private fun QuickActions(
         QuickItem(Icons.Default.Person, "歌手", Color(0xFFA855F7), iconSize, labelSize, onArtists)
         QuickItem(Icons.Default.Album, "专辑", Color(0xFF4A9EFF), iconSize, labelSize, onAlbums)
         QuickItem(Icons.Default.LibraryMusic, "歌单", Color(0xFF00E68A), iconSize, labelSize, onPlaylists)
-        QuickItem(Icons.Default.Radio, "电台", Color(0xFFFF6B35), iconSize, labelSize, onRadio)
         QuickItem(Icons.Default.Download, "缓存", Color(0xFFFFD93D), iconSize, labelSize, onCached)
     }
 }
