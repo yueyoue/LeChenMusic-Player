@@ -4,10 +4,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
@@ -800,7 +802,7 @@ fun HomeScreen(
                                     modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
                                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                                 ) {
-                                    videoPlayRecords.take(10), key = { "${it.source}_${it.videoIdRaw}" }.forEach { record ->
+                                    videoPlayRecords.take(10).forEach { record ->
                                         com.lechenmusic.ui.screens.video.VideoHorizontalCard(
                                             video = com.lechenmusic.data.model.VideoInfo(
                                                 id = record.videoIdRaw,
