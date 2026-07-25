@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
@@ -191,6 +192,7 @@ fun MusicPlayerContent(
 
             // ── 底部控制栏（共用） ──
             PlayerControls(
+                isTablet = isTablet,
                 progress = progress,
                 currentPosition = currentPosition,
                 duration = duration,
@@ -294,6 +296,7 @@ private fun LyricsPanel(
                     fontSize = if (isActive) 20.sp else 16.sp,
                     fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
                     color = if (isActive) Color.White else Color.White.copy(alpha = 0.35f),
+                    textAlign = TextAlign.Center,
                     modifier = Modifier.padding(vertical = if (isActive) 6.dp else 4.dp).fillMaxWidth()
                 )
             }
@@ -316,6 +319,7 @@ private fun LyricsPanel(
 
 @Composable
 private fun PlayerControls(
+    isTablet: Boolean = false,
     progress: Float,
     currentPosition: Long,
     duration: Long,
@@ -351,80 +355,142 @@ private fun PlayerControls(
             }
             Spacer(modifier = Modifier.height(8.dp))
 
-            // ── 控制按钮：以播放键为中心均匀分布 ──
-            // 第1行：主控制（均匀分布）
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // 随机
-                IconButton(onClick = onToggleShuffle, modifier = Modifier.size(44.dp)) {
-                    Icon(Icons.Default.Shuffle, "随机", tint = if (shuffleMode) Color.White else Color.White.copy(alpha = 0.4f), modifier = Modifier.size(20.dp))
-                }
-                // 上一首
-                IconButton(onClick = onPrevious, modifier = Modifier.size(48.dp)) {
-                    Icon(Icons.Default.SkipPrevious, "上一首", tint = Color.White, modifier = Modifier.size(32.dp))
-                }
-                // 播放/暂停（居中，最大）
-                FilledIconButton(
-                    onClick = onPlayPause,
-                    modifier = Modifier.size(56.dp),
-                    shape = CircleShape,
-                    colors = IconButtonDefaults.filledIconButtonColors(containerColor = Color.White, contentColor = Color.Black)
+            if (isTablet) {
+                // ── 平板：一排显示 ──
+                // [定时 收藏] [随机 上一首 ▶ 下一首 循环] [添加到 播放队列]
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, if (isPlaying) "暂停" else "播放", modifier = Modifier.size(28.dp))
-                }
-                // 下一首
-                IconButton(onClick = onNext, modifier = Modifier.size(48.dp)) {
-                    Icon(Icons.Default.SkipNext, "下一首", tint = Color.White, modifier = Modifier.size(32.dp))
-                }
-                // 循环
-                IconButton(onClick = onToggleRepeat, modifier = Modifier.size(44.dp)) {
-                    Icon(
-                        when (repeatMode) { RepeatMode.ONE -> Icons.Default.RepeatOne; else -> Icons.Default.Repeat },
-                        "循环",
-                        tint = if (repeatMode != RepeatMode.OFF) Color.White else Color.White.copy(alpha = 0.4f),
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            // 第2行：辅助控制（均匀分布）
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // 收藏
-                IconButton(onClick = onToggleStar, modifier = Modifier.size(40.dp)) {
-                    Icon(if (isStarred) Icons.Default.Favorite else Icons.Default.FavoriteBorder, "收藏",
-                        tint = if (isStarred) Color(0xFFFF4D6A) else Color.White.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
-                }
-                // 定时
-                var showTimer by remember { mutableStateOf(false) }
-                IconButton(onClick = { showTimer = true }, modifier = Modifier.size(40.dp)) {
-                    Icon(Icons.Default.Timer, "定时", tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
-                }
-                DropdownMenu(expanded = showTimer, onDismissRequest = { showTimer = false }) {
-                    listOf(15, 30, 45, 60, 90).forEach { min ->
-                        DropdownMenuItem(text = { Text("${min}分钟后") }, onClick = { showTimer = false })
+                    // 左侧：定时 + 收藏
+                    var showTimer by remember { mutableStateOf(false) }
+                    IconButton(onClick = { showTimer = true }, modifier = Modifier.size(40.dp)) {
+                        Icon(Icons.Default.Timer, "定时", tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
+                    }
+                    DropdownMenu(expanded = showTimer, onDismissRequest = { showTimer = false }) {
+                        listOf(15, 30, 45, 60, 90).forEach { min ->
+                            DropdownMenuItem(text = { Text("${min}分钟后") }, onClick = { showTimer = false })
+                        }
+                    }
+                    IconButton(onClick = onToggleStar, modifier = Modifier.size(40.dp)) {
+                        Icon(if (isStarred) Icons.Default.Favorite else Icons.Default.FavoriteBorder, "收藏",
+                            tint = if (isStarred) Color(0xFFFF4D6A) else Color.White.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
+                    }
+
+                    Spacer(modifier = Modifier.width(24.dp))
+
+                    // 中间：主控制
+                    IconButton(onClick = onToggleShuffle, modifier = Modifier.size(44.dp)) {
+                        Icon(Icons.Default.Shuffle, "随机", tint = if (shuffleMode) Color.White else Color.White.copy(alpha = 0.4f), modifier = Modifier.size(20.dp))
+                    }
+                    IconButton(onClick = onPrevious, modifier = Modifier.size(48.dp)) {
+                        Icon(Icons.Default.SkipPrevious, "上一首", tint = Color.White, modifier = Modifier.size(32.dp))
+                    }
+                    FilledIconButton(
+                        onClick = onPlayPause,
+                        modifier = Modifier.size(56.dp),
+                        shape = CircleShape,
+                        colors = IconButtonDefaults.filledIconButtonColors(containerColor = Color.White, contentColor = Color.Black)
+                    ) {
+                        Icon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, "播放", modifier = Modifier.size(28.dp))
+                    }
+                    IconButton(onClick = onNext, modifier = Modifier.size(48.dp)) {
+                        Icon(Icons.Default.SkipNext, "下一首", tint = Color.White, modifier = Modifier.size(32.dp))
+                    }
+                    IconButton(onClick = onToggleRepeat, modifier = Modifier.size(44.dp)) {
+                        Icon(
+                            when (repeatMode) { RepeatMode.ONE -> Icons.Default.RepeatOne; else -> Icons.Default.Repeat },
+                            "循环",
+                            tint = if (repeatMode != RepeatMode.OFF) Color.White else Color.White.copy(alpha = 0.4f),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(24.dp))
+
+                    // 右侧：添加到 + 播放队列
+                    var showAddMenu by remember { mutableStateOf(false) }
+                    Box {
+                        IconButton(onClick = { showAddMenu = true }, modifier = Modifier.size(40.dp)) {
+                            Icon(Icons.Default.PlaylistAdd, "添加到", tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
+                        }
+                        DropdownMenu(expanded = showAddMenu, onDismissRequest = { showAddMenu = false }) {
+                            DropdownMenuItem(text = { Text("添加到歌单") }, onClick = { showAddMenu = false; onShowAddToPlaylist() }, leadingIcon = { Icon(Icons.Default.QueueMusic, null) })
+                            DropdownMenuItem(text = { Text("添加到播放队列") }, onClick = { showAddMenu = false; onAddToQueue() }, leadingIcon = { Icon(Icons.Default.PlaylistPlay, null) })
+                        }
+                    }
+                    IconButton(onClick = onShowQueue, modifier = Modifier.size(40.dp)) {
+                        Icon(Icons.Default.QueueMusic, "播放队列", tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
                     }
                 }
-                // 添加到
-                var showAddMenu by remember { mutableStateOf(false) }
-                Box {
-                    IconButton(onClick = { showAddMenu = true }, modifier = Modifier.size(40.dp)) {
-                        Icon(Icons.Default.PlaylistAdd, "添加到", tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
+            } else {
+                // ── 手机：两排显示 ──
+                // 第1行：主控制
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = onToggleShuffle, modifier = Modifier.size(44.dp)) {
+                        Icon(Icons.Default.Shuffle, "随机", tint = if (shuffleMode) Color.White else Color.White.copy(alpha = 0.4f), modifier = Modifier.size(20.dp))
                     }
-                    DropdownMenu(expanded = showAddMenu, onDismissRequest = { showAddMenu = false }) {
-                        DropdownMenuItem(text = { Text("添加到歌单") }, onClick = { showAddMenu = false; onShowAddToPlaylist() }, leadingIcon = { Icon(Icons.Default.QueueMusic, null) })
-                        DropdownMenuItem(text = { Text("添加到播放队列") }, onClick = { showAddMenu = false; onAddToQueue() }, leadingIcon = { Icon(Icons.Default.PlaylistPlay, null) })
+                    IconButton(onClick = onPrevious, modifier = Modifier.size(48.dp)) {
+                        Icon(Icons.Default.SkipPrevious, "上一首", tint = Color.White, modifier = Modifier.size(32.dp))
+                    }
+                    FilledIconButton(
+                        onClick = onPlayPause,
+                        modifier = Modifier.size(56.dp),
+                        shape = CircleShape,
+                        colors = IconButtonDefaults.filledIconButtonColors(containerColor = Color.White, contentColor = Color.Black)
+                    ) {
+                        Icon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, "播放", modifier = Modifier.size(28.dp))
+                    }
+                    IconButton(onClick = onNext, modifier = Modifier.size(48.dp)) {
+                        Icon(Icons.Default.SkipNext, "下一首", tint = Color.White, modifier = Modifier.size(32.dp))
+                    }
+                    IconButton(onClick = onToggleRepeat, modifier = Modifier.size(44.dp)) {
+                        Icon(
+                            when (repeatMode) { RepeatMode.ONE -> Icons.Default.RepeatOne; else -> Icons.Default.Repeat },
+                            "循环",
+                            tint = if (repeatMode != RepeatMode.OFF) Color.White else Color.White.copy(alpha = 0.4f),
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
                 }
-                // 播放队列
-                IconButton(onClick = onShowQueue, modifier = Modifier.size(40.dp)) {
-                    Icon(Icons.Default.QueueMusic, "播放队列", tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
+                Spacer(modifier = Modifier.height(8.dp))
+                // 第2行：辅助控制
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = onToggleStar, modifier = Modifier.size(40.dp)) {
+                        Icon(if (isStarred) Icons.Default.Favorite else Icons.Default.FavoriteBorder, "收藏",
+                            tint = if (isStarred) Color(0xFFFF4D6A) else Color.White.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
+                    }
+                    var showTimer by remember { mutableStateOf(false) }
+                    IconButton(onClick = { showTimer = true }, modifier = Modifier.size(40.dp)) {
+                        Icon(Icons.Default.Timer, "定时", tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
+                    }
+                    DropdownMenu(expanded = showTimer, onDismissRequest = { showTimer = false }) {
+                        listOf(15, 30, 45, 60, 90).forEach { min ->
+                            DropdownMenuItem(text = { Text("${min}分钟后") }, onClick = { showTimer = false })
+                        }
+                    }
+                    var showAddMenu by remember { mutableStateOf(false) }
+                    Box {
+                        IconButton(onClick = { showAddMenu = true }, modifier = Modifier.size(40.dp)) {
+                            Icon(Icons.Default.PlaylistAdd, "添加到", tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
+                        }
+                        DropdownMenu(expanded = showAddMenu, onDismissRequest = { showAddMenu = false }) {
+                            DropdownMenuItem(text = { Text("添加到歌单") }, onClick = { showAddMenu = false; onShowAddToPlaylist() }, leadingIcon = { Icon(Icons.Default.QueueMusic, null) })
+                            DropdownMenuItem(text = { Text("添加到播放队列") }, onClick = { showAddMenu = false; onAddToQueue() }, leadingIcon = { Icon(Icons.Default.PlaylistPlay, null) })
+                        }
+                    }
+                    IconButton(onClick = onShowQueue, modifier = Modifier.size(40.dp)) {
+                        Icon(Icons.Default.QueueMusic, "播放队列", tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
+                    }
                 }
             }
         }
