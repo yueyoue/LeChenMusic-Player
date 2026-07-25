@@ -259,33 +259,29 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                 val doubanApi = DoubanApiClient.getApi()
 
                 // 参考 Selene-Source: 用 recent_hot 接口，每个请求独立 try-catch
-                // 所有请求并行执行，避免一个慢请求拖慢整体
-                val (moviesResp, tvResp, showResp) = kotlinx.coroutines.coroutineScope {
-                    val moviesDeferred = kotlinx.coroutines.async(Dispatchers.IO) {
-                        try {
-                            doubanApi.getRecentHot("movie", limit = 15, category = "\u70ED\u95E8", type = "\u5168\u90E8")
-                        } catch (e: Exception) {
-                            logDebug("loadHomeData", "\u70ED\u95E8\u7535\u5F71\u52A0\u8F7D\u5931\u8D25: ${e.message}")
-                            null
-                        }
+                val moviesResp = try {
+                    withContext(Dispatchers.IO) {
+                        doubanApi.getRecentHot("movie", limit = 15, category = "\u70ED\u95E8", type = "\u5168\u90E8")
                     }
-                    val tvDeferred = kotlinx.coroutines.async(Dispatchers.IO) {
-                        try {
-                            doubanApi.getRecentHot("tv", limit = 15, category = "\u6700\u8FD1\u70ED\u95E8", type = "tv")
-                        } catch (e: Exception) {
-                            logDebug("loadHomeData", "\u70ED\u95E8\u5267\u96C6\u52A0\u8F7D\u5931\u8D25: ${e.message}")
-                            null
-                        }
+                } catch (e: Exception) {
+                    logDebug("loadHomeData", "\u70ED\u95E8\u7535\u5F71\u52A0\u8F7D\u5931\u8D25: ${e.message}")
+                    null
+                }
+                val tvResp = try {
+                    withContext(Dispatchers.IO) {
+                        doubanApi.getRecentHot("tv", limit = 15, category = "\u6700\u8FD1\u70ED\u95E8", type = "tv")
                     }
-                    val showDeferred = kotlinx.coroutines.async(Dispatchers.IO) {
-                        try {
-                            doubanApi.getRecentHot("tv", limit = 15, category = "show", type = "show")
-                        } catch (e: Exception) {
-                            logDebug("loadHomeData", "\u70ED\u95E8\u7EFC\u827A\u52A0\u8F7D\u5931\u8D25: ${e.message}")
-                            null
-                        }
+                } catch (e: Exception) {
+                    logDebug("loadHomeData", "\u70ED\u95E8\u5267\u96C6\u52A0\u8F7D\u5931\u8D25: ${e.message}")
+                    null
+                }
+                val showResp = try {
+                    withContext(Dispatchers.IO) {
+                        doubanApi.getRecentHot("tv", limit = 15, category = "show", type = "show")
                     }
-                    Triple(moviesDeferred.await(), tvDeferred.await(), showDeferred.await())
+                } catch (e: Exception) {
+                    logDebug("loadHomeData", "\u70ED\u95E8\u7EFC\u827A\u52A0\u8F7D\u5931\u8D25: ${e.message}")
+                    null
                 }
 
                 _homeData.value = HomeRecommendData(
