@@ -20,11 +20,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.style.TextOverflow
 import com.lechenmusic.ui.MainViewModel
+import com.lechenmusic.ui.responsive.ResponsiveConfig
 
 @Composable
 fun SettingsScreen(
     viewModel: MainViewModel,
     videoViewModel: com.lechenmusic.ui.VideoViewModel? = null,
+    responsiveConfig: ResponsiveConfig? = null,
     onBack: () -> Unit,
     onLogout: () -> Unit
 ) {

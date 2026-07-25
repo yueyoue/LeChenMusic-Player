@@ -14,10 +14,12 @@ import androidx.compose.ui.unit.sp
 import com.lechenmusic.data.model.Song
 import com.lechenmusic.ui.MainViewModel
 import com.lechenmusic.ui.components.SongItemWithMenu
+import com.lechenmusic.ui.responsive.ResponsiveConfig
 
 @Composable
 fun RecentPlayedScreen(
     viewModel: MainViewModel,
+    responsiveConfig: ResponsiveConfig? = null,
     onBack: () -> Unit,
     onSongClick: (Song, List<Song>) -> Unit,
     onArtistClick: (String) -> Unit = {},
@@ -41,7 +43,7 @@ fun RecentPlayedScreen(
                 IconButton(onClick = onBack) {
                     Icon(Icons.Default.ArrowBack, contentDescription = "返回")
                 }
-                Text("最近播放", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                Text("最近播放", fontSize = 18.sp, fontWeight = FontWeight.Bold)
             }
         }
 

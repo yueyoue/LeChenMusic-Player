@@ -154,16 +154,17 @@ fun MusicPlayerContent(
                                 modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                // 顶部小封面 + 歌曲名
+                                // 顶部小封面 + 歌曲名（居中）
                                 Row(
                                     modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                                    horizontalArrangement = Arrangement.Center,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     CoverImageDisplay(coverUrl = coverUrl, size = 48)
                                     Spacer(modifier = Modifier.width(12.dp))
-                                    Column {
-                                        Text(song.title, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                        Text(song.artist, fontSize = 12.sp, color = Color.White.copy(alpha = 0.6f))
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Text(song.title, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
+                                        Text(song.artist, fontSize = 12.sp, color = Color.White.copy(alpha = 0.6f), textAlign = TextAlign.Center)
                                     }
                                 }
                                 // 歌词

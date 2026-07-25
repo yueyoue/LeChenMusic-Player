@@ -527,6 +527,8 @@ fun NavGraphBuilder.sharedNavRoutes(
         } else {
             FavoritesScreen(
                 viewModel = viewModel,
+                responsiveConfig = responsiveCfg,
+                onBack = onBack,
                 onSongClick = { s, p -> viewModel.playSong(s, p) },
                 onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) },
                 onAudiobookClick = { navController.navigate(Screen.AudiobookDetail.createRoute(it)) },
@@ -640,8 +642,10 @@ fun NavGraphBuilder.sharedNavRoutes(
     }
 
     composable(Screen.RecentPlayed.route) {
+        val responsiveCfg = com.lechenmusic.ui.responsive.rememberResponsiveConfig(windowSizeClass)
         RecentPlayedScreen(
             viewModel = viewModel,
+            responsiveConfig = responsiveCfg,
             onBack = onBack,
             onSongClick = { s, p -> viewModel.playSong(s, p) },
             onArtistClick = { navController.navigate(Screen.ArtistDetail.createRoute(it)) },
@@ -668,6 +672,7 @@ fun NavGraphBuilder.sharedNavRoutes(
             SettingsScreen(
                 viewModel = viewModel,
                 videoViewModel = videoViewModel,
+                responsiveConfig = responsiveCfg,
                 onBack = onBack,
                 onLogout = {
                     viewModel.logout()

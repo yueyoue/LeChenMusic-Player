@@ -24,11 +24,14 @@ import com.lechenmusic.data.model.Playlist
 import com.lechenmusic.data.model.Song
 import com.lechenmusic.ui.MainViewModel
 import com.lechenmusic.ui.components.SongItem
+import com.lechenmusic.ui.responsive.ResponsiveConfig
 import com.lechenmusic.ui.screens.audiobook.getAudiobookCoverUrl
 
 @Composable
 fun FavoritesScreen(
     viewModel: MainViewModel,
+    responsiveConfig: ResponsiveConfig? = null,
+    onBack: () -> Unit = {},
     onSongClick: (Song, List<Song>) -> Unit,
     onAlbumClick: (String) -> Unit = {},
     onAudiobookClick: (String) -> Unit = {},
@@ -46,12 +49,16 @@ fun FavoritesScreen(
     val tabs = listOf("音乐", "专辑", "歌单", "有声书")
 
     Column(modifier = Modifier.fillMaxSize()) {
-        Text(
-            "我的收藏",
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(Icons.Default.ArrowBack, "返回")
+            }
+            Spacer(modifier = Modifier.width(4.dp))
+            Text("我的收藏", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        }
 
         // Tabs
         TabRow(
