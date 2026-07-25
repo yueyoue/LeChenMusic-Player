@@ -901,6 +901,7 @@ fun NavGraphBuilder.sharedNavRoutes(
             AudiobookScreen(
                 viewModel = viewModel,
                 genreFilter = genre,
+                responsiveConfig = responsiveCfg,
                 onBack = onBack,
                 onAudiobookClick = { navController.navigate(Screen.AudiobookDetail.createRoute(it)) }
             )
@@ -925,6 +926,7 @@ fun NavGraphBuilder.sharedNavRoutes(
             AudiobookDetailScreen(
                 viewModel = viewModel,
                 audiobookId = audiobookId,
+                responsiveConfig = responsiveCfg,
                 onBack = onBack,
                 onPlayChapter = { book, chapter, chapters ->
                     viewModel.playAudiobookChapter(book, chapter, chapters)
@@ -1002,6 +1004,7 @@ fun NavGraphBuilder.sharedNavRoutes(
                 )
             } else {
                 AudiobookPlayerScreen(
+                    responsiveConfig = responsiveCfg,
                     book = book,
                     chapters = chapters,
                     currentChapterIndex = chapterIndex,
