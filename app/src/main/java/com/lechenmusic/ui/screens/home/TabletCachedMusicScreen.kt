@@ -51,7 +51,7 @@ fun TabletCachedMusicScreen(
                 Icon(Icons.Default.ArrowBack, "返回")
             }
             Spacer(modifier = Modifier.width(8.dp))
-            Text("缓存音乐", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+            Text("缓存音乐", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
 
             Spacer(modifier = Modifier.weight(1f))
 
@@ -112,9 +112,9 @@ fun TabletCachedMusicScreen(
                         tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                     )
                     Spacer(modifier = Modifier.height(12.dp))
-                    Text("暂无缓存音乐", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
+                    Text("暂无缓存音乐", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("播放过的歌曲会自动缓存到本地", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f), fontSize = 12.sp)
+                    Text("播放过的歌曲会自动缓存到本地", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f), fontSize = 11.sp)
                 }
             }
         } else {

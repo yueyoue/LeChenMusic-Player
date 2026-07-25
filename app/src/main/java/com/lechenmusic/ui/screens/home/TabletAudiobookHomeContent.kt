@@ -95,7 +95,7 @@ fun TabletAudiobookHomeContent(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("继续收听", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                Text("继续收听", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                 Text(
                     "最近播放 ›",
                     fontSize = 12.sp,
@@ -196,7 +196,7 @@ fun TabletAudiobookHomeContent(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("演播者", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                Text("演播者", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                 Text(
                     "全部 ›",
                     fontSize = 12.sp,
@@ -228,7 +228,7 @@ fun TabletAudiobookHomeContent(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("有声小说", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                Text("有声小说", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                 Text(
                     "更多 ›",
                     fontSize = 12.sp,
@@ -254,7 +254,7 @@ fun TabletAudiobookHomeContent(
                 }
             } else {
                 Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
-                    Text("暂无有声小说", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("暂无有声小说", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             Spacer(modifier = Modifier.height(24.dp))
@@ -267,7 +267,7 @@ fun TabletAudiobookHomeContent(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("相声", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                Text("相声", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                 Text(
                     "更多 ›",
                     fontSize = 12.sp,
@@ -293,7 +293,7 @@ fun TabletAudiobookHomeContent(
                 }
             } else {
                 Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
-                    Text("暂无相声", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("暂无相声", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             Spacer(modifier = Modifier.height(24.dp))
@@ -306,7 +306,7 @@ fun TabletAudiobookHomeContent(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("评书", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                Text("评书", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                 Text(
                     "更多 ›",
                     fontSize = 12.sp,
@@ -332,7 +332,7 @@ fun TabletAudiobookHomeContent(
                 }
             } else {
                 Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
-                    Text("暂无评书", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("暂无评书", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             Spacer(modifier = Modifier.height(24.dp))
@@ -345,7 +345,7 @@ fun TabletAudiobookHomeContent(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("儿童", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                Text("儿童", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                 Text(
                     "更多 ›",
                     fontSize = 12.sp,
@@ -371,7 +371,7 @@ fun TabletAudiobookHomeContent(
                 }
             } else {
                 Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
-                    Text("暂无儿童读物", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("暂无儿童读物", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             Spacer(modifier = Modifier.height(24.dp))
@@ -379,7 +379,7 @@ fun TabletAudiobookHomeContent(
 
         // ===== 热门榜单 =====
         item {
-            Text("热门榜单", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            Text("热门榜单", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
             Spacer(modifier = Modifier.height(12.dp))
             val popular = audiobooks.sortedByDescending { it.chapterCount }.take(5)
             popular.forEachIndexed { index, book ->
@@ -403,7 +403,7 @@ fun TabletAudiobookHomeContent(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("我的收藏", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    Text("我的收藏", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                     Text(
                         "全部 ›",
                         fontSize = 14.sp,
@@ -477,12 +477,12 @@ private fun ContinueListeningListRow(
             Spacer(modifier = Modifier.width(14.dp))
             // 信息
             Column(modifier = Modifier.weight(1f)) {
-                Text(book.title, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(book.title, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Spacer(modifier = Modifier.height(2.dp))
                 if (progress != null) {
                     Text(
                         "第 ${progress.chapterNumber} / ${book.chapterCount} 章",
-                        fontSize = 12.sp,
+                        fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -568,7 +568,7 @@ private fun ContinueListeningLargeCard(
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
                     book.title,
-                    fontSize = 26.sp,
+                    fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White,
                     maxLines = 2,
@@ -579,7 +579,7 @@ private fun ContinueListeningLargeCard(
                     val remainingChapter = book.chapterCount - progress.chapterNumber
                     Text(
                         "剩余约 ${remainingChapter} 章",
-                        fontSize = 14.sp,
+                        fontSize = 12.sp,
                         color = Color.White.copy(alpha = 0.7f)
                     )
                 }
@@ -595,7 +595,7 @@ private fun ContinueListeningLargeCard(
                 ) {
                     Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(20.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("继续", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    Text("继续", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
                 }
             }
         }
@@ -656,14 +656,14 @@ private fun ContinueListeningGlassCard(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         book.title,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
                         book.genre.ifEmpty { book.narrator.ifEmpty { book.author } },
-                        fontSize = 13.sp,
+                        fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1
                     )
@@ -685,7 +685,7 @@ private fun ContinueListeningGlassCard(
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         "已听 ${(progressFraction * 100).toInt()}%",
-                        fontSize = 12.sp,
+                        fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -733,12 +733,12 @@ private fun CategoryGlassCard(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text(emoji, fontSize = 24.sp)
+            Text(emoji, fontSize = 20.sp)
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 label,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold
             )
         }
     }
@@ -766,7 +766,7 @@ private fun NarratorAvatarCard(
             Box(contentAlignment = Alignment.Center) {
                 Text(
                     name.take(1),
-                    fontSize = 24.sp,
+                    fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
@@ -776,7 +776,7 @@ private fun NarratorAvatarCard(
         // 名字
         Text(
             name,
-            fontSize = 13.sp,
+            fontSize = 12.sp,
             fontWeight = FontWeight.Medium,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
@@ -840,7 +840,7 @@ private fun AudiobookCompactCard(
         )
         Text(
             if (book.chapterCount > 0) "更新至 ${book.chapterCount} 集" else "完结",
-            fontSize = 12.sp,
+            fontSize = 11.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1
         )
@@ -882,8 +882,8 @@ private fun PopularBookRow(
                 Box(contentAlignment = Alignment.Center) {
                     Text(
                         "%02d".format(rank),
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Black,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
                         color = if (rank <= 3) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -921,14 +921,14 @@ private fun PopularBookRow(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     book.title,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     "${book.narrator.ifEmpty { book.author }} · ${book.chapterCount}章",
-                    fontSize = 12.sp,
+                    fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1
                 )

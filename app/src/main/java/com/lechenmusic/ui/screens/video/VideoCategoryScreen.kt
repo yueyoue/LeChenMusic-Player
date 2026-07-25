@@ -186,7 +186,7 @@ fun VideoCategoryScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
                         Spacer(modifier = Modifier.width(12.dp))
-                        Text("搜索播放源", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        Text("搜索播放源", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                     }
                 },
                 text = { Text(searchSourceMsg.ifBlank { "正在搜索，请稍候..." }, fontSize = 14.sp) },
@@ -210,7 +210,7 @@ fun VideoCategoryScreen(
                         Icon(Icons.Default.ArrowBack, "返回", modifier = Modifier.size(18.dp))
                     }
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(title, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Text(title, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                     if (totalCount > 0) {
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("来自豆瓣的精选内容", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -380,7 +380,7 @@ private fun FilterBottomSheet(
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = MaterialTheme.colorScheme.surface,
         shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)) {
         Column(modifier = Modifier.padding(horizontal = 16.dp).padding(bottom = 32.dp)) {
-            Text(title, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 16.dp))
+            Text(title, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 16.dp))
             val rows = options.chunked(4)
             rows.forEach { row ->
                 Row(modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {

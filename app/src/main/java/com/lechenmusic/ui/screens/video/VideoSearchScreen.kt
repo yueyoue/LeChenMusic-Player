@@ -91,7 +91,7 @@ fun VideoSearchScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("搜索历史", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    Text("搜索历史", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                     Text(
                         "清除",
                         fontSize = 13.sp,
@@ -189,7 +189,7 @@ private fun VideoSearchResultItem(
                 Box(contentAlignment = Alignment.Center) {
                     Text(
                         video.title.take(1),
-                        fontSize = 20.sp,
+                        fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
                     )

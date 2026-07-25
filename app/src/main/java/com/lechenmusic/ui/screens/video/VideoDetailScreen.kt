@@ -663,7 +663,7 @@ fun VideoDetailScreen(
                     }
                     Spacer(modifier = Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(currentDetail.title, fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        Text(currentDetail.title, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                         Spacer(modifier = Modifier.height(4.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             if (currentDetail.rate != null) {
@@ -728,7 +728,7 @@ fun VideoDetailScreen(
             if (currentDetail.desc.isNotBlank()) {
                 item {
                     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                        Text("简介", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                        Text("简介", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(currentDetail.desc, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, lineHeight = 18.sp, maxLines = if (descExpanded) Int.MAX_VALUE else 3, overflow = TextOverflow.Ellipsis)
                         if (currentDetail.desc.length > 80) {
@@ -764,7 +764,7 @@ fun VideoDetailScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("片源 (${allSearchSources.size})", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                            Text("片源 (${allSearchSources.size})", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                             Row {
                                 // 测速按钮
                                 TextButton(
@@ -921,7 +921,7 @@ fun VideoDetailScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("全部源 (${allSearchSources.size})", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        Text("全部源 (${allSearchSources.size})", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                         Row {
                             TextButton(
                                 onClick = { viewModel.testSourceSpeeds() },

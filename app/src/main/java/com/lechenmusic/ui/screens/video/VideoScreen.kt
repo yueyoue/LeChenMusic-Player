@@ -572,7 +572,7 @@ fun VideoHorizontalCard(
                 ) {
                     Text(
                         video.title.take(1),
-                        fontSize = 28.sp,
+                        fontSize = 22.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
                     )

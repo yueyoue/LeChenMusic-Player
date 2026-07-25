@@ -2479,10 +2479,10 @@ private fun TabletVideoHomeContent(
                         Box(modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.85f)))))
                         Column(modifier = Modifier.align(Alignment.BottomStart).padding(28.dp)) {
                             Surface(shape = RoundedCornerShape(50), color = Color(0xFFFF4D6A)) {
-                                Text("今日热门", modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White, letterSpacing = 1.sp)
+                                Text("今日热门", modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp), fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color.White, letterSpacing = 1.sp)
                             }
                             Spacer(modifier = Modifier.height(12.dp))
-                            Text(heroVideo.title, fontSize = (config.sectionTitleSize.value + 10).sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            Text(heroVideo.title, fontSize = (config.sectionTitleSize.value + 6).sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
                             if (heroVideo.desc.isNotBlank()) {
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(heroVideo.desc, fontSize = config.bodyFontSize, color = Color.White.copy(alpha = 0.7f), maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.fillMaxWidth(0.6f))
@@ -2492,12 +2492,12 @@ private fun TabletVideoHomeContent(
                                 Button(onClick = { navigateVideo(heroVideo) }, shape = RoundedCornerShape(50), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary), contentPadding = PaddingValues(horizontal = 28.dp, vertical = 14.dp)) {
                                     Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(18.dp))
                                     Spacer(modifier = Modifier.width(6.dp))
-                                    Text("立即播放", fontWeight = FontWeight.Bold)
+                                    Text("立即播放", fontWeight = FontWeight.SemiBold)
                                 }
                                 OutlinedButton(onClick = { }, shape = RoundedCornerShape(50), border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.3f)), colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White), contentPadding = PaddingValues(horizontal = 28.dp, vertical = 14.dp)) {
                                     Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
                                     Spacer(modifier = Modifier.width(6.dp))
-                                    Text("收藏", fontWeight = FontWeight.Bold)
+                                    Text("收藏", fontWeight = FontWeight.SemiBold)
                                 }
                             }
                         }
@@ -2509,7 +2509,7 @@ private fun TabletVideoHomeContent(
             if (hotMovies.isNotEmpty()) {
                 item {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text("热门电影", fontSize = config.sectionTitleSize, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        Text("热门电影", fontSize = config.sectionTitleSize, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
                         Text("查看全部 ›", fontSize = config.bodyFontSize, color = MaterialTheme.colorScheme.secondary, modifier = Modifier.clickable { onNavigateToVideoCategory("movie") })
                     }
                 }
@@ -2529,7 +2529,7 @@ private fun TabletVideoHomeContent(
             if (hotTv.isNotEmpty()) {
                 item {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text("热门剧集", fontSize = config.sectionTitleSize, fontWeight = FontWeight.Bold)
+                        Text("热门剧集", fontSize = config.sectionTitleSize, fontWeight = FontWeight.SemiBold)
                         Text("查看全部 ›", fontSize = config.bodyFontSize, color = MaterialTheme.colorScheme.secondary, modifier = Modifier.clickable { onNavigateToVideoCategory("tv") })
                     }
                 }
@@ -2549,7 +2549,7 @@ private fun TabletVideoHomeContent(
             if (hotVariety.isNotEmpty()) {
                 item {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text("热门综艺", fontSize = config.sectionTitleSize, fontWeight = FontWeight.Bold)
+                        Text("热门综艺", fontSize = config.sectionTitleSize, fontWeight = FontWeight.SemiBold)
                         Text("查看全部 ›", fontSize = config.bodyFontSize, color = MaterialTheme.colorScheme.secondary, modifier = Modifier.clickable { onNavigateToVideoCategory("variety") })
                     }
                 }
@@ -2584,7 +2584,7 @@ private fun TabletVideoHomeContent(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("最近播放", fontSize = config.sectionTitleSize, fontWeight = FontWeight.Bold)
+                    Text("最近播放", fontSize = config.sectionTitleSize, fontWeight = FontWeight.SemiBold)
                     Icon(Icons.Default.Schedule, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
                 }
                 LazyColumn(
