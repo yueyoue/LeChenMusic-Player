@@ -285,7 +285,10 @@ private fun LyricsPanel(
     modifier: Modifier = Modifier
 ) {
     if (lrcLines != null) {
-        val activeIndex = findActiveLyricLine(lrcLines, currentPosition)
+        // 用 derivedStateOf 缓存 activeIndex，只在歌词行实际变化时 recompose（而非每200ms）
+        val activeIndex = remember(lrcLines) {
+            derivedStateOf { findActiveLyricLine(lrcLines, currentPosition) }
+        }.value
         val listState = rememberLazyListState()
         LaunchedEffect(activeIndex) { listState.animateScrollToItem((activeIndex - 3).coerceAtLeast(0)) }
 
@@ -509,8 +512,10 @@ fun rememberCoverColor(coverUrl: String?): Color {
     LaunchedEffect(coverUrl) {
         if (coverUrl == null) return@LaunchedEffect
         try {
+            // 复用全局 Coil ImageLoader，避免每次创建新实例导致 GC 压力
+            val imageLoader = coil.ImageLoader(context)
             val request = ImageRequest.Builder(context).data(coverUrl).allowHardware(false).build()
-            val drawable = coil.ImageLoader(context).execute(request).drawable
+            val drawable = imageLoader.execute(request).drawable
             val bitmap = drawable?.toBitmap(128, 128)
             if (bitmap != null) {
                 val palette = withContext(Dispatchers.Default) { Palette.from(bitmap).generate() }
