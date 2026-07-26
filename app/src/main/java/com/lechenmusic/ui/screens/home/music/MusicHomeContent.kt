@@ -80,6 +80,7 @@ fun MusicHomeContent(
     onNavigateToCachedMusic: () -> Unit,
     onRefreshDaily: () -> Unit = {},
     onPlayRadio: (InternetRadioStation) -> Unit = {},
+    onSongMenu: ((Song) -> Unit)? = null,
     // 手机头部（搜索栏+模式切换，仅手机传入）
     headerContent: (@Composable () -> Unit)? = null
 ) {
@@ -228,7 +229,12 @@ fun MusicHomeContent(
                 titleSize = config.bodyFontSize,
                 subtitleSize = config.captionFontSize,
                 coverSize = config.songCoverSize,
-                onClick = { onSongClick(song, dailySongs) }
+                onClick = { onSongClick(song, dailySongs) },
+                trailingContent = if (onSongMenu != null) {{
+                    IconButton(onClick = { onSongMenu(song) }, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Default.MoreVert, "更多", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }} else null
             )
         }
 
@@ -412,7 +418,6 @@ private fun QuickActions(
         QuickItem(Icons.Default.Person, "歌手", Color(0xFFA855F7), iconSize, labelSize, onArtists)
         QuickItem(Icons.Default.Album, "专辑", Color(0xFF4A9EFF), iconSize, labelSize, onAlbums)
         QuickItem(Icons.Default.LibraryMusic, "歌单", Color(0xFF00E68A), iconSize, labelSize, onPlaylists)
-        QuickItem(Icons.Default.MusicNote, "乐库", Color(0xFF5352ED), iconSize, labelSize, onAllSongs)
         QuickItem(Icons.Default.Radio, "电台", Color(0xFFFF4D6A), iconSize, labelSize, onRadio)
         QuickItem(Icons.Default.Download, "缓存", Color(0xFFFFD93D), iconSize, labelSize, onCached)
     }
@@ -611,7 +616,8 @@ private fun SongListItem(
     titleSize: TextUnit,
     subtitleSize: TextUnit,
     coverSize: Dp,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    trailingContent: (@Composable () -> Unit)? = null
 ) {
     Row(
         modifier = Modifier
@@ -656,8 +662,37 @@ private fun SongListItem(
 
         // 歌曲信息
         Column(modifier = Modifier.weight(1f)) {
-            Text(song.title, fontSize = titleSize, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(song.title, fontSize = titleSize, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                // 品质图标
+                val qualityLabel = when {
+                    song.suffix.equals("flac", ignoreCase = true) || song.suffix.equals("wav", ignoreCase = true) -> "SQ"
+                    song.bitRate >= 320 -> "HQ"
+                    else -> ""
+                }
+                if (qualityLabel.isNotEmpty()) {
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Surface(
+                        shape = RoundedCornerShape(3.dp),
+                        color = if (qualityLabel == "SQ") Color(0xFFFF6B35).copy(alpha = 0.15f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                        modifier = Modifier.height(14.dp)
+                    ) {
+                        Text(
+                            qualityLabel,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (qualityLabel == "SQ") Color(0xFFFF6B35) else MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(horizontal = 3.dp, vertical = 1.dp)
+                        )
+                    }
+                }
+            }
             Text(song.artist, fontSize = subtitleSize, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+
+        // 自定义尾部内容（如三个点菜单）
+        if (trailingContent != null) {
+            trailingContent()
         }
 
         // 时长

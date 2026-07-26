@@ -454,6 +454,7 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                 // ===== 手机: 标准 Scaffold + 底部导航栏 + 浮动播放器 =====
                 Box(modifier = Modifier.fillMaxSize()) {
                 Scaffold(
+                    containerColor = Color.Transparent,
                     bottomBar = {
                         if (showBottomBar) {
                             NavigationBar {
@@ -507,9 +508,11 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                         sharedNavRoutes(navController, viewModel, videoViewModel, windowSizeClass)
                     }
                 }
-                // MiniPlayer 浮动在 Scaffold 之上，不受 Scaffold bottomBar 背景影响
+                // MiniPlayer 浮动在 Scaffold 之上，背景透明
                 MiniPlayerBar(
-                    modifier = Modifier.align(Alignment.BottomCenter)
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = if (showBottomBar) 80.dp else 16.dp)
                 )
                 } // Box
             }

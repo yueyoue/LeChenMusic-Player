@@ -147,7 +147,8 @@ fun HomeScreen(
                             onNavigateToAllPlaylists = onNavigateToAllPlaylists,
                             onNavigateToCachedMusic = onNavigateToCachedMusic,
                             onRefreshDaily = { viewModel.refreshDailySongs() },
-                            onPlayRadio = { viewModel.playerManager.playRadioStation(it) }
+                            onPlayRadio = { viewModel.playerManager.playRadioStation(it) },
+                            onSongMenu = { _ -> }
                         )
                     }
                 }
@@ -222,6 +223,7 @@ fun HomeScreen(
                     onNavigateToCachedMusic = onNavigateToCachedMusic,
                     onRefreshDaily = { viewModel.refreshDailySongs() },
                     onPlayRadio = { viewModel.playerManager.playRadioStation(it) },
+                    onSongMenu = { _ -> },
                     headerContent = {
                         // 搜索栏
                         Surface(

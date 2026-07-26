@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -84,6 +85,13 @@ fun MusicPlayerContent(
 
     val coverUrl = ApiClient.getCoverArtUrl(serverUrl, username, password, song.coverArt ?: song.albumId)
     val coverBgColor = rememberCoverColor(coverUrl)
+
+    // 设置状态栏颜色跟随封面背景色
+    val context = LocalContext.current
+    LaunchedEffect(coverBgColor) {
+        val activity = context as? android.app.Activity
+        activity?.window?.statusBarColor = coverBgColor.copy(alpha = 1f).toArgb()
+    }
 
     // Parse lyrics
     val lrcLines = remember(currentLyrics) { currentLyrics?.let { parseLrc(it) } }

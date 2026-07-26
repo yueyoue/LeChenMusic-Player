@@ -147,8 +147,9 @@ fun AudiobookScreen(
                         }
                     }
 
-                    // ── 继续收听 ──
-                    if (audiobooksWithProgress.isNotEmpty()) {
+                    // ── 继续收听（只显示有进度的） ──
+                    val booksWithProgress = audiobooksWithProgress.filter { it.progress != null }
+                    if (booksWithProgress.isNotEmpty()) {
                         item {
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                                 Text("继续收听", fontSize = config.sectionTitleSize, fontWeight = FontWeight.Bold)
@@ -159,7 +160,7 @@ fun AudiobookScreen(
                                 modifier = Modifier.horizontalScroll(rememberScrollState()),
                                 horizontalArrangement = Arrangement.spacedBy(gap)
                             ) {
-                                audiobooksWithProgress.take(4).forEach { bwp ->
+                                booksWithProgress.take(4).forEach { bwp ->
                                     ContinueListeningCard(bwp, serverUrl, username, password) { onAudiobookClick(bwp.id) }
                                 }
                             }
