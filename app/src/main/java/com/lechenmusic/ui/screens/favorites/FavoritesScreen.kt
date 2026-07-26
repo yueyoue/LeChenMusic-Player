@@ -8,7 +8,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -805,7 +805,7 @@ private fun TabletAlbumsTab(
         horizontalArrangement = Arrangement.spacedBy(responsiveConfig.itemSpacing),
         verticalArrangement = Arrangement.spacedBy(responsiveConfig.itemSpacing)
     ) {
-        items(albums) { album ->
+        gridItems(albums) { album ->
             Column(modifier = Modifier.clickable { onAlbumClick(album.id) }) {
                 CoverImage(
                     coverArtId = album.coverArt,
@@ -860,7 +860,7 @@ private fun TabletPlaylistsTab(
         horizontalArrangement = Arrangement.spacedBy(responsiveConfig.itemSpacing),
         verticalArrangement = Arrangement.spacedBy(responsiveConfig.itemSpacing)
     ) {
-        items(playlists) { playlist ->
+        gridItems(playlists) { playlist ->
             Column(modifier = Modifier.clickable { onPlaylistClick(playlist.id) }) {
                 CoverImage(
                     coverArtId = playlist.coverArt,
@@ -915,7 +915,7 @@ private fun TabletAudiobooksTab(
         horizontalArrangement = Arrangement.spacedBy(responsiveConfig.itemSpacing),
         verticalArrangement = Arrangement.spacedBy(responsiveConfig.itemSpacing)
     ) {
-        items(audiobooks) { book ->
+        gridItems(audiobooks) { book ->
             Column(modifier = Modifier.clickable { onAudiobookClick(book.id) }) {
                 Surface(
                     shape = RoundedCornerShape(14.dp),

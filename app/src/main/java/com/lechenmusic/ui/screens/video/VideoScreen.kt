@@ -9,7 +9,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -390,7 +390,7 @@ private fun VideoCategoryList(
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        items(videos) { video ->
+        gridItems(videos) { video ->
             VideoCard(video = video, onClick = { onVideoClick(video) })
         }
         if (hasMore) {
