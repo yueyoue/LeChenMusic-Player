@@ -814,6 +814,9 @@ fun NavGraphBuilder.sharedNavRoutes(
                 )
             }
         } else {
+            var showQueueDialogPhone by remember { mutableStateOf(false) }
+            var showAddToPlaylistDialogPhone by remember { mutableStateOf(false) }
+
             MusicPlayerContent(
                 config = responsiveCfg,
                 playerManager = viewModel.playerManager,
@@ -823,9 +826,95 @@ fun NavGraphBuilder.sharedNavRoutes(
                 password = pwd,
                 onBack = onBack,
                 onNavigateToArtist = { navController.navigate(Screen.ArtistDetail.createRoute(it)) },
-                onShowAddToPlaylist = { },
-                onShowQueue = { }
+                onShowAddToPlaylist = { showAddToPlaylistDialogPhone = true },
+                onShowQueue = { showQueueDialogPhone = true }
             )
+
+            // 手机端播放队列弹窗
+            if (showQueueDialogPhone) {
+                val queueSongs by viewModel.playerManager.playlist.collectAsState()
+                AlertDialog(
+                    onDismissRequest = { showQueueDialogPhone = false },
+                    title = { Text("播放队列 (${queueSongs.size}首)") },
+                    text = {
+                        Column {
+                            if (queueSongs.isEmpty()) {
+                                Text("播放队列为空")
+                            } else {
+                                val currentIndex by viewModel.playerManager.currentIndex.collectAsState()
+                                LazyColumn(modifier = Modifier.heightIn(max = 400.dp)) {
+                                    items(queueSongs.size) { index ->
+                                        val song = queueSongs[index]
+                                        val isCurrent = index == currentIndex
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth()
+                                                .clickable {
+                                                    viewModel.playerManager.playSong(song, queueSongs)
+                                                    showQueueDialogPhone = false
+                                                }
+                                                .background(
+                                                    if (isCurrent) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else Color.Transparent,
+                                                    RoundedCornerShape(8.dp)
+                                                )
+                                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            if (isCurrent) {
+                                                Icon(Icons.Default.PlayArrow, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                                            } else {
+                                                Text("${index + 1}", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.width(24.dp))
+                                            }
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(song.title, fontSize = 14.sp, fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal, maxLines = 1)
+                                                Text(song.artist, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                                            }
+                                            if (song.duration > 0) {
+                                                Text("${song.duration / 60}:${"%02d".format(song.duration % 60)}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = { showQueueDialogPhone = false }) { Text("关闭") }
+                    }
+                )
+            }
+
+            // 手机端添加到歌单弹窗
+            if (showAddToPlaylistDialogPhone) {
+                val playlists by viewModel.playlists.collectAsState()
+                val currentSong by viewModel.playerManager.currentSong.collectAsState()
+                AlertDialog(
+                    onDismissRequest = { showAddToPlaylistDialogPhone = false },
+                    title = { Text("添加到歌单") },
+                    text = {
+                        Column {
+                            if (playlists.isEmpty()) {
+                                Text("暂无歌单，请先创建歌单")
+                            } else {
+                                playlists.forEach { pl ->
+                                    Surface(
+                                        modifier = Modifier.fillMaxWidth().clickable {
+                                            currentSong?.let { viewModel.addToPlaylist(pl.id, it.id) }
+                                            showAddToPlaylistDialogPhone = false
+                                        }.padding(vertical = 4.dp),
+                                        shape = RoundedCornerShape(8.dp)
+                                    ) {
+                                        Text(pl.name, modifier = Modifier.padding(12.dp), fontSize = 15.sp)
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = { showAddToPlaylistDialogPhone = false }) { Text("取消") }
+                    }
+                )
+            }
         }
     }
 
