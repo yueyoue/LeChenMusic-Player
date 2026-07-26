@@ -37,6 +37,8 @@ fun AudiobookScreen(
     onBack: () -> Unit,
     onAudiobookClick: (String) -> Unit
 ) {
+    val config = responsiveConfig
+    val isTablet = config != null && (config.isMedium || config.isExpanded)
     val audiobooks by viewModel.audiobooks.collectAsState()
     val audiobookError by viewModel.audiobookError.collectAsState()
     val starredAudiobooks by viewModel.starredAudiobooks.collectAsState()
@@ -68,95 +70,181 @@ fun AudiobookScreen(
         }
 
     val title = when (genreFilter) {
-        "starred" -> "⭐ 收藏的有声书"
-        null -> "📖 全部有声书"
-        else -> "📖 $genreFilter"
+        "starred" -> if (isTablet) "收藏的有声书" else "⭐ 收藏的有声书"
+        null -> if (isTablet) "全部有声书" else "📖 全部有声书"
+        else -> if (isTablet) (genreFilter ?: "全部有声书") else "📖 $genreFilter"
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        // Header
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = onBack) {
-                Icon(Icons.Default.ArrowBack, contentDescription = "返回")
-            }
-            Text(title, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-        }
+    if (isTablet) {
+        // ═══ 平板布局 ═══
+        val pad = config!!.contentPadding
 
-        // Search field
-        if (genreFilter == null) {
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
+        Column(modifier = Modifier.fillMaxSize()) {
+            // ===== 顶部: 返回按钮 + 搜索栏 =====
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 4.dp),
-                placeholder = { Text("搜索有声书名称、作者、演播者...", fontSize = 14.sp) },
-                shape = RoundedCornerShape(12.dp),
-                singleLine = true,
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                trailingIcon = {
-                    if (searchQuery.isNotEmpty()) {
-                        IconButton(onClick = { searchQuery = "" }) {
-                            Icon(Icons.Default.Close, contentDescription = "清除")
+                    .padding(horizontal = pad, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.Default.ArrowBack, "返回")
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(title, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                // 搜索框
+                Surface(
+                    shape = RoundedCornerShape(24.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    modifier = Modifier.width(280.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Search, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("搜索有声书名称、作者、演播者...", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // ===== 有声书网格 =====
+            if (filteredBooks.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            Icons.Default.MenuBook, null,
+                            modifier = Modifier.size(64.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            if (genreFilter != null) "暂无$genreFilter" else "暂无有声书",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp
+                        )
+                        if (audiobookError != null) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(audiobookError ?: "", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
                         }
                     }
-                },
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search)
-            )
-        }
-
-        if (filteredBooks.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        Icons.Default.MenuBook,
-                        contentDescription = null,
-                        modifier = Modifier.size(64.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        if (genreFilter != null) "暂无$genreFilter" else "暂无有声书",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontSize = 14.sp
-                    )
-                    if (audiobookError != null) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            audiobookError ?: "",
-                            color = MaterialTheme.colorScheme.error,
-                            fontSize = 12.sp,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.padding(horizontal = 32.dp)
+                }
+            } else {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(config.gridColumns.coerceIn(3, 6)),
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(
+                        start = pad,
+                        end = pad,
+                        bottom = 160.dp
+                    ),
+                    horizontalArrangement = Arrangement.spacedBy(config.itemSpacing),
+                    verticalArrangement = Arrangement.spacedBy(config.itemSpacing)
+                ) {
+                    items(filteredBooks, key = { it.id }) { book ->
+                        TabletAudiobookGridCard(
+                            book = book,
+                            serverUrl = serverUrl,
+                            username = username,
+                            password = password,
+                            onClick = { onAudiobookClick(book.id) }
                         )
                     }
                 }
             }
-        } else {
-            // Album grid style - 2 columns
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+        }
+    } else {
+        // ═══ 手机布局 ═══
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Header
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                items(filteredBooks) { book ->
-                    AudiobookGridCard(
-                        book = book,
-                        serverUrl = serverUrl,
-                        username = username,
-                        password = password,
-                        onClick = { onAudiobookClick(book.id) }
-                    )
+                IconButton(onClick = onBack) {
+                    Icon(Icons.Default.ArrowBack, contentDescription = "返回")
+                }
+                Text(title, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            }
+
+            // Search field
+            if (genreFilter == null) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 4.dp),
+                    placeholder = { Text("搜索有声书名称、作者、演播者...", fontSize = 14.sp) },
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true,
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { searchQuery = "" }) {
+                                Icon(Icons.Default.Close, contentDescription = "清除")
+                            }
+                        }
+                    },
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search)
+                )
+            }
+
+            if (filteredBooks.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            Icons.Default.MenuBook,
+                            contentDescription = null,
+                            modifier = Modifier.size(64.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            if (genreFilter != null) "暂无$genreFilter" else "暂无有声书",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 14.sp
+                        )
+                        if (audiobookError != null) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                audiobookError ?: "",
+                                color = MaterialTheme.colorScheme.error,
+                                fontSize = 12.sp,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.padding(horizontal = 32.dp)
+                            )
+                        }
+                    }
+                }
+            } else {
+                // Album grid style - 2 columns
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    items(filteredBooks) { book ->
+                        AudiobookGridCard(
+                            book = book,
+                            serverUrl = serverUrl,
+                            username = username,
+                            password = password,
+                            onClick = { onAudiobookClick(book.id) }
+                        )
+                    }
                 }
             }
         }
@@ -226,6 +314,68 @@ fun AudiobookGridCard(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
             modifier = Modifier.padding(top = 2.dp)
+        )
+    }
+}
+
+@Composable
+private fun TabletAudiobookGridCard(
+    book: Audiobook,
+    serverUrl: String,
+    username: String,
+    password: String,
+    onClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+    ) {
+        // 封面
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f),
+            shape = RoundedCornerShape(12.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant
+        ) {
+            val coverUrl = getAudiobookCoverUrl(serverUrl, username, password, book.id)
+            if (coverUrl != null) {
+                AsyncImage(
+                    model = coverUrl,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Icon(
+                        Icons.Default.MenuBook, null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                        modifier = Modifier.size(36.dp)
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // 书名
+        Text(
+            book.title,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
+
+        // 演播者/作者
+        Text(
+            book.narrator.ifEmpty { book.author },
+            fontSize = 12.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
     }
 }

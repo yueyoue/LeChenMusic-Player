@@ -11,17 +11,18 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.lechenmusic.data.model.Audiobook
 import com.lechenmusic.data.model.AudiobookChapter
 import com.lechenmusic.ui.MainViewModel
 import com.lechenmusic.ui.responsive.ResponsiveConfig
-import coil.compose.AsyncImage
-import com.lechenmusic.ui.screens.audiobook.getAudiobookCoverUrl
 
 @Composable
 fun AudiobookDetailScreen(
@@ -31,6 +32,8 @@ fun AudiobookDetailScreen(
     onBack: () -> Unit,
     onPlayChapter: (Audiobook, AudiobookChapter, List<AudiobookChapter>) -> Unit
 ) {
+    val config = responsiveConfig
+    val isTablet = config != null && (config.isMedium || config.isExpanded)
     val audiobookDetail by viewModel.audiobookDetail.collectAsState()
     val serverUrl by viewModel.serverUrl.collectAsState()
     val username by viewModel.username.collectAsState()
@@ -70,190 +73,416 @@ fun AudiobookDetailScreen(
         return
     }
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = 80.dp)
-    ) {
-        // Header bar - match AlbumDetailScreen style
-        item {
+    if (isTablet) {
+        // ═══ 平板布局 ═══
+        Column(modifier = Modifier.fillMaxSize()) {
+            // ===== 顶部返回按钮 =====
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 12.dp),
+                    .padding(horizontal = 8.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "返回")
+                    Icon(Icons.Default.ArrowBack, "返回")
                 }
-                Text("有声书详情", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.weight(1f))
-                IconButton(onClick = {
-                    if (isStarred) viewModel.unstarAudiobook(book.id)
-                    else viewModel.starAudiobook(book.id)
-                }) {
-                    Icon(
-                        if (isStarred) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                        contentDescription = if (isStarred) "取消收藏" else "收藏",
-                        tint = if (isStarred) Color(0xFFE94560) else MaterialTheme.colorScheme.onSurface
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("书籍详情", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            }
+
+            Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                // ===== 左侧：有声书信息 (1/3) =====
+                Column(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .width(IntrinsicSize.Min)
+                        .padding(horizontal = 32.dp, vertical = 24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    // 封面大图
+                    Surface(
+                        modifier = Modifier.size(280.dp),
+                        shape = RoundedCornerShape(24.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant
+                    ) {
+                        val coverUrl = getAudiobookCoverUrl(serverUrl, username, password, book.id)
+                        if (coverUrl != null) {
+                            AsyncImage(
+                                model = coverUrl,
+                                contentDescription = null,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Icon(
+                                    Icons.Default.MenuBook, null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                    modifier = Modifier.size(64.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    // 书名
+                    Text(
+                        book.title,
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
                     )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // 作者
+                    if (book.author.isNotBlank()) {
+                        Text(
+                            "作者: ${book.author}",
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    // 演播者
+                    if (book.narrator.isNotBlank()) {
+                        Text(
+                            "演播: ${book.narrator}",
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // 收藏、章节数、分类
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // 收藏
+                        IconButton(onClick = {
+                            if (isStarred) viewModel.unstarAudiobook(book.id)
+                            else viewModel.starAudiobook(book.id)
+                        }, modifier = Modifier.size(36.dp)) {
+                            Icon(
+                                if (isStarred) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                "收藏",
+                                tint = if (isStarred) Color(0xFFE94560) else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                        // 章节数
+                        Surface(shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.primaryContainer) {
+                            Text(
+                                "${book.chapterCount}章",
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                            )
+                        }
+                        // 分类
+                        if (book.genre.isNotBlank()) {
+                            Surface(shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+                                Text(
+                                    book.genre,
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // 播放按钮
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = { if (chapters.isNotEmpty()) onPlayChapter(book, chapters[0], chapters) },
+                            modifier = Modifier.weight(1f).height(40.dp),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("从头播放", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        }
+                        OutlinedButton(
+                            onClick = { viewModel.resumeAudiobook(book) },
+                            modifier = Modifier.weight(1f).height(40.dp),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("继续播放", fontSize = 13.sp)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // 内容简介
+                    if (book.description.isNotBlank()) {
+                        var expanded by remember { mutableStateOf(false) }
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainerLow,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Text("内容简介", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    book.description,
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = if (expanded) Int.MAX_VALUE else 3,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                if (book.description.length > 80) {
+                                    Text(
+                                        if (expanded) "收起" else "展开全部",
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier
+                                            .padding(top = 4.dp)
+                                            .clickable { expanded = !expanded }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // ===== 右侧：章节列表 =====
+                Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                    // 章节标题栏
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp, vertical = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "章节列表 (${chapters.size})",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    // 章节列表
+                    if (chapters.isEmpty()) {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text("暂无章节", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(start = 24.dp, end = 24.dp, bottom = 160.dp)
+                        ) {
+                            itemsIndexed(chapters) { index, chapter ->
+                                ChapterListItem(
+                                    chapter = chapter,
+                                    index = index + 1,
+                                    onClick = { onPlayChapter(book, chapter, chapters) }
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
-
-        // Book info
-        item {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.Top
-            ) {
-                Surface(
-                    modifier = Modifier.size(120.dp),
-                    shape = RoundedCornerShape(10.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant
+    } else {
+        // ═══ 手机布局 ═══
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(bottom = 80.dp)
+        ) {
+            // Header bar - match AlbumDetailScreen style
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    val coverUrl = getAudiobookCoverUrl(serverUrl, username, password, book.id)
-                    if (coverUrl != null) {
-                        AsyncImage(
-                            model = coverUrl,
-                            contentDescription = null,
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "返回")
+                    }
+                    Text("有声书详情", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.weight(1f))
+                    IconButton(onClick = {
+                        if (isStarred) viewModel.unstarAudiobook(book.id)
+                        else viewModel.starAudiobook(book.id)
+                    }) {
+                        Icon(
+                            if (isStarred) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                            contentDescription = if (isStarred) "取消收藏" else "收藏",
+                            tint = if (isStarred) Color(0xFFE94560) else MaterialTheme.colorScheme.onSurface
                         )
-                    } else {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                Icons.Default.MenuBook,
+                    }
+                }
+            }
+
+            // Book info
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Surface(
+                        modifier = Modifier.size(120.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant
+                    ) {
+                        val coverUrl = getAudiobookCoverUrl(serverUrl, username, password, book.id)
+                        if (coverUrl != null) {
+                            AsyncImage(
+                                model = coverUrl,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                                modifier = Modifier.size(48.dp)
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                            )
+                        } else {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    Icons.Default.MenuBook,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                    modifier = Modifier.size(48.dp)
+                                )
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            book.title,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 3,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        if (book.author.isNotBlank()) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                "作者: ${book.author}",
+                                fontSize = 13.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        if (book.narrator.isNotBlank()) {
+                            Text(
+                                "演播: ${book.narrator}",
+                                fontSize = 13.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            "${book.chapterCount}章",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        if (book.genre.isNotBlank()) {
+                            Text(
+                                book.genre,
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                             )
                         }
                     }
                 }
-                Spacer(modifier = Modifier.width(16.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        book.title,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 3,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    if (book.author.isNotBlank()) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            "作者: ${book.author}",
-                            fontSize = 13.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    if (book.narrator.isNotBlank()) {
-                        Text(
-                            "演播: ${book.narrator}",
-                            fontSize = 13.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        "${book.chapterCount}章",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    if (book.genre.isNotBlank()) {
-                        Text(
-                            book.genre,
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                        )
-                    }
-                }
             }
-        }
 
-        // Play buttons
-        item {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Button(
-                    onClick = { if (chapters.isNotEmpty()) onPlayChapter(book, chapters[0], chapters) },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Icon(Icons.Default.PlayArrow, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("从头播放")
-                }
-                OutlinedButton(
-                    onClick = { viewModel.resumeAudiobook(book) },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Icon(Icons.Default.PlayArrow, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("继续播放")
-                }
-            }
-        }
-
-        // Description (collapsible)
-        if (book.description.isNotBlank()) {
+            // Play buttons
             item {
-                var expanded by remember { mutableStateOf(false) }
-                Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)) {
-                    Text(
-                        "内容简介",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.padding(bottom = 6.dp)
-                    )
-                    Text(
-                        book.description,
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        lineHeight = 20.sp,
-                        maxLines = if (expanded) Int.MAX_VALUE else 3,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    if (book.description.length > 80) {
-                        Text(
-                            if (expanded) "收起" else "展开全部",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier
-                                .padding(top = 4.dp)
-                                .clickable { expanded = !expanded }
-                        )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Button(
+                        onClick = { if (chapters.isNotEmpty()) onPlayChapter(book, chapters[0], chapters) },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.PlayArrow, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("从头播放")
+                    }
+                    OutlinedButton(
+                        onClick = { viewModel.resumeAudiobook(book) },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.PlayArrow, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("继续播放")
                     }
                 }
             }
-        }
 
-        // Chapter list header
-        item {
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                "章节列表",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(horizontal = 20.dp)
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-        }
+            // Description (collapsible)
+            if (book.description.isNotBlank()) {
+                item {
+                    var expanded by remember { mutableStateOf(false) }
+                    Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)) {
+                        Text(
+                            "内容简介",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(bottom = 6.dp)
+                        )
+                        Text(
+                            book.description,
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            lineHeight = 20.sp,
+                            maxLines = if (expanded) Int.MAX_VALUE else 3,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        if (book.description.length > 80) {
+                            Text(
+                                if (expanded) "收起" else "展开全部",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier
+                                    .padding(top = 4.dp)
+                                    .clickable { expanded = !expanded }
+                            )
+                        }
+                    }
+                }
+            }
 
-        // Chapters
-        itemsIndexed(chapters) { index, chapter ->
-            ChapterItem(
-                chapter = chapter,
-                index = index + 1,
-                onClick = { onPlayChapter(book, chapter, chapters) }
-            )
+            // Chapter list header
+            item {
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    "章节列表",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(horizontal = 20.dp)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
+            // Chapters
+            itemsIndexed(chapters) { index, chapter ->
+                ChapterItem(
+                    chapter = chapter,
+                    index = index + 1,
+                    onClick = { onPlayChapter(book, chapter, chapters) }
+                )
+            }
         }
     }
 }
@@ -300,6 +529,68 @@ private fun ChapterItem(
             Icon(
                 Icons.Default.PlayArrow,
                 contentDescription = "播放",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(24.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun ChapterListItem(
+    chapter: AudiobookChapter,
+    index: Int,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        shape = RoundedCornerShape(10.dp),
+        color = Color.Transparent
+    ) {
+        Row(
+            modifier = Modifier.padding(vertical = 12.dp, horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // 序号
+            Text(
+                "$index",
+                fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.width(40.dp)
+            )
+
+            // 章节信息
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    chapter.title,
+                    fontSize = 15.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (chapter.fileSize > 0) {
+                    Text(
+                        formatFileSize(chapter.fileSize),
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    )
+                }
+            }
+
+            // 时长
+            if (chapter.duration > 0) {
+                Text(
+                    formatDuration(chapter.duration),
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+            }
+
+            // 播放按钮
+            Icon(
+                Icons.Default.PlayArrow, "播放",
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(24.dp)
             )

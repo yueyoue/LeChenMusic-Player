@@ -5,7 +5,9 @@ import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -30,6 +32,8 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onLogout: () -> Unit
 ) {
+    val config = responsiveConfig
+    val isTablet = config != null && (config.isMedium || config.isExpanded)
     val serverUrl by viewModel.serverUrl.collectAsState()
     val username by viewModel.username.collectAsState()
     val themeMode by viewModel.themeMode.collectAsState()
@@ -66,136 +70,376 @@ fun SettingsScreen(
 
     LaunchedEffect(Unit) {
         val cacheBytes = viewModel.playerManager.getCacheBytes()
-        musicCacheSize = if (cacheBytes > 0) formatSize(cacheBytes) else calculateCacheSize(context, "music_cache")
-        otherDataSize = calculateOtherDataSize(context)
+        musicCacheSize = if (cacheBytes > 0) PhoneFormatSize(cacheBytes) else PhoneCalculateCacheSize(context, "music_cache")
+        otherDataSize = PhoneCalculateOtherDataSize(context)
     }
 
-    LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 100.dp)) {
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
+    if (isTablet) {
+        // ═══ 平板布局 ═══
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = config!!.contentPadding, vertical = 16.dp)
+        ) {
+            // 面包屑
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("首页", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(" / ", color = MaterialTheme.colorScheme.outlineVariant)
+                Text("设置", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // ===== 用户信息卡片 =====
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, contentDescription = "返回") }
-                Text("设置", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Row(
+                    modifier = Modifier.padding(24.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(50),
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        modifier = Modifier.size(64.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(
+                                username.take(1).uppercase(),
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(20.dp))
+                    Column {
+                        Text(username, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                        Text(serverUrl, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
             }
-        }
 
-        item {
-            SectionTitle("服务器信息")
-            Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp), shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // ===== 服务器信息 =====
+            TabletSectionTitle("服务器信息")
+            TabletSettingsCard {
+                val statsLoaded = serverStats.songCount > 0 || serverStats.albumCount > 0
+                TabletSettingsInfoRow("服务器地址", serverUrl)
+                TabletSettingsInfoRow("用户名", username)
+                TabletSettingsInfoRow("歌曲数量", if (statsLoaded) "${serverStats.songCount}" else "加载中...")
+                TabletSettingsInfoRow("专辑数量", if (statsLoaded) "${serverStats.albumCount}" else "加载中...")
+                TabletSettingsInfoRow("歌手数量", if (statsLoaded) "${serverStats.artistCount}" else "加载中...")
+                TabletSettingsInfoRow("歌单数量", if (statsLoaded) "${serverStats.playlistCount}" else "加载中...")
+                TabletSettingsInfoRow("有声读物", if (statsLoaded) "${serverStats.audiobookCount}" else "加载中...")
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // ===== 外观设置 =====
+            TabletSectionTitle("外观设置")
+            TabletSettingsCard {
+                SettingsToggleItem(
+                    icon = Icons.Default.Settings,
+                    iconBg = Color(0xFFA55EEA).copy(alpha = 0.15f),
+                    label = "深色模式",
+                    checked = themeMode == "dark",
+                    onCheckedChange = { viewModel.setThemeMode(if (it) "dark" else "light") }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // ===== 缓存设置 =====
+            TabletSectionTitle("缓存设置")
+            TabletSettingsCard {
+                SettingsClickItem(
+                    icon = Icons.Default.Storage,
+                    iconBg = Color(0xFFFF4757).copy(alpha = 0.15f),
+                    label = "音乐缓存大小",
+                    value = "${cacheSize} GB",
+                    onClick = { showCacheDialog = true }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // ===== 存储空间 =====
+            TabletSectionTitle("存储空间")
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 Column(modifier = Modifier.padding(20.dp)) {
-                    InfoRow("服务器地址", serverUrl)
-                    InfoRow("用户名", username)
-                    val statsLoaded = serverStats.songCount > 0 || serverStats.albumCount > 0
-                    InfoRow("歌曲数量", if (statsLoaded) "${serverStats.songCount}" else "加载中...")
-                    InfoRow("专辑数量", if (statsLoaded) "${serverStats.albumCount}" else "加载中...")
-                    InfoRow("歌手数量", if (statsLoaded) "${serverStats.artistCount}" else "加载中...")
-                    InfoRow("歌单数量", if (statsLoaded) "${serverStats.playlistCount}" else "加载中...")
-                    InfoRow("有声读物", if (statsLoaded) "${serverStats.audiobookCount}" else "加载中...")
-                }
-            }
-        }
-
-
-        item {
-            SectionTitle("外观设置")
-            Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp), shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-                Column {
-                    SettingsToggleItem(icon = Icons.Default.Settings, iconBg = Color(0xFFA55EEA).copy(alpha = 0.15f), label = "深色模式", checked = themeMode == "dark", onCheckedChange = { viewModel.setThemeMode(if (it) "dark" else "light") })
-                }
-            }
-        }
-
-        item {
-            SectionTitle("缓存设置")
-            Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp), shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-                Column {
-                    SettingsClickItem(icon = Icons.Default.Storage, iconBg = Color(0xFFFF4757).copy(alpha = 0.15f), label = "音乐缓存大小", value = "${cacheSize} GB", onClick = { showCacheDialog = true })
-                }
-            }
-        }
-
-        item {
-            SectionTitle("存储空间")
-            Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp), shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-                Column(modifier = Modifier.padding(16.dp)) {
                     val exoCacheBytes = viewModel.playerManager.getCacheBytes()
-                    val musicBytes = if (exoCacheBytes > 0) exoCacheBytes else getCacheSizeBytes(context, "music_cache")
-                    val otherBytes = getOtherDataSizeBytes(context)
+                    val musicBytes = if (exoCacheBytes > 0) exoCacheBytes else PhoneGetCacheSizeBytes(context, "music_cache")
+                    val otherBytes = PhoneGetOtherDataSizeBytes(context)
                     val totalUsed = musicBytes + otherBytes
                     val maxBytes = cacheSize.toLong() * 1024 * 1024 * 1024
                     val progress = if (maxBytes > 0) (totalUsed.toFloat() / maxBytes).coerceIn(0f, 1f) else 0f
+
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("已使用 ${formatSize(totalUsed)}", fontSize = 13.sp)
+                        Text("已使用 ${PhoneFormatSize(totalUsed)}", fontSize = 13.sp)
                         Text("共 ${cacheSize} GB", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Spacer(modifier = Modifier.height(12.dp))
-                    LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth().height(8.dp), trackColor = MaterialTheme.colorScheme.surfaceVariant)
+                    LinearProgressIndicator(
+                        progress = { progress },
+                        modifier = Modifier.fillMaxWidth().height(8.dp),
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
                     Spacer(modifier = Modifier.height(12.dp))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text("🎵 音乐缓存 $musicCacheSize", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text("📦 其他数据 $otherDataSize", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Spacer(modifier = Modifier.height(16.dp))
-                    OutlinedButton(onClick = { viewModel.playerManager.clearMusicCache(); musicCacheSize = "0 B"; otherDataSize = calculateOtherDataSize(context) }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(10.dp)) {
+                    OutlinedButton(
+                        onClick = {
+                            viewModel.playerManager.clearMusicCache()
+                            musicCacheSize = "0 B"
+                            otherDataSize = PhoneCalculateOtherDataSize(context)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
                         Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("清除缓存", color = MaterialTheme.colorScheme.primary)
                     }
                 }
             }
-        }
 
-        item {
-            SectionTitle("账号")
-            Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp), shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-                Column {
-                    SettingsClickItem(icon = Icons.Default.Person, iconBg = Color(0xFF5352ED).copy(alpha = 0.15f), label = "当前账号", value = username, onClick = { })
-                    SettingsClickItem(icon = Icons.Default.Link, iconBg = Color(0xFFFFA502).copy(alpha = 0.15f), label = "服务器地址", value = serverUrl, onClick = { })
-                    Box(modifier = Modifier.fillMaxWidth().clickable { showLogoutDialog = true }.padding(vertical = 14.dp), contentAlignment = Alignment.Center) {
-                        Text("切换服务器", color = MaterialTheme.colorScheme.primary, fontSize = 14.sp)
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // ===== 账号 =====
+            TabletSectionTitle("账号")
+            TabletSettingsCard {
+                SettingsClickItem(
+                    icon = Icons.Default.Person,
+                    iconBg = Color(0xFF5352ED).copy(alpha = 0.15f),
+                    label = "当前账号",
+                    value = username,
+                    onClick = { }
+                )
+                SettingsClickItem(
+                    icon = Icons.Default.Link,
+                    iconBg = Color(0xFFFFA502).copy(alpha = 0.15f),
+                    label = "服务器地址",
+                    value = serverUrl,
+                    onClick = { }
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showLogoutDialog = true }
+                        .padding(vertical = 14.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("切换服务器", color = MaterialTheme.colorScheme.primary, fontSize = 14.sp)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // ===== 影视服务器设置 =====
+            if (videoViewModel != null) {
+                TabletVideoServerSettings(videoViewModel)
+                Spacer(modifier = Modifier.height(20.dp))
+            }
+
+            // ===== 版本更新 =====
+            TabletSectionTitle("版本更新")
+            TabletSettingsCard {
+                SettingsClickItem(
+                    icon = Icons.Default.Refresh,
+                    iconBg = Color(0xFF1E90FF).copy(alpha = 0.15f),
+                    label = "检查更新",
+                    value = if (isCheckingUpdate) "检查中..."
+                    else if (updateInfo != null) "有新版本 v${updateInfo!!.versionName}"
+                    else if (updateStatus.isNotEmpty()) updateStatus
+                    else "当前 ${PhoneGetCurrentVersionName(context)}",
+                    onClick = {
+                        viewModel.dismissUpdate()
+                        userTriggeredCheck = true
+                        viewModel.checkForUpdate(silent = false)
+                    }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // ===== 关于 =====
+            TabletSectionTitle("关于")
+            TabletSettingsCard {
+                SettingsClickItem(
+                    icon = Icons.Default.Info,
+                    iconBg = Color(0xFF2ED573).copy(alpha = 0.15f),
+                    label = "关于悦音",
+                    value = "",
+                    onClick = { showAboutDialog = true }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // ===== 退出登录 =====
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showLogoutDialog = true }
+            ) {
+                Row(
+                    modifier = Modifier.padding(20.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(Icons.Default.Logout, null, tint = MaterialTheme.colorScheme.error)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("退出登录", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.error)
+                }
+            }
+
+            // 底部留白
+            Spacer(modifier = Modifier.height(160.dp))
+        }
+    } else {
+        // ═══ 手机布局 ═══
+        LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 100.dp)) {
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, contentDescription = "返回") }
+                    Text("设置", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+
+            item {
+                SectionTitle("服务器信息")
+                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp), shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+                    Column(modifier = Modifier.padding(20.dp)) {
+                        InfoRow("服务器地址", serverUrl)
+                        InfoRow("用户名", username)
+                        val statsLoaded = serverStats.songCount > 0 || serverStats.albumCount > 0
+                        InfoRow("歌曲数量", if (statsLoaded) "${serverStats.songCount}" else "加载中...")
+                        InfoRow("专辑数量", if (statsLoaded) "${serverStats.albumCount}" else "加载中...")
+                        InfoRow("歌手数量", if (statsLoaded) "${serverStats.artistCount}" else "加载中...")
+                        InfoRow("歌单数量", if (statsLoaded) "${serverStats.playlistCount}" else "加载中...")
+                        InfoRow("有声读物", if (statsLoaded) "${serverStats.audiobookCount}" else "加载中...")
+                    }
+                }
+            }
+
+            item {
+                SectionTitle("外观设置")
+                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp), shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+                    Column {
+                        SettingsToggleItem(icon = Icons.Default.Settings, iconBg = Color(0xFFA55EEA).copy(alpha = 0.15f), label = "深色模式", checked = themeMode == "dark", onCheckedChange = { viewModel.setThemeMode(if (it) "dark" else "light") })
+                    }
+                }
+            }
+
+            item {
+                SectionTitle("缓存设置")
+                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp), shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+                    Column {
+                        SettingsClickItem(icon = Icons.Default.Storage, iconBg = Color(0xFFFF4757).copy(alpha = 0.15f), label = "音乐缓存大小", value = "${cacheSize} GB", onClick = { showCacheDialog = true })
+                    }
+                }
+            }
+
+            item {
+                SectionTitle("存储空间")
+                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp), shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        val exoCacheBytes = viewModel.playerManager.getCacheBytes()
+                        val musicBytes = if (exoCacheBytes > 0) exoCacheBytes else PhoneGetCacheSizeBytes(context, "music_cache")
+                        val otherBytes = PhoneGetOtherDataSizeBytes(context)
+                        val totalUsed = musicBytes + otherBytes
+                        val maxBytes = cacheSize.toLong() * 1024 * 1024 * 1024
+                        val progress = if (maxBytes > 0) (totalUsed.toFloat() / maxBytes).coerceIn(0f, 1f) else 0f
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("已使用 ${PhoneFormatSize(totalUsed)}", fontSize = 13.sp)
+                            Text("共 ${cacheSize} GB", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+                        LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth().height(8.dp), trackColor = MaterialTheme.colorScheme.surfaceVariant)
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("🎵 音乐缓存 $musicCacheSize", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("📦 其他数据 $otherDataSize", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                        OutlinedButton(onClick = { viewModel.playerManager.clearMusicCache(); musicCacheSize = "0 B"; otherDataSize = PhoneCalculateOtherDataSize(context) }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(10.dp)) {
+                            Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("清除缓存", color = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                }
+            }
+
+            item {
+                SectionTitle("账号")
+                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp), shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+                    Column {
+                        SettingsClickItem(icon = Icons.Default.Person, iconBg = Color(0xFF5352ED).copy(alpha = 0.15f), label = "当前账号", value = username, onClick = { })
+                        SettingsClickItem(icon = Icons.Default.Link, iconBg = Color(0xFFFFA502).copy(alpha = 0.15f), label = "服务器地址", value = serverUrl, onClick = { })
+                        Box(modifier = Modifier.fillMaxWidth().clickable { showLogoutDialog = true }.padding(vertical = 14.dp), contentAlignment = Alignment.Center) {
+                            Text("切换服务器", color = MaterialTheme.colorScheme.primary, fontSize = 14.sp)
+                        }
+                    }
+                }
+            }
+
+            // 影视服务器设置
+            if (videoViewModel != null) {
+                item {
+                    PhoneVideoServerSettings(videoViewModel)
+                }
+            }
+
+            // 版本更新
+            item {
+                SectionTitle("版本更新")
+                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp), shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+                    Column {
+                        val isChecking by viewModel.isCheckingUpdate.collectAsState()
+                        SettingsClickItem(
+                            icon = Icons.Default.Refresh,
+                            iconBg = Color(0xFF1E90FF).copy(alpha = 0.15f),
+                            label = "检查更新",
+                            value = if (isChecking) "检查中..."
+                                    else if (updateInfo != null) "有新版本 v${updateInfo!!.versionName}"
+                                    else if (updateStatus.isNotEmpty()) updateStatus
+                                    else "当前 ${PhoneGetCurrentVersionName(context)}",
+                            onClick = { viewModel.dismissUpdate(); userTriggeredCheck = true; viewModel.checkForUpdate(silent = false) }
+                        )
+                    }
+                }
+            }
+
+            item {
+                SectionTitle("关于")
+                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp), shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+                    Column {
+                        SettingsClickItem(icon = Icons.Default.Info, iconBg = Color(0xFF2ED573).copy(alpha = 0.15f), label = "关于悦音", value = "", onClick = { showAboutDialog = true })
                     }
                 }
             }
         }
-
-        // 影视服务器设置
-        if (videoViewModel != null) {
-            item {
-                VideoServerSettings(videoViewModel)
-            }
-        }
-
-        // 版本更新
-        item {
-            SectionTitle("版本更新")
-            Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp), shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-                Column {
-                    val isChecking by viewModel.isCheckingUpdate.collectAsState()
-                    SettingsClickItem(
-                        icon = Icons.Default.Refresh,
-                        iconBg = Color(0xFF1E90FF).copy(alpha = 0.15f),
-                        label = "检查更新",
-                        value = if (isChecking) "检查中..."
-                                else if (updateInfo != null) "有新版本 v${updateInfo!!.versionName}"
-                                else if (updateStatus.isNotEmpty()) updateStatus
-                                else "当前 ${getCurrentVersionName(context)}",
-                        onClick = { viewModel.dismissUpdate(); userTriggeredCheck = true; viewModel.checkForUpdate(silent = false) }
-                    )
-                }
-            }
-        }
-
-        item {
-            SectionTitle("关于")
-            Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp), shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-                Column {
-                    SettingsClickItem(icon = Icons.Default.Info, iconBg = Color(0xFF2ED573).copy(alpha = 0.15f), label = "关于悦音", value = "", onClick = { showAboutDialog = true })
-                }
-            }
-        }
     }
+
+    // ===== 共享弹窗 =====
 
     if (showAboutDialog) {
         AlertDialog(
@@ -270,6 +514,8 @@ fun SettingsScreen(
     }
 }
 
+// ==================== 手机组件 ====================
+
 @Composable
 private fun SectionTitle(title: String) {
     Text(title, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Medium, letterSpacing = 1.sp, modifier = Modifier.padding(start = 20.dp, top = 24.dp, bottom = 12.dp))
@@ -283,6 +529,50 @@ private fun InfoRow(label: String, value: String) {
     }
     HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
 }
+
+// ==================== 平板组件 ====================
+
+@Composable
+private fun TabletSectionTitle(title: String) {
+    Text(
+        title,
+        fontSize = 12.sp,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        fontWeight = FontWeight.Medium,
+        letterSpacing = 1.sp,
+        modifier = Modifier.padding(bottom = 12.dp)
+    )
+}
+
+@Composable
+private fun TabletSettingsCard(content: @Composable ColumnScope.() -> Unit) {
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(vertical = 4.dp), content = content)
+    }
+}
+
+@Composable
+private fun TabletSettingsInfoRow(label: String, value: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(label, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(value, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+    HorizontalDivider(
+        modifier = Modifier.padding(horizontal = 20.dp),
+        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+    )
+}
+
+// ==================== 共享组件 ====================
 
 @Composable
 private fun SettingsToggleItem(icon: ImageVector, iconBg: Color, label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
@@ -303,46 +593,10 @@ private fun SettingsClickItem(icon: ImageVector, iconBg: Color, label: String, v
     }
 }
 
-private fun getCacheSizeBytes(context: Context, dirName: String): Long {
-    val dir = java.io.File(context.cacheDir, dirName)
-    if (!dir.exists()) return 0
-    return dir.walkTopDown().filter { it.isFile }.sumOf { it.length() }
-}
-
-private fun getOtherDataSizeBytes(context: Context): Long {
-    var size = 0L
-    val datastoreDir = java.io.File(context.filesDir, "datastore")
-    if (datastoreDir.exists()) size += datastoreDir.walkTopDown().filter { it.isFile }.sumOf { it.length() }
-    context.cacheDir.listFiles()?.forEach { f ->
-        if (f.name != "music_cache") {
-            size += if (f.isDirectory) f.walkTopDown().filter { it.isFile }.sumOf { it.length() } else f.length()
-        }
-    }
-    return size
-}
-
-private fun calculateCacheSize(context: Context, dirName: String): String = formatSize(getCacheSizeBytes(context, dirName))
-private fun calculateOtherDataSize(context: Context): String = formatSize(getOtherDataSizeBytes(context))
-
-private fun formatSize(bytes: Long): String = when {
-    bytes < 1024 -> "$bytes B"
-    bytes < 1024 * 1024 -> "%.1f KB".format(bytes / 1024.0)
-    bytes < 1024 * 1024 * 1024 -> "%.1f MB".format(bytes / (1024.0 * 1024))
-    else -> "%.2f GB".format(bytes / (1024.0 * 1024 * 1024))
-}
-
-private fun clearCache(context: Context, dirName: String) {
-    val dir = java.io.File(context.cacheDir, dirName)
-    if (dir.exists()) { dir.deleteRecursively(); dir.mkdirs() }
-}
-
-private fun getCurrentVersionName(context: Context): String {
-    return try { context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "1.0.0" } catch (_: Exception) { "1.0.0" }
-}
-
 // ==================== 影视服务器设置 ====================
+
 @Composable
-private fun VideoServerSettings(viewModel: com.lechenmusic.ui.VideoViewModel) {
+private fun PhoneVideoServerSettings(viewModel: com.lechenmusic.ui.VideoViewModel) {
     val videoServerUrl by viewModel.videoServerUrl.collectAsState()
     val videoUsername by viewModel.videoUsername.collectAsState()
     val videoPassword by viewModel.videoPassword.collectAsState()
@@ -459,4 +713,159 @@ private fun VideoServerSettings(viewModel: com.lechenmusic.ui.VideoViewModel) {
             }
         )
     }
+}
+
+@Composable
+private fun TabletVideoServerSettings(viewModel: com.lechenmusic.ui.VideoViewModel) {
+    val videoServerUrl by viewModel.videoServerUrl.collectAsState()
+    val videoUsername by viewModel.videoUsername.collectAsState()
+    val videoPassword by viewModel.videoPassword.collectAsState()
+    val isLoggedIn by viewModel.isLoggedIn.collectAsState()
+
+    var showVideoServerDialog by remember { mutableStateOf(false) }
+    var testResult by remember { mutableStateOf<Pair<Boolean, String>?>(null) }
+
+    TabletSectionTitle("影视服务器")
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column {
+            SettingsClickItem(
+                icon = Icons.Default.Tv,
+                iconBg = Color(0xFFE94560).copy(alpha = 0.15f),
+                label = "影视服务器",
+                value = if (isLoggedIn) "已连接" else if (videoServerUrl.isNotBlank()) "未连接" else "未配置",
+                onClick = { showVideoServerDialog = true }
+            )
+            if (videoServerUrl.isNotBlank()) {
+                TabletSettingsInfoRow("服务器地址", videoServerUrl)
+                TabletSettingsInfoRow("用户名", videoUsername)
+            }
+            if (isLoggedIn) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { viewModel.logout() }
+                        .padding(vertical = 14.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("断开影视服务器", color = MaterialTheme.colorScheme.error, fontSize = 14.sp)
+                }
+            }
+        }
+    }
+
+    if (showVideoServerDialog) {
+        var url by remember { mutableStateOf(videoServerUrl.ifBlank { "http://j.tthsdd.top:3000" }) }
+        var user by remember { mutableStateOf(videoUsername) }
+        var pass by remember { mutableStateOf(videoPassword) }
+        var isTesting by remember { mutableStateOf(false) }
+
+        AlertDialog(
+            onDismissRequest = { showVideoServerDialog = false; testResult = null },
+            title = { Text("影视服务器配置", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        value = url,
+                        onValueChange = { url = it },
+                        label = { Text("服务器地址") },
+                        placeholder = { Text("http://j.tthsdd.top:3000") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = user,
+                        onValueChange = { user = it },
+                        label = { Text("用户名") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = pass,
+                        onValueChange = { pass = it },
+                        label = { Text("密码") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    testResult?.let { (success, message) ->
+                        Text(
+                            message,
+                            fontSize = 13.sp,
+                            color = if (success) Color(0xFF2ED573) else MaterialTheme.colorScheme.error
+                        )
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            isTesting = true
+                            testResult = null
+                            viewModel.testConnection(url, user, pass) { success, msg ->
+                                isTesting = false
+                                testResult = success to msg
+                            }
+                        },
+                        enabled = !isTesting && url.isNotBlank() && user.isNotBlank(),
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        if (isTesting) {
+                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                        Text(if (isTesting) "测试中..." else "测试连接")
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.login(url, user, pass)
+                    showVideoServerDialog = false
+                    testResult = null
+                }) {
+                    Text("保存并连接", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showVideoServerDialog = false; testResult = null }) {
+                    Text("取消")
+                }
+            }
+        )
+    }
+}
+
+// ==================== 工具函数 ====================
+
+private fun PhoneGetCacheSizeBytes(context: Context, dirName: String): Long {
+    val dir = java.io.File(context.cacheDir, dirName)
+    if (!dir.exists()) return 0
+    return dir.walkTopDown().filter { it.isFile }.sumOf { it.length() }
+}
+
+private fun PhoneGetOtherDataSizeBytes(context: Context): Long {
+    var size = 0L
+    val datastoreDir = java.io.File(context.filesDir, "datastore")
+    if (datastoreDir.exists()) size += datastoreDir.walkTopDown().filter { it.isFile }.sumOf { it.length() }
+    context.cacheDir.listFiles()?.forEach { f ->
+        if (f.name != "music_cache") {
+            size += if (f.isDirectory) f.walkTopDown().filter { it.isFile }.sumOf { it.length() } else f.length()
+        }
+    }
+    return size
+}
+
+private fun PhoneCalculateCacheSize(context: Context, dirName: String): String = PhoneFormatSize(PhoneGetCacheSizeBytes(context, dirName))
+private fun PhoneCalculateOtherDataSize(context: Context): String = PhoneFormatSize(PhoneGetOtherDataSizeBytes(context))
+
+private fun PhoneFormatSize(bytes: Long): String = when {
+    bytes < 1024 -> "$bytes B"
+    bytes < 1024 * 1024 -> "%.1f KB".format(bytes / 1024.0)
+    bytes < 1024 * 1024 * 1024 -> "%.1f MB".format(bytes / (1024.0 * 1024))
+    else -> "%.2f GB".format(bytes / (1024.0 * 1024 * 1024))
+}
+
+private fun PhoneGetCurrentVersionName(context: Context): String {
+    return try { context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "1.0.0" } catch (_: Exception) { "1.0.0" }
 }

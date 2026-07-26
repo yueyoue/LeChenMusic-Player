@@ -16,6 +16,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -49,6 +51,7 @@ import com.lechenmusic.R
 import com.lechenmusic.data.model.*
 import com.lechenmusic.dlna.*
 import com.lechenmusic.ui.VideoViewModel
+import com.lechenmusic.ui.responsive.ResponsiveConfig
 import kotlinx.coroutines.launch
 
 /**
@@ -66,11 +69,13 @@ fun VideoDetailScreen(
     viewModel: VideoViewModel,
     source: String,
     videoId: String,
-    responsiveConfig: com.lechenmusic.ui.responsive.ResponsiveConfig? = null,
+    responsiveConfig: ResponsiveConfig? = null,
     onBack: () -> Unit,
     onPlay: (source: String, episodeIndex: Int) -> Unit,
     onVideoClick: (VideoInfo) -> Unit = {}
 ) {
+    val config = responsiveConfig
+    val isTablet = config != null && (config.isMedium || config.isExpanded)
     val detail by viewModel.videoDetail.collectAsState()
     val isLoading by viewModel.detailLoading.collectAsState()
     val favorites by viewModel.favorites.collectAsState()
@@ -90,6 +95,8 @@ fun VideoDetailScreen(
     var showCastSheet by remember { mutableStateOf(false) }
     var castDevice by remember { mutableStateOf<DlnaDevice?>(null) }
     var castController by remember { mutableStateOf<DlnaController?>(null) }
+    // 标记是否正在切换源（切换源时跳过 LaunchedEffect(video) 的自动播放，避免重置位置）
+    var isSwitchingSource by remember { mutableStateOf(false) }
 
     LaunchedEffect(source, videoId) {
         if (source != "searching") {
@@ -113,7 +120,6 @@ fun VideoDetailScreen(
     }
 
     // 内联播放器控件自动隐藏(3秒无操作)
-    // 初始不隐藏，用户交互后开始计时
     LaunchedEffect(inlineInteractionCount) {
         if (inlineInteractionCount > 0 && exoPlayer.isPlaying) {
             inlineControlsVisible = true
@@ -147,7 +153,12 @@ fun VideoDetailScreen(
     }
 
     // 当视频详情变化时加载视频（包括初始加载）
+    // 切换源时跳过（由 SourceList 的 onSourceSelect 处理，避免重置播放位置）
     LaunchedEffect(currentDetail) {
+        if (isSwitchingSource) {
+            isSwitchingSource = false
+            return@LaunchedEffect
+        }
         val detail = currentDetail ?: return@LaunchedEffect
         val src = detail.toSources().firstOrNull()
         val ep = src?.episodes?.getOrNull(0)
@@ -169,15 +180,14 @@ fun VideoDetailScreen(
         }
     }
 
-    // 定期保存播放记录（参考 Selene-Source 每10秒保存）
-    // 同时在退出时保存
+    // 定期保存播放记录
     LaunchedEffect(currentDetail) {
         val detail = currentDetail ?: return@LaunchedEffect
         while (true) {
             kotlinx.coroutines.delay(10000)
             if (exoPlayer.isPlaying && exoPlayer.duration > 0) {
                 viewModel.savePlayRecord(
-                    com.lechenmusic.data.model.PlayRecordRequest(
+                    PlayRecordRequest(
                         source = detail.source,
                         id = detail.id,
                         title = detail.title,
@@ -195,13 +205,13 @@ fun VideoDetailScreen(
         }
     }
 
-    // 退出时保存播放记录（参考 Selene-Source _saveProgress force=true）
+    // 退出时保存播放记录
     DisposableEffect(Unit) {
         onDispose {
             val detail = currentDetail
             if (detail != null && exoPlayer.currentPosition > 1000) {
                 viewModel.savePlayRecord(
-                    com.lechenmusic.data.model.PlayRecordRequest(
+                    PlayRecordRequest(
                         source = detail.source,
                         id = detail.id,
                         title = detail.title,
@@ -219,7 +229,7 @@ fun VideoDetailScreen(
         }
     }
 
-    // 返回时立即停止播放+隐藏画面(避免返回首页后小屏播放器残留)
+    // 返回时立即停止播放+隐藏画面
     var isNavigatingBack by remember { mutableStateOf(false) }
     BackHandler {
         isNavigatingBack = true
@@ -227,7 +237,7 @@ fun VideoDetailScreen(
         onBack()
     }
 
-    // 全屏模式处理 - 用 SideEffect 避免 LaunchedEffect 重组问题
+    // 全屏模式处理
     val activity = context as? android.app.Activity
     DisposableEffect(isPlayerFullscreen) {
         activity?.requestedOrientation = if (isPlayerFullscreen) {
@@ -240,7 +250,6 @@ fun VideoDetailScreen(
         } else {
             activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
         }
-        // 播放时保持屏幕常亮
         activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         onDispose {
             activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -250,7 +259,6 @@ fun VideoDetailScreen(
     // 全屏模式下显示纯播放器
     if (isPlayerFullscreen) {
         Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
-            // 视频画面（无内置控制器）
             AndroidView(
                 factory = { ctx ->
                     PlayerView(ctx).apply {
@@ -264,7 +272,6 @@ fun VideoDetailScreen(
                 },
                 modifier = Modifier.fillMaxSize()
             )
-            // 点击视频区域切换控件显隐
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -275,9 +282,7 @@ fun VideoDetailScreen(
                         }
                     }
             )
-            // 自定义叠加层
             if (fsControlsVisible) {
-                // 退出全屏 + 电影名 (左上)
                 Row(
                     modifier = Modifier.align(Alignment.TopStart).statusBarsPadding().padding(start = 4.dp, top = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -294,7 +299,6 @@ fun VideoDetailScreen(
                         modifier = Modifier.weight(1f, fill = false)
                     )
                 }
-                // 投屏按钮 (右上)
                 IconButton(
                     onClick = { showCastSheet = true },
                     modifier = Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(4.dp)
@@ -305,14 +309,12 @@ fun VideoDetailScreen(
                         tint = if (castDevice != null) MaterialTheme.colorScheme.primary else Color.White
                     )
                 }
-                // 投屏设备选择弹窗
-                com.lechenmusic.dlna.DlnaCastSheet(
+                DlnaCastSheet(
                     isVisible = showCastSheet,
                     onDismiss = { showCastSheet = false },
                     onDeviceSelected = { device ->
                         castDevice = device
-                        castController = com.lechenmusic.dlna.DlnaController(device)
-                        // 投屏当前视频
+                        castController = DlnaController(device)
                         val detail = currentDetail
                         val ep = detail?.toSources()?.firstOrNull()?.episodes?.firstOrNull()
                         if (detail != null && ep != null && ep.url.isNotBlank()) {
@@ -322,7 +324,6 @@ fun VideoDetailScreen(
                         }
                     }
                 )
-                // 播放/暂停 (居中)
                 var fsIsPlaying by remember { mutableStateOf(false) }
                 LaunchedEffect(exoPlayer) {
                     while (true) {
@@ -345,7 +346,6 @@ fun VideoDetailScreen(
                     )
                 }
             }
-            // 底部进度条 + 时间（可拖动，跟随控件显隐）
             var fsProgress by remember { mutableFloatStateOf(0f) }
             var fsDuration by remember { mutableLongStateOf(0L) }
             var fsPosition by remember { mutableLongStateOf(0L) }
@@ -358,7 +358,6 @@ fun VideoDetailScreen(
                         fsPosition = exoPlayer.currentPosition.coerceAtLeast(0L)
                         fsProgress = if (fsDuration > 0) fsPosition.toFloat() / fsDuration else 0f
                     }
-                    // seek 完成后重置标记
                     if (fsSeeking) {
                         kotlinx.coroutines.delay(500)
                         fsSeeking = false
@@ -370,7 +369,6 @@ fun VideoDetailScreen(
             Column(
                 modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp)
             ) {
-                // 自定义手势进度条（和内联播放器同款，极致跟手）
                 var fsBarWidthPx by remember { mutableFloatStateOf(1f) }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -448,356 +446,775 @@ fun VideoDetailScreen(
     val speedTesting by viewModel.speedTesting.collectAsState()
     var showSourcePanel by remember { mutableStateOf(false) }
 
+    // 计算显示源
+    val displaySources = if (isTablet) {
+        val normalizedTitle = currentDetail.title.replace(" ", "").lowercase()
+        val relevantSources = allSearchSources.filter { src ->
+            val srcTitle = src.title.replace(" ", "").lowercase()
+            srcTitle == normalizedTitle || srcTitle.contains(normalizedTitle) || normalizedTitle.contains(srcTitle)
+        }
+        if (relevantSources.size > 1) {
+            relevantSources
+                .groupBy { it.source }
+                .values.map { group -> group.first() }
+                .map { info ->
+                    VideoSource(
+                        sourceName = info.displaySourceName.ifBlank { info.source },
+                        source = info.source,
+                        episodes = info.episodes.mapIndexed { idx, url ->
+                            VideoEpisode(index = idx, title = info.episodesTitles.getOrNull(idx) ?: "第${idx + 1}集", url = url)
+                        }
+                    )
+                }
+        } else {
+            sources
+        }
+    } else {
+        if (allSearchSources.size > 1) {
+            allSearchSources
+                .groupBy { it.source }
+                .values.map { group -> group.first() }
+                .take(20)
+                .map { info ->
+                    VideoSource(
+                        sourceName = info.displaySourceName.ifBlank { info.source },
+                        source = info.source,
+                        episodes = info.episodes.mapIndexed { idx, url ->
+                            VideoEpisode(index = idx, title = info.episodesTitles.getOrNull(idx) ?: "第${idx + 1}集", url = url)
+                        }
+                    )
+                }
+        } else {
+            sources
+        }
+    }
+
     Scaffold { padding ->
-        LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(padding),
-            contentPadding = PaddingValues(bottom = 100.dp)
-        ) {
-            // ===== 内联播放器（小窗，16:9） =====
-            item {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(16f / 9f)
-                        .background(Color.Black)
+        if (isTablet) {
+            // ═══ 平板布局: 左侧(2/3) + 右侧(1/3) ═══
+            var rightTab by remember { mutableIntStateOf(0) }
+            val currentSource = displaySources.getOrNull(selectedSource)
+            val episodes = currentSource?.episodes ?: emptyList()
+
+            Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+                // 顶部返回按钮
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    if (isNavigatingBack) {
-                        // 返回时显示黑色遮罩，避免残影
-                        Box(modifier = Modifier.fillMaxSize().background(Color.Black))
-                        return@item
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Default.ArrowBack, "返回")
                     }
-                    // 视频画面（无内置控制器）
-                    AndroidView(
-                        factory = { ctx ->
-                            PlayerView(ctx).apply {
-                                player = exoPlayer
-                                useController = false
-                                layoutParams = FrameLayout.LayoutParams(
-                                    FrameLayout.LayoutParams.MATCH_PARENT,
-                                    FrameLayout.LayoutParams.MATCH_PARENT
-                                )
-                            }
-                        },
-                        modifier = Modifier.fillMaxSize()
-                    )
-                    // 点击视频区域切换控件显隐
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .pointerInput(Unit) {
-                                detectTapGestures {
-                                    inlineControlsVisible = !inlineControlsVisible
-                                    if (inlineControlsVisible) inlineInteractionCount++
-                                }
-                            }
-                    )
-                    // 自定义叠加层: 返回 + 全屏 + 播放/暂停
-                    if (inlineControlsVisible) {
-                        // 返回按钮 (左上) - 增大内边距
-                        IconButton(
-                            onClick = onBack,
-                            modifier = Modifier.align(Alignment.TopStart).padding(start = 12.dp, top = 16.dp)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("影视详情", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                }
+
+                Row(
+                    modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = config!!.contentPadding, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(config.itemSpacing)
+                ) {
+                    // ===== 左侧: 视频播放器 + 影片信息 (flex-2) =====
+                    Column(modifier = Modifier.weight(2f).fillMaxHeight()) {
+                        // 视频播放器 (16:9, rounded-2xl)
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(16f / 9f)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(Color.Black)
                         ) {
-                            Icon(Icons.Default.ArrowBack, "返回", tint = Color.White)
-                        }
-                        // 投屏按钮 (右上) - 增大内边距
-                        Row(modifier = Modifier.align(Alignment.TopEnd).padding(end = 12.dp, top = 16.dp)) {
-                            IconButton(onClick = { showCastSheet = true }) {
-                                Icon(Icons.Default.Cast, "投屏", tint = if (castDevice != null) MaterialTheme.colorScheme.primary else Color.White)
-                            }
-                        }
-                        // 全屏按钮 (右下) - 增大内边距
-                        IconButton(
-                            onClick = { isPlayerFullscreen = true },
-                            modifier = Modifier.align(Alignment.BottomEnd).padding(end = 12.dp, bottom = 16.dp)
-                        ) {
-                            Icon(Icons.Default.Fullscreen, "全屏", tint = Color.White)
-                        }
-                        // 播放/暂停按钮 (居中)
-                        var isPlaying by remember { mutableStateOf(false) }
-                        LaunchedEffect(exoPlayer) {
-                            while (true) {
-                                isPlaying = exoPlayer.isPlaying
-                                kotlinx.coroutines.delay(500)
-                            }
-                        }
-                        IconButton(
-                            onClick = {
-                                exoPlayer.playWhenReady = !exoPlayer.isPlaying
-                                inlineControlsVisible = true
-                            },
-                            modifier = Modifier.align(Alignment.Center).size(56.dp)
-                        ) {
-                            Icon(
-                                if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                if (isPlaying) "暂停" else "播放",
-                                tint = Color.White,
-                                modifier = Modifier.size(40.dp)
+                            AndroidView(
+                                factory = { ctx ->
+                                    PlayerView(ctx).apply {
+                                        player = exoPlayer
+                                        useController = false
+                                        layoutParams = FrameLayout.LayoutParams(
+                                            FrameLayout.LayoutParams.MATCH_PARENT,
+                                            FrameLayout.LayoutParams.MATCH_PARENT
+                                        )
+                                    }
+                                },
+                                modifier = Modifier.fillMaxSize()
                             )
-                        }
-                    }
-                    // 底部进度条（自定义手势，绕过 Slider 开销）
-                    var progress by remember { mutableFloatStateOf(0f) }
-                    var durationMs by remember { mutableLongStateOf(0L) }
-                    var positionMs by remember { mutableLongStateOf(0L) }
-                    var isDragging by remember { mutableStateOf(false) }
-                    var isSeeking by remember { mutableStateOf(false) }
-                    var barWidthPx by remember { mutableFloatStateOf(1f) }
-                    LaunchedEffect(exoPlayer) {
-                        while (true) {
-                            if (!isDragging && !isSeeking) {
-                                durationMs = exoPlayer.duration.coerceAtLeast(0L)
-                                positionMs = exoPlayer.currentPosition.coerceAtLeast(0L)
-                                progress = if (durationMs > 0) positionMs.toFloat() / durationMs else 0f
-                            }
-                            if (isSeeking) {
-                                kotlinx.coroutines.delay(500)
-                                isSeeking = false
-                            }
-                            kotlinx.coroutines.delay(500)
-                        }
-                    }
-                    if (inlineControlsVisible) {
-                    Box(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(start = 8.dp, end = 8.dp, bottom = 4.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                formatTime(positionMs),
-                                color = Color.White.copy(alpha = 0.7f),
-                                fontSize = 10.sp,
-                                modifier = Modifier.width(40.dp)
-                            )
-                            // 自定义进度条（pointerInput 手势，极致跟手）
                             Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(32.dp)
-                                    .onGloballyPositioned { barWidthPx = it.size.width.toFloat() }
-                                    .pointerInput(Unit) {
-                                        detectDragGestures(
-                                            onDragStart = { offset ->
-                                                isDragging = true
-                                                progress = (offset.x / barWidthPx).coerceIn(0f, 1f)
+                                modifier = Modifier.fillMaxSize().pointerInput(Unit) {
+                                    detectTapGestures {
+                                        inlineControlsVisible = !inlineControlsVisible
+                                        if (inlineControlsVisible) inlineInteractionCount++
+                                    }
+                                }
+                            )
+                            if (inlineControlsVisible) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(12.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Spacer(modifier = Modifier.size(40.dp))
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        IconButton(
+                                            onClick = {
+                                                if (exoPlayer.currentPosition > 0) {
+                                                    viewModel.setResumePosition(exoPlayer.currentPosition)
+                                                }
+                                                onPlay(currentDetail.source, selectedEpisode)
                                             },
-                                            onDragEnd = {
-                                                isDragging = false
-                                                isSeeking = true
-                                                exoPlayer.seekTo((progress * durationMs).toLong())
-                                            },
-                                            onDragCancel = { isDragging = false; isSeeking = false }
-                                        ) { change, dragAmount ->
-                                            change.consume()
-                                            val newOffset = (progress * barWidthPx) + dragAmount.x
-                                            progress = (newOffset / barWidthPx).coerceIn(0f, 1f)
+                                            modifier = Modifier.size(40.dp)
+                                        ) {
+                                            Icon(Icons.Default.Fullscreen, "全屏", tint = Color.White, modifier = Modifier.size(22.dp))
                                         }
                                     }
-                                    .pointerInput(Unit) {
-                                        detectTapGestures(
-                                            onPress = { offset ->
-                                                isDragging = true
-                                                progress = (offset.x / barWidthPx).coerceIn(0f, 1f)
-                                                val success = tryAwaitRelease()
-                                                if (success) {
-                                                    isSeeking = true
-                                                    exoPlayer.seekTo((progress * durationMs).toLong())
-                                                }
-                                                isDragging = false
-                                            }
+                                }
+                                Row(
+                                    modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    var isPlaying by remember { mutableStateOf(false) }
+                                    LaunchedEffect(exoPlayer) {
+                                        while (true) {
+                                            isPlaying = exoPlayer.isPlaying
+                                            kotlinx.coroutines.delay(500)
+                                        }
+                                    }
+                                    FilledIconButton(
+                                        onClick = { if (isPlaying) exoPlayer.pause() else exoPlayer.play() },
+                                        modifier = Modifier.size(40.dp),
+                                        shape = CircleShape,
+                                        colors = IconButtonDefaults.filledIconButtonColors(
+                                            containerColor = Color.White.copy(alpha = 0.8f),
+                                            contentColor = Color.Black
                                         )
+                                    ) {
+                                        Icon(
+                                            if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                            null, modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                    var currentPosition by remember { mutableLongStateOf(0L) }
+                                    var duration by remember { mutableLongStateOf(0L) }
+                                    LaunchedEffect(exoPlayer) {
+                                        while (true) {
+                                            currentPosition = exoPlayer.currentPosition.coerceAtLeast(0L)
+                                            duration = exoPlayer.duration.coerceAtLeast(0L)
+                                            kotlinx.coroutines.delay(500)
+                                        }
+                                    }
+                                    Text(formatTime(currentPosition), fontSize = 12.sp, color = Color.White.copy(alpha = 0.8f))
+                                    Slider(
+                                        value = if (duration > 0) currentPosition.toFloat() / duration else 0f,
+                                        onValueChange = { exoPlayer.seekTo((it * duration).toLong()) },
+                                        modifier = Modifier.weight(1f),
+                                        colors = SliderDefaults.colors(
+                                            thumbColor = Color.White,
+                                            activeTrackColor = MaterialTheme.colorScheme.primary,
+                                            inactiveTrackColor = Color.White.copy(alpha = 0.3f)
+                                        )
+                                    )
+                                    Text(formatTime(duration), fontSize = 12.sp, color = Color.White.copy(alpha = 0.8f))
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // 影片信息
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(buildString { append(currentDetail.title); if (currentDetail.year.isNotBlank()) append(" (${currentDetail.year})") }, fontSize = 24.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    if (currentDetail.rate != null) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(Icons.Default.Star, null, tint = Color(0xFFFBBF24), modifier = Modifier.size(18.dp))
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text(currentDetail.rate!!, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFBBF24))
+                                        }
+                                        Text("•", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                    if (currentDetail.displayType.isNotBlank()) {
+                                        Text(categoryName(currentDetail.displayType), fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        Text("•", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                    if (currentDetail.year.isNotBlank()) {
+                                        Text(currentDetail.year, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
+                            }
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                OutlinedButton(onClick = { }, shape = RoundedCornerShape(12.dp), colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)) {
+                                    Icon(Icons.Default.Share, null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("分享")
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        if (currentDetail.desc.isNotBlank()) {
+                            var tabletDescExpanded by remember { mutableStateOf(false) }
+                            Column {
+                                Text(currentDetail.desc, fontSize = 15.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, lineHeight = 24.sp, maxLines = if (tabletDescExpanded) Int.MAX_VALUE else 3, overflow = TextOverflow.Ellipsis)
+                                if (currentDetail.desc.length > 100) {
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Text(
+                                        if (tabletDescExpanded) "收起" else "展开全部",
+                                        fontSize = 13.sp,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier
+                                            .clickable { tabletDescExpanded = !tabletDescExpanded }
+                                            .padding(vertical = 4.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        if (currentDetail.director.isNotBlank() || currentDetail.actor.isNotBlank()) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                                repeat(3) {
+                                    Surface(modifier = Modifier.size(36.dp), shape = CircleShape, color = MaterialTheme.colorScheme.surfaceVariant) {
+                                        Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.Person, null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f), modifier = Modifier.size(18.dp)) }
+                                    }
+                                }
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(buildString {
+                                    if (currentDetail.director.isNotBlank()) append("导演：${currentDetail.director}")
+                                    if (currentDetail.director.isNotBlank() && currentDetail.actor.isNotBlank()) append(" / ")
+                                    if (currentDetail.actor.isNotBlank()) append("主演：${currentDetail.actor}")
+                                }, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                        }
+                    }
+
+                    // ===== 右侧: Tab 切换选集/播放源 (flex-1) =====
+                    Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                        TabRow(
+                            selectedTabIndex = rightTab,
+                            modifier = Modifier.fillMaxWidth(),
+                            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                            contentColor = MaterialTheme.colorScheme.primary
+                        ) {
+                            Tab(selected = rightTab == 0, onClick = { rightTab = 0 }, text = { Text("选集 (${episodes.size})") })
+                            Tab(selected = rightTab == 1, onClick = { rightTab = 1 }, text = { Text("播放源 (${displaySources.size})") })
+                        }
+
+                        Surface(
+                            shape = RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainer,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            when (rightTab) {
+                                0 -> TabletEpisodeGrid(episodes, selectedEpisode, exoPlayer, currentDetail.source) { index ->
+                                    selectedEpisode = index
+                                    val ep = episodes.getOrNull(index)
+                                    if (ep != null && ep.url.isNotBlank()) {
+                                        exoPlayer.setMediaItem(MediaItem.fromUri(ep.url))
+                                        exoPlayer.prepare()
+                                        exoPlayer.playWhenReady = true
+                                    }
+                                }
+                                1 -> TabletSourceList(
+                                    displaySources = displaySources,
+                                    allSearchSources = allSearchSources,
+                                    selectedSource = selectedSource,
+                                    sourceSpeeds = sourceSpeeds,
+                                    speedTesting = speedTesting,
+                                    onSourceSelect = { index, info ->
+                                        val savedPosition = exoPlayer.currentPosition.coerceAtLeast(0L)
+                                        isSwitchingSource = true
+                                        selectedSource = index
+                                        selectedEpisode = 0
+                                        viewModel.switchSource(info)
+                                        val ep = info.episodes.firstOrNull()
+                                        if (ep != null && ep.isNotBlank()) {
+                                            exoPlayer.stop()
+                                            exoPlayer.setMediaItem(MediaItem.fromUri(ep))
+                                            exoPlayer.prepare()
+                                            exoPlayer.playWhenReady = true
+                                            if (savedPosition > 0) {
+                                                exoPlayer.addListener(object : Player.Listener {
+                                                    override fun onPlaybackStateChanged(state: Int) {
+                                                        if (state == Player.STATE_READY) {
+                                                            exoPlayer.seekTo(savedPosition)
+                                                            exoPlayer.removeListener(this)
+                                                        }
+                                                    }
+                                                })
+                                            }
+                                        }
                                     },
-                                contentAlignment = Alignment.CenterStart
+                                    onTestSpeed = { viewModel.testSourceSpeeds() }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            // ═══ 手机布局 ═══
+            LazyColumn(
+                modifier = Modifier.fillMaxSize().padding(padding),
+                contentPadding = PaddingValues(bottom = 100.dp)
+            ) {
+                // ===== 内联播放器（小窗，16:9） =====
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(16f / 9f)
+                            .background(Color.Black)
+                    ) {
+                        if (isNavigatingBack) {
+                            Box(modifier = Modifier.fillMaxSize().background(Color.Black))
+                            return@item
+                        }
+                        AndroidView(
+                            factory = { ctx ->
+                                PlayerView(ctx).apply {
+                                    player = exoPlayer
+                                    useController = false
+                                    layoutParams = FrameLayout.LayoutParams(
+                                        FrameLayout.LayoutParams.MATCH_PARENT,
+                                        FrameLayout.LayoutParams.MATCH_PARENT
+                                    )
+                                }
+                            },
+                            modifier = Modifier.fillMaxSize()
+                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .pointerInput(Unit) {
+                                    detectTapGestures {
+                                        inlineControlsVisible = !inlineControlsVisible
+                                        if (inlineControlsVisible) inlineInteractionCount++
+                                    }
+                                }
+                        )
+                        if (inlineControlsVisible) {
+                            IconButton(
+                                onClick = onBack,
+                                modifier = Modifier.align(Alignment.TopStart).padding(start = 12.dp, top = 16.dp)
                             ) {
-                                // 背景轨道
-                                Box(
-                                    modifier = Modifier.fillMaxWidth().height(4.dp)
-                                        .clip(RoundedCornerShape(2.dp))
-                                        .background(Color.White.copy(alpha = 0.3f))
+                                Icon(Icons.Default.ArrowBack, "返回", tint = Color.White)
+                            }
+                            Row(modifier = Modifier.align(Alignment.TopEnd).padding(end = 12.dp, top = 16.dp)) {
+                                IconButton(onClick = { showCastSheet = true }) {
+                                    Icon(Icons.Default.Cast, "投屏", tint = if (castDevice != null) MaterialTheme.colorScheme.primary else Color.White)
+                                }
+                            }
+                            IconButton(
+                                onClick = { isPlayerFullscreen = true },
+                                modifier = Modifier.align(Alignment.BottomEnd).padding(end = 12.dp, bottom = 16.dp)
+                            ) {
+                                Icon(Icons.Default.Fullscreen, "全屏", tint = Color.White)
+                            }
+                            var isPlaying by remember { mutableStateOf(false) }
+                            LaunchedEffect(exoPlayer) {
+                                while (true) {
+                                    isPlaying = exoPlayer.isPlaying
+                                    kotlinx.coroutines.delay(500)
+                                }
+                            }
+                            IconButton(
+                                onClick = {
+                                    exoPlayer.playWhenReady = !exoPlayer.isPlaying
+                                    inlineControlsVisible = true
+                                },
+                                modifier = Modifier.align(Alignment.Center).size(56.dp)
+                            ) {
+                                Icon(
+                                    if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                    if (isPlaying) "暂停" else "播放",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(40.dp)
                                 )
-                                // 已播放轨道
-                                Box(
-                                    modifier = Modifier.fillMaxWidth(fraction = progress).height(4.dp)
-                                        .clip(RoundedCornerShape(2.dp))
-                                        .background(MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                        var progress by remember { mutableFloatStateOf(0f) }
+                        var durationMs by remember { mutableLongStateOf(0L) }
+                        var positionMs by remember { mutableLongStateOf(0L) }
+                        var isDragging by remember { mutableStateOf(false) }
+                        var isSeeking by remember { mutableStateOf(false) }
+                        var barWidthPx by remember { mutableFloatStateOf(1f) }
+                        LaunchedEffect(exoPlayer) {
+                            while (true) {
+                                if (!isDragging && !isSeeking) {
+                                    durationMs = exoPlayer.duration.coerceAtLeast(0L)
+                                    positionMs = exoPlayer.currentPosition.coerceAtLeast(0L)
+                                    progress = if (durationMs > 0) positionMs.toFloat() / durationMs else 0f
+                                }
+                                if (isSeeking) {
+                                    kotlinx.coroutines.delay(500)
+                                    isSeeking = false
+                                }
+                                kotlinx.coroutines.delay(500)
+                            }
+                        }
+                        if (inlineControlsVisible) {
+                        Box(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(start = 8.dp, end = 8.dp, bottom = 4.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    formatTime(positionMs),
+                                    color = Color.White.copy(alpha = 0.7f),
+                                    fontSize = 10.sp,
+                                    modifier = Modifier.width(40.dp)
                                 )
-                                // 拖动手柄
                                 Box(
                                     modifier = Modifier
-                                        .offset { IntOffset((progress * barWidthPx - 8).toInt(), 0) }
-                                        .size(16.dp)
-                                        .background(MaterialTheme.colorScheme.primary, CircleShape)
+                                        .weight(1f)
+                                        .height(32.dp)
+                                        .onGloballyPositioned { barWidthPx = it.size.width.toFloat() }
+                                        .pointerInput(Unit) {
+                                            detectDragGestures(
+                                                onDragStart = { offset ->
+                                                    isDragging = true
+                                                    progress = (offset.x / barWidthPx).coerceIn(0f, 1f)
+                                                },
+                                                onDragEnd = {
+                                                    isDragging = false
+                                                    isSeeking = true
+                                                    exoPlayer.seekTo((progress * durationMs).toLong())
+                                                },
+                                                onDragCancel = { isDragging = false; isSeeking = false }
+                                            ) { change, dragAmount ->
+                                                change.consume()
+                                                val newOffset = (progress * barWidthPx) + dragAmount.x
+                                                progress = (newOffset / barWidthPx).coerceIn(0f, 1f)
+                                            }
+                                        }
+                                        .pointerInput(Unit) {
+                                            detectTapGestures(
+                                                onPress = { offset ->
+                                                    isDragging = true
+                                                    progress = (offset.x / barWidthPx).coerceIn(0f, 1f)
+                                                    val success = tryAwaitRelease()
+                                                    if (success) {
+                                                        isSeeking = true
+                                                        exoPlayer.seekTo((progress * durationMs).toLong())
+                                                    }
+                                                    isDragging = false
+                                                }
+                                            )
+                                        },
+                                    contentAlignment = Alignment.CenterStart
+                                ) {
+                                    Box(
+                                        modifier = Modifier.fillMaxWidth().height(4.dp)
+                                            .clip(RoundedCornerShape(2.dp))
+                                            .background(Color.White.copy(alpha = 0.3f))
+                                    )
+                                    Box(
+                                        modifier = Modifier.fillMaxWidth(fraction = progress).height(4.dp)
+                                            .clip(RoundedCornerShape(2.dp))
+                                            .background(MaterialTheme.colorScheme.primary)
+                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .offset { IntOffset((progress * barWidthPx - 8).toInt(), 0) }
+                                            .size(16.dp)
+                                            .background(MaterialTheme.colorScheme.primary, CircleShape)
+                                    )
+                                }
+                                Text(
+                                    formatTime(durationMs),
+                                    color = Color.White.copy(alpha = 0.7f),
+                                    fontSize = 10.sp,
+                                    modifier = Modifier.width(40.dp),
+                                    textAlign = TextAlign.End
                                 )
                             }
-                            Text(
-                                formatTime(durationMs),
-                                color = Color.White.copy(alpha = 0.7f),
-                                fontSize = 10.sp,
-                                modifier = Modifier.width(40.dp),
-                                textAlign = TextAlign.End
-                            )
                         }
-                    }
-                    } // end if inlineControlsVisible
-                }
-            }
-
-            // ===== 影片信息 =====
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)
-                ) {
-                    // 封面
-                    Surface(
-                        modifier = Modifier.width(100.dp).height(140.dp),
-                        shape = RoundedCornerShape(8.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant
-                    ) {
-                        if (currentDetail.displayCover.isNotBlank()) {
-                            AsyncImage(
-                                model = currentDetail.displayCover,
-                                contentDescription = null,
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(currentDetail.title, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            if (currentDetail.rate != null) {
-                                Icon(Icons.Default.Star, null, tint = Color(0xFFFFD700), modifier = Modifier.size(14.dp))
-                                Spacer(modifier = Modifier.width(3.dp))
-                                Text(currentDetail.rate, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFFD700))
-                                Spacer(modifier = Modifier.width(8.dp))
-                            }
-                            Text(currentDetail.year, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(categoryName(currentDetail.displayType), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        if (currentDetail.area.isNotBlank()) {
-                            Text(currentDetail.area, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        if (currentDetail.director.isNotBlank()) {
-                            Text("导演: ${currentDetail.director}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        }
-                        if (currentDetail.actor.isNotBlank()) {
-                            Text("演员: ${currentDetail.actor}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                        }
+                        } // end if inlineControlsVisible
                     }
                 }
-            }
 
-            // ===== 操作按钮 =====
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    // 收藏
-                    OutlinedButton(
-                        onClick = {
-                            val videoInfo = VideoInfo(id = currentDetail.id, source = currentDetail.source, title = currentDetail.title, cover = currentDetail.displayCover, year = currentDetail.year, type = currentDetail.displayType)
-                            if (isStarred) viewModel.removeFavorite(videoInfo) else viewModel.addFavorite(videoInfo)
-                        },
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(if (isStarred) Icons.Default.Favorite else Icons.Default.FavoriteBorder, null, tint = if (isStarred) Color(0xFFE94560) else MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(if (isStarred) "已收藏" else "收藏", fontSize = 13.sp)
-                    }
-                    // 分享
-                    OutlinedButton(
-                        onClick = {
-                            val intent = Intent(Intent.ACTION_SEND).apply { type = "text/plain"; putExtra(Intent.EXTRA_TEXT, "${currentDetail.title} (${currentDetail.year})") }
-                            context.startActivity(Intent.createChooser(intent, "分享"))
-                        },
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(Icons.Default.Share, null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("分享", fontSize = 13.sp)
-                    }
-                }
-            }
-
-            // ===== 简介 =====
-            if (currentDetail.desc.isNotBlank()) {
+                // ===== 影片信息 =====
                 item {
-                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                        Text("简介", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(currentDetail.desc, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, lineHeight = 18.sp, maxLines = if (descExpanded) Int.MAX_VALUE else 3, overflow = TextOverflow.Ellipsis)
-                        if (currentDetail.desc.length > 80) {
-                            Text(if (descExpanded) "收起" else "展开全部", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.clickable { descExpanded = !descExpanded }.padding(top = 2.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)
+                    ) {
+                        Surface(
+                            modifier = Modifier.width(100.dp).height(140.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant
+                        ) {
+                            if (currentDetail.displayCover.isNotBlank()) {
+                                AsyncImage(
+                                    model = currentDetail.displayCover,
+                                    contentDescription = null,
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(currentDetail.title, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                if (currentDetail.rate != null) {
+                                    Icon(Icons.Default.Star, null, tint = Color(0xFFFFD700), modifier = Modifier.size(14.dp))
+                                    Spacer(modifier = Modifier.width(3.dp))
+                                    Text(currentDetail.rate, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFFD700))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                }
+                                Text(currentDetail.year, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(categoryName(currentDetail.displayType), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            if (currentDetail.area.isNotBlank()) {
+                                Text(currentDetail.area, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            if (currentDetail.director.isNotBlank()) {
+                                Text("导演: ${currentDetail.director}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                            if (currentDetail.actor.isNotBlank()) {
+                                Text("演员: ${currentDetail.actor}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            }
                         }
                     }
                 }
-            }
 
-            // ===== 片源选择 =====
-            val displaySources = if (allSearchSources.size > 1) {
-                allSearchSources
-                    .groupBy { it.source }
-                    .values.map { group -> group.first() }
-                    .take(20)
-                    .map { info ->
-                        VideoSource(
-                            sourceName = info.displaySourceName.ifBlank { info.source },
-                            source = info.source,
-                            episodes = info.episodes.mapIndexed { idx, url ->
-                                VideoEpisode(index = idx, title = info.episodesTitles.getOrNull(idx) ?: "第${idx + 1}集", url = url)
+                // ===== 操作按钮 =====
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = {
+                                val videoInfo = VideoInfo(id = currentDetail.id, source = currentDetail.source, title = currentDetail.title, cover = currentDetail.displayCover, year = currentDetail.year, type = currentDetail.displayType)
+                                if (isStarred) viewModel.removeFavorite(videoInfo) else viewModel.addFavorite(videoInfo)
+                            },
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(if (isStarred) Icons.Default.Favorite else Icons.Default.FavoriteBorder, null, tint = if (isStarred) Color(0xFFE94560) else MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(if (isStarred) "已收藏" else "收藏", fontSize = 13.sp)
+                        }
+                        OutlinedButton(
+                            onClick = {
+                                val intent = Intent(Intent.ACTION_SEND).apply { type = "text/plain"; putExtra(Intent.EXTRA_TEXT, "${currentDetail.title} (${currentDetail.year})") }
+                                context.startActivity(Intent.createChooser(intent, "分享"))
+                            },
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(Icons.Default.Share, null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("分享", fontSize = 13.sp)
+                        }
+                    }
+                }
+
+                // ===== 简介 =====
+                if (currentDetail.desc.isNotBlank()) {
+                    item {
+                        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                            Text("简介", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(currentDetail.desc, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, lineHeight = 18.sp, maxLines = if (descExpanded) Int.MAX_VALUE else 3, overflow = TextOverflow.Ellipsis)
+                            if (currentDetail.desc.length > 80) {
+                                Text(if (descExpanded) "收起" else "展开全部", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.clickable { descExpanded = !descExpanded }.padding(top = 2.dp))
                             }
+                        }
+                    }
+                }
+
+                // ===== 片源选择 =====
+                if (displaySources.size > 1) {
+                    item {
+                        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("片源 (${allSearchSources.size})", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                                Row {
+                                    TextButton(
+                                        onClick = { viewModel.testSourceSpeeds() },
+                                        enabled = !speedTesting
+                                    ) {
+                                        if (speedTesting) {
+                                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                        }
+                                        Text(if (speedTesting) "测速中..." else "\u26A1 测速", fontSize = 12.sp)
+                                    }
+                                    TextButton(onClick = { showSourcePanel = true }) {
+                                        Text("展开 \u25B6", fontSize = 12.sp)
+                                    }
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Row(
+                                modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                displaySources.forEachIndexed { index, src ->
+                                    val speed = sourceSpeeds[src.source]
+                                    FilterChip(
+                                        selected = selectedSource == index,
+                                        onClick = {
+                                            val info = allSearchSources.firstOrNull { src.source == it.source }
+                                            if (info != null && info.episodes.isNotEmpty()) {
+                                                val savedPosition = exoPlayer.currentPosition.coerceAtLeast(0L)
+                                                selectedSource = index
+                                                selectedEpisode = 0
+                                                viewModel.switchSource(info)
+                                                val url = info.episodes[0]
+                                                if (url.isNotBlank()) {
+                                                    exoPlayer.stop()
+                                                    exoPlayer.setMediaItem(MediaItem.fromUri(url))
+                                                    exoPlayer.prepare()
+                                                    exoPlayer.playWhenReady = true
+                                                    if (savedPosition > 0) {
+                                                        val seekPos = savedPosition
+                                                        exoPlayer.addListener(object : Player.Listener {
+                                                            override fun onPlaybackStateChanged(state: Int) {
+                                                                if (state == Player.STATE_READY) {
+                                                                    exoPlayer.seekTo(seekPos)
+                                                                    exoPlayer.removeListener(this)
+                                                                }
+                                                            }
+                                                        })
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        label = {
+                                            Text(
+                                                buildString {
+                                                    append("${src.sourceName}")
+                                                    if (speed != null && speed > 0) append(" ${speed}ms")
+                                                    else if (speed == -1L) append(" 超时")
+                                                },
+                                                fontSize = 11.sp
+                                            )
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // ===== 选集 =====
+                val currentEpisodes = detail?.episodes ?: emptyList()
+                val currentEpisodesTitles = detail?.episodesTitles ?: emptyList()
+                if (currentEpisodes.isNotEmpty()) {
+                    item {
+                        Text(
+                            "选集 (${currentEpisodes.size})",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                         )
                     }
-            } else {
-                sources
+
+                    if (currentEpisodes.size == 1) {
+                        item {
+                            Surface(
+                                modifier = Modifier.padding(horizontal = 16.dp).clickable {
+                                    selectedEpisode = 0
+                                    val url = currentEpisodes[0]
+                                    if (url.isNotBlank()) {
+                                        exoPlayer.setMediaItem(MediaItem.fromUri(url))
+                                        exoPlayer.prepare()
+                                        exoPlayer.playWhenReady = true
+                                    }
+                                },
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (selectedEpisode == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
+                            ) {
+                                Text("播放", modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp), fontWeight = FontWeight.Medium)
+                            }
+                        }
+                    } else {
+                        val rows = currentEpisodes.chunked(6)
+                        itemsIndexed(rows) { rowIndex, rowEpisodes ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                rowEpisodes.forEachIndexed { colIndex, ep ->
+                                    val globalIndex = rowIndex * 6 + colIndex
+                                    Surface(
+                                        modifier = Modifier.weight(1f).clickable {
+                                            selectedEpisode = globalIndex
+                                            if (ep.isNotBlank()) {
+                                                exoPlayer.setMediaItem(MediaItem.fromUri(ep))
+                                                exoPlayer.prepare()
+                                                exoPlayer.playWhenReady = true
+                                            }
+                                        },
+                                        shape = RoundedCornerShape(6.dp),
+                                        color = if (selectedEpisode == globalIndex) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
+                                    ) {
+                                        Text(
+                                            (globalIndex + 1).toString(),
+                                            modifier = Modifier.padding(vertical = 10.dp),
+                                            textAlign = TextAlign.Center,
+                                            fontSize = 13.sp,
+                                            fontWeight = if (selectedEpisode == globalIndex) FontWeight.Bold else FontWeight.Normal
+                                        )
+                                    }
+                                }
+                                repeat(6 - rowEpisodes.size) {
+                                    Spacer(modifier = Modifier.weight(1f))
+                                }
+                            }
+                        }
+                    }
+                }
             }
-            if (displaySources.size > 1) {
-                item {
-                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+
+            // ===== 源列表弹窗 =====
+            if (showSourcePanel) {
+                ModalBottomSheet(
+                    onDismissRequest = { showSourcePanel = false },
+                    containerColor = MaterialTheme.colorScheme.surface
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("片源 (${allSearchSources.size})", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                            Text("全部源 (${allSearchSources.size})", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                             Row {
-                                // 测速按钮
                                 TextButton(
                                     onClick = { viewModel.testSourceSpeeds() },
                                     enabled = !speedTesting
                                 ) {
-                                    if (speedTesting) {
-                                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                    }
-                                    Text(if (speedTesting) "测速中..." else "\u26A1 测速", fontSize = 12.sp)
+                                    Text(if (speedTesting) "测速中..." else "\u26A1 测速排序")
                                 }
-                                // 展开按钮
-                                TextButton(onClick = { showSourcePanel = true }) {
-                                    Text("展开 \u25B6", fontSize = 12.sp)
+                                IconButton(onClick = { showSourcePanel = false }) {
+                                    Icon(Icons.Default.Close, "关闭")
                                 }
                             }
                         }
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Row(
-                            modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        LazyColumn(
+                            modifier = Modifier.heightIn(max = 400.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            displaySources.forEachIndexed { index, src ->
-                                val speed = sourceSpeeds[src.source]
-                                FilterChip(
-                                    selected = selectedSource == index,
+                            items(allSearchSources.size) { index ->
+                                val info = allSearchSources[index]
+                                val speed = sourceSpeeds[info.source]
+                                val isCurrent = currentDetail?.source == info.source
+                                Surface(
                                     onClick = {
-                                        val info = allSearchSources.firstOrNull { src.source == src.source }
-                                        if (info != null && info.episodes.isNotEmpty()) {
+                                        if (info.episodes.isNotEmpty()) {
                                             val savedPosition = exoPlayer.currentPosition.coerceAtLeast(0L)
-                                            selectedSource = index
                                             selectedEpisode = 0
                                             viewModel.switchSource(info)
                                             val url = info.episodes[0]
@@ -818,202 +1235,53 @@ fun VideoDetailScreen(
                                                     })
                                                 }
                                             }
+                                            showSourcePanel = false
                                         }
                                     },
-                                    label = {
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (isCurrent) MaterialTheme.colorScheme.primaryContainer
+                                    else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
                                         Text(
-                                            buildString {
-                                                append("${src.sourceName}")
-                                                if (speed != null && speed > 0) append(" ${speed}ms")
-                                                else if (speed == -1L) append(" 超时")
+                                            info.displaySourceName.ifBlank { info.source },
+                                            fontSize = 14.sp,
+                                            fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        Text(
+                                            "${info.episodes.size}集",
+                                            fontSize = 12.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            when {
+                                                speed == null -> "-"
+                                                speed < 0 -> "超时"
+                                                else -> "${speed}ms"
                                             },
-                                            fontSize = 11.sp
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            color = when {
+                                                speed == null -> MaterialTheme.colorScheme.onSurfaceVariant
+                                                speed < 0 -> Color.Red
+                                                speed < 500 -> Color(0xFF4CAF50)
+                                                speed < 1000 -> Color(0xFFFF9800)
+                                                else -> Color.Red
+                                            }
                                         )
                                     }
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            // ===== 源列表弹窗（展开按钮触发） =====
-            // ===== 选集（直接用当前 VideoDetail 的 episodes） =====
-            val currentEpisodes = detail?.episodes ?: emptyList()
-            val currentEpisodesTitles = detail?.episodesTitles ?: emptyList()
-            if (currentEpisodes.isNotEmpty()) {
-                item {
-                    Text(
-                        "选集 (${currentEpisodes.size})",
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                    )
-                }
-
-                if (currentEpisodes.size == 1) {
-                    item {
-                        Surface(
-                            modifier = Modifier.padding(horizontal = 16.dp).clickable {
-                                selectedEpisode = 0
-                                val url = currentEpisodes[0]
-                                if (url.isNotBlank()) {
-                                    exoPlayer.setMediaItem(MediaItem.fromUri(url))
-                                    exoPlayer.prepare()
-                                    exoPlayer.playWhenReady = true
-                                }
-                            },
-                            shape = RoundedCornerShape(8.dp),
-                            color = if (selectedEpisode == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
-                        ) {
-                            Text("播放", modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp), fontWeight = FontWeight.Medium)
-                        }
-                    }
-                } else {
-                    // 网格选集
-                    val rows = currentEpisodes.chunked(6)
-                    itemsIndexed(rows) { rowIndex, rowEpisodes ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            rowEpisodes.forEachIndexed { colIndex, ep ->
-                                val globalIndex = rowIndex * 6 + colIndex
-                                Surface(
-                                    modifier = Modifier.weight(1f).clickable {
-                                        selectedEpisode = globalIndex
-                                        if (ep.isNotBlank()) {
-                                            exoPlayer.setMediaItem(MediaItem.fromUri(ep))
-                                            exoPlayer.prepare()
-                                            exoPlayer.playWhenReady = true
-                                        }
-                                    },
-                                    shape = RoundedCornerShape(6.dp),
-                                    color = if (selectedEpisode == globalIndex) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
-                                ) {
-                                    Text(
-                                        (globalIndex + 1).toString(),
-                                        modifier = Modifier.padding(vertical = 10.dp),
-                                        textAlign = TextAlign.Center,
-                                        fontSize = 13.sp,
-                                        fontWeight = if (selectedEpisode == globalIndex) FontWeight.Bold else FontWeight.Normal
-                                    )
-                                }
-                            }
-                            // 填充空位
-                            repeat(6 - rowEpisodes.size) {
-                                Spacer(modifier = Modifier.weight(1f))
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // ===== 源列表弹窗（展开按钮触发） =====
-        if (showSourcePanel) {
-            ModalBottomSheet(
-                onDismissRequest = { showSourcePanel = false },
-                containerColor = MaterialTheme.colorScheme.surface
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("全部源 (${allSearchSources.size})", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                        Row {
-                            TextButton(
-                                onClick = { viewModel.testSourceSpeeds() },
-                                enabled = !speedTesting
-                            ) {
-                                Text(if (speedTesting) "测速中..." else "\u26A1 测速排序")
-                            }
-                            IconButton(onClick = { showSourcePanel = false }) {
-                                Icon(Icons.Default.Close, "关闭")
-                            }
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    LazyColumn(
-                        modifier = Modifier.heightIn(max = 400.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        items(allSearchSources.size) { index ->
-                            val info = allSearchSources[index]
-                            val speed = sourceSpeeds[info.source]
-                            val isCurrent = currentDetail?.source == info.source
-                            Surface(
-                                onClick = {
-                                    if (info.episodes.isNotEmpty()) {
-                                        val savedPosition = exoPlayer.currentPosition.coerceAtLeast(0L)
-                                        selectedEpisode = 0
-                                        viewModel.switchSource(info)
-                                        val url = info.episodes[0]
-                                        if (url.isNotBlank()) {
-                                            exoPlayer.stop()
-                                            exoPlayer.setMediaItem(MediaItem.fromUri(url))
-                                            exoPlayer.prepare()
-                                            exoPlayer.playWhenReady = true
-                                            if (savedPosition > 0) {
-                                                val seekPos = savedPosition
-                                                exoPlayer.addListener(object : Player.Listener {
-                                                    override fun onPlaybackStateChanged(state: Int) {
-                                                        if (state == Player.STATE_READY) {
-                                                            exoPlayer.seekTo(seekPos)
-                                                            exoPlayer.removeListener(this)
-                                                        }
-                                                    }
-                                                })
-                                            }
-                                        }
-                                        showSourcePanel = false
-                                    }
-                                },
-                                shape = RoundedCornerShape(8.dp),
-                                color = if (isCurrent) MaterialTheme.colorScheme.primaryContainer
-                                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        info.displaySourceName.ifBlank { info.source },
-                                        fontSize = 14.sp,
-                                        fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                    Text(
-                                        "${info.episodes.size}集",
-                                        fontSize = 12.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        when {
-                                            speed == null -> "-"
-                                            speed < 0 -> "超时"
-                                            else -> "${speed}ms"
-                                        },
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        color = when {
-                                            speed == null -> MaterialTheme.colorScheme.onSurfaceVariant
-                                            speed < 0 -> Color.Red
-                                            speed < 500 -> Color(0xFF4CAF50)
-                                            speed < 1000 -> Color(0xFFFF9800)
-                                            else -> Color.Red
-                                        }
-                                    )
                                 }
                             }
                         }
                     }
                 }
             }
-        }
+        } // end phone layout
     }
 
     // ===== 投屏设备选择弹窗 =====
@@ -1025,7 +1293,6 @@ fun VideoDetailScreen(
             castDevice = device
             val controller = DlnaController(device)
             castController = controller
-            // 推送当前视频到投屏设备
             val currentEpisodes = detail?.episodes ?: emptyList()
             val url = currentEpisodes.getOrNull(0)
             if (!url.isNullOrBlank()) {
@@ -1035,6 +1302,125 @@ fun VideoDetailScreen(
             }
         }
     )
+}
+
+// ==================== 平板选集网格 ====================
+@Composable
+private fun TabletEpisodeGrid(
+    episodes: List<VideoEpisode>,
+    selectedEpisode: Int,
+    exoPlayer: ExoPlayer,
+    videoSource: String,
+    onEpisodeClick: (Int) -> Unit
+) {
+    if (episodes.isEmpty()) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("暂无剧集", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        return
+    }
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(4),
+        modifier = Modifier.fillMaxSize().padding(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        items(episodes.size) { index ->
+            val isActive = index == selectedEpisode
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHigh,
+                border = if (!isActive) androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant) else null,
+                modifier = Modifier.aspectRatio(1f).clickable { onEpisodeClick(index) }
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(episodes.getOrNull(index)?.title ?: "${index + 1}", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = if (isActive) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface)
+                        if (isActive) {
+                            Text("播放中", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f))
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ==================== 平板播放源列表 ====================
+@Composable
+private fun TabletSourceList(
+    displaySources: List<VideoSource>,
+    allSearchSources: List<VideoInfo>,
+    selectedSource: Int,
+    sourceSpeeds: Map<String, Long>,
+    speedTesting: Boolean,
+    onSourceSelect: (Int, VideoInfo) -> Unit,
+    onTestSpeed: () -> Unit
+) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("共 ${displaySources.size} 个源", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            TextButton(onClick = onTestSpeed, enabled = !speedTesting) {
+                if (speedTesting) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                    Spacer(modifier = Modifier.width(4.dp))
+                }
+                Text(if (speedTesting) "测速中..." else "\u26A1 测速排序", fontSize = 13.sp)
+            }
+        }
+
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            items(displaySources.size) { index ->
+                val src = displaySources[index]
+                val speed = sourceSpeeds[src.source]
+                val isCurrent = index == selectedSource
+                val matchingInfo = allSearchSources.firstOrNull { it.source == src.source }
+
+                Surface(
+                    onClick = {
+                        if (matchingInfo != null && matchingInfo.episodes.isNotEmpty()) {
+                            onSourceSelect(index, matchingInfo)
+                        }
+                    },
+                    shape = RoundedCornerShape(12.dp),
+                    color = if (isCurrent) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                    else MaterialTheme.colorScheme.surfaceContainerHigh,
+                    border = if (isCurrent) androidx.compose.foundation.BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f))
+                    else androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(src.sourceName.ifBlank { src.source }, fontSize = 14.sp, fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
+                            color = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                        Text("${src.episodes.size}集", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            when { speed == null -> ""; speed < 0 -> "超时"; else -> "${speed}ms" },
+                            fontSize = 12.sp, fontWeight = FontWeight.Medium,
+                            color = when { speed == null -> MaterialTheme.colorScheme.onSurfaceVariant; speed < 0 -> Color.Red; speed < 500 -> Color(0xFF4CAF50); speed < 1500 -> Color(0xFFFFC107); else -> Color(0xFFFF5722) }
+                        )
+                        if (isCurrent) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Surface(shape = RoundedCornerShape(4.dp), color = MaterialTheme.colorScheme.primary) {
+                                Text("当前", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 private fun formatTime(ms: Long): String {
