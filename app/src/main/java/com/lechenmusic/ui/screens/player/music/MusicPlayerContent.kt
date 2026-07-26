@@ -41,6 +41,7 @@ import com.lechenmusic.ui.responsive.ResponsiveConfig
 import com.lechenmusic.ui.screens.player.parseLrc
 import com.lechenmusic.ui.screens.player.findActiveLyricLine
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.snapshotFlow
 import kotlinx.coroutines.withContext
 
 // ═══════════════════════════════════════════════════════════
@@ -117,8 +118,8 @@ fun MusicPlayerContent(
                     }
                     Spacer(modifier = Modifier.width(32.dp))
                     // 右侧歌词
-                    Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                        SongInfo(song = song, titleSize = 28.sp, artistSize = 18.sp, onArtistClick = { if (song.artistId.isNotBlank()) onNavigateToArtist(song.artistId) })
+                    Column(modifier = Modifier.weight(1f).fillMaxHeight(), horizontalAlignment = Alignment.CenterHorizontally) {
+                        SongInfo(song = song, titleSize = 28.sp, artistSize = 18.sp, onArtistClick = { if (song.artistId.isNotBlank()) onNavigateToArtist(song.artistId) }, center = true)
                         Spacer(modifier = Modifier.height(8.dp))
                         LyricsPanel(lrcLines = lrcLines, plainLines = plainLines, currentPosition = currentPosition, modifier = Modifier.weight(1f))
                     }
@@ -285,12 +286,15 @@ private fun LyricsPanel(
     modifier: Modifier = Modifier
 ) {
     if (lrcLines != null) {
-        // 用 derivedStateOf 缓存 activeIndex，只在歌词行实际变化时 recompose（而非每200ms）
-        val activeIndex = remember(lrcLines) {
-            derivedStateOf { findActiveLyricLine(lrcLines, currentPosition) }
-        }.value
+        val activeIndex = findActiveLyricLine(lrcLines, currentPosition)
         val listState = rememberLazyListState()
-        LaunchedEffect(activeIndex) { listState.animateScrollToItem((activeIndex - 3).coerceAtLeast(0)) }
+        // 使用 snapshotFlow 监听 activeIndex 变化，确保每次歌词行切换都触发滚动
+        LaunchedEffect(lrcLines) {
+            snapshotFlow { findActiveLyricLine(lrcLines, currentPosition) }
+                .collect { index ->
+                    listState.animateScrollToItem((index - 3).coerceAtLeast(0))
+                }
+        }
 
         LazyColumn(state = listState, modifier = modifier.fillMaxWidth(), contentPadding = PaddingValues(vertical = 40.dp)) {
             itemsIndexed(lrcLines) { index, line ->

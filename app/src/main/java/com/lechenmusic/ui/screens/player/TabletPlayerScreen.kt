@@ -180,7 +180,10 @@ fun TabletPlayerScreen(
                     if (lrcLines != null) {
                         val activeIndex = findActiveLyricLine(lrcLines, currentPosition)
                         val listState = rememberLazyListState()
-                        LaunchedEffect(activeIndex) { listState.animateScrollToItem((activeIndex - 3).coerceAtLeast(0)) }
+                        LaunchedEffect(lrcLines) {
+                            kotlinx.coroutines.flow.snapshotFlow { findActiveLyricLine(lrcLines, currentPosition) }
+                                .collect { index -> listState.animateScrollToItem((index - 3).coerceAtLeast(0)) }
+                        }
 
                         LazyColumn(state = listState, modifier = Modifier.weight(1f).fillMaxWidth(), contentPadding = PaddingValues(vertical = 40.dp)) {
                             itemsIndexed(lrcLines) { index, line ->

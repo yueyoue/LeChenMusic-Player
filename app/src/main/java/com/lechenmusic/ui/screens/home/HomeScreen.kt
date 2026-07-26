@@ -2102,12 +2102,18 @@ private fun TabletMusicHomeContent(
                 }
             }
 
-            // ===== Playlists =====
+            // ===== Playlists (4-per-row grid) =====
             if (playlists.isNotEmpty()) {
                 item { TabletSecHd("歌单", "更多 ›", config, onNavigateToAllPlaylists) }
-                item {
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(gap)) {
-                        items(playlists.take(8), key = { it.id }) { TabletPlaylistCard(it, serverUrl, username, password, config) { onPlaylistClick(it.id) } }
+                val playlistRows = playlists.take(8).chunked(4)
+                items(playlistRows.size) { rowIdx ->
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap)) {
+                        playlistRows[rowIdx].forEach { pl ->
+                            Box(modifier = Modifier.weight(1f)) {
+                                TabletPlaylistCard(pl, serverUrl, username, password, config) { onPlaylistClick(pl.id) }
+                            }
+                        }
+                        repeat(4 - playlistRows[rowIdx].size) { Spacer(modifier = Modifier.weight(1f)) }
                     }
                 }
             }
@@ -2129,12 +2135,18 @@ private fun TabletMusicHomeContent(
             }
 
 
-            // ===== Random Albums =====
+            // ===== Random Albums (4-per-row grid) =====
             if (randomAlbums.isNotEmpty()) {
-                item { TabletSecHd("最近更新", "更多 ›", config, onNavigateToRecentPlayed) }
-                item {
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(gap)) {
-                        items(randomAlbums, key = { it.id }) { TabletAlbumCard(it, serverUrl, username, password, config) { onAlbumClick(it.id) } }
+                item { TabletSecHd("最新专辑", "更多 ›", config, onNavigateToAlbums) }
+                val albumRows = randomAlbums.take(8).chunked(4)
+                items(albumRows.size) { rowIdx ->
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap)) {
+                        albumRows[rowIdx].forEach { album ->
+                            Box(modifier = Modifier.weight(1f)) {
+                                TabletAlbumCard(album, serverUrl, username, password, config) { onAlbumClick(album.id) }
+                            }
+                        }
+                        repeat(4 - albumRows[rowIdx].size) { Spacer(modifier = Modifier.weight(1f)) }
                     }
                 }
             }
@@ -2187,9 +2199,8 @@ private fun TabletSecHd(title: String, action: String, config: ResponsiveConfig,
 
 @Composable
 private fun TabletAlbumCard(album: Album, s: String, u: String, p: String, config: ResponsiveConfig, onClick: () -> Unit) {
-    val size = config.albumCardSize
-    Column(modifier = Modifier.width(size).clickable(onClick = onClick)) {
-        Surface(modifier = Modifier.size(size), shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceVariant, shadowElevation = 2.dp) {
+    Column(modifier = Modifier.clickable(onClick = onClick)) {
+        Surface(modifier = Modifier.fillMaxWidth().aspectRatio(1f), shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceVariant, shadowElevation = 2.dp) {
             if (album.coverArt != null) AsyncImage(model = ApiClient.getCoverArtUrl(s, u, p, album.coverArt), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
             else Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.Album, null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f), modifier = Modifier.size(48.dp)) }
         }
@@ -2200,9 +2211,8 @@ private fun TabletAlbumCard(album: Album, s: String, u: String, p: String, confi
 
 @Composable
 private fun TabletPlaylistCard(pl: Playlist, s: String, u: String, p: String, config: ResponsiveConfig, onClick: () -> Unit) {
-    val size = config.playlistCardSize
-    Column(modifier = Modifier.width(size).clickable(onClick = onClick)) {
-        Surface(modifier = Modifier.size(size), shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceVariant, shadowElevation = 2.dp) {
+    Column(modifier = Modifier.clickable(onClick = onClick)) {
+        Surface(modifier = Modifier.fillMaxWidth().aspectRatio(1f), shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceVariant, shadowElevation = 2.dp) {
             if (pl.coverArt != null) AsyncImage(model = ApiClient.getCoverArtUrl(s, u, p, pl.coverArt), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
         }
         Text(pl.name, fontSize = config.cardTitleSize, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))

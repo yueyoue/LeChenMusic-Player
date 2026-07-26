@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.sp
 import android.widget.Toast
 import com.lechenmusic.data.model.Playlist
 import com.lechenmusic.data.model.Song
+import kotlinx.coroutines.flow.snapshotFlow
 import com.lechenmusic.player.MusicPlayerManager
 import com.lechenmusic.player.RepeatMode
 import com.lechenmusic.ui.MainViewModel
@@ -905,11 +906,16 @@ private fun LyricsView(
 
     val listState = rememberLazyListState()
 
-    // Auto-scroll to active line
-    LaunchedEffect(activeLineIndex) {
-        val totalLines = lrcLines?.size ?: plainLines.size
-        if (totalLines > 0 && activeLineIndex in 0 until totalLines) {
-            listState.animateScrollToItem(activeLineIndex)
+    // Auto-scroll to active line using snapshotFlow for reliable triggering
+    LaunchedEffect(lrcLines) {
+        if (lrcLines != null) {
+            snapshotFlow { findActiveLyricLine(lrcLines, currentPosition) }
+                .collect { index -> listState.animateScrollToItem(index) }
+        } else if (plainLines.isNotEmpty() && duration > 0L) {
+            snapshotFlow {
+                val progress = currentPosition.toFloat() / duration.toFloat()
+                (progress * plainLines.size).toInt().coerceIn(0, plainLines.lastIndex)
+            }.collect { index -> listState.animateScrollToItem(index) }
         }
     }
 

@@ -1,10 +1,13 @@
 package com.lechenmusic.ui.screens.audiobook
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -13,6 +16,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -50,60 +55,120 @@ fun TabletAudiobookScreen(
     }
 
     var searchQuery by remember { mutableStateOf("") }
+    var selectedTab by remember { mutableIntStateOf(
+        when (actualGenre) {
+            "有声读物" -> 1
+            "评书" -> 2
+            "相声" -> 3
+            "儿童" -> 4
+            "starred" -> 5
+            else -> 0
+        }
+    ) }
 
-    val baseBooks = when (actualGenre) {
+    val tabs = listOf(
+        "全部" to null,
+        "有声小说" to "有声读物",
+        "评书" to "评书",
+        "相声" to "相声",
+        "儿童" to "儿童",
+        "收藏" to "starred"
+    )
+
+    val baseBooks = when (val genre = tabs[selectedTab].second) {
         "starred" -> starredAudiobooks
         null -> audiobooks
-        else -> audiobooks.filter { it.genre == actualGenre }
+        else -> audiobooks.filter { it.genre == genre }
     }
     val filteredBooks = if (searchQuery.isBlank()) baseBooks
         else baseBooks.filter {
             it.title.contains(searchQuery, ignoreCase = true) ||
             it.author.contains(searchQuery, ignoreCase = true) ||
             it.narrator.contains(searchQuery, ignoreCase = true)
-    }
+        }
 
-    val title = when (genreFilter) {
-        "starred" -> "收藏的有声书"
-        null -> "全部有声书"
-        else -> genreFilter ?: "全部有声书"
-    }
+    val pad = responsiveConfig.contentPadding
+    val cardSize = responsiveConfig.albumCardSize
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // ===== 顶部: 返回按钮 + 搜索栏 =====
+        // ===== 顶部: 返回按钮 + 标题 =====
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = responsiveConfig.contentPadding, vertical = 12.dp),
+                .padding(start = pad, end = pad, top = 16.dp, bottom = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 返回按钮
             IconButton(onClick = onBack) {
                 Icon(Icons.Default.ArrowBack, "返回")
             }
             Spacer(modifier = Modifier.width(8.dp))
-            Text(title, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+            Text("有声书", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+        }
 
-            Spacer(modifier = Modifier.weight(1f))
-
-            // 搜索框
-            Surface(
-                shape = RoundedCornerShape(24.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                modifier = Modifier.width(280.dp)
+        // ===== 搜索栏 =====
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = pad, vertical = 8.dp),
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Default.Search, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("搜索有声书名称、作者、演播者...", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Icon(Icons.Default.Search, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+                Spacer(modifier = Modifier.width(10.dp))
+                androidx.compose.foundation.text.BasicTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    modifier = Modifier.weight(1f),
+                    textStyle = LocalTextStyle.current.copy(fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface),
+                    singleLine = true,
+                    decorationBox = { innerTextField ->
+                        if (searchQuery.isEmpty()) {
+                            Text("搜索有声书名称、作者、演播者...", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
+                        }
+                        innerTextField()
+                    }
+                )
+                if (searchQuery.isNotEmpty()) {
+                    IconButton(onClick = { searchQuery = "" }, modifier = Modifier.size(20.dp)) {
+                        Icon(Icons.Default.Close, "清除", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
+                    }
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        // ===== 分类标签 =====
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = pad, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            tabs.forEachIndexed { index, (label, _) ->
+                val isSelected = selectedTab == index
+                Surface(
+                    onClick = { selectedTab = index },
+                    shape = RoundedCornerShape(50.dp),
+                    color = if (isSelected) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                ) {
+                    Text(
+                        label,
+                        fontSize = 13.sp,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
 
         // ===== 有声书网格 =====
         if (filteredBooks.isEmpty()) {
@@ -116,7 +181,7 @@ fun TabletAudiobookScreen(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        if (genreFilter != null) "暂无$genreFilter" else "暂无有声书",
+                        if (genreFilter != null) "暂无${tabs[selectedTab].first}" else "暂无有声书",
                         color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp
                     )
                     if (audiobookError != null) {
@@ -126,12 +191,17 @@ fun TabletAudiobookScreen(
                 }
             }
         } else {
+            // 根据屏幕宽度自适应列数，确保封面不会太大
+            val columns = when {
+                responsiveConfig.isExpanded -> 5
+                else -> 4
+            }
             LazyVerticalGrid(
-                columns = GridCells.Fixed(responsiveConfig.gridColumns.coerceIn(3, 6)),
+                columns = GridCells.Fixed(columns),
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(
-                    start = responsiveConfig.contentPadding,
-                    end = responsiveConfig.contentPadding,
+                    start = pad,
+                    end = pad,
                     bottom = 160.dp
                 ),
                 horizontalArrangement = Arrangement.spacedBy(responsiveConfig.itemSpacing),
@@ -169,7 +239,7 @@ private fun TabletAudiobookGridCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(1f),
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(14.dp),
             color = MaterialTheme.colorScheme.surfaceVariant
         ) {
             val coverUrl = getAudiobookCoverUrl(serverUrl, username, password, book.id)
@@ -181,22 +251,24 @@ private fun TabletAudiobookGridCard(
                     contentScale = ContentScale.Crop
                 )
             } else {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Box(modifier = Modifier.fillMaxSize().background(
+                    Brush.linearGradient(listOf(Color(0xFFFF6B35), Color(0xFFFF3CAC)))
+                ), contentAlignment = Alignment.Center) {
                     Icon(
                         Icons.Default.MenuBook, null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                        tint = Color.White.copy(alpha = 0.6f),
                         modifier = Modifier.size(36.dp)
                     )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         // 书名
         Text(
             book.title,
-            fontSize = 14.sp,
+            fontSize = 13.sp,
             fontWeight = FontWeight.SemiBold,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
@@ -205,10 +277,19 @@ private fun TabletAudiobookGridCard(
         // 演播者/作者
         Text(
             book.narrator.ifEmpty { book.author },
-            fontSize = 12.sp,
+            fontSize = 11.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
+
+        // 章节数
+        if (book.chapterCount > 0) {
+            Text(
+                "${book.chapterCount}集",
+                fontSize = 10.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+            )
+        }
     }
 }
