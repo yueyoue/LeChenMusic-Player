@@ -1691,10 +1691,10 @@ private fun CatGrid(onGenreClick: (String) -> Unit = {}) {
                     Surface(
                         modifier = Modifier
                             .weight(1f)
-                            .height(90.dp)
-                            .padding(bottom = 10.dp)
+                            .height(70.dp)
+                            .padding(bottom = 8.dp)
                             .clickable { onGenreClick(cat.genre) },
-                        shape = RoundedCornerShape(18.dp),
+                        shape = RoundedCornerShape(14.dp),
                         color = Color.Transparent
                     ) {
                         Box(
@@ -1706,13 +1706,15 @@ private fun CatGrid(onGenreClick: (String) -> Unit = {}) {
                                     )
                                 )
                         ) {
-                            Column(
+                            // 图标在左，文字在右
+                            Row(
                                 modifier = Modifier
-                                    .align(Alignment.BottomStart)
-                                    .padding(14.dp)
+                                    .align(Alignment.CenterStart)
+                                    .padding(horizontal = 14.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(cat.emoji, fontSize = 28.sp)
-                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(cat.emoji, fontSize = 26.sp)
+                                Spacer(modifier = Modifier.width(10.dp))
                                 Text(
                                     cat.label,
                                     fontSize = 15.sp,
@@ -1792,10 +1794,10 @@ private fun AbGridCard(
     p: String,
     onClick: () -> Unit
 ) {
-    Column(modifier = Modifier.clickable(onClick = onClick).width(140.dp)) {
+    Column(modifier = Modifier.clickable(onClick = onClick).width(130.dp)) {
         Box(
             modifier = Modifier
-                .size(140.dp)
+                .size(130.dp)
                 .clip(RoundedCornerShape(18.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant)
         ) {

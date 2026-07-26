@@ -185,7 +185,6 @@ fun MusicHomeContent(
         item {
             FeaturedSection(
                 playlists = playlists,
-                radioStations = radioStations,
                 cardWidth = config.cardWidth,
                 cardHeight = 150.dp,
                 titleSize = config.sectionTitleSize,
@@ -213,11 +212,11 @@ fun MusicHomeContent(
             )
         }
 
-        // ── 5. 每日推荐 ──
+        // ── 5. 每日推荐（手机只显示5首） ──
         item {
             SectionHead(title = "每日推荐", action = "换一批 ↻", titleSize = config.sectionTitleSize, captionSize = config.captionFontSize, onClick = onRefreshDaily)
         }
-        itemsIndexed(dailySongs) { index, song ->
+        itemsIndexed(dailySongs.take(5)) { index, song ->
             SongListItem(
                 index = index + 1,
                 song = song,
@@ -476,7 +475,6 @@ private fun SectionHead(
 @Composable
 private fun FeaturedSection(
     playlists: List<Playlist>,
-    radioStations: List<InternetRadioStation>,
     cardWidth: Dp,
     cardHeight: Dp,
     titleSize: TextUnit,
@@ -487,8 +485,7 @@ private fun FeaturedSection(
     LazyRow(
         horizontalArrangement = Arrangement.spacedBy(gap)
     ) {
-        // 歌单精选
-        items(playlists.take(3)) { pl ->
+        items(playlists.take(5)) { pl ->
             FeaturedCard(
                 tag = "歌单",
                 title = pl.name,
@@ -499,20 +496,6 @@ private fun FeaturedSection(
                 titleSize = (titleSize.value + 2).sp,
                 captionSize = captionSize,
                 onClick = { onPlaylistClick(pl.id) }
-            )
-        }
-        // 电台精选
-        items(radioStations.take(2)) { station ->
-            FeaturedCard(
-                tag = "电台",
-                title = station.name,
-                subtitle = "24小时不间断",
-                gradient = Brush.linearGradient(listOf(Color(0xFF667eea), Color(0xFF764ba2))),
-                width = cardWidth,
-                height = cardHeight,
-                titleSize = (titleSize.value + 2).sp,
-                captionSize = captionSize,
-                onClick = { }
             )
         }
     }
