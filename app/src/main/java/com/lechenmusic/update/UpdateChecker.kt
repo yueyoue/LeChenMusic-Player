@@ -79,7 +79,8 @@ object UpdateChecker {
                 ?: ""
             if (url.isBlank()) return null
 
-            val checkUrl = "${url.trimEnd('/')}/api/version/check"
+            // 检查 APP 版本更新接口（由 Web 管理端上传 APK 后触发）
+            val checkUrl = "${url.trimEnd('/')}/api/app/version/check?currentVersionCode=$currentVersionCode"
             val request = Request.Builder().url(checkUrl).cacheControl(CacheControl.FORCE_NETWORK).build()
             val response = client.newCall(request).execute()
             if (!response.isSuccessful) return null
@@ -89,25 +90,23 @@ object UpdateChecker {
             val hasUpdate = json.optBoolean("hasUpdate", false)
             if (!hasUpdate) return null
 
-            val latestTag = json.optString("latestTag", "")
-            val latestDate = json.optString("latestDate", "")
-            val changelog = json.optString("changelog", "")
-            val updateCommand = json.optString("updateCommand", "")
+            val latestVersion = json.optString("latestVersion", "")
+            val latestCode = json.optInt("latestCode", 0)
+            val changelog = json.optString("updateLog", "")
+            val apkAvailable = json.optBoolean("apkAvailable", false)
 
-            // Parse version code from tag
-            val versionCode = parseVersionCodeFromTag(latestTag)
-            if (versionCode <= currentVersionCode) return null
+            if (!apkAvailable || latestCode <= currentVersionCode) return null
 
             val downloadUrl = "${url.trimEnd('/')}/api/app/apk/download"
             UpdateInfo(
-                versionCode = versionCode,
-                versionName = latestTag,
+                versionCode = latestCode,
+                versionName = latestVersion,
                 apkUrl = downloadUrl,
-                updateLog = changelog.ifBlank { "版本 $latestTag 已发布" },
+                updateLog = changelog.ifBlank { "版本 $latestVersion 已发布" },
                 source = "服务器"
             )
         } catch (e: Exception) {
-            Log.e(TAG, "Navidrome server check failed", e)
+            Log.e(TAG, "Server APP version check failed", e)
             null
         }
     }
