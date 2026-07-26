@@ -38,6 +38,7 @@ fun AllSongsScreen(
     val password by viewModel.password.collectAsState()
     val toastMessage by viewModel.toastMessage.collectAsState()
     val playlists by viewModel.playlists.collectAsState()
+    val starredSongIds by viewModel.starredSongIds.collectAsState()
     val context = LocalContext.current
     var initialLoadTriggered by remember { mutableStateOf(false) }
     val isTablet = responsiveConfig != null && (responsiveConfig.isMedium || responsiveConfig.isExpanded)
@@ -162,6 +163,7 @@ fun AllSongsScreen(
                     username = username,
                     password = password,
                     playlists = playlists,
+                    isStarred = song.isStarred || starredSongIds.contains(song.id),
                     onClick = { onSongClick(song, displayedSongs) },
                     onStar = { viewModel.star(song.id); Toast.makeText(context, "收藏成功", Toast.LENGTH_SHORT).show() },
                     onUnstar = { viewModel.unstar(song.id); Toast.makeText(context, "已取消收藏", Toast.LENGTH_SHORT).show() },

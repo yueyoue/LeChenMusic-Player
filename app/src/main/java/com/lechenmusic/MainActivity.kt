@@ -454,7 +454,7 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                 // ===== 手机: 标准 Scaffold + 底部导航栏 =====
                 Scaffold(
                     bottomBar = {
-                        Column {
+                        Column(modifier = Modifier.background(Color.Transparent)) {
                             MiniPlayerBar()
                             if (showBottomBar) {
                                 NavigationBar {

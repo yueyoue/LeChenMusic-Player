@@ -449,6 +449,7 @@ fun SectionHeader(
 fun SongContextMenu(
     song: Song,
     playlists: List<com.lechenmusic.data.model.Playlist>,
+    isStarred: Boolean = song.isStarred,
     onStar: () -> Unit,
     onUnstar: () -> Unit,
     onAddToPlaylist: (String) -> Unit,
@@ -458,7 +459,7 @@ fun SongContextMenu(
     onNavigateToAlbum: (() -> Unit)? = null
 ) {
     var expanded by remember { mutableStateOf(false) }
-    var showPlaylistMenu by remember { mutableStateOf(false) }
+    var showPlaylistDialog by remember { mutableStateOf(false) }
     var showCreateDialog by remember { mutableStateOf(false) }
 
     Box {
@@ -476,58 +477,28 @@ fun SongContextMenu(
 
         DropdownMenu(
             expanded = expanded,
-            onDismissRequest = {
-                expanded = false
-                showPlaylistMenu = false
-            }
+            onDismissRequest = { expanded = false }
         ) {
             DropdownMenuItem(
-                text = { Text(if (song.isStarred) "取消收藏" else "收藏") },
+                text = { Text(if (isStarred) "取消收藏" else "收藏") },
                 onClick = {
                     expanded = false
-                    if (song.isStarred) onUnstar() else onStar()
+                    if (isStarred) onUnstar() else onStar()
                 },
                 leadingIcon = {
                     Icon(
-                        if (song.isStarred) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        if (isStarred) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                         contentDescription = null,
                         modifier = Modifier.size(20.dp),
-                        tint = if (song.isStarred) Color(0xFFE94560) else MaterialTheme.colorScheme.onSurfaceVariant
+                        tint = if (isStarred) Color(0xFFE94560) else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             )
             DropdownMenuItem(
                 text = { Text("添加到歌单") },
-                onClick = { showPlaylistMenu = !showPlaylistMenu },
-                leadingIcon = { Icon(Icons.Default.PlaylistAdd, contentDescription = null, modifier = Modifier.size(20.dp)) },
-                trailingIcon = { Icon(Icons.Default.ArrowRight, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                onClick = { expanded = false; showPlaylistDialog = true },
+                leadingIcon = { Icon(Icons.Default.PlaylistAdd, contentDescription = null, modifier = Modifier.size(20.dp)) }
             )
-            if (showPlaylistMenu) {
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                playlists.forEach { pl ->
-                    DropdownMenuItem(
-                        text = { Text(pl.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                        onClick = {
-                            expanded = false
-                            showPlaylistMenu = false
-                            onAddToPlaylist(pl.id)
-                        },
-                        leadingIcon = { Icon(Icons.Default.PlaylistAdd, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant) }
-                    )
-                }
-                if (onCreatePlaylist != null) {
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                    DropdownMenuItem(
-                        text = { Text("新建歌单...") },
-                        onClick = {
-                            expanded = false
-                            showPlaylistMenu = false
-                            showCreateDialog = true
-                        },
-                        leadingIcon = { Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary) }
-                    )
-                }
-            }
             // 添加到播放队列
             DropdownMenuItem(
                 text = { Text("添加到播放队列") },
@@ -549,6 +520,73 @@ fun SongContextMenu(
         }
     }
 
+    // 添加到歌单弹窗
+    if (showPlaylistDialog) {
+        AlertDialog(
+            onDismissRequest = { showPlaylistDialog = false },
+            title = { Text("添加到歌单") },
+            text = {
+                Column {
+                    // 新建歌单按钮
+                    if (onCreatePlaylist != null) {
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { showPlaylistDialog = false; showCreateDialog = true },
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.Add, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text("新建歌单", fontSize = 15.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+                        HorizontalDivider()
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                    // 歌单列表
+                    if (playlists.isEmpty()) {
+                        Text("暂无歌单", color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(vertical = 16.dp))
+                    } else {
+                        playlists.forEach { pl ->
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        showPlaylistDialog = false
+                                        onAddToPlaylist(pl.id)
+                                    },
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(vertical = 12.dp, horizontal = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Default.PlaylistPlay, null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(pl.name, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        Text("${pl.songCount}首", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showPlaylistDialog = false }) { Text("取消") }
+            }
+        )
+    }
+
+    // 新建歌单弹窗
     if (showCreateDialog && onCreatePlaylist != null) {
         var newName by remember { mutableStateOf("") }
         AlertDialog(
@@ -583,6 +621,7 @@ fun SongItemWithMenu(
     username: String,
     password: String,
     playlists: List<com.lechenmusic.data.model.Playlist>,
+    isStarred: Boolean = song.isStarred,
     onClick: () -> Unit,
     onStar: () -> Unit,
     onUnstar: () -> Unit,
@@ -638,6 +677,7 @@ fun SongItemWithMenu(
         SongContextMenu(
             song = song,
             playlists = playlists,
+            isStarred = isStarred,
             onStar = onStar,
             onUnstar = onUnstar,
             onAddToPlaylist = onAddToPlaylist,

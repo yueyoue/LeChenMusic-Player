@@ -291,6 +291,8 @@ fun ArtistDetailScreen(
         }
     } else {
         // ═══ 手机布局 ═══
+        var selectedTab by remember { mutableStateOf(0) } // 0=歌曲, 1=专辑
+
         LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 160.dp)) {
             // Gradient background header with artist info
             item {
@@ -367,7 +369,7 @@ fun ArtistDetailScreen(
                             modifier = Modifier.padding(top = 12.dp)
                         )
                         Text(
-                            "${currentArtist.albumCount} 张专辑",
+                            "${currentArtist.albumCount} 张专辑 · ${artistSongs.size} 首歌曲",
                             fontSize = 13.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -375,48 +377,125 @@ fun ArtistDetailScreen(
                 }
             }
 
-            // Albums section title
+            // Tab 栏（歌曲 / 专辑）
             item {
-                Text(
-                    "专辑 (${currentArtist.album?.size ?: 0})",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
-                )
-            }
-
-            if (!currentArtist.album.isNullOrEmpty()) {
-                items(currentArtist.album!!.chunked(2)) { row ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 20.dp, vertical = 4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        row.forEach { album ->
-                            AlbumCard(
-                                album = album,
-                                serverUrl = serverUrl,
-                                username = username,
-                                password = password,
-                                onClick = { onAlbumClick(album.id) },
-                                modifier = Modifier.weight(1f)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(24.dp)
+                ) {
+                    listOf("歌曲 (${artistSongs.size})", "专辑 (${currentArtist.album?.size ?: 0})").forEachIndexed { index, title ->
+                        Column(
+                            modifier = Modifier.clickable { selectedTab = index },
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                title,
+                                fontSize = 15.sp,
+                                fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal,
+                                color = if (selectedTab == index) MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.onSurfaceVariant
                             )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            if (selectedTab == index) {
+                                Box(
+                                    modifier = Modifier
+                                        .width(24.dp)
+                                        .height(2.dp)
+                                        .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(1.dp))
+                                )
+                            }
                         }
                     }
                 }
-            } else {
-                item {
-                    Box(
+            }
+
+            // 播放全部按钮
+            item {
+                val currentList = if (selectedTab == 0) artistSongs else emptyList()
+                if (currentList.isNotEmpty()) {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(40.dp),
-                        contentAlignment = Alignment.Center
+                            .padding(horizontal = 20.dp, vertical = 4.dp)
+                            .clickable { onSongClick(currentList.first(), currentList) }
                     ) {
-                        Text(
-                            "暂无专辑",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Row(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.PlayCircleFilled, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("播放全部 (${currentList.size})", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                }
+            }
+
+            // 内容区域
+            when (selectedTab) {
+                0 -> {
+                    // 歌曲列表
+                    if (artistSongs.isEmpty()) {
+                        item {
+                            Box(modifier = Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) {
+                                Text("暂无歌曲", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    } else {
+                        items(artistSongs) { song ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onSongClick(song, artistSongs) }
+                                    .padding(horizontal = 20.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                CoverImage(
+                                    coverArtId = song.coverArt ?: song.albumId,
+                                    serverUrl = serverUrl,
+                                    username = username,
+                                    password = password,
+                                    modifier = Modifier.size(48.dp).clip(RoundedCornerShape(8.dp))
+                                )
+                                Column(modifier = Modifier.weight(1f).padding(start = 12.dp)) {
+                                    Text(song.title, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(song.album, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                }
+                                Text(song.durationFormatted, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                }
+                1 -> {
+                    // 专辑列表
+                    if (!currentArtist.album.isNullOrEmpty()) {
+                        items(currentArtist.album!!.chunked(2)) { row ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                row.forEach { album ->
+                                    AlbumCard(
+                                        album = album,
+                                        serverUrl = serverUrl,
+                                        username = username,
+                                        password = password,
+                                        onClick = { onAlbumClick(album.id) },
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        item {
+                            Box(modifier = Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) {
+                                Text("暂无专辑", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
                     }
                 }
             }

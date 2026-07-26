@@ -108,7 +108,8 @@ fun MusicHomeContent(
                     QuickActions(
                         iconSize = 48.dp, labelSize = config.cardSubtitleSize, gap = 12.dp,
                         onArtists = onNavigateToArtists, onAlbums = onNavigateToAlbums,
-                        onPlaylists = onNavigateToAllPlaylists, onRadio = onNavigateToRadio, onCached = onNavigateToCachedMusic
+                        onPlaylists = onNavigateToAllPlaylists, onAllSongs = onNavigateToAllSongs,
+                        onRadio = onNavigateToRadio, onCached = onNavigateToCachedMusic
                     )
                 }
                 // 歌单广场
@@ -177,7 +178,8 @@ fun MusicHomeContent(
                 QuickActions(
                     iconSize = 48.dp, labelSize = config.cardSubtitleSize, gap = 12.dp,
                     onArtists = onNavigateToArtists, onAlbums = onNavigateToAlbums,
-                    onPlaylists = onNavigateToAllPlaylists, onRadio = onNavigateToRadio, onCached = onNavigateToCachedMusic
+                    onPlaylists = onNavigateToAllPlaylists, onAllSongs = onNavigateToAllSongs,
+                    onRadio = onNavigateToRadio, onCached = onNavigateToCachedMusic
                 )
             }
 
@@ -399,6 +401,7 @@ private fun QuickActions(
     onArtists: () -> Unit,
     onAlbums: () -> Unit,
     onPlaylists: () -> Unit,
+    onAllSongs: () -> Unit,
     onRadio: () -> Unit,
     onCached: () -> Unit
 ) {
@@ -409,6 +412,7 @@ private fun QuickActions(
         QuickItem(Icons.Default.Person, "歌手", Color(0xFFA855F7), iconSize, labelSize, onArtists)
         QuickItem(Icons.Default.Album, "专辑", Color(0xFF4A9EFF), iconSize, labelSize, onAlbums)
         QuickItem(Icons.Default.LibraryMusic, "歌单", Color(0xFF00E68A), iconSize, labelSize, onPlaylists)
+        QuickItem(Icons.Default.MusicNote, "乐库", Color(0xFF5352ED), iconSize, labelSize, onAllSongs)
         QuickItem(Icons.Default.Radio, "电台", Color(0xFFFF4D6A), iconSize, labelSize, onRadio)
         QuickItem(Icons.Default.Download, "缓存", Color(0xFFFFD93D), iconSize, labelSize, onCached)
     }

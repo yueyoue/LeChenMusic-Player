@@ -70,6 +70,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // Starred
     private val _starredSongs = MutableStateFlow<List<Song>>(emptyList())
     val starredSongs: StateFlow<List<Song>> = _starredSongs.asStateFlow()
+    // 跟踪已收藏歌曲ID（解决列表中歌曲收藏状态不更新的问题）
+    private val _starredSongIds = MutableStateFlow<Set<String>>(emptySet())
+    val starredSongIds: StateFlow<Set<String>> = _starredSongIds.asStateFlow()
+    fun isSongStarred(song: Song): Boolean = song.isStarred || _starredSongIds.value.contains(song.id)
     private val _starredAlbums = MutableStateFlow<List<Album>>(emptyList())
     val starredAlbums: StateFlow<List<Album>> = _starredAlbums.asStateFlow()
     private val _starredAudiobooks = MutableStateFlow<List<Audiobook>>(emptyList())
@@ -1388,6 +1392,7 @@ fun loadAudiobooks() {
     fun star(id: String) {
         android.util.Log.d("LeChenMusic", "ViewModel.star: id=$id")
         // Optimistic update
+        _starredSongIds.value = _starredSongIds.value + id
         val current = _currentAlbum.value
         if (current != null && current.id == id) {
             _currentAlbum.value = current.copy(starred = java.time.Instant.now().toString())
@@ -1412,6 +1417,7 @@ fun loadAudiobooks() {
     }
 
     fun unstar(id: String) {
+        _starredSongIds.value = _starredSongIds.value - id
         val current = _currentAlbum.value
         if (current != null && current.id == id) {
             _currentAlbum.value = current.copy(starred = null)
@@ -1482,6 +1488,11 @@ fun loadAudiobooks() {
 
     // Star/Unstar playlist (for #4: favorites sync)
     fun starPlaylist(id: String) {
+        // 乐观更新当前歌单详情
+        val cp = _currentPlaylist.value
+        if (cp != null && cp.id == id) {
+            _currentPlaylist.value = cp.copy(starred = java.time.Instant.now().toString())
+        }
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 repository.star(id)
@@ -1493,11 +1504,16 @@ fun loadAudiobooks() {
                 }
             } catch (e: Exception) {
                 android.util.Log.e("LeChenMusic", "starPlaylist exception: ${e.message}")
+                if (cp != null) _currentPlaylist.value = cp
             }
         }
     }
 
     fun unstarPlaylist(id: String) {
+        val cp = _currentPlaylist.value
+        if (cp != null && cp.id == id) {
+            _currentPlaylist.value = cp.copy(starred = null)
+        }
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 repository.unstar(id)
@@ -1509,6 +1525,7 @@ fun loadAudiobooks() {
                 }
             } catch (e: Exception) {
                 android.util.Log.e("LeChenMusic", "unstarPlaylist exception: ${e.message}")
+                if (cp != null) _currentPlaylist.value = cp
             }
         }
     }
