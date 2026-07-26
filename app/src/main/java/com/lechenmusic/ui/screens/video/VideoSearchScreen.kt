@@ -6,9 +6,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -109,15 +109,16 @@ fun VideoSearchScreen(
                 }
             } else {
                 LazyVerticalGrid(
-                    columns = GridCells.Fixed(config.gridColumns.coerceIn(3, 6)),
+                    columns = GridCells.Fixed(config!!.gridColumns.coerceIn(3, 6)),
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(
-                        start = config.contentPadding,
+                        start = config!!.contentPadding,
                         end = config.contentPadding,
                         bottom = 160.dp
                     ),
                     horizontalArrangement = Arrangement.spacedBy(config.itemSpacing),
                     verticalArrangement = Arrangement.spacedBy(config.itemSpacing)
+                
                 ) {
                     items(searchResults) { video ->
                         VideoGridCard(video = video, onClick = { onVideoClick(video) })

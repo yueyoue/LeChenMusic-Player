@@ -143,7 +143,7 @@ fun FavoritesScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = config.contentPadding, vertical = 12.dp),
+                    .padding(horizontal = config?.contentPadding ?: 16.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -197,7 +197,7 @@ fun FavoritesScreen(
                 )
                 1 -> TabletAlbumsTab(
                     albums = starredAlbums,
-                    responsiveConfig = config,
+                    responsiveConfig = config!!,
                     serverUrl = serverUrl,
                     username = username,
                     password = password,
@@ -205,7 +205,7 @@ fun FavoritesScreen(
                 )
                 2 -> TabletPlaylistsTab(
                     playlists = starredPlaylists,
-                    responsiveConfig = config,
+                    responsiveConfig = config!!,
                     serverUrl = serverUrl,
                     username = username,
                     password = password,
@@ -213,7 +213,7 @@ fun FavoritesScreen(
                 )
                 3 -> TabletAudiobooksTab(
                     audiobooks = starredAudiobooks,
-                    responsiveConfig = config,
+                    responsiveConfig = config!!,
                     serverUrl = serverUrl,
                     username = username,
                     password = password,
