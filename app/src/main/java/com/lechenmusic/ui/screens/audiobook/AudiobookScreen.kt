@@ -262,13 +262,13 @@ fun AudiobookGridCard(
     Column(
         modifier = Modifier.clickable(onClick = onClick)
     ) {
-        // Cover image - square with rounded corners
-        Surface(
+        // Cover image - 18dp radius + chapter badge
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(1f),
-            shape = RoundedCornerShape(12.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant
+                .aspectRatio(1f)
+                .clip(RoundedCornerShape(18.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
         ) {
             val coverUrl = getAudiobookCoverUrl(serverUrl, username, password, book.id)
             if (coverUrl != null) {
@@ -282,18 +282,25 @@ fun AudiobookGridCard(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(
-                            Brush.linearGradient(listOf(Color(0xFF667eea), Color(0xFF764ba2)))
-                        ),
+                        .background(Brush.linearGradient(listOf(Color(0xFFFF6B35), Color(0xFFFF3CAC)))),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        Icons.Default.MenuBook,
-                        contentDescription = null,
-                        tint = Color.White.copy(alpha = 0.6f),
-                        modifier = Modifier.size(36.dp)
-                    )
+                    Icon(Icons.Default.MenuBook, null, tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(36.dp))
                 }
+            }
+            // Chapter count badge
+            Surface(
+                modifier = Modifier.align(Alignment.BottomEnd).padding(8.dp),
+                shape = RoundedCornerShape(8.dp),
+                color = Color.Black.copy(alpha = 0.6f)
+            ) {
+                Text(
+                    "${book.chapterCount}集",
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
             }
         }
 

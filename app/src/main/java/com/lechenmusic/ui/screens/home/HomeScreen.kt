@@ -1676,10 +1676,10 @@ private fun getNarrColor(name: String): androidx.compose.ui.graphics.Color {
 private fun CatGrid(onGenreClick: (String) -> Unit = {}) {
     data class CatItem(val emoji: String, val label: String, val genre: String, val color: Color)
     val cats = listOf(
-        CatItem("\uD83D\uDCD6", "有声小说", "有声读物", Color(0xFF5352ED)),
-        CatItem("\uD83C\uDFA4", "相声", "相声", Color(0xFF8E44AD)),
-        CatItem("\uD83C\uDFAD", "评书", "评书", Color(0xFFF39C12)),
-        CatItem("\uD83D\uDC76", "儿童读物", "儿童", Color(0xFF00B894))
+        CatItem("\uD83D\uDCD6", "有声书", "有声读物", Color(0xFFFF6B35)),
+        CatItem("\uD83C\uDFA4", "评书", "评书", Color(0xFF667eea)),
+        CatItem("\uD83D\uDE02", "相声", "相声", Color(0xFFFBBF24)),
+        CatItem("\uD83E\uDDF8", "儿童", "儿童", Color(0xFF00E68A))
     )
     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
         for (row in cats.chunked(2)) {
@@ -1691,10 +1691,10 @@ private fun CatGrid(onGenreClick: (String) -> Unit = {}) {
                     Surface(
                         modifier = Modifier
                             .weight(1f)
-                            .height(80.dp)
+                            .height(90.dp)
                             .padding(bottom = 10.dp)
                             .clickable { onGenreClick(cat.genre) },
-                        shape = RoundedCornerShape(14.dp),
+                        shape = RoundedCornerShape(18.dp),
                         color = Color.Transparent
                     ) {
                         Box(
@@ -1709,11 +1709,13 @@ private fun CatGrid(onGenreClick: (String) -> Unit = {}) {
                             Column(
                                 modifier = Modifier
                                     .align(Alignment.BottomStart)
-                                    .padding(12.dp)
+                                    .padding(14.dp)
                             ) {
+                                Text(cat.emoji, fontSize = 28.sp)
+                                Spacer(modifier = Modifier.height(6.dp))
                                 Text(
-                                    "${cat.emoji} ${cat.label}",
-                                    fontSize = 13.sp,
+                                    cat.label,
+                                    fontSize = 15.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.White
                                 )
@@ -1742,9 +1744,14 @@ private fun NarrItem(
             .clickable(onClick = onClick)
     ) {
         Surface(
-            modifier = Modifier.size(64.dp),
+            modifier = Modifier.size(60.dp),
             shape = CircleShape,
-            color = color
+            color = Color.Transparent
+        ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Brush.linearGradient(listOf(color, color.copy(alpha = 0.6f))), CircleShape)
         ) {
             val avatarUrl = if (serverUrl.isNotEmpty()) {
                 com.lechenmusic.data.api.SubsonicApi.getNarratorAvatarUrl(serverUrl, name)
@@ -1760,6 +1767,7 @@ private fun NarrItem(
                 Box(contentAlignment = Alignment.Center) { Text("\uD83C\uDFA4", fontSize = 24.sp) }
             }
         }
+        } // Box
         Spacer(modifier = Modifier.height(6.dp))
         Text(
             name,
@@ -1784,12 +1792,12 @@ private fun AbGridCard(
     p: String,
     onClick: () -> Unit
 ) {
-    Column(modifier = Modifier.clickable(onClick = onClick)) {
-        Surface(
-            modifier = Modifier.size(140.dp),
-            shape = RoundedCornerShape(14.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant,
-            shadowElevation = 2.dp
+    Column(modifier = Modifier.clickable(onClick = onClick).width(140.dp)) {
+        Box(
+            modifier = Modifier
+                .size(140.dp)
+                .clip(RoundedCornerShape(18.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
         ) {
             val url = getAudiobookCoverUrl(s, u, p, book.id)
             if (url != null) AsyncImage(
@@ -1798,12 +1806,21 @@ private fun AbGridCard(
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )
-            else Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    Icons.Default.MenuBook,
-                    null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
-                    modifier = Modifier.size(48.dp)
+            else Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFFFF6B35), Color(0xFFFF3CAC))))) {
+                Icon(Icons.Default.MenuBook, null, tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(48.dp))
+            }
+            // 章数角标
+            Surface(
+                modifier = Modifier.align(Alignment.BottomEnd).padding(8.dp),
+                shape = RoundedCornerShape(8.dp),
+                color = Color.Black.copy(alpha = 0.6f)
+            ) {
+                Text(
+                    "${book.chapterCount}集",
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
                 )
             }
         }
