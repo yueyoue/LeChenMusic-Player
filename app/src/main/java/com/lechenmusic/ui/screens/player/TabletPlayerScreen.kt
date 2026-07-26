@@ -181,7 +181,7 @@ fun TabletPlayerScreen(
                         val activeIndex = findActiveLyricLine(lrcLines, currentPosition)
                         val listState = rememberLazyListState()
                         LaunchedEffect(lrcLines) {
-                            kotlinx.coroutines.flow.snapshotFlow { findActiveLyricLine(lrcLines, currentPosition) }
+                            androidx.compose.runtime.snapshotFlow { findActiveLyricLine(lrcLines, currentPosition) }
                                 .collect { index -> listState.animateScrollToItem((index - 3).coerceAtLeast(0)) }
                         }
 

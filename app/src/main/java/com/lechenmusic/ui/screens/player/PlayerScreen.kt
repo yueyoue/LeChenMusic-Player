@@ -38,7 +38,7 @@ import androidx.compose.ui.unit.sp
 import android.widget.Toast
 import com.lechenmusic.data.model.Playlist
 import com.lechenmusic.data.model.Song
-import kotlinx.coroutines.flow.snapshotFlow
+import androidx.compose.runtime.snapshotFlow
 import com.lechenmusic.player.MusicPlayerManager
 import com.lechenmusic.player.RepeatMode
 import com.lechenmusic.ui.MainViewModel

@@ -41,7 +41,7 @@ import com.lechenmusic.ui.responsive.ResponsiveConfig
 import com.lechenmusic.ui.screens.player.parseLrc
 import com.lechenmusic.ui.screens.player.findActiveLyricLine
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.snapshotFlow
+import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.withContext
 
 // ═══════════════════════════════════════════════════════════
