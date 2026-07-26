@@ -766,7 +766,6 @@ private fun RadioGrid(
                             Spacer(modifier = Modifier.width(12.dp))
                             Column {
                                 Text(station.name, fontSize = titleSize, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Text("24小时在线", fontSize = subtitleSize, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }

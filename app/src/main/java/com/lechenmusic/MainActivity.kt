@@ -444,9 +444,9 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                 // ===== 手机: 标准 Scaffold + 底部导航栏 =====
                 Scaffold(
                     bottomBar = {
-                        if (showBottomBar) {
-                            Column {
-                                MiniPlayerBar()
+                        Column {
+                            MiniPlayerBar()
+                            if (showBottomBar) {
                                 NavigationBar {
                                     tabs.forEach { tab ->
                                         val selected = currentRoute == tab.route
@@ -694,22 +694,12 @@ fun NavGraphBuilder.sharedNavRoutes(
             val context = LocalContext.current
             DisposableEffect(Unit) {
                 val activity = context as? android.app.Activity
-                val window = activity?.window
-                window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-                // 隐藏状态栏和导航栏 (沉浸式)
-                @Suppress("DEPRECATION")
-                window?.decorView?.systemUiVisibility = (
-                    android.view.View.SYSTEM_UI_FLAG_FULLSCREEN or
-                    android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
-                    android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or
-                    android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
-                    android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
-                    android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                )
+                val mainActivity = context as? com.lechenmusic.MainActivity
+                activity?.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                mainActivity?.enterImmersiveFullscreen()
                 onDispose {
-                    window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-                    @Suppress("DEPRECATION")
-                    window?.decorView?.systemUiVisibility = android.view.View.SYSTEM_UI_FLAG_VISIBLE
+                    activity?.window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                    mainActivity?.exitImmersiveFullscreen()
                 }
             }
             var showAddToPlaylistDialog by remember { mutableStateOf(false) }
