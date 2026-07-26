@@ -479,15 +479,34 @@ fun ArtistDetailScreen(
                                 horizontalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
                                 row.forEach { album ->
-                                    AlbumCard(
-                                        album = album,
-                                        serverUrl = serverUrl,
-                                        username = username,
-                                        password = password,
-                                        onClick = { onAlbumClick(album.id) },
-                                        modifier = Modifier.weight(1f)
-                                    )
+                                    Column(
+                                        modifier = Modifier.weight(1f).clickable { onAlbumClick(album.id) }
+                                    ) {
+                                        CoverImage(
+                                            coverArtId = album.coverArt ?: album.id,
+                                            serverUrl = serverUrl,
+                                            username = username,
+                                            password = password,
+                                            modifier = Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(12.dp))
+                                        )
+                                        Text(
+                                            album.name,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis,
+                                            modifier = Modifier.padding(top = 8.dp)
+                                        )
+                                        Text(
+                                            album.artist,
+                                            fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 1,
+                                            modifier = Modifier.padding(top = 2.dp)
+                                        )
+                                    }
                                 }
+                                if (row.size < 2) Spacer(modifier = Modifier.weight(1f))
                             }
                         }
                     } else {

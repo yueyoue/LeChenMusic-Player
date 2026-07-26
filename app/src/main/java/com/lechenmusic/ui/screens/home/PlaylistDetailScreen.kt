@@ -68,6 +68,9 @@ fun PlaylistDetailScreen(
         return
     }
 
+    // 本地收藏状态（乐观更新，确保UI即时响应）
+    var localStarred by remember(currentPlaylist.isStarred) { mutableStateOf(currentPlaylist.isStarred) }
+
     val isOwner = currentPlaylist.owner.isBlank() || currentPlaylist.owner == currentUser
     var showRemoveDialog by remember { mutableStateOf<Pair<Int, Song>?>(null) }
 
@@ -104,14 +107,15 @@ fun PlaylistDetailScreen(
                 // Star/Unstar button
                 IconButton(
                     onClick = {
-                        if (currentPlaylist.isStarred) viewModel.unstarPlaylist(playlistId)
-                        else viewModel.starPlaylist(playlistId)
+                        localStarred = !localStarred
+                        if (localStarred) viewModel.starPlaylist(playlistId)
+                        else viewModel.unstarPlaylist(playlistId)
                     }
                 ) {
                     Icon(
-                        if (currentPlaylist.isStarred) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                        contentDescription = if (currentPlaylist.isStarred) "取消收藏" else "收藏",
-                        tint = if (currentPlaylist.isStarred) Color(0xFFE94560) else MaterialTheme.colorScheme.onSurface
+                        if (localStarred) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        contentDescription = if (localStarred) "取消收藏" else "收藏",
+                        tint = if (localStarred) Color(0xFFE94560) else MaterialTheme.colorScheme.onSurface
                     )
                 }
             }

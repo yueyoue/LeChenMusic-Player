@@ -451,22 +451,20 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                     }
                 }
             } else {
-                // ===== 手机: 标准 Scaffold + 底部导航栏 =====
+                // ===== 手机: 标准 Scaffold + 底部导航栏 + 浮动播放器 =====
+                Box(modifier = Modifier.fillMaxSize()) {
                 Scaffold(
                     bottomBar = {
-                        Column(modifier = Modifier.background(Color.Transparent)) {
-                            MiniPlayerBar()
-                            if (showBottomBar) {
-                                NavigationBar {
-                                    tabs.forEach { tab ->
-                                        val selected = currentRoute == tab.route
-                                        NavigationBarItem(
-                                            selected = selected,
-                                            onClick = { onNavClick(tab.route) },
-                                            icon = { Icon(tab.icon, contentDescription = tab.label) },
-                                            label = { Text(tab.label) }
-                                        )
-                                    }
+                        if (showBottomBar) {
+                            NavigationBar {
+                                tabs.forEach { tab ->
+                                    val selected = currentRoute == tab.route
+                                    NavigationBarItem(
+                                        selected = selected,
+                                        onClick = { onNavClick(tab.route) },
+                                        icon = { Icon(tab.icon, contentDescription = tab.label) },
+                                        label = { Text(tab.label) }
+                                    )
                                 }
                             }
                         }
@@ -509,6 +507,11 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                         sharedNavRoutes(navController, viewModel, videoViewModel, windowSizeClass)
                     }
                 }
+                // MiniPlayer 浮动在 Scaffold 之上，不受 Scaffold bottomBar 背景影响
+                MiniPlayerBar(
+                    modifier = Modifier.align(Alignment.BottomCenter)
+                )
+                } // Box
             }
         }
     }

@@ -596,7 +596,7 @@ fun HomeScreen(
                         // 横向分类导航菜单
                         item {
                             var selectedVideoTab by remember { mutableIntStateOf(0) }
-                            val videoTabs = listOf("\uD83C\uDFAE 推荐", "\uD83C\uDFAC 电影", "\uD83D\uDCFA 剧集", "\uD83C\uDF8C 动漫", "\uD83C\uDFAD 综艺")
+                            val videoTabs = listOf("\uD83C\uDFAE 推荐", "\uD83C\uDFAC 电影", "\uD83D\uDCFA 剧集", "\uD83C\uDF8C 动漫", "\uD83C\uDFAD 综艺", "\uD83D\uDCFA 电视")
                             Column {
                                 Row(
                                     modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
@@ -613,6 +613,7 @@ fun HomeScreen(
                                                     2 -> onNavigateToVideoCategory("tv")
                                                     3 -> onNavigateToVideoCategory("anime")
                                                     4 -> onNavigateToVideoCategory("variety")
+                                                    5 -> onNavigateToLive()
                                                 }
                                             },
                                             shape = RoundedCornerShape(20.dp),
@@ -988,7 +989,7 @@ private fun AudiobookSlidesCarousel(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp)
-                    .height(170.dp)
+                    .height(210.dp)
             ) { page ->
                 val slide = slides[page]
                 val gradients = listOf(
@@ -1101,7 +1102,7 @@ private fun AudiobookCarousel(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 8.dp)
-                .height(170.dp),
+                .height(210.dp),
             shape = RoundedCornerShape(18.dp),
             color = Color.Transparent
         ) {
@@ -1175,7 +1176,7 @@ private fun AudiobookCarousel(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 8.dp)
-                .height(170.dp)
+                .height(210.dp)
         ) { page ->
             val book = carouselItems[page]
             val gradients = listOf(
@@ -2309,7 +2310,8 @@ private fun TabletVideoHomeContent(
                     "剧集" to "tv",
                     "动漫" to "anime",
                     "综艺" to "variety",
-                    "短剧" to "short"
+                    "短剧" to "short",
+                    "电视" to "live"
                 )
                 Row(
                     modifier = Modifier
@@ -2325,7 +2327,10 @@ private fun TabletVideoHomeContent(
                             fontWeight = FontWeight.Normal,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier
-                                .clickable { onNavigateToVideoCategory(type) }
+                                .clickable {
+                                    if (type == "live") onNavigateToLive()
+                                    else onNavigateToVideoCategory(type)
+                                }
                                 .padding(bottom = 8.dp)
                         )
                     }
