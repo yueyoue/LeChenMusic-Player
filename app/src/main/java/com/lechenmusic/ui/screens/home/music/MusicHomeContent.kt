@@ -1,6 +1,7 @@
 package com.lechenmusic.ui.screens.home.music
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -229,12 +230,7 @@ fun MusicHomeContent(
                 titleSize = config.bodyFontSize,
                 subtitleSize = config.captionFontSize,
                 coverSize = config.songCoverSize,
-                onClick = { onSongClick(song, dailySongs) },
-                trailingContent = if (onSongMenu != null) {{
-                    IconButton(onClick = { onSongMenu(song) }, modifier = Modifier.size(32.dp)) {
-                        Icon(Icons.Default.MoreVert, "更多", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }} else null
+                onClick = { onSongClick(song, dailySongs) }
             )
         }
 
@@ -672,19 +668,19 @@ private fun SongListItem(
                 }
                 if (qualityLabel.isNotEmpty()) {
                     Spacer(modifier = Modifier.width(4.dp))
-                    Surface(
-                        shape = RoundedCornerShape(3.dp),
-                        color = if (qualityLabel == "SQ") Color(0xFFFF6B35).copy(alpha = 0.15f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                        modifier = Modifier.height(14.dp)
-                    ) {
-                        Text(
-                            qualityLabel,
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (qualityLabel == "SQ") Color(0xFFFF6B35) else MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(horizontal = 3.dp, vertical = 1.dp)
-                        )
-                    }
+                    Text(
+                        qualityLabel,
+                        fontSize = 8.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (qualityLabel == "SQ") Color(0xFFFF6B35) else MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .border(
+                                width = 0.5.dp,
+                                color = if (qualityLabel == "SQ") Color(0xFFFF6B35) else MaterialTheme.colorScheme.primary,
+                                shape = RoundedCornerShape(2.dp)
+                            )
+                            .padding(horizontal = 2.dp, vertical = 0.dp)
+                    )
                 }
             }
             Text(song.artist, fontSize = subtitleSize, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)

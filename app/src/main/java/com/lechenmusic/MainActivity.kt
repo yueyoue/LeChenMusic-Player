@@ -454,7 +454,6 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                 // ===== 手机: 标准 Scaffold + 底部导航栏 + 浮动播放器 =====
                 Box(modifier = Modifier.fillMaxSize()) {
                 Scaffold(
-                    containerColor = Color.Transparent,
                     bottomBar = {
                         if (showBottomBar) {
                             NavigationBar {
