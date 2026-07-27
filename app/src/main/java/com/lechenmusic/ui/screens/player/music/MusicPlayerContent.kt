@@ -20,7 +20,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
+import androidx.compose.runtime.DisposableEffect
+
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -86,11 +87,13 @@ fun MusicPlayerContent(
     val coverUrl = ApiClient.getCoverArtUrl(serverUrl, username, password, song.coverArt ?: song.albumId)
     val coverBgColor = rememberCoverColor(coverUrl)
 
-    // 设置状态栏颜色跟随封面背景色
+    // 设置状态栏颜色跟随封面背景色（通过全局状态，避免被 Theme SideEffect 重置）
     val context = LocalContext.current
-    LaunchedEffect(coverBgColor) {
-        val activity = context as? android.app.Activity
-        activity?.window?.statusBarColor = coverBgColor.copy(alpha = 1f).toArgb()
+    DisposableEffect(coverBgColor) {
+        com.lechenmusic.ui.theme.PlayerStatusBarColor.value = coverBgColor.copy(alpha = 1f)
+        onDispose {
+            com.lechenmusic.ui.theme.PlayerStatusBarColor.value = null
+        }
     }
 
     // Parse lyrics

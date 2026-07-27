@@ -3,6 +3,7 @@ import android.app.Activity
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
@@ -21,17 +22,26 @@ private val LightColorScheme = lightColorScheme(
     outline = LightBorder, error = AccentRed
 )
 
+// 全局状态栏颜色控制（播放器页面可覆盖）
+val PlayerStatusBarColor = mutableStateOf<Color?>(null)
+
 @Composable
 fun LeChenMusicTheme(darkTheme: Boolean = false, content: @Composable () -> Unit) {
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
     val view = LocalView.current
+    val playerColor = PlayerStatusBarColor.value
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = Color.Transparent.toArgb()
+            // 如果播放器设置了自定义状态栏颜色，则使用它；否则用透明
+            if (playerColor != null) {
+                window.statusBarColor = playerColor.toArgb()
+            } else {
+                window.statusBarColor = Color.Transparent.toArgb()
+            }
             window.navigationBarColor = Color.Transparent.toArgb()
             WindowCompat.getInsetsController(window, view).apply {
-                isAppearanceLightStatusBars = !darkTheme
+                isAppearanceLightStatusBars = false // 播放器和深色主题都是深色背景，状态栏用白色图标
                 isAppearanceLightNavigationBars = !darkTheme
             }
         }
