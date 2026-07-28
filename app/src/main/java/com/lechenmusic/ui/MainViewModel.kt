@@ -163,13 +163,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     @Suppress("DEPRECATION")
                     context.packageManager.getPackageInfo(context.packageName, 0).versionCode
                 }
+                android.util.Log.d("UpdateCheck", "Checking update: currentVersionCode=$currentVersionCode, serverUrl=${serverUrl.value}")
                 val info = UpdateChecker.check(currentVersionCode, serverUrl.value)
+                android.util.Log.d("UpdateCheck", "Update result: info=$info")
                 if (info != null) {
-                    // If silent auto-check, respect skipped version
                     if (silent) {
                         val skippedCode = settings.skippedVersionCode.first()
                         if (skippedCode >= info.versionCode) {
-                            // User already skipped this version, don't show
+                            android.util.Log.d("UpdateCheck", "Update skipped by user (skippedCode=$skippedCode)")
                             _isCheckingUpdate.value = false
                             _updateStatus.value = ""
                             return@launch
@@ -177,6 +178,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     }
                     _updateInfo.value = info
                 } else if (!silent) {
+                    android.util.Log.d("UpdateCheck", "No update found, showing toast")
                     _toastMessage.value = "当前已是最新版本 ✓"
                 }
             } catch (e: Exception) {

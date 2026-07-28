@@ -58,14 +58,17 @@ object UpdateChecker {
 
     suspend fun check(currentVersionCode: Int, serverUrl: String? = null): UpdateInfo? {
         return withContext(Dispatchers.IO) {
-            // Try Navidrome server (with dynamic URL), custom server, and GitHub
-            val navidromeInfo = try { tryNavidromeServer(currentVersionCode, serverUrl) } catch (e: Exception) { null }
-            val customInfo = try { tryCustomServer(currentVersionCode) } catch (e: Exception) { null }
-            val githubInfo = try { tryGitHubReleases(currentVersionCode) } catch (e: Exception) { null }
+            Log.d(TAG, "=== Update check started, currentVersionCode=$currentVersionCode, serverUrl=$serverUrl ===")
+            val navidromeInfo = try { tryNavidromeServer(currentVersionCode, serverUrl) } catch (e: Exception) { Log.e(TAG, "navidromeInfo exception", e); null }
+            val customInfo = try { tryCustomServer(currentVersionCode) } catch (e: Exception) { Log.e(TAG, "customInfo exception", e); null }
+            val githubInfo = try { tryGitHubReleases(currentVersionCode) } catch (e: Exception) { Log.e(TAG, "githubInfo exception", e); null }
+            Log.d(TAG, "Results: navidrome=${navidromeInfo?.versionCode}, custom=${customInfo?.versionCode}, github=${githubInfo?.versionCode}")
             val candidates = listOfNotNull(navidromeInfo, customInfo, githubInfo)
             val best = candidates.maxByOrNull { it.versionCode }
             if (best != null) {
                 Log.d(TAG, "Found update: v${best.versionName} (${best.versionCode}) from ${best.source}")
+            } else {
+                Log.d(TAG, "No update found")
             }
             best
         }
@@ -77,27 +80,41 @@ object UpdateChecker {
             val url = serverUrl
                 ?: com.lechenmusic.LeChenApp.appContext?.getSharedPreferences("settings", android.content.Context.MODE_PRIVATE)?.getString("serverUrl", "")
                 ?: ""
-            if (url.isBlank()) return null
+            Log.d(TAG, "tryNavidromeServer: url='$url', currentVersionCode=$currentVersionCode")
+            if (url.isBlank()) {
+                Log.w(TAG, "tryNavidromeServer: url is blank, skipping")
+                return null
+            }
 
-            // 检查 APP 版本更新接口（由 Web 管理端上传 APK 后触发）
             val checkUrl = "${url.trimEnd('/')}/api/app/version/check?currentVersionCode=$currentVersionCode"
+            Log.d(TAG, "tryNavidromeServer: requesting $checkUrl")
             val request = Request.Builder().url(checkUrl).cacheControl(CacheControl.FORCE_NETWORK).build()
             val response = client.newCall(request).execute()
-            if (!response.isSuccessful) return null
+            Log.d(TAG, "tryNavidromeServer: response code=${response.code}")
+            if (!response.isSuccessful) {
+                Log.w(TAG, "tryNavidromeServer: unsuccessful response ${response.code}")
+                return null
+            }
             val body = response.body?.string() ?: return null
+            Log.d(TAG, "tryNavidromeServer: body=${body.take(200)}")
             val json = JSONObject(body).getJSONObject("data")
 
             val hasUpdate = json.optBoolean("hasUpdate", false)
+            val latestCode = json.optInt("latestCode", 0)
+            Log.d(TAG, "tryNavidromeServer: hasUpdate=$hasUpdate, latestCode=$latestCode, current=$currentVersionCode")
             if (!hasUpdate) return null
 
             val latestVersion = json.optString("latestVersion", "")
-            val latestCode = json.optInt("latestCode", 0)
             val changelog = json.optString("updateLog", "")
             val apkAvailable = json.optBoolean("apkAvailable", false)
 
-            if (!apkAvailable || latestCode <= currentVersionCode) return null
+            if (!apkAvailable || latestCode <= currentVersionCode) {
+                Log.w(TAG, "tryNavidromeServer: apkAvailable=$apkAvailable, latestCode=$latestCode <= current=$currentVersionCode")
+                return null
+            }
 
             val downloadUrl = "${url.trimEnd('/')}/api/app/apk/download"
+            Log.d(TAG, "tryNavidromeServer: update found! v$latestVersion ($latestCode)")
             UpdateInfo(
                 versionCode = latestCode,
                 versionName = latestVersion,
@@ -106,7 +123,7 @@ object UpdateChecker {
                 source = "服务器"
             )
         } catch (e: Exception) {
-            Log.e(TAG, "Server APP version check failed", e)
+            Log.e(TAG, "tryNavidromeServer FAILED: ${e.javaClass.simpleName}: ${e.message}", e)
             null
         }
     }
