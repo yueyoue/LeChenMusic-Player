@@ -2,6 +2,7 @@ package com.lechenmusic.ui.screens.video
 
 import android.app.Activity
 import com.lechenmusic.ErrorReporter
+import com.lechenmusic.dlna.*
 import android.content.pm.ActivityInfo
 import android.view.WindowManager
 import androidx.compose.foundation.background
@@ -104,6 +105,11 @@ fun VideoPlayerScreen(
     var isFullscreen by remember { mutableStateOf(true) }
     var showSpeedMenu by remember { mutableStateOf(false) }
     var showEpisodePanel by remember { mutableStateOf(false) }
+
+    // 投屏状态
+    var showCastSheet by remember { mutableStateOf(false) }
+    var castDevice by remember { mutableStateOf<com.lechenmusic.dlna.DlnaDevice?>(null) }
+    var castController by remember { mutableStateOf<com.lechenmusic.dlna.DlnaController?>(null) }
 
     // 跟踪是否已由按钮保存过位置（避免 DisposableEffect 重复保存）
     var positionSavedByButton by remember { mutableStateOf(false) }
@@ -266,6 +272,9 @@ fun VideoPlayerScreen(
             }
             exoPlayer.removeListener(listener)
             exoPlayer.release()
+            // 重置屏幕方向，确保返回详情页时使用手机布局
+            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
             activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         }
     }
@@ -406,6 +415,9 @@ fun VideoPlayerScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = {
+                    // 重置屏幕方向，确保返回详情页时使用手机布局
+                    activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                    activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
                     // 保存播放位置（供详情页恢复）
                     if (exoPlayer.currentPosition > 0) {
                         videoViewModel?.setResumePosition(exoPlayer.currentPosition)
@@ -429,6 +441,14 @@ fun VideoPlayerScreen(
                         color = Color.White.copy(alpha = 0.7f),
                         fontSize = 12.sp,
                         maxLines = 1
+                    )
+                }
+                // 投屏按钮
+                IconButton(onClick = { showCastSheet = true }) {
+                    Icon(
+                        if (castDevice != null) Icons.Default.CastConnected else Icons.Default.Cast,
+                        "投屏",
+                        tint = if (castDevice != null) Color(0xFF4CAF50) else Color.White
                     )
                 }
             }
@@ -579,6 +599,9 @@ fun VideoPlayerScreen(
                         // 全屏切换（当前为全屏时点击退出，返回详情页）
                         IconButton(onClick = {
                             if (isFullscreen) {
+                                // 重置屏幕方向，确保返回详情页时使用手机布局
+                                activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                                activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
                                 // 保存播放位置供详情页恢复
                                 if (exoPlayer.currentPosition > 0) {
                                     videoViewModel?.setResumePosition(exoPlayer.currentPosition)
@@ -737,6 +760,22 @@ fun VideoPlayerScreen(
                 }
             }
         }
+
+        // 投屏弹窗
+        DlnaCastSheet(
+            isVisible = showCastSheet,
+            onDismiss = { showCastSheet = false },
+            onDeviceSelected = { device ->
+                castDevice = device
+                castController = DlnaController(device)
+                val episode = currentSource?.episodes?.getOrNull(selectedEpisode)
+                if (episode != null && episode.url.isNotBlank()) {
+                    kotlinx.coroutines.GlobalScope.launch {
+                        castController?.setUriAndPlay(episode.url, "$videoTitle - $episodeTitle")
+                    }
+                }
+            }
+        )
     }
 }
 

@@ -42,7 +42,6 @@ fun LiveScreen(
     onBack: () -> Unit
 ) {
     val config = responsiveConfig
-    val isTablet = config != null && (config.isMedium || config.isExpanded)
     val liveSources by viewModel.liveSources.collectAsState()
     val liveChannels by viewModel.liveChannels.collectAsState()
     val isLoading by viewModel.liveLoading.collectAsState()
@@ -118,9 +117,8 @@ fun LiveScreen(
     }
     val channels = cachedChannels
 
-    if (isTablet) {
-        // ═══ 平板布局 ═══
-        // 全屏模式
+    // ═══ 平板布局（手机/平板统一） ═══
+    // 全屏模式
         if (isFullscreen && selectedChannel != null) {
             DisposableEffect(Unit) {
                 val activity = context as? android.app.Activity
@@ -498,188 +496,7 @@ fun LiveScreen(
                 }
             }
         }
-    } else {
-        // ═══ 手机布局 ═══
-        Column(modifier = Modifier.fillMaxSize()) {
-            // 顶部栏
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.Default.ArrowBack, "返回")
-                }
-                Text("直播", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.weight(1f))
-                if (liveSources.size > 1) {
-                    var expanded by remember { mutableStateOf(false) }
-                    Box {
-                        TextButton(onClick = { expanded = true }) {
-                            Text(liveSources.getOrNull(selectedSourceIndex)?.name ?: "选择源")
-                            Icon(Icons.Default.ArrowDropDown, null)
-                        }
-                        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                            liveSources.forEachIndexed { index, source ->
-                                DropdownMenuItem(
-                                    text = { Text(source.name) },
-                                    onClick = {
-                                        selectedSourceIndex = index
-                                        selectedGroupIndex = 0
-                                        selectedChannel = null
-                                        expanded = false
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (isLoading && groups.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
-                return@Column
-            }
-
-            // 播放器区域
-            Box(
-                modifier = Modifier.fillMaxWidth().height(220.dp).background(Color.Black)
-            ) {
-                if (selectedChannel == null) {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(Icons.Default.Tv, null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(48.dp))
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text("选择频道开始播放", color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp)
-                        }
-                    }
-                } else {
-                    androidx.compose.ui.viewinterop.AndroidView(
-                        factory = { ctx ->
-                            androidx.media3.ui.PlayerView(ctx).apply {
-                                player = exoPlayer
-                                useController = false
-                            }
-                        },
-                        modifier = Modifier.fillMaxSize()
-                    )
-                    Box(
-                        modifier = Modifier.fillMaxSize().background(
-                            Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.4f), Color.Transparent, Color.Black.copy(alpha = 0.6f)))
-                        )
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(12.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = 0.4f)).padding(horizontal = 10.dp, vertical = 5.dp)
-                            ) {
-                                Box(modifier = Modifier.size(7.dp).clip(CircleShape).background(Color(0xFFFF4D6A)))
-                                Spacer(modifier = Modifier.width(5.dp))
-                                Text("正在直播: ${selectedChannel?.name}", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                            }
-                            IconButton(onClick = { exoPlayer.stop(); selectedChannel = null }, modifier = Modifier.size(32.dp)) {
-                                Icon(Icons.Default.Close, "停止", tint = Color.White, modifier = Modifier.size(18.dp))
-                            }
-                        }
-                        Row(
-                            modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            FilledIconButton(
-                                onClick = { if (isPlaying) exoPlayer.pause() else exoPlayer.play() },
-                                modifier = Modifier.size(40.dp),
-                                shape = CircleShape,
-                                colors = IconButtonDefaults.filledIconButtonColors(
-                                    containerColor = MaterialTheme.colorScheme.primary,
-                                    contentColor = MaterialTheme.colorScheme.onPrimary
-                                )
-                            ) {
-                                Icon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, null, modifier = Modifier.size(20.dp))
-                            }
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(selectedChannel?.name ?: "", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                                Text(selectedChannel?.group ?: "", color = Color.White.copy(alpha = 0.6f), fontSize = 11.sp)
-                            }
-                        }
-                    }
-                }
-            }
-
-            // 分类标签
-            if (groups.size > 1) {
-                Row(
-                    modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    groups.indices.forEach { index ->
-                        val group = groups[index]
-                        val isSelected = selectedGroupIndex == index
-                        Surface(
-                            onClick = { selectedGroupIndex = index; selectedChannel = null },
-                            shape = RoundedCornerShape(50),
-                            color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
-                        ) {
-                            Text(
-                                group.name, fontSize = 13.sp,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
-                            )
-                        }
-                    }
-                }
-            }
-
-            // 频道列表（Column + verticalScroll，不用 LazyColumn，彻底避免 item tracking 崩溃）
-            if (channels.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize().padding(40.dp), contentAlignment = Alignment.Center) {
-                    Text("暂无频道", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            } else {
-                val scrollState = rememberScrollState()
-                Column(
-                    modifier = Modifier.fillMaxSize().verticalScroll(scrollState).padding(bottom = 100.dp)
-                ) {
-                    channels.forEach { channel ->
-                        LiveChannelItem(
-                            channel = channel,
-                            isSelected = selectedChannel?.url == channel.url,
-                            onClick = {
-                                selectedChannel = channel
-                                try {
-                                    if (channel.url.isNotBlank()) {
-                                        exoPlayer.setMediaItem(MediaItem.fromUri(channel.url))
-                                        exoPlayer.prepare()
-                                        exoPlayer.playWhenReady = true
-                                    }
-                                } catch (e: Exception) {
-                                    android.util.Log.e("LiveScreen", "ExoPlayer error: ${e.message}")
-                                }
-                            }
-                        )
-                    }
-                }
-            }
-
-            // Debug overlay
-            if (liveDebug.isNotBlank()) {
-                Surface(
-                    modifier = Modifier.fillMaxWidth().padding(8.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.errorContainer
-                ) {
-                    Text(liveDebug, fontSize = 11.sp, modifier = Modifier.padding(12.dp),
-                        color = MaterialTheme.colorScheme.onErrorContainer, lineHeight = 16.sp)
-                }
-            }
-        }
     }
-}
 
 @Composable
 private fun LiveChannelItem(
