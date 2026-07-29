@@ -245,7 +245,7 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
             )
             val responsiveConfig = rememberResponsiveConfig(windowSizeClass)
             val useSideNav = responsiveConfig.useRailNav
-            val showMiniPlayer = currentSong != null && currentRoute != Screen.Player.route && currentRoute != Screen.AudiobookPlayer.route && currentRoute != Screen.VideoPlayerDirect.route && currentRoute != Screen.VideoPlayer.route
+            val showMiniPlayer = currentSong != null && currentRoute != Screen.Player.route && currentRoute != Screen.AudiobookPlayer.route && currentRoute != Screen.VideoPlayerDirect.route && currentRoute != Screen.VideoPlayer.route && currentRoute?.contains("video_detail") != true && currentRoute?.contains("live") != true
 
             // MiniPlayer 组件（复用）
             @Composable
@@ -265,7 +265,8 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                         onClick = {
                             if (isAudiobookPlaying) navController.navigate(Screen.AudiobookPlayer.route)
                             else navController.navigate(Screen.Player.route)
-                        }
+                        },
+                        onDismiss = { viewModel.playerManager.forcePause() }
                     )
                 }
             }

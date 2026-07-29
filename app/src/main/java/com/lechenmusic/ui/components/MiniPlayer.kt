@@ -1,7 +1,10 @@
 package com.lechenmusic.ui.components
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -11,17 +14,24 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lechenmusic.data.model.Song
 import com.lechenmusic.player.MusicPlayerManager
+import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 @Composable
 fun MiniPlayer(
@@ -32,17 +42,48 @@ fun MiniPlayer(
     audiobookCoverUrl: String? = null,
     isAudiobook: Boolean = false,
     modifier: Modifier = Modifier,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onDismiss: (() -> Unit)? = null
 ) {
     val currentSong by playerManager.currentSong.collectAsState()
     val isPlaying by playerManager.isPlaying.collectAsState()
 
     val song = currentSong ?: return
 
+    val offsetX = remember { Animatable(0f) }
+    val scope = rememberCoroutineScope()
+    val density = LocalDensity.current
+    val dismissThresholdPx = with(density) { 200.dp.toPx() }
+
     Surface(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 6.dp)
+            .offset { IntOffset(offsetX.value.roundToInt(), 0) }
+            .pointerInput(onDismiss) {
+                if (onDismiss == null) return@pointerInput
+                detectHorizontalDragGestures(
+                    onDragEnd = {
+                        scope.launch {
+                            if (kotlin.math.abs(offsetX.value) > dismissThresholdPx) {
+                                val target = if (offsetX.value > 0) 1500f else -1500f
+                                offsetX.animateTo(target, tween(200))
+                                onDismiss()
+                            } else {
+                                offsetX.animateTo(0f, tween(200))
+                            }
+                        }
+                    },
+                    onDragCancel = {
+                        scope.launch { offsetX.animateTo(0f, tween(200)) }
+                    }
+                ) { change, dragAmount ->
+                    change.consume()
+                    scope.launch {
+                        offsetX.snapTo(offsetX.value + dragAmount)
+                    }
+                }
+            }
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(20.dp),
         color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.95f),
