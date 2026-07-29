@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.runtime.DisposableEffect
 
 import androidx.compose.ui.layout.ContentScale
@@ -91,8 +92,15 @@ fun MusicPlayerContent(
     val context = LocalContext.current
     DisposableEffect(coverBgColor) {
         com.lechenmusic.ui.theme.PlayerStatusBarColor.value = coverBgColor.copy(alpha = 1f)
+        val window = (context as? android.app.Activity)?.window
+        if (window != null) {
+            window.navigationBarColor = coverBgColor.copy(alpha = 1f).toArgb()
+        }
         onDispose {
             com.lechenmusic.ui.theme.PlayerStatusBarColor.value = null
+            if (window != null) {
+                window.navigationBarColor = android.graphics.Color.TRANSPARENT
+            }
         }
     }
 

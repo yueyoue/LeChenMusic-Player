@@ -39,9 +39,9 @@ fun LeChenMusicTheme(darkTheme: Boolean = false, content: @Composable () -> Unit
             } else {
                 window.statusBarColor = Color.Transparent.toArgb()
             }
-            window.navigationBarColor = Color.Transparent.toArgb()
+            window.navigationBarColor = if (playerColor != null) playerColor.toArgb() else Color.Transparent.toArgb()
             WindowCompat.getInsetsController(window, view).apply {
-                isAppearanceLightStatusBars = false // 播放器和深色主题都是深色背景，状态栏用白色图标
+                isAppearanceLightStatusBars = if (playerColor != null) false else !darkTheme
                 isAppearanceLightNavigationBars = !darkTheme
             }
         }
