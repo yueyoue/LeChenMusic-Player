@@ -61,12 +61,9 @@ fun FavoritesScreen(
 
     var selectedTab by remember { mutableIntStateOf(0) }
 
-    // Lifecycle-aware refresh: reload data when screen becomes visible
+    // Lifecycle-aware refresh: reload starred data when screen becomes visible
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
-        viewModel.loadStarredSongs()
-        viewModel.loadStarredAlbums()
-        viewModel.loadStarredAudiobooks()
-        viewModel.loadPlaylists()
+        viewModel.loadHomeData()
     }
 
     if (isTablet) {
