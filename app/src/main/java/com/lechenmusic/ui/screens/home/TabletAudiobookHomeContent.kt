@@ -337,39 +337,6 @@ fun TabletAudiobookHomeContent(
             Spacer(modifier = Modifier.height(24.dp))
         }
 
-        // ===== 我的收藏 =====
-        if (starredAudiobooks.isNotEmpty()) {
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("我的收藏", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                    Text(
-                        "全部 ›",
-                        fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.clickable { onNavigateToAudiobook("starred") }
-                    )
-                }
-                Spacer(modifier = Modifier.height(12.dp))
-            }
-            item {
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    items(starredAudiobooks.take(8)) { book ->
-                        AudiobookCompactCard(cardSize = cardSize,
-                            book = book,
-                            serverUrl = serverUrl,
-                            username = username,
-                            password = password,
-                            onClick = { onNavigateToAudiobookDetail(book.id) }
-                        )
-                    }
-                }
-            }
-        }
-
         // 底部留白给 MiniPlayer
         item { Spacer(modifier = Modifier.height(40.dp)) }
     }

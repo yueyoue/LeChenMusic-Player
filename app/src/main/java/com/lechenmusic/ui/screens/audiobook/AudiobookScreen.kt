@@ -126,7 +126,7 @@ fun AudiobookScreen(
                         item {
                             val coverUrl = getAudiobookCoverUrl(serverUrl, username, password, featured.id)
                             Box(
-                                modifier = Modifier.fillMaxWidth().height(180.dp).clip(RoundedCornerShape(16.dp)).background(
+                                modifier = Modifier.fillMaxWidth().height(config.heroHeight).clip(RoundedCornerShape(16.dp)).background(
                                     Brush.linearGradient(listOf(Color(0xFFFF416C), Color(0xFFFF4B2B)))
                                 )
                             ) {
@@ -208,7 +208,7 @@ fun AudiobookScreen(
                             horizontalArrangement = Arrangement.spacedBy(gap)
                         ) {
                             audiobooks.sortedByDescending { it.createdAt }.take(6).forEach { book ->
-                                AudiobookCard(book, serverUrl, username, password, 130.dp) { onAudiobookClick(book.id) }
+                                AudiobookCard(book, serverUrl, username, password, config.albumCardSize) { onAudiobookClick(book.id) }
                             }
                         }
                     }

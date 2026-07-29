@@ -525,31 +525,6 @@ fun HomeScreen(
                             }
                         }
                     }
-                    // Favorites
-                    item { SecHd("❤️ 我的收藏", "更多 ›") { onNavigateToAudiobook("starred") } }
-                    if (starredAudiobooks.isNotEmpty()) {
-                        item {
-                            Row(
-                                modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                starredAudiobooks.take(5).forEach { it ->
-                                    AbGridCard(
-                                        it,
-                                        serverUrl,
-                                        username,
-                                        password
-                                    ) { onNavigateToAudiobookDetail(it.id) }
-                                }
-                            }
-                        }
-                    } else {
-                        item {
-                            Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
-                                Text("暂无收藏的有声书", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                        }
-                    }
                 }
 
                 // ===== VIDEO MODE =====
