@@ -24,6 +24,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import coil.compose.AsyncImage
 import com.lechenmusic.data.api.ApiClient
 import com.lechenmusic.data.model.Album
@@ -58,6 +60,14 @@ fun FavoritesScreen(
     val password by viewModel.password.collectAsState()
 
     var selectedTab by remember { mutableIntStateOf(0) }
+
+    // Lifecycle-aware refresh: reload data when screen becomes visible
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        viewModel.loadStarredSongs()
+        viewModel.loadStarredAlbums()
+        viewModel.loadStarredAudiobooks()
+        viewModel.loadPlaylists()
+    }
 
     if (isTablet) {
         // ═══ 平板布局 ═══

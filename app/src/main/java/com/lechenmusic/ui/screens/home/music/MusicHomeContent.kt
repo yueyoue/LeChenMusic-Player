@@ -104,15 +104,6 @@ fun MusicHomeContent(
                         heroHeight = config.heroHeight, titleSize = config.sectionTitleSize, bodySize = config.bodyFontSize
                     )
                 }
-                // 快捷入口
-                item {
-                    QuickActions(
-                        iconSize = 48.dp, labelSize = config.cardSubtitleSize, gap = 12.dp,
-                        onArtists = onNavigateToArtists, onAlbums = onNavigateToAlbums,
-                        onPlaylists = onNavigateToAllPlaylists, onAllSongs = onNavigateToAllSongs,
-                        onRadio = onNavigateToRadio, onCached = onNavigateToCachedMusic
-                    )
-                }
                 // 歌单广场
                 item { SectionHead(title = "歌单广场", action = "更多 ›", titleSize = config.sectionTitleSize, captionSize = config.captionFontSize, onClick = onNavigateToAllPlaylists) }
                 item { PlaylistRow(playlists = playlists, coverSize = config.playlistCardSize, titleSize = config.cardTitleSize, subtitleSize = config.cardSubtitleSize, gap = gap, serverUrl = serverUrl, username = username, password = password, onClick = onPlaylistClick) }
@@ -171,16 +162,6 @@ fun MusicHomeContent(
                 MusicHero(
                     slides = musicSlides, serverUrl = serverUrl,
                     heroHeight = config.heroHeight, titleSize = config.sectionTitleSize, bodySize = config.bodyFontSize
-                )
-            }
-
-            // ── 2. 快捷入口 ──
-            item {
-                QuickActions(
-                    iconSize = 48.dp, labelSize = config.cardSubtitleSize, gap = 12.dp,
-                    onArtists = onNavigateToArtists, onAlbums = onNavigateToAlbums,
-                    onPlaylists = onNavigateToAllPlaylists, onAllSongs = onNavigateToAllSongs,
-                    onRadio = onNavigateToRadio, onCached = onNavigateToCachedMusic
                 )
             }
 
