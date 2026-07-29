@@ -215,10 +215,6 @@ fun VideoCategoryScreen(
                     }
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(title, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                    if (totalCount > 0) {
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("来自豆瓣的精选内容", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
                     if (categoryOpts.isNotEmpty()) {
                         Spacer(modifier = Modifier.width(16.dp))
                         Row(
