@@ -1,8 +1,6 @@
 package com.lechenmusic.ui.screens.video
 
 import android.content.Intent
-import android.content.pm.ActivityInfo
-import android.view.WindowManager
 import android.widget.FrameLayout
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
@@ -85,12 +83,9 @@ fun VideoDetailScreen(
     var selectedSource by remember { mutableIntStateOf(0) }
     var selectedEpisode by remember { mutableIntStateOf(0) }
     var descExpanded by remember { mutableStateOf(false) }
-    var isPlayerFullscreen by remember { mutableStateOf(false) }
     // 播放器控件自动隐藏
     var inlineControlsVisible by remember { mutableStateOf(true) }
-    var fsControlsVisible by remember { mutableStateOf(true) }
     var inlineInteractionCount by remember { mutableIntStateOf(0) }
-    var fsInteractionCount by remember { mutableIntStateOf(0) }
     // 投屏状态
     var showCastSheet by remember { mutableStateOf(false) }
     var castDevice by remember { mutableStateOf<DlnaDevice?>(null) }
@@ -135,23 +130,6 @@ fun VideoDetailScreen(
             if (exoPlayer.isPlaying) inlineControlsVisible = false
         }
     }
-    // 全屏播放器控件自动隐藏(3秒无操作)
-    LaunchedEffect(fsInteractionCount) {
-        if (fsInteractionCount > 0 && exoPlayer.isPlaying) {
-            fsControlsVisible = true
-            kotlinx.coroutines.delay(3000)
-            if (exoPlayer.isPlaying) fsControlsVisible = false
-        }
-    }
-
-    // 全屏视频开始播放后自动隐藏控件
-    LaunchedEffect(exoPlayer.isPlaying) {
-        if (exoPlayer.isPlaying) {
-            kotlinx.coroutines.delay(3000)
-            if (exoPlayer.isPlaying) fsControlsVisible = false
-        }
-    }
-
     // 当视频详情变化时加载视频（包括初始加载）
     // 切换源时跳过（由 SourceList 的 onSourceSelect 处理，避免重置播放位置）
     LaunchedEffect(currentDetail) {
@@ -235,196 +213,6 @@ fun VideoDetailScreen(
         isNavigatingBack = true
         exoPlayer.stop()
         onBack()
-    }
-
-    // 全屏模式处理
-    val activity = context as? android.app.Activity
-    DisposableEffect(isPlayerFullscreen) {
-        activity?.requestedOrientation = if (isPlayerFullscreen) {
-            ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-        } else {
-            ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-        }
-        if (isPlayerFullscreen) {
-            activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
-        } else {
-            activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
-        }
-        activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        onDispose {
-            activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        }
-    }
-
-    // 全屏模式下显示纯播放器
-    if (isPlayerFullscreen) {
-        Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
-            AndroidView(
-                factory = { ctx ->
-                    PlayerView(ctx).apply {
-                        player = exoPlayer
-                        useController = false
-                        layoutParams = FrameLayout.LayoutParams(
-                            FrameLayout.LayoutParams.MATCH_PARENT,
-                            FrameLayout.LayoutParams.MATCH_PARENT
-                        )
-                    }
-                },
-                modifier = Modifier.fillMaxSize()
-            )
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .pointerInput(Unit) {
-                        detectTapGestures {
-                            fsControlsVisible = !fsControlsVisible
-                            if (fsControlsVisible) fsInteractionCount++
-                        }
-                    }
-            )
-            if (fsControlsVisible) {
-                Row(
-                    modifier = Modifier.align(Alignment.TopStart).statusBarsPadding().padding(start = 4.dp, top = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(onClick = { isPlayerFullscreen = false }) {
-                        Icon(Icons.Default.ArrowBack, "退出全屏", tint = Color.White)
-                    }
-                    Text(
-                        currentDetail?.title ?: "",
-                        color = Color.White,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium,
-                        maxLines = 1,
-                        modifier = Modifier.weight(1f, fill = false)
-                    )
-                }
-                IconButton(
-                    onClick = { showCastSheet = true },
-                    modifier = Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(4.dp)
-                ) {
-                    Icon(
-                        if (castDevice != null) Icons.Default.CastConnected else Icons.Default.Cast,
-                        "投屏",
-                        tint = if (castDevice != null) MaterialTheme.colorScheme.primary else Color.White
-                    )
-                }
-                DlnaCastSheet(
-                    isVisible = showCastSheet,
-                    onDismiss = { showCastSheet = false },
-                    onDeviceSelected = { device ->
-                        castDevice = device
-                        castController = DlnaController(device)
-                        val detail = currentDetail
-                        val ep = detail?.toSources()?.firstOrNull()?.episodes?.firstOrNull()
-                        if (detail != null && ep != null && ep.url.isNotBlank()) {
-                            kotlinx.coroutines.GlobalScope.launch {
-                                castController?.setUriAndPlay(ep.url, detail.title)
-                            }
-                        }
-                    }
-                )
-                var fsIsPlaying by remember { mutableStateOf(false) }
-                LaunchedEffect(exoPlayer) {
-                    while (true) {
-                        fsIsPlaying = exoPlayer.isPlaying
-                        kotlinx.coroutines.delay(200)
-                    }
-                }
-                IconButton(
-                    onClick = {
-                        exoPlayer.playWhenReady = !exoPlayer.isPlaying
-                        fsControlsVisible = true
-                    },
-                    modifier = Modifier.align(Alignment.Center).size(64.dp)
-                ) {
-                    Icon(
-                        if (fsIsPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        if (fsIsPlaying) "暂停" else "播放",
-                        tint = Color.White,
-                        modifier = Modifier.size(48.dp)
-                    )
-                }
-            }
-            var fsProgress by remember { mutableFloatStateOf(0f) }
-            var fsDuration by remember { mutableLongStateOf(0L) }
-            var fsPosition by remember { mutableLongStateOf(0L) }
-            var fsDragging by remember { mutableStateOf(false) }
-            var fsSeeking by remember { mutableStateOf(false) }
-            LaunchedEffect(exoPlayer) {
-                while (true) {
-                    if (!fsDragging && !fsSeeking) {
-                        fsDuration = exoPlayer.duration.coerceAtLeast(0L)
-                        fsPosition = exoPlayer.currentPosition.coerceAtLeast(0L)
-                        fsProgress = if (fsDuration > 0) fsPosition.toFloat() / fsDuration else 0f
-                    }
-                    if (fsSeeking) {
-                        kotlinx.coroutines.delay(500)
-                        fsSeeking = false
-                    }
-                    kotlinx.coroutines.delay(300)
-                }
-            }
-            if (fsControlsVisible) {
-            Column(
-                modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp)
-            ) {
-                var fsBarWidthPx by remember { mutableFloatStateOf(1f) }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(formatTime(fsPosition), color = Color.White.copy(alpha = 0.7f), fontSize = 10.sp, modifier = Modifier.width(40.dp))
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(32.dp)
-                            .onGloballyPositioned { fsBarWidthPx = it.size.width.toFloat() }
-                            .pointerInput(Unit) {
-                                detectDragGestures(
-                                    onDragStart = { offset ->
-                                        fsDragging = true
-                                        fsProgress = (offset.x / fsBarWidthPx).coerceIn(0f, 1f)
-                                    },
-                                    onDragEnd = {
-                                        fsDragging = false
-                                        fsSeeking = true
-                                        exoPlayer.seekTo((fsProgress * fsDuration).toLong())
-                                    },
-                                    onDragCancel = { fsDragging = false; fsSeeking = false }
-                                ) { change, dragAmount ->
-                                    change.consume()
-                                    val newOffset = (fsProgress * fsBarWidthPx) + dragAmount.x
-                                    fsProgress = (newOffset / fsBarWidthPx).coerceIn(0f, 1f)
-                                }
-                            }
-                            .pointerInput(Unit) {
-                                detectTapGestures(
-                                    onPress = { offset ->
-                                        fsDragging = true
-                                        fsProgress = (offset.x / fsBarWidthPx).coerceIn(0f, 1f)
-                                        val success = tryAwaitRelease()
-                                        if (success) {
-                                            fsSeeking = true
-                                            exoPlayer.seekTo((fsProgress * fsDuration).toLong())
-                                        }
-                                        fsDragging = false
-                                    }
-                                )
-                            },
-                        contentAlignment = Alignment.CenterStart
-                    ) {
-                        Box(modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)).background(Color.White.copy(alpha = 0.3f)))
-                        Box(modifier = Modifier.fillMaxWidth(fraction = fsProgress).height(4.dp).clip(RoundedCornerShape(2.dp)).background(MaterialTheme.colorScheme.primary))
-                        Box(modifier = Modifier.offset { IntOffset((fsProgress * fsBarWidthPx - 8).toInt(), 0) }.size(16.dp).background(MaterialTheme.colorScheme.primary, CircleShape))
-                    }
-                    Text(formatTime(fsDuration), color = Color.White.copy(alpha = 0.7f), fontSize = 10.sp, modifier = Modifier.width(40.dp), textAlign = TextAlign.End)
-                }
-            }
-            } // end if (fsControlsVisible)
-        }
-        BackHandler { isPlayerFullscreen = false }
-        return
     }
 
     if (isLoading && currentDetail == null) {
@@ -806,7 +594,9 @@ fun VideoDetailScreen(
                                 }
                             }
                             IconButton(
-                                onClick = { isPlayerFullscreen = true },
+                                onClick = {
+                                    onPlay(currentDetail.source, selectedEpisode)
+                                },
                                 modifier = Modifier.align(Alignment.BottomEnd).padding(end = 12.dp, bottom = 16.dp)
                             ) {
                                 Icon(Icons.Default.Fullscreen, "全屏", tint = Color.White)

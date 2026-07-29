@@ -1205,6 +1205,10 @@ fun NavGraphBuilder.sharedNavRoutes(
                     onBack()
                 },
                 onPlay = { playSource, episodeIndex ->
+                    // 找到对应源在 sources 列表中的索引
+                    val sources = videoViewModel.videoDetail.value?.toSources() ?: emptyList()
+                    val sourceIdx = sources.indexOfFirst { it.source == playSource }.coerceAtLeast(0)
+                    videoViewModel.setInitialPlayParams(sourceIdx, episodeIndex)
                     navController.navigate(Screen.VideoPlayerDirect.route)
                 },
                 onVideoClick = { video ->
@@ -1219,6 +1223,10 @@ fun NavGraphBuilder.sharedNavRoutes(
                 responsiveConfig = responsiveCfg,
                 onBack = onBack,
                 onPlay = { playSource, episodeIndex ->
+                    // 找到对应源在 sources 列表中的索引
+                    val sources = videoViewModel.videoDetail.value?.toSources() ?: emptyList()
+                    val sourceIdx = sources.indexOfFirst { it.source == playSource }.coerceAtLeast(0)
+                    videoViewModel.setInitialPlayParams(sourceIdx, episodeIndex)
                     navController.navigate(Screen.VideoPlayerDirect.route)
                 },
                 onVideoClick = { video ->
@@ -1235,13 +1243,15 @@ fun NavGraphBuilder.sharedNavRoutes(
         }
         val responsiveCfg = com.lechenmusic.ui.responsive.rememberResponsiveConfig(windowSizeClass)
         val detail by videoViewModel.videoDetail.collectAsState()
+        val initialSource by videoViewModel.initialPlaySourceIndex.collectAsState()
+        val initialEpisode by videoViewModel.initialPlayEpisodeIndex.collectAsState()
         if (detail != null) {
             val sources = detail!!.toSources()
             VideoPlayerScreen(
                 videoTitle = detail!!.title,
                 sources = sources,
-                initialSource = 0,
-                initialEpisode = 0,
+                initialSource = initialSource,
+                initialEpisode = initialEpisode,
                 videoSource = detail!!.source,
                 videoId = detail!!.id,
                 videoCover = detail!!.displayCover,

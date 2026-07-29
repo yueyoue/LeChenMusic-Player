@@ -320,6 +320,7 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
     fun search(keyword: String) {
         if (keyword.isBlank()) {
             _searchResults.value = emptyList()
+            _allSearchSources.value = emptyList()
             return
         }
         viewModelScope.launch {
@@ -329,13 +330,37 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                 val api = VideoApiClient.getApi(videoServerUrl.value)
                 val response = withContext(Dispatchers.IO) { api.search(keyword) }
                 if (response.isSuccessful) {
-                    _searchResults.value = response.body()?.results ?: emptyList()
+                    val results = response.body()?.results ?: emptyList()
+
+                    // 保存所有有效源（用于详情页片源切换）
+                    val validSources = results.filter { it.episodes.isNotEmpty() }
+                        .groupBy { it.source }
+                        .values.map { group -> group.first() }
+                        .take(30)
+                    _allSearchSources.value = validSources
+
+                    // 参考 Selene-Source: 按标题+年份去重，每组只保留一个代表结果
+                    // 所有源信息保存在 allSearchSources 中，详情页可切换
+                    val grouped = results
+                        .groupBy { r ->
+                            val normTitle = r.title.replace(" ", "").lowercase()
+                            val normYear = r.year.trim().lowercase()
+                            "${normTitle}_$normYear"
+                        }
+                        .mapNotNull { (_, group) ->
+                            // 优先选有 episodes 的结果
+                            group.firstOrNull { it.episodes.isNotEmpty() } ?: group.firstOrNull()
+                        }
+
+                    _searchResults.value = grouped
                 } else {
                     _searchResults.value = emptyList()
+                    _allSearchSources.value = emptyList()
                     _toastMessage.value = "搜索失败"
                 }
             } catch (e: Exception) {
                 _searchResults.value = emptyList()
+                _allSearchSources.value = emptyList()
                 _toastMessage.value = "搜索失败: ${e.message}"
             } finally {
                 _searchLoading.value = false
@@ -345,6 +370,7 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
 
     fun clearSearchResults() {
         _searchResults.value = emptyList()
+        _allSearchSources.value = emptyList()
     }
 
     private fun addSearchHistory(keyword: String) {
@@ -550,6 +576,18 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
     // 切换源时保存的播放位置（毫秒），用于切换源后从同一位置继续播放
     private val _resumePositionMs = MutableStateFlow(0L)
     val resumePositionMs: StateFlow<Long> = _resumePositionMs.asStateFlow()
+
+    // 全屏播放器初始源和集数（由详情页设置，VideoPlayerDirect 读取）
+    private val _initialPlaySourceIndex = MutableStateFlow(0)
+    val initialPlaySourceIndex: StateFlow<Int> = _initialPlaySourceIndex.asStateFlow()
+
+    private val _initialPlayEpisodeIndex = MutableStateFlow(0)
+    val initialPlayEpisodeIndex: StateFlow<Int> = _initialPlayEpisodeIndex.asStateFlow()
+
+    fun setInitialPlayParams(sourceIndex: Int, episodeIndex: Int) {
+        _initialPlaySourceIndex.value = sourceIndex
+        _initialPlayEpisodeIndex.value = episodeIndex
+    }
 
     fun setResumePosition(ms: Long) {
         _resumePositionMs.value = ms
