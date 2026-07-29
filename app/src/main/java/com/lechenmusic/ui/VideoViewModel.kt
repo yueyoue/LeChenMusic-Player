@@ -408,16 +408,15 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                 val response = withContext(Dispatchers.IO) { api.getDetail(source, id) }
                 if (response.isSuccessful && response.body() != null) {
                     val detail = response.body()!!
-                    // 检查是否有可播放资源
+                    _videoDetail.value = detail
+                    _allSearchSources.value = emptyList()
+                    // 如果没有可播放资源，后台搜索其他源（不导航离开）
                     if (detail.episodes.isEmpty() && detail.sources.isEmpty()) {
                         _toastMessage.value = "该源暂无播放资源，正在尝试其他源..."
-                        // 尝试用标题搜索其他源
                         if (detail.title.isNotBlank()) {
-                            searchAndPlay(detail.title, detail.doubanId, detail.year)
-                            return@launch
+                            searchOtherSources(detail.title, detail.doubanId, detail.year)
                         }
                     }
-                    _videoDetail.value = detail
                 } else {
                     _toastMessage.value = "加载详情失败"
                 }
@@ -558,6 +557,46 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
     private val _needNavigateToPlayer = MutableStateFlow(false)
     val needNavigateToPlayer: StateFlow<Boolean> = _needNavigateToPlayer.asStateFlow()
     fun consumeNavigateToPlayer() { _needNavigateToPlayer.value = false }
+
+    /**
+     * 后台搜索其他播放源（不触发导航）
+     * 用于 loadDetail 时发现原源无资源，在详情页内搜索并更新源列表
+     */
+    private fun searchOtherSources(title: String, doubanId: String, year: String = "") {
+        viewModelScope.launch {
+            try {
+                val api = VideoApiClient.getApi(videoServerUrl.value)
+                val searchResp = withContext(Dispatchers.IO) { api.search(title) }
+                val results = searchResp.body()?.results ?: emptyList()
+                val validSources = results.filter { it.episodes.isNotEmpty() }
+                    .groupBy { it.source }
+                    .values.map { group -> group.first() }
+                    .take(30)
+                _allSearchSources.value = validSources
+
+                // 找到最佳匹配并更新详情
+                val normalizedTitle = title.replace(" ", "").lowercase()
+                val matched = validSources.firstOrNull { src ->
+                    val srcTitle = src.title.replace(" ", "").lowercase()
+                    srcTitle == normalizedTitle && (year.isBlank() || src.year.lowercase() == year.lowercase())
+                } ?: validSources.firstOrNull { src ->
+                    val srcTitle = src.title.replace(" ", "").lowercase()
+                    (srcTitle.contains(normalizedTitle) || normalizedTitle.contains(srcTitle)) &&
+                    (year.isBlank() || src.year.lowercase() == year.lowercase())
+                } ?: validSources.firstOrNull()
+
+                if (matched != null && matched.episodes.isNotEmpty()) {
+                    _videoDetail.value = VideoDetail(
+                        id = matched.id, title = matched.title, year = matched.year,
+                        poster = matched.poster, source = matched.source,
+                        sourceName = matched.sourceName,
+                        desc = matched.desc, typeName = matched.type,
+                        episodes = matched.episodes, episodesTitles = matched.episodesTitles
+                    )
+                }
+            } catch (_: Exception) { }
+        }
+    }
 
     // 导航到详情页（searchAndPlay 用这个）
     private val _navigateToDetail = MutableStateFlow(false)
