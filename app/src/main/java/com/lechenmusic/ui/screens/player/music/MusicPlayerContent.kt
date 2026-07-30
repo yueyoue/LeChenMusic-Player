@@ -89,7 +89,12 @@ fun MusicPlayerContent(
     val coverBgColor = rememberCoverColor(coverUrl)
 
     // 计算实际可见的背景色（封面背景色 + 35%黑色遮罩）
-    val visibleBgColor = Color.Black.copy(alpha = 0.35f).compositeOver(coverBgColor)
+    val visibleBgColor = Color(
+        red = coverBgColor.red * 0.65f,
+        green = coverBgColor.green * 0.65f,
+        blue = coverBgColor.blue * 0.65f,
+        alpha = 1f
+    )
 
     // 设置状态栏和导航栏颜色跟随播放器背景
     val context = LocalContext.current
