@@ -88,6 +88,16 @@ fun MusicPlayerContent(
     val coverUrl = ApiClient.getCoverArtUrl(serverUrl, username, password, song.coverArt ?: song.albumId)
     val coverBgColor = rememberCoverColor(coverUrl)
 
+    // 根据背景亮度决定文字颜色（亮背景用深色文字，暗背景用白色文字）
+    val isLightBg = (coverBgColor.red * 0.299f + coverBgColor.green * 0.587f + coverBgColor.blue * 0.114f) > 0.5f
+    val playerTextColor = if (isLightBg) Color(0xFF1A1A2E) else Color.White
+    val playerTextSecondary = if (isLightBg) Color(0xFF1A1A2E).copy(alpha = 0.7f) else Color.White.copy(alpha = 0.7f)
+    val playerTextTertiary = if (isLightBg) Color(0xFF1A1A2E).copy(alpha = 0.4f) else Color.White.copy(alpha = 0.4f)
+    val playerIconTint = if (isLightBg) Color(0xFF1A1A2E) else Color.White
+    val playerIconTintSecondary = if (isLightBg) Color(0xFF1A1A2E).copy(alpha = 0.6f) else Color.White.copy(alpha = 0.6f)
+    val sliderActiveColor = if (isLightBg) Color(0xFF1A1A2E) else Color.White
+    val sliderInactiveColor = if (isLightBg) Color(0xFF1A1A2E).copy(alpha = 0.3f) else Color.White.copy(alpha = 0.3f)
+
     // 设置状态栏和导航栏颜色跟随播放器背景色
     val context = LocalContext.current
     DisposableEffect(coverBgColor) {
@@ -118,7 +128,7 @@ fun MusicPlayerContent(
                 onClick = onBack,
                 modifier = Modifier.padding(start = 8.dp, top = 8.dp)
             ) {
-                Icon(Icons.Default.KeyboardArrowDown, "返回", tint = Color.White, modifier = Modifier.size(32.dp))
+                Icon(Icons.Default.KeyboardArrowDown, "返回", tint = playerIconTint, modifier = Modifier.size(32.dp))
             }
 
             // ── 主内容区 ──
@@ -180,8 +190,8 @@ fun MusicPlayerContent(
                                     CoverImageDisplay(coverUrl = coverUrl, size = 48)
                                     Spacer(modifier = Modifier.width(12.dp))
                                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text(song.title, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
-                                        Text(song.artist, fontSize = 12.sp, color = Color.White.copy(alpha = 0.6f), textAlign = TextAlign.Center)
+                                        Text(song.title, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = playerTextColor, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
+                                        Text(song.artist, fontSize = 12.sp, color = playerTextSecondary, textAlign = TextAlign.Center)
                                     }
                                 }
                                 // 歌词
@@ -202,7 +212,7 @@ fun MusicPlayerContent(
                                 .padding(horizontal = 4.dp)
                                 .size(if (pagerState.currentPage == idx) 8.dp else 6.dp)
                                 .clip(CircleShape)
-                                .background(if (pagerState.currentPage == idx) Color.White else Color.White.copy(alpha = 0.4f))
+                                .background(if (pagerState.currentPage == idx) playerTextColor else playerTextTertiary)
                         )
                     }
                 }
@@ -276,7 +286,7 @@ private fun SongInfo(
             song.title,
             fontSize = titleSize,
             fontWeight = FontWeight.Bold,
-            color = Color.White,
+            color = playerTextColor,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             textAlign = if (center) androidx.compose.ui.text.style.TextAlign.Center else androidx.compose.ui.text.style.TextAlign.Start
@@ -285,7 +295,7 @@ private fun SongInfo(
         Text(
             song.artist,
             fontSize = artistSize,
-            color = Color.White.copy(alpha = 0.7f),
+            color = playerTextSecondary,
             modifier = Modifier.clickable(onClick = onArtistClick)
         )
     }
@@ -319,7 +329,7 @@ private fun LyricsPanel(
                     text = line.text,
                     fontSize = if (isActive) 20.sp else 16.sp,
                     fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
-                    color = if (isActive) Color.White else Color.White.copy(alpha = 0.35f),
+                    color = if (isActive) playerTextColor else playerTextTertiary,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(vertical = if (isActive) 6.dp else 4.dp).fillMaxWidth()
                 )
@@ -328,12 +338,12 @@ private fun LyricsPanel(
     } else if (plainLines.isNotEmpty()) {
         LazyColumn(modifier = modifier.fillMaxWidth(), contentPadding = PaddingValues(vertical = 40.dp)) {
             itemsIndexed(plainLines) { _, line ->
-                Text(line, fontSize = 16.sp, color = Color.White.copy(alpha = 0.4f), modifier = Modifier.padding(vertical = 4.dp).fillMaxWidth())
+                Text(line, fontSize = 16.sp, color = playerTextTertiary, modifier = Modifier.padding(vertical = 4.dp).fillMaxWidth())
             }
         }
     } else {
         Box(modifier = modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            Text("暂无歌词", fontSize = 16.sp, color = Color.White.copy(alpha = 0.4f))
+            Text("暂无歌词", fontSize = 16.sp, color = playerTextTertiary)
         }
     }
 }
@@ -366,16 +376,16 @@ private fun PlayerControls(
         Column(modifier = Modifier.padding(horizontal = 32.dp, vertical = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             // 进度条
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                Text(formatTime(currentPosition), fontSize = 12.sp, color = Color.White.copy(alpha = 0.7f))
+                Text(formatTime(currentPosition), fontSize = 12.sp, color = playerTextSecondary)
                 Spacer(modifier = Modifier.width(12.dp))
                 Slider(
                     value = progress,
                     onValueChange = onSeek,
                     modifier = Modifier.weight(1f),
-                    colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color.White, inactiveTrackColor = Color.White.copy(alpha = 0.3f))
+                    colors = SliderDefaults.colors(thumbColor = playerTextColor, activeTrackColor = sliderActiveColor, inactiveTrackColor = sliderInactiveColor)
                 )
                 Spacer(modifier = Modifier.width(12.dp))
-                Text(formatTime(duration), fontSize = 12.sp, color = Color.White.copy(alpha = 0.7f))
+                Text(formatTime(duration), fontSize = 12.sp, color = playerTextSecondary)
             }
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -390,7 +400,7 @@ private fun PlayerControls(
                     // 左侧：定时 + 收藏
                     var showTimer by remember { mutableStateOf(false) }
                     IconButton(onClick = { showTimer = true }, modifier = Modifier.size(40.dp)) {
-                        Icon(Icons.Default.Timer, "定时", tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
+                        Icon(Icons.Default.Timer, "定时", tint = playerIconTintSecondary, modifier = Modifier.size(20.dp))
                     }
                     DropdownMenu(expanded = showTimer, onDismissRequest = { showTimer = false }) {
                         listOf(15, 30, 45, 60, 90).forEach { min ->
@@ -399,34 +409,34 @@ private fun PlayerControls(
                     }
                     IconButton(onClick = onToggleStar, modifier = Modifier.size(40.dp)) {
                         Icon(if (isStarred) Icons.Default.Favorite else Icons.Default.FavoriteBorder, "收藏",
-                            tint = if (isStarred) Color(0xFFFF4D6A) else Color.White.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
+                            tint = if (isStarred) Color(0xFFFF4D6A) else playerIconTintSecondary, modifier = Modifier.size(20.dp))
                     }
 
                     Spacer(modifier = Modifier.width(24.dp))
 
                     // 中间：主控制
                     IconButton(onClick = onToggleShuffle, modifier = Modifier.size(44.dp)) {
-                        Icon(Icons.Default.Shuffle, "随机", tint = if (shuffleMode) Color.White else Color.White.copy(alpha = 0.4f), modifier = Modifier.size(20.dp))
+                        Icon(Icons.Default.Shuffle, "随机", tint = if (shuffleMode) playerIconTint else playerIconTintSecondary, modifier = Modifier.size(20.dp))
                     }
                     IconButton(onClick = onPrevious, modifier = Modifier.size(48.dp)) {
-                        Icon(Icons.Default.SkipPrevious, "上一首", tint = Color.White, modifier = Modifier.size(32.dp))
+                        Icon(Icons.Default.SkipPrevious, "上一首", tint = playerIconTint, modifier = Modifier.size(32.dp))
                     }
                     FilledIconButton(
                         onClick = onPlayPause,
                         modifier = Modifier.size(56.dp),
                         shape = CircleShape,
-                        colors = IconButtonDefaults.filledIconButtonColors(containerColor = Color.White, contentColor = Color.Black)
+                        colors = IconButtonDefaults.filledIconButtonColors(containerColor = playerTextColor, contentColor = if (isLightBg) Color.White else Color.Black)
                     ) {
                         Icon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, "播放", modifier = Modifier.size(28.dp))
                     }
                     IconButton(onClick = onNext, modifier = Modifier.size(48.dp)) {
-                        Icon(Icons.Default.SkipNext, "下一首", tint = Color.White, modifier = Modifier.size(32.dp))
+                        Icon(Icons.Default.SkipNext, "下一首", tint = playerIconTint, modifier = Modifier.size(32.dp))
                     }
                     IconButton(onClick = onToggleRepeat, modifier = Modifier.size(44.dp)) {
                         Icon(
                             when (repeatMode) { RepeatMode.ONE -> Icons.Default.RepeatOne; else -> Icons.Default.Repeat },
                             "循环",
-                            tint = if (repeatMode != RepeatMode.OFF) Color.White else Color.White.copy(alpha = 0.4f),
+                            tint = if (repeatMode != RepeatMode.OFF) playerIconTint else playerIconTintSecondary,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -437,7 +447,7 @@ private fun PlayerControls(
                     var showAddMenu by remember { mutableStateOf(false) }
                     Box {
                         IconButton(onClick = { showAddMenu = true }, modifier = Modifier.size(40.dp)) {
-                            Icon(Icons.Default.PlaylistAdd, "添加到", tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
+                            Icon(Icons.Default.PlaylistAdd, "添加到", tint = playerIconTintSecondary, modifier = Modifier.size(20.dp))
                         }
                         DropdownMenu(expanded = showAddMenu, onDismissRequest = { showAddMenu = false }) {
                             DropdownMenuItem(text = { Text("添加到歌单") }, onClick = { showAddMenu = false; onShowAddToPlaylist() }, leadingIcon = { Icon(Icons.Default.QueueMusic, null) })
@@ -445,7 +455,7 @@ private fun PlayerControls(
                         }
                     }
                     IconButton(onClick = onShowQueue, modifier = Modifier.size(40.dp)) {
-                        Icon(Icons.Default.QueueMusic, "播放队列", tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
+                        Icon(Icons.Default.QueueMusic, "播放队列", tint = playerIconTintSecondary, modifier = Modifier.size(20.dp))
                     }
                 }
             } else {
@@ -457,27 +467,27 @@ private fun PlayerControls(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(onClick = onToggleShuffle, modifier = Modifier.size(44.dp)) {
-                        Icon(Icons.Default.Shuffle, "随机", tint = if (shuffleMode) Color.White else Color.White.copy(alpha = 0.4f), modifier = Modifier.size(20.dp))
+                        Icon(Icons.Default.Shuffle, "随机", tint = if (shuffleMode) playerIconTint else playerIconTintSecondary, modifier = Modifier.size(20.dp))
                     }
                     IconButton(onClick = onPrevious, modifier = Modifier.size(48.dp)) {
-                        Icon(Icons.Default.SkipPrevious, "上一首", tint = Color.White, modifier = Modifier.size(32.dp))
+                        Icon(Icons.Default.SkipPrevious, "上一首", tint = playerIconTint, modifier = Modifier.size(32.dp))
                     }
                     FilledIconButton(
                         onClick = onPlayPause,
                         modifier = Modifier.size(56.dp),
                         shape = CircleShape,
-                        colors = IconButtonDefaults.filledIconButtonColors(containerColor = Color.White, contentColor = Color.Black)
+                        colors = IconButtonDefaults.filledIconButtonColors(containerColor = playerTextColor, contentColor = if (isLightBg) Color.White else Color.Black)
                     ) {
                         Icon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, "播放", modifier = Modifier.size(28.dp))
                     }
                     IconButton(onClick = onNext, modifier = Modifier.size(48.dp)) {
-                        Icon(Icons.Default.SkipNext, "下一首", tint = Color.White, modifier = Modifier.size(32.dp))
+                        Icon(Icons.Default.SkipNext, "下一首", tint = playerIconTint, modifier = Modifier.size(32.dp))
                     }
                     IconButton(onClick = onToggleRepeat, modifier = Modifier.size(44.dp)) {
                         Icon(
                             when (repeatMode) { RepeatMode.ONE -> Icons.Default.RepeatOne; else -> Icons.Default.Repeat },
                             "循环",
-                            tint = if (repeatMode != RepeatMode.OFF) Color.White else Color.White.copy(alpha = 0.4f),
+                            tint = if (repeatMode != RepeatMode.OFF) playerIconTint else playerIconTintSecondary,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -491,11 +501,11 @@ private fun PlayerControls(
                 ) {
                     IconButton(onClick = onToggleStar, modifier = Modifier.size(40.dp)) {
                         Icon(if (isStarred) Icons.Default.Favorite else Icons.Default.FavoriteBorder, "收藏",
-                            tint = if (isStarred) Color(0xFFFF4D6A) else Color.White.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
+                            tint = if (isStarred) Color(0xFFFF4D6A) else playerIconTintSecondary, modifier = Modifier.size(20.dp))
                     }
                     var showTimer by remember { mutableStateOf(false) }
                     IconButton(onClick = { showTimer = true }, modifier = Modifier.size(40.dp)) {
-                        Icon(Icons.Default.Timer, "定时", tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
+                        Icon(Icons.Default.Timer, "定时", tint = playerIconTintSecondary, modifier = Modifier.size(20.dp))
                     }
                     DropdownMenu(expanded = showTimer, onDismissRequest = { showTimer = false }) {
                         listOf(15, 30, 45, 60, 90).forEach { min ->
@@ -505,7 +515,7 @@ private fun PlayerControls(
                     var showAddMenu by remember { mutableStateOf(false) }
                     Box {
                         IconButton(onClick = { showAddMenu = true }, modifier = Modifier.size(40.dp)) {
-                            Icon(Icons.Default.PlaylistAdd, "添加到", tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
+                            Icon(Icons.Default.PlaylistAdd, "添加到", tint = playerIconTintSecondary, modifier = Modifier.size(20.dp))
                         }
                         DropdownMenu(expanded = showAddMenu, onDismissRequest = { showAddMenu = false }) {
                             DropdownMenuItem(text = { Text("添加到歌单") }, onClick = { showAddMenu = false; onShowAddToPlaylist() }, leadingIcon = { Icon(Icons.Default.QueueMusic, null) })
@@ -513,7 +523,7 @@ private fun PlayerControls(
                         }
                     }
                     IconButton(onClick = onShowQueue, modifier = Modifier.size(40.dp)) {
-                        Icon(Icons.Default.QueueMusic, "播放队列", tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
+                        Icon(Icons.Default.QueueMusic, "播放队列", tint = playerIconTintSecondary, modifier = Modifier.size(20.dp))
                     }
                 }
             }
