@@ -203,6 +203,22 @@ private fun VideoRecommendTab(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(bottom = 100.dp)
         ) {
+            // ── 幻灯片推荐 ──
+            val sliderItems = buildList {
+                homeData?.hotMovies?.let { addAll(it) }
+                homeData?.hotTvShows?.let { addAll(it) }
+            }.distinctBy { it.id }.take(8)
+
+            if (sliderItems.isNotEmpty()) {
+                item {
+                    VideoHeroSlider(
+                        items = sliderItems,
+                        onItemClick = { onVideoClick(it) }
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
+            }
+
             // 继续观看
             if (playRecords.isNotEmpty()) {
                 item {
@@ -749,4 +765,138 @@ fun categoryName(type: String): String = when (type) {
     "综艺" -> "综艺"
     "纪录片" -> "纪录片"
     else -> type
+}
+
+// ==================== 影视幻灯片 ====================
+
+@Composable
+private fun VideoHeroSlider(
+    items: List<VideoInfo>,
+    onItemClick: (VideoInfo) -> Unit
+) {
+    if (items.isEmpty()) return
+
+    val pagerState = androidx.compose.foundation.pager.rememberPagerState(pageCount = { items.size })
+
+    // 自动轮播
+    LaunchedEffect(pagerState) {
+        while (true) {
+            kotlinx.coroutines.delay(4000)
+            val nextPage = (pagerState.currentPage + 1) % items.size
+            pagerState.animateScrollToPage(nextPage)
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(220.dp)
+            .padding(horizontal = 16.dp)
+            .clip(RoundedCornerShape(16.dp))
+    ) {
+        androidx.compose.foundation.pager.HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxSize()
+        ) { page ->
+            val item = items[page]
+            val imageUrl = item.poster.ifEmpty { item.cover }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clickable { onItemClick(item) }
+            ) {
+                // 背景图
+                if (imageUrl.isNotEmpty()) {
+                    AsyncImage(
+                        model = imageUrl,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+                // 渐变遮罩
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(
+                                    Color.Transparent,
+                                    Color.Black.copy(alpha = 0.7f)
+                                )
+                            )
+                        )
+                )
+                // 底部信息
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(16.dp)
+                ) {
+                    Text(
+                        item.title,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (!item.rate.isNullOrEmpty()) {
+                            Surface(
+                                shape = RoundedCornerShape(4.dp),
+                                color = Color(0xFFFFD700)
+                            ) {
+                                Text(
+                                    "★ ${item.rate}",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.Black,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                        if (item.year.isNotEmpty()) {
+                            Text(
+                                item.year,
+                                fontSize = 12.sp,
+                                color = Color.White.copy(alpha = 0.8f)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                        if (item.type.isNotEmpty()) {
+                            Text(
+                                categoryName(item.type),
+                                fontSize = 12.sp,
+                                color = Color.White.copy(alpha = 0.6f)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        // 指示器
+        Row(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 16.dp, bottom = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            repeat(items.size) { index ->
+                Box(
+                    modifier = Modifier
+                        .height(4.dp)
+                        .width(if (pagerState.currentPage == index) 16.dp else 4.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(
+                            if (pagerState.currentPage == index) Color.White
+                            else Color.White.copy(alpha = 0.4f)
+                        )
+                )
+            }
+        }
+    }
 }
