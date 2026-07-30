@@ -112,9 +112,6 @@ fun MusicPlayerContent(
     }
 
     Box(modifier = Modifier.fillMaxSize().background(coverBgColor)) {
-        // 遮罩
-        Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.35f)))
-
         Column(modifier = Modifier.fillMaxSize()) {
             // ── 顶部返回按钮 ──
             IconButton(
