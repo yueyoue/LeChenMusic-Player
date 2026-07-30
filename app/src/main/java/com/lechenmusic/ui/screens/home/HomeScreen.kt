@@ -2314,49 +2314,6 @@ private fun TabletVideoHomeContent(
                 }
             }
 
-            // Hero 横幅 (21:9, rounded-3xl)
-            val heroVideo = hotMovies.firstOrNull() ?: hotTv.firstOrNull()
-            if (heroVideo != null) {
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .aspectRatio(21f / 9f)
-                            .clip(RoundedCornerShape(24.dp))
-                            .clickable { navigateVideo(heroVideo) }
-                    ) {
-                        if (heroVideo.displayCover.isNotBlank()) {
-                            AsyncImage(model = heroVideo.displayCover, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                        }
-                        Box(modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.85f)))))
-                        Column(modifier = Modifier.align(Alignment.BottomStart).padding(28.dp)) {
-                            Surface(shape = RoundedCornerShape(50), color = Color(0xFFFF4D6A)) {
-                                Text("今日热门", modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp), fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color.White, letterSpacing = 1.sp)
-                            }
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Text(heroVideo.title, fontSize = (config.sectionTitleSize.value + 6).sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                            if (heroVideo.desc.isNotBlank()) {
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(heroVideo.desc, fontSize = config.bodyFontSize, color = Color.White.copy(alpha = 0.7f), maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.fillMaxWidth(0.6f))
-                            }
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                Button(onClick = { navigateVideo(heroVideo) }, shape = RoundedCornerShape(50), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary), contentPadding = PaddingValues(horizontal = 28.dp, vertical = 14.dp)) {
-                                    Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(18.dp))
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text("立即播放", fontWeight = FontWeight.SemiBold)
-                                }
-                                OutlinedButton(onClick = { }, shape = RoundedCornerShape(50), border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.3f)), colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White), contentPadding = PaddingValues(horizontal = 28.dp, vertical = 14.dp)) {
-                                    Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text("收藏", fontWeight = FontWeight.SemiBold)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
             // 继续播放 (横向卡片滚动)
             if (videoPlayRecords.isNotEmpty()) {
                 item {
@@ -2379,7 +2336,13 @@ private fun TabletVideoHomeContent(
                                     playTime = record.displayPlayTime,
                                     totalTime = record.displayTotalTime
                                 ),
-                                onClick = { if (record.source.isNotBlank()) onNavigateToVideoDetail(record.source, record.videoIdRaw) }
+                                onClick = {
+                                    if (record.source.isNotBlank()) {
+                                        onNavigateToVideoDetail(record.source, record.videoIdRaw)
+                                    } else {
+                                        videoViewModel.searchAndPlay(record.title, record.videoIdRaw, record.year)
+                                    }
+                                }
                             )
                         }
                     }

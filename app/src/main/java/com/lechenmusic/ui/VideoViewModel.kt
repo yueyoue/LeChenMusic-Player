@@ -408,21 +408,17 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                 val response = withContext(Dispatchers.IO) { api.getDetail(source, id) }
                 if (response.isSuccessful && response.body() != null) {
                     val detail = response.body()!!
-                    // 如果API返回的详情为空（标题和封面都为空），用播放记录信息填充
-                    if (detail.title.isBlank() && detail.displayCover.isBlank()) {
-                        val record = _playRecords.value.find { it.source == source && it.videoIdRaw == id }
-                        if (record != null) {
-                            val enrichedDetail = detail.copy(
-                                title = record.title.ifBlank { detail.title },
-                                cover = record.cover.ifBlank { detail.cover },
-                                year = record.year.ifBlank { detail.year },
-                                sourceName = record.sourceName.ifBlank { detail.sourceName }
-                            )
-                            _videoDetail.value = enrichedDetail
-                            logDebug("loadDetail", "用播放记录填充详情: title=${record.title}")
-                        } else {
-                            _videoDetail.value = detail
-                        }
+                    // 用播放记录补全缺失字段（标题/封面/年份/来源名称）
+                    val record = _playRecords.value.find { it.source == source && it.videoIdRaw == id }
+                    if (record != null && (detail.title.isBlank() || detail.displayCover.isBlank() || detail.year.isBlank())) {
+                        val enrichedDetail = detail.copy(
+                            title = detail.title.ifBlank { record.title },
+                            cover = detail.cover.ifBlank { record.cover },
+                            year = detail.year.ifBlank { record.year },
+                            sourceName = detail.sourceName.ifBlank { record.sourceName }
+                        )
+                        _videoDetail.value = enrichedDetail
+                        logDebug("loadDetail", "用播放记录补全详情: title=${enrichedDetail.title}, cover=${enrichedDetail.displayCover.take(50)}")
                     } else {
                         _videoDetail.value = detail
                     }
@@ -431,8 +427,9 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                     val finalDetail = _videoDetail.value!!
                     if (finalDetail.episodes.isEmpty() && finalDetail.sources.isEmpty()) {
                         _toastMessage.value = "该源暂无播放资源，正在尝试其他源..."
-                        if (finalDetail.title.isNotBlank()) {
-                            searchOtherSources(finalDetail.title, finalDetail.doubanId, finalDetail.year)
+                        val searchTitle = finalDetail.title.ifBlank { record?.title ?: "" }
+                        if (searchTitle.isNotBlank()) {
+                            searchOtherSources(searchTitle, finalDetail.doubanId, finalDetail.year)
                         }
                     }
                 } else {
@@ -604,15 +601,32 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                 } ?: validSources.firstOrNull()
 
                 if (matched != null && matched.episodes.isNotEmpty()) {
+                    // 保留当前详情的原始信息，只更新播放源相关字段
+                    val currentDetail = _videoDetail.value
                     _videoDetail.value = VideoDetail(
-                        id = matched.id, title = matched.title, year = matched.year,
-                        poster = matched.poster, source = matched.source,
-                        sourceName = matched.sourceName,
-                        desc = matched.desc, typeName = matched.type,
-                        episodes = matched.episodes, episodesTitles = matched.episodesTitles
+                        id = currentDetail?.id ?: matched.id,
+                        title = currentDetail?.title?.ifBlank { matched.title } ?: matched.title,
+                        year = currentDetail?.year?.ifBlank { matched.year } ?: matched.year,
+                        cover = currentDetail?.cover?.ifBlank { matched.cover } ?: matched.cover,
+                        poster = currentDetail?.poster?.ifBlank { matched.poster } ?: matched.poster,
+                        source = matched.source,
+                        sourceName = matched.sourceName.ifBlank { currentDetail?.sourceName ?: "" },
+                        sourceNameAlt = matched.sourceNameAlt,
+                        desc = currentDetail?.desc?.ifBlank { matched.desc } ?: matched.desc,
+                        typeName = matched.type.ifBlank { currentDetail?.typeName ?: "" },
+                        rate = currentDetail?.rate ?: matched.rate,
+                        director = currentDetail?.director?.ifBlank { matched.director } ?: matched.director,
+                        actor = currentDetail?.actor?.ifBlank { matched.actor } ?: matched.actor,
+                        area = currentDetail?.area?.ifBlank { matched.area } ?: matched.area,
+                        episodes = matched.episodes,
+                        episodesTitles = matched.episodesTitles,
+                        doubanId = doubanId.ifBlank { currentDetail?.doubanId ?: "" }
                     )
+                    logDebug("searchOtherSources", "找到替代源: ${matched.displaySourceName}, eps=${matched.episodes.size}")
                 }
-            } catch (_: Exception) { }
+            } catch (e: Exception) {
+                logDebug("searchOtherSources", "搜索失败: ${e.message}")
+            }
         }
     }
 
