@@ -78,7 +78,11 @@ fun VideoDetailScreen(
     val isLoading by viewModel.detailLoading.collectAsState()
     val favorites by viewModel.favorites.collectAsState()
     val allSearchSources by viewModel.allSearchSources.collectAsState()
+    val playRecords by viewModel.playRecords.collectAsState()
     val context = LocalContext.current
+
+    // 从播放记录中找到当前视频的记录
+    val currentRecord = playRecords.find { it.source == source && it.videoIdRaw == videoId }
 
     var selectedSource by remember { mutableIntStateOf(0) }
     var selectedEpisode by remember { mutableIntStateOf(0) }
@@ -145,6 +149,18 @@ fun VideoDetailScreen(
                 exoPlayer.setMediaItem(MediaItem.fromUri(ep.url))
                 exoPlayer.prepare()
                 exoPlayer.playWhenReady = true
+                // 从播放记录恢复播放位置
+                val record = currentRecord
+                if (record != null && record.displayPlayTime > 0) {
+                    exoPlayer.addListener(object : Player.Listener {
+                        override fun onPlaybackStateChanged(state: Int) {
+                            if (state == Player.STATE_READY) {
+                                exoPlayer.seekTo(record.displayPlayTime * 1000L)
+                                exoPlayer.removeListener(this)
+                            }
+                        }
+                    })
+                }
             } catch (e: Exception) {
                 ErrorReporter.reportError("error", "视频加载失败", e, "video_detail")
             }

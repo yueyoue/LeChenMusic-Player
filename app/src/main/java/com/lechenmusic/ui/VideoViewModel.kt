@@ -408,13 +408,31 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                 val response = withContext(Dispatchers.IO) { api.getDetail(source, id) }
                 if (response.isSuccessful && response.body() != null) {
                     val detail = response.body()!!
-                    _videoDetail.value = detail
+                    // 如果API返回的详情为空（标题和封面都为空），用播放记录信息填充
+                    if (detail.title.isBlank() && detail.displayCover.isBlank()) {
+                        val record = _playRecords.value.find { it.source == source && it.videoIdRaw == id }
+                        if (record != null) {
+                            val enrichedDetail = detail.copy(
+                                title = record.title.ifBlank { detail.title },
+                                cover = record.cover.ifBlank { detail.cover },
+                                year = record.year.ifBlank { detail.year },
+                                sourceName = record.sourceName.ifBlank { detail.sourceName }
+                            )
+                            _videoDetail.value = enrichedDetail
+                            logDebug("loadDetail", "用播放记录填充详情: title=${record.title}")
+                        } else {
+                            _videoDetail.value = detail
+                        }
+                    } else {
+                        _videoDetail.value = detail
+                    }
                     _allSearchSources.value = emptyList()
                     // 如果没有可播放资源，后台搜索其他源（不导航离开）
-                    if (detail.episodes.isEmpty() && detail.sources.isEmpty()) {
+                    val finalDetail = _videoDetail.value!!
+                    if (finalDetail.episodes.isEmpty() && finalDetail.sources.isEmpty()) {
                         _toastMessage.value = "该源暂无播放资源，正在尝试其他源..."
-                        if (detail.title.isNotBlank()) {
-                            searchOtherSources(detail.title, detail.doubanId, detail.year)
+                        if (finalDetail.title.isNotBlank()) {
+                            searchOtherSources(finalDetail.title, finalDetail.doubanId, finalDetail.year)
                         }
                     }
                 } else {
