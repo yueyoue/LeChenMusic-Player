@@ -769,6 +769,7 @@ fun categoryName(type: String): String = when (type) {
 
 // ==================== 影视幻灯片 ====================
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun VideoHeroSlider(
     items: List<VideoInfo>,
