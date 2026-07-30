@@ -638,24 +638,19 @@ private fun SongListItem(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(song.title, fontSize = titleSize, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 // 品质图标
-                val qualityLabel = when {
-                    song.suffix.equals("flac", ignoreCase = true) || song.suffix.equals("wav", ignoreCase = true) -> "SQ"
-                    song.bitRate >= 320 -> "HQ"
-                    else -> ""
-                }
-                if (qualityLabel.isNotEmpty()) {
+                val qualityText = com.lechenmusic.ui.components.getQualityText(song)
+                if (qualityText.isNotEmpty()) {
                     Spacer(modifier = Modifier.width(4.dp))
                     Surface(
-                        shape = RoundedCornerShape(3.dp),
-                        color = if (qualityLabel == "SQ") Color(0xFFFF6B35).copy(alpha = 0.15f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                        modifier = Modifier.height(14.dp)
+                        shape = RoundedCornerShape(4.dp),
+                        color = com.lechenmusic.ui.components.getQualityColor(song).copy(alpha = 0.15f)
                     ) {
                         Text(
-                            qualityLabel,
-                            fontSize = 9.sp,
+                            qualityText,
+                            fontSize = 8.sp,
                             fontWeight = FontWeight.Bold,
-                            color = if (qualityLabel == "SQ") Color(0xFFFF6B35) else MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(horizontal = 3.dp, vertical = 1.dp)
+                            color = com.lechenmusic.ui.components.getQualityColor(song),
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
                         )
                     }
                 }

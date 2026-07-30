@@ -189,7 +189,7 @@ fun SongItem(
     }
 }
 
-private fun getQualityText(song: Song): String {
+fun getQualityText(song: Song): String {
     val suffix = song.suffix.uppercase()
     val bitRate = song.bitRate
     return when {
@@ -204,7 +204,7 @@ private fun getQualityText(song: Song): String {
     }
 }
 
-private fun getQualityColor(song: Song): Color {
+fun getQualityColor(song: Song): Color {
     val suffix = song.suffix.uppercase()
     return when {
         suffix == "FLAC" || suffix == "DSD" || suffix == "WAV" || suffix == "AIFF" -> Color(0xFFFF6B81) // Red for lossless

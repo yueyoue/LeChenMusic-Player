@@ -525,6 +525,30 @@ fun HomeScreen(
                             }
                         }
                     }
+                    // 教育
+                    item { SecHd("📚 教育", "更多 ›") { onNavigateToAudiobook("教育") } }
+                    item {
+                        val eduBooks = audiobooks.filter { it.genre == "教育" }
+                        if (eduBooks.isNotEmpty()) {
+                            Row(
+                                modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                eduBooks.take(5).forEach { it ->
+                                    AbGridCard(
+                                        it,
+                                        serverUrl,
+                                        username,
+                                        password
+                                    ) { onNavigateToAudiobookDetail(it.id) }
+                                }
+                            }
+                        } else {
+                            Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                                Text("暂无教育内容", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
                 }
 
                 // ===== VIDEO MODE =====

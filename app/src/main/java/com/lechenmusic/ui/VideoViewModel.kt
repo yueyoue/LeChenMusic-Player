@@ -422,15 +422,15 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                     } else {
                         _videoDetail.value = detail
                     }
-                    _allSearchSources.value = emptyList()
-                    // 如果没有可播放资源，后台搜索其他源（不导航离开）
+                    // 后台搜索其他播放源（用于详情页片源切换面板）
                     val finalDetail = _videoDetail.value!!
+                    val searchTitle = finalDetail.title.ifBlank { record?.title ?: "" }
+                    if (searchTitle.isNotBlank()) {
+                        searchOtherSources(searchTitle, finalDetail.doubanId, finalDetail.year)
+                    }
+                    // 如果没有可播放资源，提示用户
                     if (finalDetail.episodes.isEmpty() && finalDetail.sources.isEmpty()) {
                         _toastMessage.value = "该源暂无播放资源，正在尝试其他源..."
-                        val searchTitle = finalDetail.title.ifBlank { record?.title ?: "" }
-                        if (searchTitle.isNotBlank()) {
-                            searchOtherSources(searchTitle, finalDetail.doubanId, finalDetail.year)
-                        }
                     }
                 } else {
                     _toastMessage.value = "加载详情失败"
