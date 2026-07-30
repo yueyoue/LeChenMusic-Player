@@ -88,21 +88,13 @@ fun MusicPlayerContent(
     val coverUrl = ApiClient.getCoverArtUrl(serverUrl, username, password, song.coverArt ?: song.albumId)
     val coverBgColor = rememberCoverColor(coverUrl)
 
-    // 计算实际可见的背景色（封面背景色 + 35%黑色遮罩）
-    val visibleBgColor = Color(
-        red = coverBgColor.red * 0.65f,
-        green = coverBgColor.green * 0.65f,
-        blue = coverBgColor.blue * 0.65f,
-        alpha = 1f
-    )
-
-    // 设置状态栏和导航栏颜色跟随播放器背景
+    // 设置状态栏和导航栏颜色跟随播放器背景色
     val context = LocalContext.current
     DisposableEffect(coverBgColor) {
-        com.lechenmusic.ui.theme.PlayerStatusBarColor.value = visibleBgColor
+        com.lechenmusic.ui.theme.PlayerStatusBarColor.value = coverBgColor
         val window = (context as? android.app.Activity)?.window
         if (window != null) {
-            window.navigationBarColor = visibleBgColor.toArgb()
+            window.navigationBarColor = coverBgColor.toArgb()
         }
         onDispose {
             com.lechenmusic.ui.theme.PlayerStatusBarColor.value = null
