@@ -145,7 +145,7 @@ fun MusicPlayerContent(
                     Spacer(modifier = Modifier.width(32.dp))
                     // 右侧歌词
                     Column(modifier = Modifier.weight(1f).fillMaxHeight(), horizontalAlignment = Alignment.CenterHorizontally) {
-                        SongInfo(song = song, titleSize = 28.sp, artistSize = 18.sp, onArtistClick = { if (song.artistId.isNotBlank()) onNavigateToArtist(song.artistId) }, center = true)
+                        SongInfo(song = song, titleSize = 28.sp, artistSize = 18.sp, onArtistClick = { if (song.artistId.isNotBlank()) onNavigateToArtist(song.artistId) }, center = true, playerTextColor = playerTextColor, playerTextSecondary = playerTextSecondary)
                         Spacer(modifier = Modifier.height(8.dp))
                         LyricsPanel(lrcLines = lrcLines, plainLines = plainLines, currentPosition = currentPosition, playerTextColor = playerTextColor, playerTextTertiary = playerTextTertiary, modifier = Modifier.weight(1f))
                     }
@@ -171,7 +171,7 @@ fun MusicPlayerContent(
                                 SongInfo(
                                     song = song, titleSize = 22.sp, artistSize = 14.sp,
                                     onArtistClick = { if (song.artistId.isNotBlank()) onNavigateToArtist(song.artistId) },
-                                    center = true
+                                    center = true, playerTextColor = playerTextColor, playerTextSecondary = playerTextSecondary
                                 )
                             }
                         }
@@ -285,7 +285,9 @@ private fun SongInfo(
     titleSize: TextUnit,
     artistSize: TextUnit,
     onArtistClick: () -> Unit,
-    center: Boolean = false
+    center: Boolean = false,
+    playerTextColor: Color = Color.White,
+    playerTextSecondary: Color = Color.White.copy(alpha = 0.7f)
 ) {
     Column(
         horizontalAlignment = if (center) Alignment.CenterHorizontally else Alignment.Start
