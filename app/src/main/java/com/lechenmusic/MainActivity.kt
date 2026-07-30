@@ -1299,7 +1299,6 @@ fun NavGraphBuilder.sharedNavRoutes(
         } else {
             LiveScreen(
                 viewModel = videoViewModel,
-                responsiveConfig = responsiveCfg,
                 onBack = onBack
             )
         }
