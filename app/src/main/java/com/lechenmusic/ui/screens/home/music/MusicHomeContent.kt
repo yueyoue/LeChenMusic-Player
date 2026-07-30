@@ -165,19 +165,6 @@ fun MusicHomeContent(
                 )
             }
 
-        // ── 3. 为你精选 ──
-        item {
-            FeaturedSection(
-                playlists = playlists,
-                cardWidth = config.cardWidth,
-                cardHeight = 150.dp,
-                titleSize = config.sectionTitleSize,
-                captionSize = config.captionFontSize,
-                gap = gap,
-                onPlaylistClick = onPlaylistClick
-            )
-        }
-
         // ── 4. 歌单广场 ──
         item {
             SectionHead(title = "歌单广场", action = "更多 ›", titleSize = config.sectionTitleSize, captionSize = config.captionFontSize, onClick = onNavigateToAllPlaylists)
