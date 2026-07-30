@@ -137,21 +137,62 @@ fun AllSongsScreen(
         if (displayedSongs.isNotEmpty()) {
             item {
                 val pad = if (isTablet) responsiveConfig!!.contentPadding else 20.dp
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = pad, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = pad, vertical = 4.dp)
                 ) {
-                    Text(
-                        "${displayedSongs.size} 首歌曲",
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    if (isLoading) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("加载中...", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "${displayedSongs.size} 首歌曲",
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        if (isLoading) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("加载中...", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        // 播放全部
+                        Button(
+                            onClick = {
+                                if (displayedSongs.isNotEmpty()) {
+                                    viewModel.playerManager.playSong(displayedSongs.first(), displayedSongs)
+                                }
+                            },
+                            shape = RoundedCornerShape(20.dp),
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary
+                            )
+                        ) {
+                            Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("播放全部", fontSize = 13.sp)
+                        }
+                        // 随机播放
+                        OutlinedButton(
+                            onClick = {
+                                if (displayedSongs.isNotEmpty()) {
+                                    val shuffled = displayedSongs.shuffled()
+                                    viewModel.playerManager.playSong(shuffled.first(), shuffled)
+                                }
+                            },
+                            shape = RoundedCornerShape(20.dp),
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                        ) {
+                            Icon(Icons.Default.Shuffle, null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("随机播放", fontSize = 13.sp)
                         }
                     }
                 }

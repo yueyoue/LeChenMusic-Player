@@ -104,6 +104,38 @@ fun MusicHomeContent(
                         heroHeight = config.heroHeight, titleSize = config.sectionTitleSize, bodySize = config.bodyFontSize
                     )
                 }
+                // 快捷入口按钮
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(gap)
+                    ) {
+                        val quickItems = listOf(
+                            Triple(Icons.Default.Person, "歌手", onNavigateToArtists),
+                            Triple(Icons.Default.Album, "专辑", onNavigateToAlbums),
+                            Triple(Icons.Default.QueueMusic, "歌单", onNavigateToAllPlaylists),
+                            Triple(Icons.Default.Radio, "电台", onNavigateToRadio),
+                            Triple(Icons.Default.Download, "缓存", onNavigateToCachedMusic)
+                        )
+                        quickItems.forEach { (icon, label, onClick) ->
+                            Surface(
+                                onClick = onClick,
+                                shape = RoundedCornerShape(12.dp),
+                                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(vertical = 12.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Icon(icon, null, modifier = Modifier.size(24.dp), tint = MaterialTheme.colorScheme.primary)
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(label, fontSize = config.cardSubtitleSize, fontWeight = FontWeight.Medium)
+                                }
+                            }
+                        }
+                    }
+                }
                 // 歌单广场
                 item { SectionHead(title = "歌单广场", action = "更多 ›", titleSize = config.sectionTitleSize, captionSize = config.captionFontSize, onClick = onNavigateToAllPlaylists) }
                 item { PlaylistRow(playlists = playlists, coverSize = config.playlistCardSize, titleSize = config.cardTitleSize, subtitleSize = config.cardSubtitleSize, gap = gap, serverUrl = serverUrl, username = username, password = password, onClick = onPlaylistClick) }
