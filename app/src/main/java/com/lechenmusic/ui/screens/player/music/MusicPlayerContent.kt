@@ -147,7 +147,7 @@ fun MusicPlayerContent(
                     Column(modifier = Modifier.weight(1f).fillMaxHeight(), horizontalAlignment = Alignment.CenterHorizontally) {
                         SongInfo(song = song, titleSize = 28.sp, artistSize = 18.sp, onArtistClick = { if (song.artistId.isNotBlank()) onNavigateToArtist(song.artistId) }, center = true)
                         Spacer(modifier = Modifier.height(8.dp))
-                        LyricsPanel(lrcLines = lrcLines, plainLines = plainLines, currentPosition = currentPosition, modifier = Modifier.weight(1f))
+                        LyricsPanel(lrcLines = lrcLines, plainLines = plainLines, currentPosition = currentPosition, playerTextColor = playerTextColor, playerTextTertiary = playerTextTertiary, modifier = Modifier.weight(1f))
                     }
                 }
             } else {
@@ -195,7 +195,7 @@ fun MusicPlayerContent(
                                     }
                                 }
                                 // 歌词
-                                LyricsPanel(lrcLines = lrcLines, plainLines = plainLines, currentPosition = currentPosition, modifier = Modifier.weight(1f))
+                                LyricsPanel(lrcLines = lrcLines, plainLines = plainLines, currentPosition = currentPosition, playerTextColor = playerTextColor, playerTextTertiary = playerTextTertiary, modifier = Modifier.weight(1f))
                             }
                         }
                     }
@@ -228,6 +228,14 @@ fun MusicPlayerContent(
                 isStarred = isStarred,
                 shuffleMode = shuffleMode,
                 repeatMode = repeatMode,
+                isLightBg = isLightBg,
+                playerTextColor = playerTextColor,
+                playerTextSecondary = playerTextSecondary,
+                playerTextTertiary = playerTextTertiary,
+                playerIconTint = playerIconTint,
+                playerIconTintSecondary = playerIconTintSecondary,
+                sliderActiveColor = sliderActiveColor,
+                sliderInactiveColor = sliderInactiveColor,
                 onSeek = { playerManager.seekToProgress(it) },
                 onPlayPause = { playerManager.togglePlayPause() },
                 onPrevious = { playerManager.skipPrevious() },
@@ -309,6 +317,8 @@ private fun LyricsPanel(
     lrcLines: List<com.lechenmusic.ui.screens.player.LyricLine>?,
     plainLines: List<String>,
     currentPosition: Long,
+    playerTextColor: Color = Color.White,
+    playerTextTertiary: Color = Color.White.copy(alpha = 0.4f),
     modifier: Modifier = Modifier
 ) {
     if (lrcLines != null) {
@@ -361,6 +371,14 @@ private fun PlayerControls(
     isStarred: Boolean,
     shuffleMode: Boolean,
     repeatMode: RepeatMode,
+    isLightBg: Boolean = false,
+    playerTextColor: Color = Color.White,
+    playerTextSecondary: Color = Color.White.copy(alpha = 0.7f),
+    playerTextTertiary: Color = Color.White.copy(alpha = 0.4f),
+    playerIconTint: Color = Color.White,
+    playerIconTintSecondary: Color = Color.White.copy(alpha = 0.6f),
+    sliderActiveColor: Color = Color.White,
+    sliderInactiveColor: Color = Color.White.copy(alpha = 0.3f),
     onSeek: (Float) -> Unit,
     onPlayPause: () -> Unit,
     onPrevious: () -> Unit,
