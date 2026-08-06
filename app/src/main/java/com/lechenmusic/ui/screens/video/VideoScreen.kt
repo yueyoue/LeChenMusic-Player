@@ -297,8 +297,8 @@ private fun VideoRecommendTab(
             }
 
             // 热门电影（横向滚动）
-            val hotMovies = homeData?.hotMovies
-            if (!hotMovies.isNullOrEmpty()) {
+            val hotMoviesList = homeData?.hotMovies
+            if (!hotMoviesList.isNullOrEmpty()) {
                 item {
                     SectionHeader("🎬 热门电影")
                     Spacer(modifier = Modifier.height(8.dp))
@@ -306,7 +306,7 @@ private fun VideoRecommendTab(
                         modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        hotMovies.forEach { video ->
+                        hotMoviesList.forEach { video ->
                             VideoHorizontalCard(video = video, onClick = { onVideoClick(video) })
                         }
                     }

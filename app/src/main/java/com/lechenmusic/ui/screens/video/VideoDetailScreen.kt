@@ -79,6 +79,7 @@ fun VideoDetailScreen(
     val favorites by viewModel.favorites.collectAsState()
     val allSearchSources by viewModel.allSearchSources.collectAsState()
     val playRecords by viewModel.playRecords.collectAsState()
+    val resumePositionMs by viewModel.resumePositionMs.collectAsState()
     val context = LocalContext.current
 
     // 从播放记录中找到当前视频的记录
@@ -147,13 +148,12 @@ fun VideoDetailScreen(
         if (ep != null && ep.url.isNotBlank()) {
             try {
                 // 检查是否需要恢复播放位置（从全屏返回时）
-                val resumeMs = viewModel.resumePositionMs.collectAsState().value
                 val currentUrl = exoPlayer.currentMediaItem?.localConfiguration?.uri?.toString()
                 val newUrl = ep.url
 
                 // 如果URL没变且有恢复位置，只seek不重新加载
-                if (currentUrl == newUrl && resumeMs > 0) {
-                    exoPlayer.seekTo(resumeMs)
+                if (currentUrl == newUrl && resumePositionMs > 0) {
+                    exoPlayer.seekTo(resumePositionMs)
                     viewModel.clearResumePosition()
                     return@LaunchedEffect
                 }
@@ -163,7 +163,7 @@ fun VideoDetailScreen(
                 exoPlayer.playWhenReady = true
 
                 // 优先从 resumePosition 恢复（全屏返回）
-                if (resumeMs > 0) {
+                if (resumePositionMs > 0) {
                     exoPlayer.addListener(object : Player.Listener {
                         override fun onPlaybackStateChanged(state: Int) {
                             if (state == Player.STATE_READY) {
