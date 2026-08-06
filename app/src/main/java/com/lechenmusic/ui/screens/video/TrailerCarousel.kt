@@ -63,7 +63,7 @@ fun TrailerCarousel(
         trailers.map { trailer ->
             ExoPlayer.Builder(context).build().apply {
                 volume = 0f // 静音
-                repeatMode = Player.REPEAT_ONE
+                repeatMode = Player.REPEAT_MODE_ONE
                 // 通过 LunaTV video-proxy 构建代理 URL
                 val proxyUrl = "${serverUrl.trimEnd('/')}/api/video-proxy?url=${java.net.URLEncoder.encode(trailer.trailerUrl, "UTF-8")}&douban_id=${trailer.doubanId}"
                 setMediaItem(MediaItem.fromUri(proxyUrl))
@@ -146,9 +146,7 @@ fun TrailerCarousel(
                                     Color.Transparent,
                                     Color.Transparent,
                                     Color.Black.copy(alpha = 0.7f)
-                                ),
-                                startY = 0f,
-                                startYFraction = 0.4f
+                                )
                             )
                         )
                 )
@@ -284,8 +282,7 @@ fun TrailerCarouselPoster(
                                 colors = listOf(
                                     Color.Transparent,
                                     Color.Black.copy(alpha = 0.6f)
-                                ),
-                                startYFraction = 0.5f
+                                )
                             )
                         )
                 )

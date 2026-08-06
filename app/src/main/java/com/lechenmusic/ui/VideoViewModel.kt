@@ -1069,24 +1069,24 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
 
             // 并发测速（最多同时测 5 个）
             sources.chunked(5).forEach { chunk ->
-                chunk.map { source ->
-                    kotlinx.coroutines.async {
-                        val url = source.episodes.firstOrNull()
-                        if (url != null && url.isNotBlank()) {
-                            val ping = withContext(Dispatchers.IO) {
+                val deferreds = chunk.map { source ->
+                    kotlinx.coroutines.withContext(Dispatchers.IO) {
+                        kotlinx.coroutines.async {
+                            val url = source.episodes.firstOrNull()
+                            if (url != null && url.isNotBlank()) {
                                 try {
                                     val start = System.currentTimeMillis()
                                     val request = okhttp3.Request.Builder().url(url).head().build()
                                     client.newCall(request).execute().use { _ -> }
-                                    System.currentTimeMillis() - start
-                                } catch (_: Exception) { -1L }
+                                    source.source to (System.currentTimeMillis() - start)
+                                } catch (_: Exception) { source.source to -1L }
+                            } else {
+                                source.source to -1L
                             }
-                            source.source to ping
-                        } else {
-                            source.source to -1L
                         }
                     }
-                }.forEach { deferred ->
+                }
+                deferreds.forEach { deferred ->
                     val (key, ping) = deferred.await()
                     speeds[key] = ping
                     _sourceSpeeds.value = speeds.toMap()
