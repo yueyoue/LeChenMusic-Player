@@ -208,17 +208,34 @@ private fun VideoRecommendTab(
         ) {
             // ── 预告片轮播 ──
             val trailers = homeData?.trailers ?: emptyList()
-            if (trailers.isNotEmpty()) {
+            val hotMovies = homeData?.hotMovies ?: emptyList()
+            if (trailers.isNotEmpty() && serverUrl.isNotBlank()) {
                 item {
                     TrailerCarousel(
                         trailers = trailers,
                         serverUrl = serverUrl,
                         onItemClick = { trailer ->
-                            // 构造 VideoInfo 用于跳转详情
-                            val videoInfo = homeData?.hotMovies?.firstOrNull { it.id == trailer.doubanId }
+                            val videoInfo = hotMovies.firstOrNull { it.id == trailer.doubanId }
                             if (videoInfo != null) onVideoClick(videoInfo)
                         }
                     )
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
+            } else if (hotMovies.isNotEmpty()) {
+                // 降级：无视频代理时显示海报轮播
+                item {
+                    val posterTrailers = hotMovies.take(8).filter { it.id.isNotBlank() }.map { m ->
+                        TrailerItem(doubanId = m.id, title = m.title, poster = m.poster.ifBlank { m.cover }, rate = m.rate ?: "", year = m.year, trailerUrl = "")
+                    }
+                    if (posterTrailers.isNotEmpty()) {
+                        TrailerCarouselPoster(
+                            trailers = posterTrailers,
+                            onItemClick = { trailer ->
+                                val videoInfo = hotMovies.firstOrNull { it.id == trailer.doubanId }
+                                if (videoInfo != null) onVideoClick(videoInfo)
+                            }
+                        )
+                    }
                     Spacer(modifier = Modifier.height(12.dp))
                 }
             }

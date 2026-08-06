@@ -143,23 +143,49 @@ fun VideoDetailScreen(
         }
         val detail = currentDetail ?: return@LaunchedEffect
         val src = detail.toSources().firstOrNull()
-        val ep = src?.episodes?.getOrNull(0)
+        val ep = src?.episodes?.getOrNull(selectedEpisode)
         if (ep != null && ep.url.isNotBlank()) {
             try {
-                exoPlayer.setMediaItem(MediaItem.fromUri(ep.url))
+                // 检查是否需要恢复播放位置（从全屏返回时）
+                val resumeMs = viewModel.resumePositionMs.collectAsState().value
+                val currentUrl = exoPlayer.currentMediaItem?.localConfiguration?.uri?.toString()
+                val newUrl = ep.url
+
+                // 如果URL没变且有恢复位置，只seek不重新加载
+                if (currentUrl == newUrl && resumeMs > 0) {
+                    exoPlayer.seekTo(resumeMs)
+                    viewModel.clearResumePosition()
+                    return@LaunchedEffect
+                }
+
+                exoPlayer.setMediaItem(MediaItem.fromUri(newUrl))
                 exoPlayer.prepare()
                 exoPlayer.playWhenReady = true
-                // 从播放记录恢复播放位置
-                val record = currentRecord
-                if (record != null && record.displayPlayTime > 0) {
+
+                // 优先从 resumePosition 恢复（全屏返回）
+                if (resumeMs > 0) {
                     exoPlayer.addListener(object : Player.Listener {
                         override fun onPlaybackStateChanged(state: Int) {
                             if (state == Player.STATE_READY) {
-                                exoPlayer.seekTo(record.displayPlayTime * 1000L)
+                                exoPlayer.seekTo(resumeMs)
+                                viewModel.clearResumePosition()
                                 exoPlayer.removeListener(this)
                             }
                         }
                     })
+                } else {
+                    // 从播放记录恢复播放位置
+                    val record = currentRecord
+                    if (record != null && record.displayPlayTime > 0) {
+                        exoPlayer.addListener(object : Player.Listener {
+                            override fun onPlaybackStateChanged(state: Int) {
+                                if (state == Player.STATE_READY) {
+                                    exoPlayer.seekTo(record.displayPlayTime * 1000L)
+                                    exoPlayer.removeListener(this)
+                                }
+                            }
+                        })
+                    }
                 }
             } catch (e: Exception) {
                 ErrorReporter.reportError("error", "视频加载失败", e, "video_detail")

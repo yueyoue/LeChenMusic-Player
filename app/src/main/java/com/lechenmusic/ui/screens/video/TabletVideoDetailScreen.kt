@@ -112,11 +112,21 @@ fun TabletVideoDetailScreen(
         val src = video.toSources().firstOrNull()
         val ep = src?.episodes?.getOrNull(0)
         if (ep != null && ep.url.isNotBlank()) {
+            // 检查是否需要恢复播放位置（从全屏返回时）
+            val resumeMs = viewModel.resumePositionMs.value
+            val currentUrl = exoPlayer.currentMediaItem?.localConfiguration?.uri?.toString()
+
+            // 如果URL没变且有恢复位置，只seek不重新加载
+            if (currentUrl == ep.url && resumeMs > 0) {
+                exoPlayer.seekTo(resumeMs)
+                viewModel.clearResumePosition()
+                return@LaunchedEffect
+            }
+
             exoPlayer.setMediaItem(MediaItem.fromUri(ep.url))
             exoPlayer.prepare()
             exoPlayer.playWhenReady = true
             // 从全屏播放器返回时，恢复到之前播放的位置
-            val resumeMs = viewModel.resumePositionMs.value
             if (resumeMs > 0) {
                 exoPlayer.addListener(object : Player.Listener {
                     override fun onPlaybackStateChanged(state: Int) {
