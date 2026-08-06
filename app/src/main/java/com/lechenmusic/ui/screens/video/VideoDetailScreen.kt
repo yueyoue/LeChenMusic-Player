@@ -167,7 +167,7 @@ fun VideoDetailScreen(
                     exoPlayer.addListener(object : Player.Listener {
                         override fun onPlaybackStateChanged(state: Int) {
                             if (state == Player.STATE_READY) {
-                                exoPlayer.seekTo(resumeMs)
+                                exoPlayer.seekTo(resumePositionMs)
                                 viewModel.clearResumePosition()
                                 exoPlayer.removeListener(this)
                             }
