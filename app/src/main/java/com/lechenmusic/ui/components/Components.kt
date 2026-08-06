@@ -656,6 +656,23 @@ fun SongItemWithMenu(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f, fill = false)
                 )
+                // Quality badge
+                val qualityText = getQualityText(song)
+                if (qualityText.isNotEmpty()) {
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Surface(
+                        shape = RoundedCornerShape(4.dp),
+                        color = getQualityColor(song).copy(alpha = 0.15f)
+                    ) {
+                        Text(
+                            text = qualityText,
+                            fontSize = 8.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = getQualityColor(song),
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                        )
+                    }
+                }
             }
             Text(
                 text = "${song.artist} · ${song.album}",

@@ -18,6 +18,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import kotlinx.coroutines.launch
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
@@ -68,6 +69,7 @@ fun MusicPlayerContent(
     password: String,
     onBack: () -> Unit,
     onNavigateToArtist: (String) -> Unit = {},
+    onNavigateToArtistByName: (suspend (String) -> String?)? = null,
     onShowAddToPlaylist: () -> Unit = {},
     onShowQueue: () -> Unit = {}
 ) {
@@ -145,7 +147,13 @@ fun MusicPlayerContent(
                     Spacer(modifier = Modifier.width(32.dp))
                     // 右侧歌词
                     Column(modifier = Modifier.weight(1f).fillMaxHeight(), horizontalAlignment = Alignment.CenterHorizontally) {
-                        SongInfo(song = song, titleSize = 28.sp, artistSize = 18.sp, onArtistClick = { if (song.artistId.isNotBlank()) onNavigateToArtist(song.artistId) }, center = true, playerTextColor = playerTextColor, playerTextSecondary = playerTextSecondary)
+                        val artistSearchScope = rememberCoroutineScope()
+                        SongInfo(song = song, titleSize = 28.sp, artistSize = 18.sp, onArtistClick = { if (song.artistId.isNotBlank()) onNavigateToArtist(song.artistId) }, onArtistNameClick = { name ->
+                            artistSearchScope.launch {
+                                val id = viewModel.findArtistIdByName(name)
+                                if (id != null) onNavigateToArtist(id)
+                            }
+                        }, center = true, playerTextColor = playerTextColor, playerTextSecondary = playerTextSecondary)
                         Spacer(modifier = Modifier.height(8.dp))
                         LyricsPanel(lrcLines = lrcLines, plainLines = plainLines, currentPosition = currentPosition, playerTextColor = playerTextColor, playerTextTertiary = playerTextTertiary, modifier = Modifier.weight(1f))
                     }
@@ -168,9 +176,16 @@ fun MusicPlayerContent(
                             ) {
                                 CoverImageDisplay(coverUrl = coverUrl, size = 260)
                                 Spacer(modifier = Modifier.height(32.dp))
+                                val artistSearchScopePhone = rememberCoroutineScope()
                                 SongInfo(
                                     song = song, titleSize = 22.sp, artistSize = 14.sp,
                                     onArtistClick = { if (song.artistId.isNotBlank()) onNavigateToArtist(song.artistId) },
+                                    onArtistNameClick = { name ->
+                                        artistSearchScopePhone.launch {
+                                            val id = viewModel.findArtistIdByName(name)
+                                            if (id != null) onNavigateToArtist(id)
+                                        }
+                                    },
                                     center = true, playerTextColor = playerTextColor, playerTextSecondary = playerTextSecondary
                                 )
                             }
@@ -285,6 +300,7 @@ private fun SongInfo(
     titleSize: TextUnit,
     artistSize: TextUnit,
     onArtistClick: () -> Unit,
+    onArtistNameClick: ((String) -> Unit)? = null,
     center: Boolean = false,
     playerTextColor: Color = Color.White,
     playerTextSecondary: Color = Color.White.copy(alpha = 0.7f)
@@ -302,12 +318,38 @@ private fun SongInfo(
             textAlign = if (center) androidx.compose.ui.text.style.TextAlign.Center else androidx.compose.ui.text.style.TextAlign.Start
         )
         Spacer(modifier = Modifier.height(6.dp))
-        Text(
-            song.artist,
-            fontSize = artistSize,
-            color = playerTextSecondary,
-            modifier = Modifier.clickable(onClick = onArtistClick)
-        )
+        // 多歌手支持：用 · 分隔，每个歌手可独立点击
+        val artistParts = song.artist.split("·", "、", "/").map { it.trim() }.filter { it.isNotEmpty() }
+        if (artistParts.size > 1 && onArtistNameClick != null) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = if (center) Arrangement.Center else Arrangement.Start,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                artistParts.forEachIndexed { index, artistName ->
+                    if (index > 0) {
+                        Text(
+                            " · ",
+                            fontSize = artistSize,
+                            color = playerTextSecondary
+                        )
+                    }
+                    Text(
+                        artistName,
+                        fontSize = artistSize,
+                        color = playerTextSecondary,
+                        modifier = Modifier.clickable { onArtistNameClick(artistName) }
+                    )
+                }
+            }
+        } else {
+            Text(
+                song.artist,
+                fontSize = artistSize,
+                color = playerTextSecondary,
+                modifier = Modifier.clickable(onClick = onArtistClick)
+            )
+        }
     }
 }
 
@@ -326,12 +368,11 @@ private fun LyricsPanel(
     if (lrcLines != null) {
         val activeIndex = findActiveLyricLine(lrcLines, currentPosition)
         val listState = rememberLazyListState()
-        // 使用 snapshotFlow 监听 activeIndex 变化，确保每次歌词行切换都触发滚动
-        LaunchedEffect(lrcLines) {
-            snapshotFlow { findActiveLyricLine(lrcLines, currentPosition) }
-                .collect { index ->
-                    listState.animateScrollToItem((index - 3).coerceAtLeast(0))
-                }
+        // 每次 currentPosition 变化时滚动到当前歌词行
+        LaunchedEffect(activeIndex) {
+            if (activeIndex >= 0) {
+                listState.animateScrollToItem((activeIndex - 3).coerceAtLeast(0))
+            }
         }
 
         LazyColumn(state = listState, modifier = modifier.fillMaxWidth(), contentPadding = PaddingValues(vertical = 40.dp)) {

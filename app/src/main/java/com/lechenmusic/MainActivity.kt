@@ -411,7 +411,11 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                             NavHost(
                                 navController = navController,
                                 startDestination = Screen.Home.route,
-                                modifier = if (applyPadding) Modifier.fillMaxSize().padding(innerPadding) else Modifier.fillMaxSize()
+                                modifier = if (applyPadding) Modifier.fillMaxSize().padding(innerPadding) else Modifier.fillMaxSize(),
+                                enterTransition = { EnterTransition.None },
+                                exitTransition = { ExitTransition.None },
+                                popEnterTransition = { EnterTransition.None },
+                                popExitTransition = { ExitTransition.None }
                             ) {
                                 composable(Screen.Home.route) {
                                     HomeScreen(
@@ -474,7 +478,11 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                     NavHost(
                         navController = navController,
                         startDestination = Screen.Home.route,
-                        modifier = Modifier.fillMaxSize().padding(innerPadding)
+                        modifier = Modifier.fillMaxSize().padding(innerPadding),
+                        enterTransition = { EnterTransition.None },
+                        exitTransition = { ExitTransition.None },
+                        popEnterTransition = { EnterTransition.None },
+                        popExitTransition = { ExitTransition.None }
                     ) {
                         composable(Screen.Home.route) {
                             HomeScreen(

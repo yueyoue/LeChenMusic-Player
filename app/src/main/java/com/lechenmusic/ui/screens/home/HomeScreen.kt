@@ -1449,13 +1449,23 @@ private fun SongRow(
         }
         Spacer(modifier = Modifier.width(11.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                song.title,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Medium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    song.title,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false)
+                )
+                val qualityText = com.lechenmusic.ui.components.getQualityText(song)
+                if (qualityText.isNotEmpty()) {
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Surface(shape = RoundedCornerShape(3.dp), color = com.lechenmusic.ui.components.getQualityColor(song).copy(alpha = 0.15f)) {
+                        Text(qualityText, fontSize = 7.sp, fontWeight = FontWeight.Bold, color = com.lechenmusic.ui.components.getQualityColor(song), modifier = Modifier.padding(horizontal = 3.dp, vertical = 1.dp))
+                    }
+                }
+            }
             Text(
                 song.artist,
                 fontSize = 11.sp,
@@ -2056,7 +2066,16 @@ private fun TabletMusicHomeContent(
                                             if (song.coverArt != null) AsyncImage(model = ApiClient.getCoverArtUrl(serverUrl, username, password, song.coverArt), contentDescription = null, contentScale = ContentScale.Crop)
                                         }
                                         Column(modifier = Modifier.weight(1f)) {
-                                            Text(song.title, fontSize = config.cardTitleSize, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Text(song.title, fontSize = config.cardTitleSize, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                                                val qText = com.lechenmusic.ui.components.getQualityText(song)
+                                                if (qText.isNotEmpty()) {
+                                                    Spacer(modifier = Modifier.width(4.dp))
+                                                    Surface(shape = RoundedCornerShape(3.dp), color = com.lechenmusic.ui.components.getQualityColor(song).copy(alpha = 0.15f)) {
+                                                        Text(qText, fontSize = 7.sp, fontWeight = FontWeight.Bold, color = com.lechenmusic.ui.components.getQualityColor(song), modifier = Modifier.padding(horizontal = 3.dp, vertical = 1.dp))
+                                                    }
+                                                }
+                                            }
                                             Text(song.artist, fontSize = config.captionFontSize, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                                         }
                                     }
@@ -2234,7 +2253,16 @@ private fun TabletSongRow(song: Song, s: String, u: String, p: String, config: R
         }
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(song.title, fontSize = config.bodyFontSize, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(song.title, fontSize = config.bodyFontSize, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                val qText = com.lechenmusic.ui.components.getQualityText(song)
+                if (qText.isNotEmpty()) {
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Surface(shape = RoundedCornerShape(3.dp), color = com.lechenmusic.ui.components.getQualityColor(song).copy(alpha = 0.15f)) {
+                        Text(qText, fontSize = 7.sp, fontWeight = FontWeight.Bold, color = com.lechenmusic.ui.components.getQualityColor(song), modifier = Modifier.padding(horizontal = 3.dp, vertical = 1.dp))
+                    }
+                }
+            }
             Text(song.artist, fontSize = config.captionFontSize, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
         }
         Text(song.durationFormatted, fontSize = config.captionFontSize, color = MaterialTheme.colorScheme.onSurfaceVariant)

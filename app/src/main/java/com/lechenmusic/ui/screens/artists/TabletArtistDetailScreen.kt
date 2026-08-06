@@ -306,13 +306,23 @@ private fun SongListItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    song.title,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        song.title,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    val qualityText = com.lechenmusic.ui.components.getQualityText(song)
+                    if (qualityText.isNotEmpty()) {
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Surface(shape = RoundedCornerShape(4.dp), color = com.lechenmusic.ui.components.getQualityColor(song).copy(alpha = 0.15f)) {
+                            Text(qualityText, fontSize = 8.sp, fontWeight = FontWeight.Bold, color = com.lechenmusic.ui.components.getQualityColor(song), modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp))
+                        }
+                    }
+                }
                 Text(
                     "${song.artist} - ${song.album}",
                     fontSize = 12.sp,

@@ -804,6 +804,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /**
+     * 通过歌手名称搜索并返回歌手ID，用于多歌手点击导航
+     */
+    suspend fun findArtistIdByName(artistName: String): String? {
+        return try {
+            val result = repository.search(artistName)
+            result.getOrNull()?.artist?.firstOrNull { it.name == artistName }?.id
+                ?: result.getOrNull()?.artist?.firstOrNull()?.id
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     fun loadPlaylistDetail(playlistId: String) {
         viewModelScope.launch {
             repository.getPlaylist(playlistId).onSuccess { _currentPlaylist.value = it }
