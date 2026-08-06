@@ -646,6 +646,10 @@ fun VideoDetailScreen(
                             }
                             IconButton(
                                 onClick = {
+                                    // Save current playback position before entering fullscreen
+                                    if (exoPlayer.currentPosition > 0) {
+                                        viewModel.setResumePosition(exoPlayer.currentPosition)
+                                    }
                                     onPlay(currentDetail.source, selectedEpisode)
                                 },
                                 modifier = Modifier.align(Alignment.BottomEnd).padding(end = 12.dp, bottom = 16.dp)

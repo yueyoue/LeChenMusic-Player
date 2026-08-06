@@ -603,7 +603,15 @@ class MusicPlayerManager(private val context: Context) {
         // User manually pressed play, clear timer expired flag
         timerExpired = false
         player?.let {
-            if (it.isPlaying) it.pause() else it.play()
+            if (it.isPlaying) {
+                it.pause()
+            } else {
+                // If playback ended (single song, no repeat), seek to start before playing
+                if (it.playbackState == Player.STATE_ENDED) {
+                    it.seekTo(0)
+                }
+                it.play()
+            }
         }
     }
 

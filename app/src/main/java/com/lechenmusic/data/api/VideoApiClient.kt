@@ -74,8 +74,21 @@ interface LunaTvApi {
         @Query("label") label: String? = null
     ): Response<LunaDoubanListResponse>
 
+    /**
+     * 豆瓣分类接口 - 与 LunaTV Web 前端一致
+     * 使用 v2/subject/recent_hot/{kind} 获取真正的热门数据
+     */
     @GET("api/douban/categories")
     suspend fun getDoubanCategories(
+        @Query("kind") kind: String,
+        @Query("category") category: String,
+        @Query("type") type: String,
+        @Query("limit") limit: Int = 20,
+        @Query("start") start: Int = 0
+    ): Response<LunaDoubanListResponse>
+
+    @GET("api/douban/categories")
+    suspend fun getDoubanCategoriesInfo(
         @Query("kind") kind: String
     ): Response<LunaDoubanCategoriesResponse>
 

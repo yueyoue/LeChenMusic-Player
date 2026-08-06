@@ -257,21 +257,22 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 val api = VideoApiClient.getApi(videoServerUrl.value)
 
-                // 通过 LunaTV 代理接口获取豆瓣数据，比直调豆瓣更稳定
+                // 使用与 LunaTV Web 前端一致的 /api/douban/categories 接口
+                // (底层调用 v2/subject/recent_hot/{kind}，返回真正的热门数据)
                 val moviesResp = try {
-                    withContext(Dispatchers.IO) { api.getDoubanRecommends(kind = "movie", limit = 15) }
+                    withContext(Dispatchers.IO) { api.getDoubanCategories(kind = "movie", category = "热门", type = "全部", limit = 15) }
                 } catch (e: Exception) {
                     logDebug("loadHomeData", "热门电影加载失败: ${e.message}")
                     null
                 }
                 val tvResp = try {
-                    withContext(Dispatchers.IO) { api.getDoubanRecommends(kind = "tv", limit = 15) }
+                    withContext(Dispatchers.IO) { api.getDoubanCategories(kind = "tv", category = "tv", type = "tv", limit = 15) }
                 } catch (e: Exception) {
                     logDebug("loadHomeData", "热门剧集加载失败: ${e.message}")
                     null
                 }
                 val showResp = try {
-                    withContext(Dispatchers.IO) { api.getDoubanRecommends(kind = "tv", limit = 15, category = "show") }
+                    withContext(Dispatchers.IO) { api.getDoubanCategories(kind = "tv", category = "show", type = "show", limit = 15) }
                 } catch (e: Exception) {
                     logDebug("loadHomeData", "热门综艺加载失败: ${e.message}")
                     null
@@ -598,20 +599,38 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                     .take(30)
                 _allSearchSources.value = validSources
 
-                // 找到最佳匹配并更新详情
+                // 只在当前源无可用集数时才寻找替代源并更新详情
+                // 避免后台搜索覆盖已有正确详情导致跳转到其他电影
+                val currentDetail = _videoDetail.value
+                if (currentDetail != null && currentDetail.episodes.isNotEmpty()) {
+                    logDebug("searchOtherSources", "当前源已有集数，跳过详情更新")
+                    return@launch
+                }
+
+                // 找到最佳匹配 - 使用精确匹配优先，避免模糊匹配到其他电影
                 val normalizedTitle = title.replace(" ", "").lowercase()
-                val matched = validSources.firstOrNull { src ->
+                // 第一级: 标题精确匹配 + 年份匹配
+                var matched = validSources.firstOrNull { src ->
                     val srcTitle = src.title.replace(" ", "").lowercase()
                     srcTitle == normalizedTitle && (year.isBlank() || src.year.lowercase() == year.lowercase())
-                } ?: validSources.firstOrNull { src ->
-                    val srcTitle = src.title.replace(" ", "").lowercase()
-                    (srcTitle.contains(normalizedTitle) || normalizedTitle.contains(srcTitle)) &&
-                    (year.isBlank() || src.year.lowercase() == year.lowercase())
-                } ?: validSources.firstOrNull()
+                }
+                // 第二级: 标题精确匹配（忽略年份）
+                if (matched == null) {
+                    matched = validSources.firstOrNull { src ->
+                        src.title.replace(" ", "").lowercase() == normalizedTitle
+                    }
+                }
+                // 第三级: 标题包含匹配 + 年份必须一致（防止匹配到名字相似的其他电影）
+                if (matched == null && year.isNotBlank()) {
+                    matched = validSources.firstOrNull { src ->
+                        val srcTitle = src.title.replace(" ", "").lowercase()
+                        (srcTitle.contains(normalizedTitle) || normalizedTitle.contains(srcTitle)) &&
+                        src.year.lowercase() == year.lowercase()
+                    }
+                }
+                // 不使用无年份约束的 contains 匹配，也不回退到第一个源，防止错配
 
                 if (matched != null && matched.episodes.isNotEmpty()) {
-                    // 保留当前详情的原始信息，只更新播放源相关字段
-                    val currentDetail = _videoDetail.value
                     _videoDetail.value = VideoDetail(
                         id = currentDetail?.id ?: matched.id,
                         title = currentDetail?.title?.ifBlank { matched.title } ?: matched.title,
@@ -636,6 +655,8 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                     if (validSources.size > 1) {
                         testSourceSpeeds(autoSelect = true)
                     }
+                } else {
+                    logDebug("searchOtherSources", "未找到匹配的替代源 (共 ${validSources.size} 个有效源)")
                 }
             } catch (e: Exception) {
                 logDebug("searchOtherSources", "搜索失败: ${e.message}")
