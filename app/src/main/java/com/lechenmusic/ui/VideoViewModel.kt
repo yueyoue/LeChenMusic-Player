@@ -1067,28 +1067,19 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                 .readTimeout(3, java.util.concurrent.TimeUnit.SECONDS)
                 .build()
 
-            // 并发测速（最多同时测 5 个）
-            sources.chunked(5).forEach { chunk ->
-                val deferreds = chunk.map { source ->
-                    kotlinx.coroutines.withContext(Dispatchers.IO) {
-                        kotlinx.coroutines.async {
-                            val url = source.episodes.firstOrNull()
-                            if (url != null && url.isNotBlank()) {
-                                try {
-                                    val start = System.currentTimeMillis()
-                                    val request = okhttp3.Request.Builder().url(url).head().build()
-                                    client.newCall(request).execute().use { _ -> }
-                                    source.source to (System.currentTimeMillis() - start)
-                                } catch (_: Exception) { source.source to -1L }
-                            } else {
-                                source.source to -1L
-                            }
-                        }
+            // 测速（逐个测试，更新实时进度）
+            sources.forEach { source ->
+                val url = source.episodes.firstOrNull()
+                if (url != null && url.isNotBlank()) {
+                    val ping = withContext(Dispatchers.IO) {
+                        try {
+                            val start = System.currentTimeMillis()
+                            val request = okhttp3.Request.Builder().url(url).head().build()
+                            client.newCall(request).execute().use { _ -> }
+                            System.currentTimeMillis() - start
+                        } catch (_: Exception) { -1L }
                     }
-                }
-                deferreds.forEach { deferred ->
-                    val (key, ping) = deferred.await()
-                    speeds[key] = ping
+                    speeds[source.source] = ping
                     _sourceSpeeds.value = speeds.toMap()
                 }
             }
