@@ -147,9 +147,18 @@ fun VideoDetailScreen(
         val ep = src?.episodes?.getOrNull(selectedEpisode)
         if (ep != null && ep.url.isNotBlank()) {
             try {
-                // 检查是否需要恢复播放位置（从全屏返回时）
                 val currentUrl = exoPlayer.currentMediaItem?.localConfiguration?.uri?.toString()
                 val newUrl = ep.url
+
+                // 如果URL没变且播放器正在播放，不重新加载（避免全屏切换时重启）
+                if (currentUrl == newUrl && exoPlayer.isPlaying) {
+                    // 只检查是否需要恢复位置
+                    if (resumePositionMs > 0) {
+                        exoPlayer.seekTo(resumePositionMs)
+                        viewModel.clearResumePosition()
+                    }
+                    return@LaunchedEffect
+                }
 
                 // 如果URL没变且有恢复位置，只seek不重新加载
                 if (currentUrl == newUrl && resumePositionMs > 0) {

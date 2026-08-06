@@ -166,13 +166,25 @@ fun VideoPlayerScreen(
         } catch (_: Exception) {}
         if (episode != null && episode.url.isNotBlank()) {
             try {
+                // 检查是否需要恢复播放位置（从详情页小屏切全屏时）
+                val resumeMs = videoViewModel?.resumePositionMs?.value ?: 0L
+                val currentUrl = exoPlayer.currentMediaItem?.localConfiguration?.uri?.toString()
+
+                // 如果URL没变且有恢复位置，只seek不重新加载
+                if (currentUrl == episode.url && resumeMs > 0) {
+                    logFile.appendText("[Player] URL未变，seek到 $resumeMs\n")
+                    exoPlayer.seekTo(resumeMs)
+                    videoViewModel?.clearResumePosition()
+                    return@LaunchedEffect
+                }
+
                 exoPlayer.setMediaItem(MediaItem.fromUri(episode.url))
                 exoPlayer.prepare()
                 exoPlayer.playWhenReady = true
                 isPlaying = true
-                // 切换源时从上次位置继续播放
-                val resumeMs = videoViewModel?.resumePositionMs?.value ?: 0L
+                // 从上次位置继续播放
                 if (resumeMs > 0) {
+                    logFile.appendText("[Player] 恢复播放位置: $resumeMs\n")
                     exoPlayer.addListener(object : Player.Listener {
                         override fun onPlaybackStateChanged(state: Int) {
                             if (state == Player.STATE_READY) {
