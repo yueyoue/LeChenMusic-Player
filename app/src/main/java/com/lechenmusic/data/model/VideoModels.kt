@@ -251,6 +251,44 @@ data class HomeRecommendData(
 
 // ==================== 豆瓣 ====================
 
+// ==================== LunaTV 豆瓣代理接口响应 ====================
+
+/** LunaTV /api/douban/recommends 和 /api/douban 返回的列表项 */
+data class LunaDoubanItem(
+    val id: String = "",
+    val title: String = "",
+    val poster: String = "",
+    val rate: String = "",
+    val year: String = ""
+) {
+    fun toVideoInfo(type: String): VideoInfo {
+        return VideoInfo(
+            id = id,
+            title = title,
+            year = year,
+            cover = poster,
+            rate = rate,
+            type = type
+        )
+    }
+}
+
+/** LunaTV /api/douban/recommends 和 /api/douban 响应 */
+data class LunaDoubanListResponse(
+    val code: Int = 0,
+    val message: String = "",
+    val list: List<LunaDoubanItem> = emptyList()
+)
+
+/** LunaTV /api/douban/categories 响应 */
+data class LunaDoubanCategoriesResponse(
+    val code: Int = 0,
+    val message: String = "",
+    val categories: Map<String, List<String>> = emptyMap()
+)
+
+// ==================== 豆瓣直调响应（保留兼容） ====================
+
 data class DoubanHotResponse(
     val category: String = "",
     val type: String = "",

@@ -4,7 +4,6 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.lechenmusic.data.api.VideoApiClient
-import com.lechenmusic.data.api.DoubanApiClient
 import com.lechenmusic.data.model.*
 import com.lechenmusic.ErrorReporter
 import com.lechenmusic.data.repository.SettingsRepository
@@ -249,56 +248,48 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // ==================== 首页推荐（豆瓣） ====================
+    // ==================== 首页推荐（通过 LunaTV 豆瓣代理） ====================
 
     fun loadHomeData() {
         viewModelScope.launch {
             _homeLoading.value = true
             _homeError.value = null
             try {
-                val doubanApi = DoubanApiClient.getApi()
+                val api = VideoApiClient.getApi(videoServerUrl.value)
 
-                // 参考 Selene-Source: 用 recent_hot 接口，每个请求独立 try-catch
+                // 通过 LunaTV 代理接口获取豆瓣数据，比直调豆瓣更稳定
                 val moviesResp = try {
-                    withContext(Dispatchers.IO) {
-                        doubanApi.getRecentHot("movie", limit = 15, category = "\u70ED\u95E8", type = "\u5168\u90E8")
-                    }
+                    withContext(Dispatchers.IO) { api.getDoubanRecommends(kind = "movie", limit = 15) }
                 } catch (e: Exception) {
-                    logDebug("loadHomeData", "\u70ED\u95E8\u7535\u5F71\u52A0\u8F7D\u5931\u8D25: ${e.message}")
+                    logDebug("loadHomeData", "热门电影加载失败: ${e.message}")
                     null
                 }
                 val tvResp = try {
-                    withContext(Dispatchers.IO) {
-                        doubanApi.getRecentHot("tv", limit = 15, category = "\u6700\u8FD1\u70ED\u95E8", type = "tv")
-                    }
+                    withContext(Dispatchers.IO) { api.getDoubanRecommends(kind = "tv", limit = 15) }
                 } catch (e: Exception) {
-                    logDebug("loadHomeData", "\u70ED\u95E8\u5267\u96C6\u52A0\u8F7D\u5931\u8D25: ${e.message}")
+                    logDebug("loadHomeData", "热门剧集加载失败: ${e.message}")
                     null
                 }
                 val showResp = try {
-                    withContext(Dispatchers.IO) {
-                        doubanApi.getRecentHot("tv", limit = 15, category = "show", type = "show")
-                    }
+                    withContext(Dispatchers.IO) { api.getDoubanRecommends(kind = "tv", limit = 15, category = "show") }
                 } catch (e: Exception) {
-                    logDebug("loadHomeData", "\u70ED\u95E8\u7EFC\u827A\u52A0\u8F7D\u5931\u8D25: ${e.message}")
+                    logDebug("loadHomeData", "热门综艺加载失败: ${e.message}")
                     null
                 }
                 val shortResp = try {
-                    withContext(Dispatchers.IO) {
-                        doubanApi.getRecentHot("tv", limit = 15, category = "\u70ED\u95E8", type = "\u5168\u90E8")
-                    }
+                    withContext(Dispatchers.IO) { api.getDoubanRecommends(kind = "tv", limit = 15, category = "热门短剧") }
                 } catch (e: Exception) {
-                    logDebug("loadHomeData", "\u70ED\u95E8\u77ED\u5267\u52A0\u8F7D\u5931\u8D25: ${e.message}")
+                    logDebug("loadHomeData", "热门短剧加载失败: ${e.message}")
                     null
                 }
 
                 _homeData.value = HomeRecommendData(
                     continueWatch = _playRecords.value,
-                    hotMovies = moviesResp?.body()?.items?.map { it.toVideoInfo("movie") } ?: emptyList(),
-                    hotTvShows = tvResp?.body()?.items?.map { it.toVideoInfo("tv") } ?: emptyList(),
+                    hotMovies = moviesResp?.body()?.list?.map { it.toVideoInfo("movie") } ?: emptyList(),
+                    hotTvShows = tvResp?.body()?.list?.map { it.toVideoInfo("tv") } ?: emptyList(),
                     hotAnime = emptyList(),
-                    hotVariety = showResp?.body()?.items?.map { it.toVideoInfo("show") } ?: emptyList(),
-                    hotShortDrama = shortResp?.body()?.items?.map { it.toVideoInfo("short") } ?: emptyList()
+                    hotVariety = showResp?.body()?.list?.map { it.toVideoInfo("show") } ?: emptyList(),
+                    hotShortDrama = shortResp?.body()?.list?.map { it.toVideoInfo("short") } ?: emptyList()
                 )
                 logDebug("loadHomeData", "首页数据: movies=${_homeData.value?.hotMovies?.size} tv=${_homeData.value?.hotTvShows?.size} variety=${_homeData.value?.hotVariety?.size} anime=${_homeData.value?.hotAnime?.size}")
             } catch (e: Exception) {
@@ -815,7 +806,6 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
      * - sort: T/U/R/S
      */
     fun fetchDoubanCategory(kind: String, isRefresh: Boolean = true) {
-        // 切换分类时重置筛选条件
         if (categoryCurrentKind != kind || isRefresh) {
             _categoryFilters.value = CategoryFilters()
         }
@@ -832,13 +822,11 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
             val hasFilters = filters.category != "\u70ED\u95E8" || filters.region != "\u5168\u90E8" ||
                     filters.year != "\u5168\u90E8" || filters.sort != "T"
 
-            // 记录请求时的筛选状态
             val requestFilterKey = "${kind}_${filters.category}_${filters.region}_${filters.year}_${filters.sort}_${categoryPage}"
 
             try {
-                val doubanApi = DoubanApiClient.getApi()
-                // 参考 Selene-Source: anime 和 variety 都用 tv kind
-                val doubanKind = when (kind) {
+                val api = VideoApiClient.getApi(videoServerUrl.value)
+                val lunaKind = when (kind) {
                     "anime" -> "tv"
                     "variety" -> "tv"
                     "short" -> "tv"
@@ -847,30 +835,23 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
 
                 val response = withContext(Dispatchers.IO) {
                     if (!hasFilters) {
-                        // 无筛选: 用 recent_hot(快)
-                        val (defCat, defType) = getDefaultParams(kind)
-                        doubanApi.getRecentHot(
-                            kind = doubanKind,
-                            start = categoryPage * PAGE_SIZE,
+                        api.getDoubanRecommends(
+                            kind = lunaKind,
                             limit = PAGE_SIZE,
-                            category = defCat,
-                            type = defType
+                            start = categoryPage * PAGE_SIZE
                         )
                     } else {
-                        // 有筛选: 用 recommend API(支持组合筛选)
-                        val (tags, selectedCategories) = buildRecommendParams(kind, filters)
-                        doubanApi.getRecommendations(
-                            kind = doubanKind,
+                        api.getDoubanList(
+                            kind = lunaKind,
+                            type = if (filters.category != "\u70ED\u95E8") filters.category else "\u70ED\u95E8",
+                            tag = if (filters.region != "\u5168\u90E8") filters.region else "",
+                            sort = if (filters.sort != "T") filters.sort else "T",
                             start = categoryPage * PAGE_SIZE,
-                            count = PAGE_SIZE,
-                            selectedCategories = selectedCategories,
-                            tags = tags,
-                            sort = if (filters.sort != "T") filters.sort else ""
+                            limit = PAGE_SIZE
                         )
                     }
                 }
 
-                // 检查筛选状态是否已变化
                 val curFilters = _categoryFilters.value
                 val curKey = "${kind}_${curFilters.category}_${curFilters.region}_${curFilters.year}_${curFilters.sort}_${categoryPage}"
                 if (requestFilterKey != curKey) {
@@ -879,7 +860,7 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                 }
 
                 if (response.isSuccessful) {
-                    val items = response.body()?.items ?: emptyList()
+                    val items = response.body()?.list ?: emptyList()
                     val mapped = items.map { it.toVideoInfo(kind) }
 
                     if (isRefresh) {
@@ -890,8 +871,8 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
 
                     categoryPage++
                     _categoryHasMore.value = items.size >= PAGE_SIZE
-                    _categoryTotalCount.value = response.body()?.total ?: _categoryResults.value.size
-                    logDebug("fetchDoubanCategory", "完成: kind=$doubanKind, filters=$hasFilters, page=${categoryPage-1}, got=${items.size}")
+                    _categoryTotalCount.value = _categoryResults.value.size
+                    logDebug("fetchDoubanCategory", "完成: kind=$lunaKind, filters=$hasFilters, page=${categoryPage-1}, got=${items.size}")
                 } else {
                     logDebug("fetchDoubanCategory", "请求失败: ${response.code()}")
                     if (isRefresh) _categoryResults.value = emptyList()
@@ -988,11 +969,11 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
         categoryIsLoadingMore = true
         viewModelScope.launch {
             try {
-                val doubanApi = DoubanApiClient.getApi()
+                val api = VideoApiClient.getApi(videoServerUrl.value)
                 val filters = _categoryFilters.value
                 val hasFilters = filters.category != "\u70ED\u95E8" || filters.region != "\u5168\u90E8" ||
                         filters.year != "\u5168\u90E8" || filters.sort != "T"
-                val doubanKind = when (categoryCurrentKind) {
+                val lunaKind = when (categoryCurrentKind) {
                     "anime" -> "tv"
                     "variety" -> "tv"
                     "short" -> "tv"
@@ -1001,29 +982,25 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
 
                 val response = withContext(Dispatchers.IO) {
                     if (!hasFilters) {
-                        val (defCat, defType) = getDefaultParams(categoryCurrentKind)
-                        doubanApi.getRecentHot(
-                            kind = doubanKind,
-                            start = categoryPage * PAGE_SIZE,
+                        api.getDoubanRecommends(
+                            kind = lunaKind,
                             limit = PAGE_SIZE,
-                            category = defCat,
-                            type = defType
+                            start = categoryPage * PAGE_SIZE
                         )
                     } else {
-                        val (tags, selectedCategories) = buildRecommendParams(categoryCurrentKind, filters)
-                        doubanApi.getRecommendations(
-                            kind = doubanKind,
+                        api.getDoubanList(
+                            kind = lunaKind,
+                            type = if (filters.category != "\u70ED\u95E8") filters.category else "\u70ED\u95E8",
+                            tag = if (filters.region != "\u5168\u90E8") filters.region else "",
+                            sort = if (filters.sort != "T") filters.sort else "T",
                             start = categoryPage * PAGE_SIZE,
-                            count = PAGE_SIZE,
-                            selectedCategories = selectedCategories,
-                            tags = tags,
-                            sort = if (filters.sort != "T") filters.sort else ""
+                            limit = PAGE_SIZE
                         )
                     }
                 }
 
                 if (response.isSuccessful) {
-                    val items = response.body()?.items ?: emptyList()
+                    val items = response.body()?.list ?: emptyList()
                     val mapped = items.map { it.toVideoInfo(categoryCurrentKind) }
                     _categoryResults.value = _categoryResults.value + mapped
                     categoryPage++

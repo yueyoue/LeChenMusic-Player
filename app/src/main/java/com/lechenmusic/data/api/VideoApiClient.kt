@@ -58,6 +58,39 @@ interface LunaTvApi {
 
     @GET("api/search/resources")
     suspend fun getSearchResources(): Response<List<SearchResourceResponse>>
+
+    // ===== 豆瓣代理接口 (LunaTV 中转，比直调豆瓣稳定) =====
+
+    @GET("api/douban/recommends")
+    suspend fun getDoubanRecommends(
+        @Query("kind") kind: String,
+        @Query("limit") limit: Int = 20,
+        @Query("start") start: Int = 0,
+        @Query("category") category: String? = null,
+        @Query("format") format: String? = null,
+        @Query("region") region: String? = null,
+        @Query("year") year: String? = null,
+        @Query("sort") sort: String? = null,
+        @Query("label") label: String? = null
+    ): Response<LunaDoubanListResponse>
+
+    @GET("api/douban/categories")
+    suspend fun getDoubanCategories(
+        @Query("kind") kind: String
+    ): Response<LunaDoubanCategoriesResponse>
+
+    @GET("api/douban")
+    suspend fun getDoubanList(
+        @Query("kind") kind: String,
+        @Query("type") type: String,
+        @Query("tag") tag: String = "",
+        @Query("sort") sort: String = "T",
+        @Query("start") start: Int = 0,
+        @Query("limit") limit: Int = 20
+    ): Response<LunaDoubanListResponse>
+
+    @GET("api/bangumi/calendar")
+    suspend fun getBangumiCalendar(): Response<List<BangumiCalendarResponse>>
 }
 
 /**
