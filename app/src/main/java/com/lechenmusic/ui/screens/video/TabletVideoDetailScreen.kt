@@ -539,6 +539,10 @@ private fun SourceList(
     onSourceSelect: (Int, VideoInfo) -> Unit,
     onTestSpeed: () -> Unit
 ) {
+    // 找到最快源
+    val fastestSource = allSearchSources.filter { (sourceSpeeds[it.source] ?: -1L) > 0 }
+        .minByOrNull { sourceSpeeds[it.source] ?: Long.MAX_VALUE }
+
     Column(modifier = Modifier.fillMaxSize()) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
@@ -546,12 +550,15 @@ private fun SourceList(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text("共 ${displaySources.size} 个源", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            TextButton(onClick = onTestSpeed, enabled = !speedTesting) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 if (speedTesting) {
-                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                    Spacer(modifier = Modifier.width(4.dp))
+                    CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("自动测速中...", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
                 }
-                Text(if (speedTesting) "测速中..." else "\u26A1 测速排序", fontSize = 13.sp)
+                TextButton(onClick = onTestSpeed, enabled = !speedTesting) {
+                    Text(if (speedTesting) "测速中..." else "\u26A1 测速排序", fontSize = 13.sp)
+                }
             }
         }
 
@@ -565,6 +572,7 @@ private fun SourceList(
                 val speed = sourceSpeeds[src.source]
                 val isCurrent = index == selectedSource
                 val matchingInfo = allSearchSources.firstOrNull { it.source == src.source }
+                val isFastest = fastestSource != null && src.source == fastestSource.source && (speed ?: -1L) > 0
 
                 Surface(
                     onClick = {
@@ -592,8 +600,14 @@ private fun SourceList(
                             fontSize = 12.sp, fontWeight = FontWeight.Medium,
                             color = when { speed == null -> MaterialTheme.colorScheme.onSurfaceVariant; speed < 0 -> Color.Red; speed < 500 -> Color(0xFF4CAF50); speed < 1500 -> Color(0xFFFFC107); else -> Color(0xFFFF5722) }
                         )
+                        if (isFastest) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Surface(shape = RoundedCornerShape(4.dp), color = Color(0xFF4CAF50)) {
+                                Text("最快", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.White, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                            }
+                        }
                         if (isCurrent) {
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
                             Surface(shape = RoundedCornerShape(4.dp), color = MaterialTheme.colorScheme.primary) {
                                 Text("当前", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
                             }

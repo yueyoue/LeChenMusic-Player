@@ -527,6 +527,11 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
 
                 _searchSourceMessage.value = "已找到播放源：${matched.displaySourceName}，共 ${matched.episodes.size} 集"
 
+                // 后台自动测速（不阻塞播放）
+                if (validSources.size > 1) {
+                    testSourceSpeeds(autoSelect = false)
+                }
+
                 // 构造 VideoDetail
                 val detail = VideoDetail(
                     id = matched.id,
@@ -614,6 +619,10 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                         doubanId = doubanId.ifBlank { currentDetail?.doubanId ?: "" }
                     )
                     logDebug("searchOtherSources", "找到替代源: ${matched.displaySourceName}, eps=${matched.episodes.size}")
+                    // 后台自动测速
+                    if (validSources.size > 1) {
+                        testSourceSpeeds(autoSelect = true)
+                    }
                 }
             } catch (e: Exception) {
                 logDebug("searchOtherSources", "搜索失败: ${e.message}")
@@ -1032,30 +1041,41 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
     /**
      * 测试所有源的响应速度（ping m3u8 URL）
      * 按速度排序后更新 allSearchSources
+     * @param autoSelect 测试完成后是否自动选中最快源
      */
-    fun testSourceSpeeds() {
+    fun testSourceSpeeds(autoSelect: Boolean = false) {
         val sources = _allSearchSources.value
         if (sources.isEmpty()) return
         viewModelScope.launch {
             _speedTesting.value = true
             val speeds = mutableMapOf<String, Long>()
             val client = okhttp3.OkHttpClient.Builder()
-                .connectTimeout(5, java.util.concurrent.TimeUnit.SECONDS)
-                .readTimeout(5, java.util.concurrent.TimeUnit.SECONDS)
+                .connectTimeout(3, java.util.concurrent.TimeUnit.SECONDS)
+                .readTimeout(3, java.util.concurrent.TimeUnit.SECONDS)
                 .build()
 
-            sources.forEach { source ->
-                val url = source.episodes.firstOrNull()
-                if (url != null && url.isNotBlank()) {
-                    val ping = withContext(Dispatchers.IO) {
-                        try {
-                            val start = System.currentTimeMillis()
-                            val request = okhttp3.Request.Builder().url(url).head().build()
-                            client.newCall(request).execute().use { _ -> }
-                            System.currentTimeMillis() - start
-                        } catch (_: Exception) { -1L }
+            // 并发测速（最多同时测 5 个）
+            sources.chunked(5).forEach { chunk ->
+                chunk.map { source ->
+                    kotlinx.coroutines.async {
+                        val url = source.episodes.firstOrNull()
+                        if (url != null && url.isNotBlank()) {
+                            val ping = withContext(Dispatchers.IO) {
+                                try {
+                                    val start = System.currentTimeMillis()
+                                    val request = okhttp3.Request.Builder().url(url).head().build()
+                                    client.newCall(request).execute().use { _ -> }
+                                    System.currentTimeMillis() - start
+                                } catch (_: Exception) { -1L }
+                            }
+                            source.source to ping
+                        } else {
+                            source.source to -1L
+                        }
                     }
-                    speeds[source.source] = ping
+                }.forEach { deferred ->
+                    val (key, ping) = deferred.await()
+                    speeds[key] = ping
                     _sourceSpeeds.value = speeds.toMap()
                 }
             }
@@ -1063,6 +1083,19 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
             // 按速度排序（快的在前，超时的排最后）
             val sorted = sources.sortedBy { speeds[it.source] ?: Long.MAX_VALUE }
             _allSearchSources.value = sorted
+            logDebug("testSourceSpeeds", "测速完成: ${sorted.map { "${it.source}=${speeds[it.source]}ms" }.joinToString()}")
+
+            // 自动选中最快源
+            if (autoSelect && sorted.isNotEmpty()) {
+                val fastest = sorted.firstOrNull { (speeds[it.source] ?: -1L) > 0 }
+                if (fastest != null) {
+                    val currentDetail = _videoDetail.value
+                    if (currentDetail != null && currentDetail.source != fastest.source) {
+                        logDebug("testSourceSpeeds", "自动切换到最快源: ${fastest.source} (${speeds[fastest.source]}ms)")
+                        switchSource(fastest)
+                    }
+                }
+            }
         }
     }
 

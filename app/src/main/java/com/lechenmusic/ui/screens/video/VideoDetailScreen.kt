@@ -844,7 +844,12 @@ fun VideoDetailScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text("片源 (${allSearchSources.size})", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                                Row {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    if (speedTesting) {
+                                        CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("测速中", fontSize = 11.sp, color = MaterialTheme.colorScheme.primary)
+                                    }
                                     TextButton(
                                         onClick = { viewModel.testSourceSpeeds() },
                                         enabled = !speedTesting
@@ -989,6 +994,10 @@ fun VideoDetailScreen(
                     onDismissRequest = { showSourcePanel = false },
                     containerColor = MaterialTheme.colorScheme.surface
                 ) {
+                    // 找到最快源
+                    val fastestInPanel = allSearchSources.filter { (sourceSpeeds[it.source] ?: -1L) > 0 }
+                        .minByOrNull { sourceSpeeds[it.source] ?: Long.MAX_VALUE }
+
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -996,7 +1005,12 @@ fun VideoDetailScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text("全部源 (${allSearchSources.size})", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                            Row {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                if (speedTesting) {
+                                    CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("自动测速中...", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
+                                }
                                 TextButton(
                                     onClick = { viewModel.testSourceSpeeds() },
                                     enabled = !speedTesting
@@ -1017,6 +1031,7 @@ fun VideoDetailScreen(
                                 val info = allSearchSources[index]
                                 val speed = sourceSpeeds[info.source]
                                 val isCurrent = currentDetail?.source == info.source
+                                val isFastest = fastestInPanel != null && info.source == fastestInPanel.source && (speed ?: -1L) > 0
                                 Surface(
                                     onClick = {
                                         if (info.episodes.isNotEmpty()) {
@@ -1080,6 +1095,12 @@ fun VideoDetailScreen(
                                                 else -> Color.Red
                                             }
                                         )
+                                        if (isFastest) {
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Surface(shape = RoundedCornerShape(4.dp), color = Color(0xFF4CAF50)) {
+                                                Text("最快", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.White, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                                            }
+                                        }
                                     }
                                 }
                             }
