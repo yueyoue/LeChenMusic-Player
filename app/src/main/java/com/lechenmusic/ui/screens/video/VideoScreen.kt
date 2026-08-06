@@ -51,6 +51,7 @@ fun VideoScreen(
     val homeData by viewModel.homeData.collectAsState()
     val homeLoading by viewModel.homeLoading.collectAsState()
     val playRecords by viewModel.playRecords.collectAsState()
+    val serverUrl by viewModel.videoServerUrl.collectAsState()
 
     // Tab 状态
     var selectedTab by remember { mutableIntStateOf(0) }
@@ -172,6 +173,7 @@ fun VideoScreen(
                     homeData = homeData,
                     playRecords = playRecords,
                     isLoading = homeLoading,
+                    serverUrl = serverUrl,
                     onRefresh = { viewModel.refreshHome() },
                     onVideoClick = onVideoClick,
                     onRecordClick = onRecordClick
@@ -193,6 +195,7 @@ private fun VideoRecommendTab(
     homeData: HomeRecommendData?,
     playRecords: List<VideoPlayRecord>,
     isLoading: Boolean,
+    serverUrl: String = "",
     onRefresh: () -> Unit,
     onVideoClick: (VideoInfo) -> Unit,
     onRecordClick: (VideoPlayRecord) -> Unit
@@ -203,17 +206,18 @@ private fun VideoRecommendTab(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(bottom = 100.dp)
         ) {
-            // ── 幻灯片推荐 ──
-            val sliderItems = buildList {
-                homeData?.hotMovies?.let { addAll(it) }
-                homeData?.hotTvShows?.let { addAll(it) }
-            }.distinctBy { it.id }.take(8)
-
-            if (sliderItems.isNotEmpty()) {
+            // ── 预告片轮播 ──
+            val trailers = homeData?.trailers ?: emptyList()
+            if (trailers.isNotEmpty()) {
                 item {
-                    VideoHeroSlider(
-                        items = sliderItems,
-                        onItemClick = { onVideoClick(it) }
+                    TrailerCarousel(
+                        trailers = trailers,
+                        serverUrl = serverUrl,
+                        onItemClick = { trailer ->
+                            // 构造 VideoInfo 用于跳转详情
+                            val videoInfo = homeData?.hotMovies?.firstOrNull { it.id == trailer.doubanId }
+                            if (videoInfo != null) onVideoClick(videoInfo)
+                        }
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                 }

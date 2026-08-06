@@ -283,15 +283,28 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                     null
                 }
 
+                val movieItems = moviesResp?.body()?.list ?: emptyList()
+
                 _homeData.value = HomeRecommendData(
                     continueWatch = _playRecords.value,
-                    hotMovies = moviesResp?.body()?.list?.map { it.toVideoInfo("movie") } ?: emptyList(),
+                    hotMovies = movieItems.map { it.toVideoInfo("movie") },
                     hotTvShows = tvResp?.body()?.list?.map { it.toVideoInfo("tv") } ?: emptyList(),
                     hotAnime = emptyList(),
                     hotVariety = showResp?.body()?.list?.map { it.toVideoInfo("show") } ?: emptyList(),
-                    hotShortDrama = shortResp?.body()?.list?.map { it.toVideoInfo("short") } ?: emptyList()
+                    hotShortDrama = shortResp?.body()?.list?.map { it.toVideoInfo("short") } ?: emptyList(),
+                    // 从热门电影中取前 8 个构建预告片轮播
+                    trailers = movieItems.take(8).filter { it.id.isNotBlank() }.map { item ->
+                        TrailerItem(
+                            doubanId = item.id,
+                            title = item.title,
+                            poster = item.poster,
+                            rate = item.rate,
+                            year = item.year,
+                            trailerUrl = item.trailerUrl
+                        )
+                    }
                 )
-                logDebug("loadHomeData", "首页数据: movies=${_homeData.value?.hotMovies?.size} tv=${_homeData.value?.hotTvShows?.size} variety=${_homeData.value?.hotVariety?.size} anime=${_homeData.value?.hotAnime?.size}")
+                logDebug("loadHomeData", "首页数据: movies=${_homeData.value?.hotMovies?.size} tv=${_homeData.value?.hotTvShows?.size} variety=${_homeData.value?.hotVariety?.size} trailers=${_homeData.value?.trailers?.size}")
             } catch (e: Exception) {
                 _homeError.value = "加载失败: ${e.message}"
                 reportVideoError("loadHomeData", "首页推荐加载失败", e)

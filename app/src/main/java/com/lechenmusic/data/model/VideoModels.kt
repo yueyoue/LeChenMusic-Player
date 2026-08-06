@@ -246,7 +246,17 @@ data class HomeRecommendData(
     val hotTvShows: List<VideoInfo> = emptyList(),
     val hotVariety: List<VideoInfo> = emptyList(),
     val hotAnime: List<VideoInfo> = emptyList(),
-    val hotShortDrama: List<VideoInfo> = emptyList()
+    val hotShortDrama: List<VideoInfo> = emptyList(),
+    val trailers: List<TrailerItem> = emptyList()
+)
+
+data class TrailerItem(
+    val doubanId: String,
+    val title: String,
+    val poster: String,
+    val rate: String,
+    val year: String,
+    val trailerUrl: String
 )
 
 // ==================== 豆瓣 ====================
@@ -261,6 +271,9 @@ data class LunaDoubanItem(
     val rate: String = "",
     val year: String = ""
 ) {
+    /** 豆瓣预告片 URL (通过 LunaTV video-proxy 代理) */
+    val trailerUrl: String get() = if (id.isNotBlank()) "https://vt1.doubanio.com/placeholder/M/$id.mp4" else ""
+
     fun toVideoInfo(type: String): VideoInfo {
         return VideoInfo(
             id = id,
