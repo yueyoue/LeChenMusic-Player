@@ -347,6 +347,20 @@ interface SubsonicApi {
         @retrofit2.http.Header("X-ND-Authorization") authHeader: String
     ): retrofit2.Response<com.google.gson.JsonElement>
 
+    // ===== Stats API =====
+
+    @retrofit2.http.POST("api/stats/play-log")
+    suspend fun reportPlayLog(
+        @retrofit2.http.Body body: okhttp3.RequestBody,
+        @retrofit2.http.Header("X-ND-Authorization") authHeader: String
+    ): retrofit2.Response<com.google.gson.JsonElement>
+
+    @retrofit2.http.POST("api/stats/device")
+    suspend fun reportDevice(
+        @retrofit2.http.Body body: okhttp3.RequestBody,
+        @retrofit2.http.Header("X-ND-Authorization") authHeader: String
+    ): retrofit2.Response<com.google.gson.JsonElement>
+
     companion object {
         /** Build narrator avatar URL for loading with Coil/AsyncImage */
         fun getNarratorAvatarUrl(serverUrl: String, narratorName: String, token: String? = null): String {

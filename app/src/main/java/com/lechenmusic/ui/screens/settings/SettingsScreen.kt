@@ -340,6 +340,52 @@ fun SettingsScreen(
             }
 
             item {
+                SectionTitle("听歌统计")
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(20.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.Headphones,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(32.dp)
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column {
+                            Text(
+                                "累计听歌时长",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                            )
+                            val totalSeconds = remember {
+                                context.getSharedPreferences("play_stats", Context.MODE_PRIVATE)
+                                    .getLong("total_play_seconds", 0)
+                            }
+                            val hours = totalSeconds / 3600
+                            val minutes = (totalSeconds % 3600) / 60
+                            val durationText = when {
+                                hours > 0 -> "${hours}小时${minutes}分钟"
+                                minutes > 0 -> "${minutes}分钟"
+                                else -> "${totalSeconds}秒"
+                            }
+                            Text(
+                                durationText,
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+                    }
+                }
+            }
+
+            item {
                 SectionTitle("外观设置")
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp), shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
                     Column {
