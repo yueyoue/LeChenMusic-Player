@@ -529,7 +529,7 @@ fun VideoPlayerScreen(
                     IconButton(onClick = {
                         exoPlayer.seekTo((exoPlayer.currentPosition - 15000).coerceAtLeast(0))
                     }) {
-                        Icon(Icons.Default.Replay10, "后退15秒", tint = Color.White)
+                        Icon(Icons.Default.Replay15, "后退15秒", tint = Color.White)
                     }
 
                     // 播放/暂停
@@ -554,7 +554,7 @@ fun VideoPlayerScreen(
                     IconButton(onClick = {
                         exoPlayer.seekTo((exoPlayer.currentPosition + 15000).coerceAtMost(duration))
                     }) {
-                        Icon(Icons.Default.Forward30, "前进15秒", tint = Color.White)
+                        Icon(Icons.Default.Forward15, "前进15秒", tint = Color.White)
                     }
 
                     // 下一集
