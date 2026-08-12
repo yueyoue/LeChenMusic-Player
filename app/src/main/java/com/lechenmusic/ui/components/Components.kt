@@ -214,137 +214,7 @@ fun getQualityColor(song: Song): Color {
 }
 
 // ==================== Skip 30s Buttons ====================
-// Custom SVG icons: 后退30秒 / 前进30秒
-
-private val SkipBackward30Icon: ImageVector by lazy {
-    ImageVector.Builder(
-        name = "SkipBackward30",
-        defaultWidth = 24.dp,
-        defaultHeight = 24.dp,
-        viewportWidth = 1024f,
-        viewportHeight = 1024f
-    ).apply {
-        path(
-            fill = SolidColor(Color.Black)
-        ) {
-            moveTo(512f, 85.333f)
-            curveTo(276.352f, 85.333f, 85.333f, 276.352f, 85.333f, 512f)
-            reflectiveCurveToRelative(191.019f, 426.667f, 426.667f, 426.667f)
-            curveToRelative(52.267f, 0f, 102.827f, -9.472f, 150.187f, -26.752f)
-            lineToRelative(139.349f, -56.528f)
-            lineToRelative(-41.216f, -49.067f)
-            arcTo(362.667f, 362.667f, 0f, true, true, 874.667f, 512f)
-            horizontalLineToRelative(-42.667f)
-            lineToRelative(80f, -128f)
-            lineToRelative(80f, 128f)
-            horizontalLineToRelative(-53.333f)
-            curveTo(938.667f, 747.648f, 747.648f, 938.667f, 512f, 938.667f)
-            curveTo(276.352f, 938.667f, 85.333f, 747.648f, 85.333f, 512f)
-            curveTo(85.333f, 276.352f, 276.352f, 85.333f, 512f, 85.333f)
-            close()
-            moveTo(477.632f, 641.536f)
-            horizontalLineTo(337.6f)
-            verticalLineTo(607.168f)
-            horizontalLineToRelative(51.904f)
-            verticalLineTo(454.272f)
-            horizontalLineTo(346.752f)
-            verticalLineTo(427.968f)
-            curveTo(369.792f, 423.552f, 385.856f, 417.728f, 400.512f, 408.96f)
-            horizontalLineToRelative(31.424f)
-            verticalLineToRelative(198.208f)
-            horizontalLineToRelative(45.696f)
-            verticalLineToRelative(34.368f)
-            close()
-            moveTo(668.224f, 565.824f)
-            curveToRelative(0f, 50.816f, -39.168f, 80.128f, -81.92f, 80.128f)
-            curveToRelative(-37.696f, 0f, -62.208f, -15.04f, -79.36f, -32.192f)
-            lineToRelative(19.328f, -27.072f)
-            curveToRelative(13.952f, 13.184f, 31.104f, 24.832f, 54.528f, 24.832f)
-            curveToRelative(25.984f, 0f, 44.992f, -16.448f, 44.992f, -44.608f)
-            curveToRelative(0f, -27.776f, -17.216f, -43.52f, -42.816f, -43.52f)
-            curveToRelative(-14.976f, 0f, -23.424f, 4.032f, -37.312f, 13.184f)
-            lineToRelative(-20.096f, -12.8f)
-            lineToRelative(6.976f, -114.816f)
-            horizontalLineToRelative(124.288f)
-            verticalLineToRelative(35.456f)
-            horizontalLineTo(569.088f)
-            lineToRelative(-4.736f, 56.32f)
-            curveToRelative(15.232f, -7.68f, 32.768f, -15.36f, 62.72f, -15.36f)
-            curveToRelative(39.872f, 0f, 73.152f, 22.656f, 73.152f, 72.768f)
-            close()
-            moveTo(295.168f, 564.736f)
-            horizontalLineTo(208.128f)
-            verticalLineTo(534.016f)
-            horizontalLineToRelative(87.04f)
-            verticalLineToRelative(30.72f)
-            close()
-        }
-    }.build()
-}
-
-private val SkipForward30Icon: ImageVector by lazy {
-    ImageVector.Builder(
-        name = "SkipForward30",
-        defaultWidth = 24.dp,
-        defaultHeight = 24.dp,
-        viewportWidth = 1024f,
-        viewportHeight = 1024f
-    ).apply {
-        path(
-            fill = SolidColor(Color.Black)
-        ) {
-            moveTo(512f, 85.333f)
-            curveTo(747.648f, 85.333f, 938.667f, 276.352f, 938.667f, 512f)
-            reflectiveCurveTo(747.648f, 938.667f, 512f, 938.667f)
-            curveTo(459.733f, 938.667f, 409.173f, 929.195f, 361.813f, 911.915f)
-            lineTo(222.464f, 955.387f)
-            lineToRelative(41.216f, -49.067f)
-            arcTo(362.667f, 362.667f, 0f, true, false, 149.333f, 512f)
-            horizontalLineToRelative(42.667f)
-            lineToRelative(-80f, 128f)
-            lineToRelative(-80f, -128f)
-            horizontalLineToRelative(53.333f)
-            curveTo(85.333f, 276.352f, 276.352f, 85.333f, 512f, 85.333f)
-            close()
-            moveTo(546.368f, 641.536f)
-            horizontalLineTo(686.4f)
-            verticalLineTo(607.168f)
-            horizontalLineToRelative(-51.904f)
-            verticalLineTo(454.272f)
-            horizontalLineToRelative(42.752f)
-            verticalLineTo(427.968f)
-            curveToRelative(-23.04f, -4.416f, -39.104f, -10.24f, -53.76f, -19.008f)
-            horizontalLineToRelative(-31.424f)
-            verticalLineToRelative(198.208f)
-            horizontalLineToRelative(-45.696f)
-            verticalLineToRelative(34.368f)
-            close()
-            moveTo(355.776f, 565.824f)
-            curveToRelative(0f, 50.816f, 39.168f, 80.128f, 81.92f, 80.128f)
-            curveToRelative(37.696f, 0f, 62.208f, -15.04f, 79.36f, -32.192f)
-            lineToRelative(-19.328f, -27.072f)
-            curveToRelative(-13.952f, 13.184f, -31.104f, 24.832f, -54.528f, 24.832f)
-            curveToRelative(-25.984f, 0f, -44.992f, -16.448f, -44.992f, -44.608f)
-            curveToRelative(0f, -27.776f, 17.216f, -43.52f, 42.816f, -43.52f)
-            curveToRelative(14.976f, 0f, 23.424f, 4.032f, 37.312f, 13.184f)
-            lineToRelative(20.096f, -12.8f)
-            lineToRelative(-6.976f, -114.816f)
-            horizontalLineTo(355.776f)
-            verticalLineToRelative(35.456f)
-            horizontalLineToRelative(87.8f)
-            lineToRelative(4.736f, 56.32f)
-            curveToRelative(-15.232f, -7.68f, -32.768f, -15.36f, -62.72f, -15.36f)
-            curveToRelative(-39.872f, 0f, -73.152f, 22.656f, -73.152f, 72.768f)
-            close()
-            moveTo(728.832f, 564.736f)
-            horizontalLineToRelative(87.04f)
-            verticalLineTo(534.016f)
-            horizontalLineToRelative(-87.04f)
-            verticalLineToRelative(30.72f)
-            close()
-        }
-    }.build()
-}
+// Using Material Icons: Replay30 / Forward30
 
 @Composable
 fun SkipForward30Button(
@@ -360,7 +230,7 @@ fun SkipForward30Button(
         contentAlignment = Alignment.Center
     ) {
         Icon(
-            imageVector = SkipForward30Icon,
+            imageVector = Icons.Default.Forward30,
             contentDescription = "前进30秒",
             tint = tint,
             modifier = Modifier.size(28.dp)
@@ -382,7 +252,7 @@ fun SkipBackward30Button(
         contentAlignment = Alignment.Center
     ) {
         Icon(
-            imageVector = SkipBackward30Icon,
+            imageVector = Icons.Default.Replay30,
             contentDescription = "后退30秒",
             tint = tint,
             modifier = Modifier.size(28.dp)
