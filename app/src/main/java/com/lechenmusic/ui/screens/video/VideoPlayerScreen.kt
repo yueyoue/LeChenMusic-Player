@@ -525,11 +525,11 @@ fun VideoPlayerScreen(
                         )
                     }
 
-                    // 后退15秒
+                    // 后退30秒
                     IconButton(onClick = {
-                        exoPlayer.seekTo((exoPlayer.currentPosition - 15000).coerceAtLeast(0))
+                        exoPlayer.seekTo((exoPlayer.currentPosition - 30000).coerceAtLeast(0))
                     }) {
-                        Icon(Icons.Default.Replay15, "后退15秒", tint = Color.White)
+                        Icon(Icons.Default.Replay30, "后退30秒", tint = Color.White)
                     }
 
                     // 播放/暂停
@@ -550,11 +550,11 @@ fun VideoPlayerScreen(
                         }
                     }
 
-                    // 前进15秒
+                    // 前进30秒
                     IconButton(onClick = {
-                        exoPlayer.seekTo((exoPlayer.currentPosition + 15000).coerceAtMost(duration))
+                        exoPlayer.seekTo((exoPlayer.currentPosition + 30000).coerceAtMost(duration))
                     }) {
-                        Icon(Icons.Default.Forward15, "前进15秒", tint = Color.White)
+                        Icon(Icons.Default.Forward30, "前进30秒", tint = Color.White)
                     }
 
                     // 下一集

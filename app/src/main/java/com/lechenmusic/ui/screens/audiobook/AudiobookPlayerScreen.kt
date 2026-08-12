@@ -35,8 +35,8 @@ import coil.compose.AsyncImage
 import com.lechenmusic.data.model.Audiobook
 import com.lechenmusic.data.model.AudiobookChapter
 import com.lechenmusic.ui.components.CoverImage
-import com.lechenmusic.ui.components.SkipBackward15Button
-import com.lechenmusic.ui.components.SkipForward15Button
+import com.lechenmusic.ui.components.SkipBackward30Button
+import com.lechenmusic.ui.components.SkipForward30Button
 import com.lechenmusic.ui.screens.player.PlayerProgressBar
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -58,8 +58,8 @@ fun AudiobookPlayerScreen(
     onBack: () -> Unit,
     onPlayPause: () -> Unit,
     onSeekTo: (Long) -> Unit,
-    onSkipForward15s: () -> Unit,
-    onSkipBackward15s: () -> Unit,
+    onSkipForward30s: () -> Unit,
+    onSkipBackward30s: () -> Unit,
     onPreviousChapter: () -> Unit,
     onNextChapter: () -> Unit,
     onChapterSelect: (Int) -> Unit,
@@ -237,8 +237,8 @@ fun AudiobookPlayerScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Skip backward 15s
-                SkipBackward15Button(
-                    onClick = onSkipBackward15s,
+                SkipBackward30Button(
+                    onClick = onSkipBackward30s,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     size = 48.dp
                 )
@@ -271,8 +271,8 @@ fun AudiobookPlayerScreen(
                 }
 
                 // Skip forward 15s
-                SkipForward15Button(
-                    onClick = onSkipForward15s,
+                SkipForward30Button(
+                    onClick = onSkipForward30s,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     size = 48.dp
                 )

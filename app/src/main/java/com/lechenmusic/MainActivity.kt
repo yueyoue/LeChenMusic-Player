@@ -1093,8 +1093,8 @@ fun NavGraphBuilder.sharedNavRoutes(
                     onBack = onBack,
                     onPlayPause = { viewModel.audiobookTogglePlayPause() },
                     onSeekTo = { viewModel.audiobookSeekTo(it) },
-                    onSkipForward15s = { viewModel.audiobookSkipForward15s() },
-                    onSkipBackward15s = { viewModel.audiobookSkipBackward15s() },
+                    onSkipForward30s = { viewModel.audiobookSkipForward30s() },
+                    onSkipBackward30s = { viewModel.audiobookSkipBackward30s() },
                     onPreviousChapter = { viewModel.audiobookPreviousChapter() },
                     onNextChapter = { viewModel.audiobookNextChapter() },
                     onChapterSelect = { idx ->
@@ -1123,8 +1123,8 @@ fun NavGraphBuilder.sharedNavRoutes(
                     onBack = onBack,
                     onPlayPause = { viewModel.audiobookTogglePlayPause() },
                     onSeekTo = { viewModel.audiobookSeekTo(it) },
-                    onSkipForward15s = { viewModel.audiobookSkipForward15s() },
-                    onSkipBackward15s = { viewModel.audiobookSkipBackward15s() },
+                    onSkipForward30s = { viewModel.audiobookSkipForward30s() },
+                    onSkipBackward30s = { viewModel.audiobookSkipBackward30s() },
                     onPreviousChapter = { viewModel.audiobookPreviousChapter() },
                     onNextChapter = { viewModel.audiobookNextChapter() },
                     onChapterSelect = { idx ->

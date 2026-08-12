@@ -28,8 +28,8 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.lechenmusic.data.model.Audiobook
 import com.lechenmusic.data.model.AudiobookChapter
-import com.lechenmusic.ui.components.SkipBackward15Button
-import com.lechenmusic.ui.components.SkipForward15Button
+import com.lechenmusic.ui.components.SkipBackward30Button
+import com.lechenmusic.ui.components.SkipForward30Button
 import com.lechenmusic.ui.screens.player.CoverImageDisplay
 import com.lechenmusic.ui.screens.player.rememberCoverColor
 
@@ -51,8 +51,8 @@ fun TabletAudiobookPlayerScreen(
     onBack: () -> Unit,
     onPlayPause: () -> Unit,
     onSeekTo: (Long) -> Unit,
-    onSkipForward15s: () -> Unit,
-    onSkipBackward15s: () -> Unit,
+    onSkipForward30s: () -> Unit,
+    onSkipBackward30s: () -> Unit,
     onPreviousChapter: () -> Unit,
     onNextChapter: () -> Unit,
     onChapterSelect: (Int) -> Unit,
@@ -274,9 +274,9 @@ fun TabletAudiobookPlayerScreen(
                         horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // 后退15秒
-                        SkipBackward15Button(
-                            onClick = onSkipBackward15s,
+                        // 后退30秒
+                        SkipBackward30Button(
+                            onClick = onSkipBackward30s,
                             tint = Color.White.copy(alpha = 0.7f),
                             size = 44.dp
                         )
@@ -426,9 +426,9 @@ fun TabletAudiobookPlayerScreen(
                             }
                         }
 
-                        // 前进15秒
-                        SkipForward15Button(
-                            onClick = onSkipForward15s,
+                        // 前进30秒
+                        SkipForward30Button(
+                            onClick = onSkipForward30s,
                             tint = Color.White.copy(alpha = 0.7f),
                             size = 44.dp
                         )

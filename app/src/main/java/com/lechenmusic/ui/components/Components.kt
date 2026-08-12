@@ -213,12 +213,12 @@ fun getQualityColor(song: Song): Color {
     }
 }
 
-// ==================== Skip 15s Buttons ====================
-// Custom SVG icons: 后退15秒 / 前进15秒
+// ==================== Skip 30s Buttons ====================
+// Custom SVG icons: 后退30秒 / 前进30秒
 
-private val SkipBackward15Icon: ImageVector by lazy {
+private val SkipBackward30Icon: ImageVector by lazy {
     ImageVector.Builder(
-        name = "SkipBackward15",
+        name = "SkipBackward30",
         defaultWidth = 24.dp,
         defaultHeight = 24.dp,
         viewportWidth = 1024f,
@@ -227,71 +227,64 @@ private val SkipBackward15Icon: ImageVector by lazy {
         path(
             fill = SolidColor(Color.Black)
         ) {
-            moveTo(299.52f, 224.512f)
-            lineTo(306.112f, 187.648f)
-            horizontalLineTo(306.048f)
-            arcTo(27.392f, 27.392f, 0f, false, false, 252.16f, 178.048f)
-            horizontalLineTo(252.096f)
-            lineTo(231.232f, 295.04f)
-            arcTo(27.456f, 27.456f, 0f, false, false, 278.848f, 317.952f)
-            quadTo(373.696f, 210.304f, 517.12f, 210.304f)
-            quadTo(648.576f, 210.304f, 741.568f, 303.232f)
-            quadTo(834.496f, 396.224f, 834.496f, 527.68f)
-            quadTo(834.496f, 659.136f, 741.568f, 752.128f)
-            quadTo(648.576f, 845.056f, 517.12f, 845.056f)
-            quadTo(389.952f, 845.056f, 298.048f, 757.376f)
-            arcTo(27.328f, 27.328f, 0f, false, false, 260.224f, 797.0f)
-            quadTo(368.0f, 899.912f, 627.12f, 899.912f)
-            quadTo(781.36f, 899.912f, 890.352f, 790.92f)
-            quadTo(999.344f, 681.864f, 999.344f, 527.68f)
-            quadTo(999.344f, 373.44f, 890.352f, 264.448f)
-            quadTo(781.36f, 155.52f, 671.296f, 155.52f)
-            quadTo(546.944f, 155.52f, 453.696f, 224.576f)
-            lineTo(299.52f, 224.512f)
+            moveTo(512f, 85.333f)
+            curveTo(276.352f, 85.333f, 85.333f, 276.352f, 85.333f, 512f)
+            reflectiveCurveToRelative(191.019f, 426.667f, 426.667f, 426.667f)
+            curveToRelative(52.267f, 0f, 102.827f, -9.472f, 150.187f, -26.752f)
+            lineToRelative(139.349f, -56.528f)
+            lineToRelative(-41.216f, -49.067f)
+            arcTo(362.667f, 362.667f, 0f, true, true, 874.667f, 512f)
+            horizontalLineToRelative(-42.667f)
+            lineToRelative(80f, -128f)
+            lineToRelative(80f, 128f)
+            horizontalLineToRelative(-53.333f)
+            curveTo(938.667f, 747.648f, 747.648f, 938.667f, 512f, 938.667f)
+            curveTo(276.352f, 938.667f, 85.333f, 747.648f, 85.333f, 512f)
+            curveTo(85.333f, 276.352f, 276.352f, 85.333f, 512f, 85.333f)
             close()
             moveTo(477.632f, 641.536f)
             horizontalLineTo(337.6f)
             verticalLineTo(607.168f)
-            horizontalLineTo(389.504f)
+            horizontalLineToRelative(51.904f)
             verticalLineTo(454.272f)
             horizontalLineTo(346.752f)
             verticalLineTo(427.968f)
             curveTo(369.792f, 423.552f, 385.856f, 417.728f, 400.512f, 408.96f)
-            horizontalLineTo(431.936f)
-            verticalLineTo(607.168f)
-            horizontalLineTo(477.632f)
-            verticalLineTo(641.536f)
+            horizontalLineToRelative(31.424f)
+            verticalLineToRelative(198.208f)
+            horizontalLineToRelative(45.696f)
+            verticalLineToRelative(34.368f)
             close()
             moveTo(668.224f, 565.824f)
-            curveTo(668.224f, 616.64f, 629.056f, 645.952f, 586.304f, 645.952f)
-            curveTo(548.608f, 645.952f, 524.096f, 630.912f, 506.944f, 613.76f)
-            lineTo(526.272f, 586.688f)
-            curveTo(540.224f, 599.872f, 557.376f, 611.52f, 580.8f, 611.52f)
-            curveTo(606.784f, 611.52f, 625.792f, 595.072f, 625.792f, 566.912f)
-            curveTo(625.792f, 539.136f, 608.576f, 523.392f, 582.976f, 523.392f)
-            curveTo(568.0f, 523.392f, 559.552f, 527.424f, 545.664f, 536.576f)
-            lineTo(525.568f, 523.776f)
-            lineTo(532.544f, 408.96f)
-            horizontalLineTo(656.832f)
-            verticalLineTo(444.416f)
+            curveToRelative(0f, 50.816f, -39.168f, 80.128f, -81.92f, 80.128f)
+            curveToRelative(-37.696f, 0f, -62.208f, -15.04f, -79.36f, -32.192f)
+            lineToRelative(19.328f, -27.072f)
+            curveToRelative(13.952f, 13.184f, 31.104f, 24.832f, 54.528f, 24.832f)
+            curveToRelative(25.984f, 0f, 44.992f, -16.448f, 44.992f, -44.608f)
+            curveToRelative(0f, -27.776f, -17.216f, -43.52f, -42.816f, -43.52f)
+            curveToRelative(-14.976f, 0f, -23.424f, 4.032f, -37.312f, 13.184f)
+            lineToRelative(-20.096f, -12.8f)
+            lineToRelative(6.976f, -114.816f)
+            horizontalLineToRelative(124.288f)
+            verticalLineToRelative(35.456f)
             horizontalLineTo(569.088f)
-            lineTo(564.352f, 500.736f)
-            arcTo(65.92f, 65.92f, 0f, false, true, 595.072f, 493.056f)
-            curveTo(634.944f, 493.056f, 668.224f, 515.712f, 668.224f, 565.824f)
+            lineToRelative(-4.736f, 56.32f)
+            curveToRelative(15.232f, -7.68f, 32.768f, -15.36f, 62.72f, -15.36f)
+            curveToRelative(39.872f, 0f, 73.152f, 22.656f, 73.152f, 72.768f)
             close()
             moveTo(295.168f, 564.736f)
             horizontalLineTo(208.128f)
             verticalLineTo(534.016f)
-            horizontalLineTo(295.168f)
-            verticalLineTo(564.736f)
+            horizontalLineToRelative(87.04f)
+            verticalLineToRelative(30.72f)
             close()
         }
     }.build()
 }
 
-private val SkipForward15Icon: ImageVector by lazy {
+private val SkipForward30Icon: ImageVector by lazy {
     ImageVector.Builder(
-        name = "SkipForward15",
+        name = "SkipForward30",
         defaultWidth = 24.dp,
         defaultHeight = 24.dp,
         viewportWidth = 1024f,
@@ -300,78 +293,61 @@ private val SkipForward15Icon: ImageVector by lazy {
         path(
             fill = SolidColor(Color.Black)
         ) {
-            moveTo(724.48f, 221.44f)
-            lineTo(717.888f, 184.576f)
-            horizontalLineTo(717.952f)
-            arcTo(27.392f, 27.392f, 0f, false, true, 771.84f, 174.976f)
-            horizontalLineTo(771.904f)
-            lineTo(792.768f, 292.032f)
-            arcTo(27.456f, 27.456f, 0f, false, true, 745.152f, 314.944f)
-            quadTo(650.304f, 207.232f, 506.88f, 207.232f)
-            quadTo(375.424f, 207.232f, 282.432f, 300.224f)
-            quadTo(189.504f, 393.152f, 189.504f, 527.616f)
-            quadTo(189.504f, 658.112f, 282.432f, 752.064f)
-            quadTo(375.424f, 845.0f, 506.88f, 845.0f)
-            quadTo(634.048f, 845.0f, 725.952f, 757.32f)
-            arcTo(27.328f, 27.328f, 0f, false, true, 763.776f, 796.936f)
-            quadTo(656.0f, 899.976f, 396.88f, 899.976f)
-            quadTo(242.64f, 899.976f, 133.648f, 790.92f)
-            quadTo(24.656f, 681.864f, 24.656f, 527.68f)
-            quadTo(24.656f, 373.504f, 133.648f, 264.448f)
-            quadTo(242.64f, 155.392f, 506.88f, 155.392f)
-            quadTo(631.232f, 155.392f, 724.48f, 224.448f)
-            lineTo(724.48f, 221.44f)
+            moveTo(512f, 85.333f)
+            curveTo(747.648f, 85.333f, 938.667f, 276.352f, 938.667f, 512f)
+            reflectiveCurveTo(747.648f, 938.667f, 512f, 938.667f)
+            curveTo(459.733f, 938.667f, 409.173f, 929.195f, 361.813f, 911.915f)
+            lineTo(222.464f, 955.387f)
+            lineToRelative(41.216f, -49.067f)
+            arcTo(362.667f, 362.667f, 0f, true, false, 149.333f, 512f)
+            horizontalLineToRelative(42.667f)
+            lineToRelative(-80f, 128f)
+            lineToRelative(-80f, -128f)
+            horizontalLineToRelative(53.333f)
+            curveTo(85.333f, 276.352f, 276.352f, 85.333f, 512f, 85.333f)
             close()
-            moveTo(457.536f, 638.464f)
-            horizontalLineTo(317.44f)
-            verticalLineTo(604.16f)
-            horizontalLineTo(369.408f)
-            verticalLineTo(451.2f)
-            horizontalLineTo(326.592f)
-            verticalLineTo(424.96f)
-            curveTo(349.632f, 420.544f, 365.76f, 414.72f, 380.352f, 405.952f)
-            horizontalLineTo(411.84f)
-            verticalLineTo(604.16f)
-            horizontalLineTo(457.536f)
-            verticalLineTo(638.464f)
+            moveTo(546.368f, 641.536f)
+            horizontalLineTo(686.4f)
+            verticalLineTo(607.168f)
+            horizontalLineToRelative(-51.904f)
+            verticalLineTo(454.272f)
+            horizontalLineToRelative(42.752f)
+            verticalLineTo(427.968f)
+            curveToRelative(-23.04f, -4.416f, -39.104f, -10.24f, -53.76f, -19.008f)
+            horizontalLineToRelative(-31.424f)
+            verticalLineToRelative(198.208f)
+            horizontalLineToRelative(-45.696f)
+            verticalLineToRelative(34.368f)
             close()
-            moveTo(648.064f, 562.752f)
-            curveTo(648.064f, 613.632f, 608.96f, 642.88f, 566.144f, 642.88f)
-            curveTo(528.512f, 642.88f, 504.0f, 627.84f, 486.784f, 610.688f)
-            lineTo(506.176f, 583.616f)
-            curveTo(520.064f, 596.8f, 537.28f, 607.776f, 560.608f, 607.776f)
-            curveTo(586.592f, 607.776f, 605.6f, 591.264f, 605.6f, 563.008f)
-            curveTo(605.6f, 535.232f, 588.448f, 519.488f, 562.848f, 519.488f)
-            curveTo(547.808f, 519.488f, 539.392f, 523.52f, 525.472f, 532.672f)
-            lineTo(505.376f, 519.872f)
-            lineTo(512.288f, 405.056f)
-            horizontalLineTo(636.8f)
-            verticalLineTo(440.512f)
-            horizontalLineTo(548.992f)
-            lineTo(544.192f, 496.832f)
-            arcTo(65.92f, 65.92f, 0f, false, true, 574.912f, 489.152f)
-            curveTo(614.784f, 489.152f, 648.064f, 511.808f, 648.064f, 562.752f)
+            moveTo(355.776f, 565.824f)
+            curveToRelative(0f, 50.816f, 39.168f, 80.128f, 81.92f, 80.128f)
+            curveToRelative(37.696f, 0f, 62.208f, -15.04f, 79.36f, -32.192f)
+            lineToRelative(-19.328f, -27.072f)
+            curveToRelative(-13.952f, 13.184f, -31.104f, 24.832f, -54.528f, 24.832f)
+            curveToRelative(-25.984f, 0f, -44.992f, -16.448f, -44.992f, -44.608f)
+            curveToRelative(0f, -27.776f, 17.216f, -43.52f, 42.816f, -43.52f)
+            curveToRelative(14.976f, 0f, 23.424f, 4.032f, 37.312f, 13.184f)
+            lineToRelative(20.096f, -12.8f)
+            lineToRelative(-6.976f, -114.816f)
+            horizontalLineTo(355.776f)
+            verticalLineToRelative(35.456f)
+            horizontalLineToRelative(87.8f)
+            lineToRelative(4.736f, 56.32f)
+            curveToRelative(-15.232f, -7.68f, -32.768f, -15.36f, -62.72f, -15.36f)
+            curveToRelative(-39.872f, 0f, -73.152f, 22.656f, -73.152f, 72.768f)
             close()
-            moveTo(775.36f, 602.24f)
-            horizontalLineTo(743.552f)
-            verticalLineTo(533.12f)
-            horizontalLineTo(678.08f)
-            verticalLineTo(502.4f)
-            horizontalLineTo(743.552f)
-            verticalLineTo(433.28f)
-            horizontalLineTo(775.36f)
-            verticalLineTo(502.4f)
-            horizontalLineTo(840.832f)
-            verticalLineTo(533.12f)
-            horizontalLineTo(775.36f)
-            verticalLineTo(602.24f)
+            moveTo(728.832f, 564.736f)
+            horizontalLineToRelative(87.04f)
+            verticalLineTo(534.016f)
+            horizontalLineToRelative(-87.04f)
+            verticalLineToRelative(30.72f)
             close()
         }
     }.build()
 }
 
 @Composable
-fun SkipForward15Button(
+fun SkipForward30Button(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     tint: Color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -384,8 +360,8 @@ fun SkipForward15Button(
         contentAlignment = Alignment.Center
     ) {
         Icon(
-            imageVector = SkipForward15Icon,
-            contentDescription = "前进15秒",
+            imageVector = SkipForward30Icon,
+            contentDescription = "前进30秒",
             tint = tint,
             modifier = Modifier.size(28.dp)
         )
@@ -393,7 +369,7 @@ fun SkipForward15Button(
 }
 
 @Composable
-fun SkipBackward15Button(
+fun SkipBackward30Button(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     tint: Color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -406,12 +382,13 @@ fun SkipBackward15Button(
         contentAlignment = Alignment.Center
     ) {
         Icon(
-            imageVector = SkipBackward15Icon,
-            contentDescription = "后退15秒",
+            imageVector = SkipBackward30Icon,
+            contentDescription = "后退30秒",
             tint = tint,
             modifier = Modifier.size(28.dp)
         )
     }
+}
 }
 
 @Composable

@@ -1594,8 +1594,8 @@ fun loadAudiobooks() {
     }
 
     fun audiobookSeekTo(positionMs: Long) { playerManager.seekTo(positionMs) }
-    fun audiobookSkipForward15s() { playerManager.seekTo(playerManager.currentPosition.value + 15000) }
-    fun audiobookSkipBackward15s() { playerManager.seekTo((playerManager.currentPosition.value - 15000).coerceAtLeast(0)) }
+    fun audiobookSkipForward30s() { playerManager.seekTo(playerManager.currentPosition.value + 30000) }
+    fun audiobookSkipBackward30s() { playerManager.seekTo((playerManager.currentPosition.value - 30000).coerceAtLeast(0)) }
     fun audiobookTogglePlayPause() { playerManager.togglePlayPause() }
 
     // ===== Audiobook Progress =====
