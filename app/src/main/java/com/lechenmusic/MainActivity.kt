@@ -520,7 +520,7 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                 MiniPlayerBar(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
-                        .padding(bottom = if (showBottomBar) 80.dp else 16.dp)
+                        .padding(bottom = if (showBottomBar) 96.dp else 16.dp)
                 )
                 } // Box
             }

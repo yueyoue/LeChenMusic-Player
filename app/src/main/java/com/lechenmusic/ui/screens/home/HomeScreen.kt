@@ -990,7 +990,7 @@ private fun AudiobookSlidesCarousel(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp)
-                    .height(210.dp)
+                    .height(170.dp)
             ) { page ->
                 val slide = slides[page]
                 val gradients = listOf(
@@ -1031,12 +1031,12 @@ private fun AudiobookSlidesCarousel(
                         Column(
                             modifier = Modifier
                                 .align(Alignment.BottomStart)
-                                .padding(20.dp)
+                                .padding(16.dp)
                         ) {
                             if (slide.title.isNotEmpty()) {
                                 Text(
                                     slide.title,
-                                    fontSize = 20.sp,
+                                    fontSize = 18.sp,
                                     fontWeight = FontWeight.ExtraBold,
                                     color = Color.White,
                                     maxLines = 2,
@@ -1103,7 +1103,7 @@ private fun AudiobookCarousel(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 8.dp)
-                .height(210.dp),
+                .height(170.dp),
             shape = RoundedCornerShape(18.dp),
             color = Color.Transparent
         ) {
@@ -1115,7 +1115,7 @@ private fun AudiobookCarousel(
                             listOf(Color(0xFFE94560), Color(0xFFFF6B81), Color(0xFFFF8787))
                         )
                     )
-                    .padding(20.dp)
+                    .padding(16.dp)
             ) {
                 Column {
                     Surface(
@@ -1130,16 +1130,16 @@ private fun AudiobookCarousel(
                             color = Color.White
                         )
                     }
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         "有声书",
-                        fontSize = 22.sp,
+                        fontSize = 18.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = Color.White
                     )
                     Text(
                         "精彩内容等你来听",
-                        fontSize = 22.sp,
+                        fontSize = 18.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = Color.White
                     )
@@ -1177,7 +1177,7 @@ private fun AudiobookCarousel(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 8.dp)
-                .height(210.dp)
+                .height(170.dp)
         ) { page ->
             val book = carouselItems[page]
             val gradients = listOf(
@@ -1200,7 +1200,7 @@ private fun AudiobookCarousel(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(Brush.linearGradient(gradient))
-                        .padding(20.dp)
+                        .padding(16.dp)
                 ) {
                     Column {
                         Surface(
@@ -1215,10 +1215,10 @@ private fun AudiobookCarousel(
                                 color = Color.White
                             )
                         }
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
                         Text(
                             book.title,
-                            fontSize = 20.sp,
+                            fontSize = 18.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = Color.White,
                             maxLines = 2,
@@ -1312,7 +1312,16 @@ private fun ModeBtn(
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(icon, fontSize = 14.sp)
+            Surface(
+                shape = RoundedCornerShape(6.dp),
+                color = if (active) Color.White.copy(alpha = 0.2f) else Color.Transparent
+            ) {
+                Text(
+                    icon,
+                    modifier = Modifier.padding(horizontal = 3.dp, vertical = 1.dp),
+                    fontSize = 14.sp
+                )
+            }
             Spacer(modifier = Modifier.width(5.dp))
             Text(
                 label,

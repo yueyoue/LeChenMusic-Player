@@ -212,12 +212,8 @@ fun MusicHomeContent(
             SectionHead(title = "歌单广场", action = "更多 ›", titleSize = config.sectionTitleSize, captionSize = config.captionFontSize, onClick = onNavigateToAllPlaylists)
         }
         item {
-            PlaylistRow(
+            PlaylistGrid(
                 playlists = playlists,
-                coverSize = config.playlistCardSize,
-                titleSize = config.cardTitleSize,
-                subtitleSize = config.cardSubtitleSize,
-                gap = gap,
                 serverUrl = serverUrl,
                 username = username,
                 password = password,
@@ -248,12 +244,8 @@ fun MusicHomeContent(
             SectionHead(title = "最新专辑", action = "更多 ›", titleSize = config.sectionTitleSize, captionSize = config.captionFontSize, onClick = onNavigateToAlbums)
         }
         item {
-            AlbumRow(
+            AlbumGrid(
                 albums = newestAlbums,
-                coverSize = config.albumCardSize,
-                titleSize = config.cardTitleSize,
-                subtitleSize = config.cardSubtitleSize,
-                gap = gap,
                 serverUrl = serverUrl,
                 username = username,
                 password = password,
@@ -266,12 +258,8 @@ fun MusicHomeContent(
             SectionHead(title = "随机专辑", action = "换一批 ↻", titleSize = config.sectionTitleSize, captionSize = config.captionFontSize)
         }
         item {
-            AlbumRow(
+            AlbumGrid(
                 albums = randomAlbums,
-                coverSize = config.albumCardSize,
-                titleSize = config.cardTitleSize,
-                subtitleSize = config.cardSubtitleSize,
-                gap = gap,
                 serverUrl = serverUrl,
                 username = username,
                 password = password,
@@ -609,6 +597,62 @@ private fun PlaylistRow(
 }
 
 
+// ── 歌单网格（手机：一排两个）──
+
+@Composable
+private fun PlaylistGrid(
+    playlists: List<Playlist>,
+    serverUrl: String,
+    username: String,
+    password: String,
+    onClick: (String) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        playlists.take(6).chunked(2).forEach { row ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                row.forEach { pl ->
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { onClick(pl.id) }
+                            .padding(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(56.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                        ) {
+                            if (!pl.coverArt.isNullOrEmpty()) {
+                                AsyncImage(
+                                    model = ApiClient.getCoverArtUrl(serverUrl, username, password, pl.coverArt),
+                                    contentDescription = null,
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Icon(Icons.Default.LibraryMusic, null, modifier = Modifier.size(28.dp).align(Alignment.Center), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f))
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(pl.name, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text("${pl.songCount}首", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+                if (row.size < 2) Spacer(modifier = Modifier.weight(1f))
+            }
+        }
+    }
+}
+
+
 // ── 歌曲列表项 ───────────────────────────────────────────
 
 @Composable
@@ -750,6 +794,61 @@ private fun AlbumRow(
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(album.name, fontSize = titleSize, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(album.artist, fontSize = subtitleSize, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+    }
+}
+
+// ── 专辑网格（手机：一排两个）──
+
+@Composable
+private fun AlbumGrid(
+    albums: List<Album>,
+    serverUrl: String,
+    username: String,
+    password: String,
+    onClick: (String) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        albums.take(6).chunked(2).forEach { row ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                row.forEach { album ->
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { onClick(album.id) }
+                            .padding(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(56.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                        ) {
+                            if (!album.coverArt.isNullOrEmpty()) {
+                                AsyncImage(
+                                    model = ApiClient.getCoverArtUrl(serverUrl, username, password, album.coverArt),
+                                    contentDescription = null,
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Icon(Icons.Default.Album, null, modifier = Modifier.size(28.dp).align(Alignment.Center), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f))
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(album.name, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(album.artist, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+                }
+                if (row.size < 2) Spacer(modifier = Modifier.weight(1f))
             }
         }
     }
