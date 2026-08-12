@@ -324,6 +324,55 @@ fun SettingsScreen(
             }
 
             item {
+                val totalSeconds = remember {
+                    mutableStateOf(
+                        context.getSharedPreferences("play_stats", Context.MODE_PRIVATE)
+                            .getLong("total_play_seconds", 0L)
+                    )
+                }
+                // 定期刷新统计
+                LaunchedEffect(Unit) {
+                    while (true) {
+                        kotlinx.coroutines.delay(5000)
+                        totalSeconds.value = context.getSharedPreferences("play_stats", Context.MODE_PRIVATE)
+                            .getLong("total_play_seconds", 0L)
+                    }
+                }
+                val totalMin = (totalSeconds.value / 60).toInt()
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.Headphones,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(28.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                "${totalMin}",
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                "累计听歌（分钟）",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+
+            item {
                 SectionTitle("服务器信息")
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp), shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
                     Column(modifier = Modifier.padding(20.dp)) {
@@ -335,52 +384,6 @@ fun SettingsScreen(
                         InfoRow("歌手数量", if (statsLoaded) "${serverStats.artistCount}" else "加载中...")
                         InfoRow("歌单数量", if (statsLoaded) "${serverStats.playlistCount}" else "加载中...")
                         InfoRow("有声读物", if (statsLoaded) "${serverStats.audiobookCount}" else "加载中...")
-                    }
-                }
-            }
-
-            item {
-                SectionTitle("听歌统计")
-                Card(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(20.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            Icons.Default.Headphones,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(32.dp)
-                        )
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Column {
-                            Text(
-                                "累计听歌时长",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                            )
-                            val totalSeconds = remember {
-                                context.getSharedPreferences("play_stats", Context.MODE_PRIVATE)
-                                    .getLong("total_play_seconds", 0)
-                            }
-                            val hours = totalSeconds / 3600
-                            val minutes = (totalSeconds % 3600) / 60
-                            val durationText = when {
-                                hours > 0 -> "${hours}小时${minutes}分钟"
-                                minutes > 0 -> "${minutes}分钟"
-                                else -> "${totalSeconds}秒"
-                            }
-                            Text(
-                                durationText,
-                                style = MaterialTheme.typography.headlineSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        }
                     }
                 }
             }

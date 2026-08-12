@@ -100,8 +100,15 @@ fun MusicHomeContent(
                 // Hero
                 item {
                     MusicHero(
-                        slides = musicSlides, serverUrl = serverUrl,
-                        heroHeight = config.heroHeight, titleSize = config.sectionTitleSize, bodySize = config.bodyFontSize
+                        slides = musicSlides,
+                        playlists = playlists,
+                        serverUrl = serverUrl,
+                        username = username,
+                        password = password,
+                        heroHeight = config.heroHeight,
+                        titleSize = config.sectionTitleSize,
+                        bodySize = config.bodyFontSize,
+                        onPlaylistClick = onPlaylistClick
                     )
                 }
                 // 快捷入口按钮
@@ -192,8 +199,15 @@ fun MusicHomeContent(
             // ── 1. Hero Banner ──
             item {
                 MusicHero(
-                    slides = musicSlides, serverUrl = serverUrl,
-                    heroHeight = config.heroHeight, titleSize = config.sectionTitleSize, bodySize = config.bodyFontSize
+                    slides = musicSlides,
+                    playlists = playlists,
+                    serverUrl = serverUrl,
+                    username = username,
+                    password = password,
+                    heroHeight = config.heroHeight,
+                    titleSize = config.sectionTitleSize,
+                    bodySize = config.bodyFontSize,
+                    onPlaylistClick = onPlaylistClick
                 )
             }
 
@@ -310,13 +324,23 @@ fun MusicHomeContent(
 @Composable
 private fun MusicHero(
     slides: List<SlideConfig>,
+    playlists: List<Playlist> = emptyList(),
     serverUrl: String,
+    username: String = "",
+    password: String = "",
     heroHeight: Dp,
     titleSize: TextUnit,
-    bodySize: TextUnit
+    bodySize: TextUnit,
+    onPlaylistClick: ((String) -> Unit)? = null
 ) {
-    val slide = slides.firstOrNull()
-    val title = slide?.title ?: "每日推荐"
+    // 优先显示随机歌单，否则显示幻灯
+    val randomPlaylist = remember(playlists) {
+        if (playlists.isNotEmpty()) playlists.random() else null
+    }
+    val slide = if (randomPlaylist == null) slides.firstOrNull() else null
+    val title = randomPlaylist?.name ?: slide?.title ?: "每日推荐"
+    val coverArt = randomPlaylist?.coverArt
+    val playlistId = randomPlaylist?.id
 
     Box(
         modifier = Modifier
@@ -324,9 +348,22 @@ private fun MusicHero(
             .height(heroHeight)
             .clip(RoundedCornerShape(20.dp))
             .background(Brush.linearGradient(listOf(Color(0xFF6C5CE7), Color(0xFFA78BFA), Color(0xFFD4BBFF))))
+            .then(
+                if (playlistId != null && onPlaylistClick != null)
+                    Modifier.clickable { onPlaylistClick(playlistId) }
+                else Modifier
+            )
     ) {
-        // 背景图（如果有）
-        if (slide != null && slide.imageUrl.isNotEmpty()) {
+        // 背景图（歌单封面或幻灯图片）
+        if (coverArt != null && coverArt.isNotEmpty()) {
+            AsyncImage(
+                model = ApiClient.getCoverArtUrl(serverUrl, username, password, coverArt),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+                alpha = 0.3f
+            )
+        } else if (slide != null && slide.imageUrl.isNotEmpty()) {
             val fullUrl = if (slide.imageUrl.startsWith("http")) slide.imageUrl
             else "${serverUrl.trimEnd('/')}${slide.imageUrl}"
             AsyncImage(
@@ -614,18 +651,16 @@ private fun PlaylistGrid(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 row.forEach { pl ->
-                    Row(
+                    Column(
                         modifier = Modifier
                             .weight(1f)
-                            .clip(RoundedCornerShape(12.dp))
                             .clickable { onClick(pl.id) }
-                            .padding(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(56.dp)
-                                .clip(RoundedCornerShape(12.dp))
+                                .fillMaxWidth()
+                                .aspectRatio(1f)
+                                .clip(RoundedCornerShape(14.dp))
                                 .background(MaterialTheme.colorScheme.surfaceVariant)
                         ) {
                             if (!pl.coverArt.isNullOrEmpty()) {
@@ -636,14 +671,12 @@ private fun PlaylistGrid(
                                     contentScale = ContentScale.Crop
                                 )
                             } else {
-                                Icon(Icons.Default.LibraryMusic, null, modifier = Modifier.size(28.dp).align(Alignment.Center), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f))
+                                Icon(Icons.Default.LibraryMusic, null, modifier = Modifier.size(40.dp).align(Alignment.Center), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f))
                             }
                         }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(pl.name, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text("${pl.songCount}首", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(pl.name, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text("${pl.songCount}首", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
                 if (row.size < 2) Spacer(modifier = Modifier.weight(1f))
@@ -673,7 +706,7 @@ private fun SongListItem(
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .clickable(onClick = onClick)
-            .padding(vertical = 8.dp),
+            .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // 序号
@@ -816,18 +849,16 @@ private fun AlbumGrid(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 row.forEach { album ->
-                    Row(
+                    Column(
                         modifier = Modifier
                             .weight(1f)
-                            .clip(RoundedCornerShape(12.dp))
                             .clickable { onClick(album.id) }
-                            .padding(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(56.dp)
-                                .clip(RoundedCornerShape(12.dp))
+                                .fillMaxWidth()
+                                .aspectRatio(1f)
+                                .clip(RoundedCornerShape(14.dp))
                                 .background(MaterialTheme.colorScheme.surfaceVariant)
                         ) {
                             if (!album.coverArt.isNullOrEmpty()) {
@@ -838,14 +869,12 @@ private fun AlbumGrid(
                                     contentScale = ContentScale.Crop
                                 )
                             } else {
-                                Icon(Icons.Default.Album, null, modifier = Modifier.size(28.dp).align(Alignment.Center), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f))
+                                Icon(Icons.Default.Album, null, modifier = Modifier.size(40.dp).align(Alignment.Center), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f))
                             }
                         }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(album.name, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(album.artist, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(album.name, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(album.artist, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
                 if (row.size < 2) Spacer(modifier = Modifier.weight(1f))
