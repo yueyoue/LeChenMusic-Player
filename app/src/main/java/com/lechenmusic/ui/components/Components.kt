@@ -389,7 +389,6 @@ fun SkipBackward30Button(
         )
     }
 }
-}
 
 @Composable
 fun SectionHeader(
