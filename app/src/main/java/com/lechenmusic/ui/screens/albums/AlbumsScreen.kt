@@ -266,26 +266,24 @@ fun AlbumsScreen(
                     CircularProgressIndicator()
                 }
             } else {
-                // 按首字母分组
-                val sortedAlbums = remember(albums) { albums.sortedBy { it.name.lowercase() } }
-                val grouped = remember(sortedAlbums) {
-                    sortedAlbums.groupBy { album ->
-                        val first = album.name.firstOrNull()?.uppercase() ?: "#"
-                        if (first[0] in 'A'..'Z') first else "#"
-                    }.toSortedMap()
-                }
-                val letters = remember(grouped) { grouped.keys.toList() }
+                // 直接使用 albums（已由 LaunchedEffect 根据 sortType 排序）
                 val gridState = rememberLazyGridState()
                 val coroutineScope = rememberCoroutineScope()
-                // letter -> index in sortedAlbums
-                val letterIndexMap = remember(sortedAlbums) {
-                    val map = mutableMapOf<String, Int>()
-                    sortedAlbums.forEachIndexed { index, album ->
-                        val letter = album.name.firstOrNull()?.uppercase()?.let { if (it[0] in 'A'..'Z') it else "#" } ?: "#"
-                        if (letter !in map) map[letter] = index
+
+                // 仅在按名称/添加时间排序时显示 A-Z 索引栏
+                val showIndexBar = sortType == "all" || sortType == "name"
+                val letterIndexMap = remember(albums, showIndexBar) {
+                    if (!showIndexBar) emptyMap()
+                    else {
+                        val map = mutableMapOf<String, Int>()
+                        albums.forEachIndexed { index, album ->
+                            val letter = album.name.firstOrNull()?.uppercase()?.let { if (it[0] in 'A'..'Z') it else "#" } ?: "#"
+                            if (letter !in map) map[letter] = index
+                        }
+                        map
                     }
-                    map
                 }
+                val letters = remember(letterIndexMap) { letterIndexMap.keys.toList() }
 
                 Box(modifier = Modifier.fillMaxSize()) {
                 LazyVerticalGrid(
@@ -295,8 +293,8 @@ fun AlbumsScreen(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    items(sortedAlbums.size) { index ->
-                        val album = sortedAlbums[index]
+                    items(albums.size) { index ->
+                        val album = albums[index]
                         Column(modifier = Modifier.clickable { onAlbumClick(album.id) }) {
                             CoverImage(
                                 coverArtId = album.coverArt,

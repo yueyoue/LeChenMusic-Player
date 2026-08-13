@@ -30,6 +30,7 @@ class SettingsRepository(private val context: Context) {
         val CACHED_RANDOM_ALBUMS_JSON = stringPreferencesKey("cached_random_albums_json")
         val CACHED_PLAYLISTS_JSON = stringPreferencesKey("cached_playlists_json")
         val CACHED_RADIO_STATIONS_JSON = stringPreferencesKey("cached_radio_stations_json")
+        val STARRED_RADIO_IDS = stringPreferencesKey("starred_radio_ids")
         // 影视服务器
         val VIDEO_SERVER_URL = stringPreferencesKey("video_server_url")
         val VIDEO_USERNAME = stringPreferencesKey("video_username")
@@ -124,6 +125,10 @@ class SettingsRepository(private val context: Context) {
 
     val cachedRadioStationsJson: Flow<String> = context.dataStore.data.map { it[CACHED_RADIO_STATIONS_JSON] ?: "" }
     suspend fun saveCachedRadioStationsJson(json: String) { context.dataStore.edit { it[CACHED_RADIO_STATIONS_JSON] = json } }
+
+    // 电台收藏
+    val starredRadioIds: Flow<String> = context.dataStore.data.map { it[STARRED_RADIO_IDS] ?: "" }
+    suspend fun saveStarredRadioIds(ids: String) { context.dataStore.edit { it[STARRED_RADIO_IDS] = ids } }
 
     // 影视服务器配置
     val videoServerUrl: Flow<String> = context.dataStore.data.map { it[VIDEO_SERVER_URL] ?: "" }

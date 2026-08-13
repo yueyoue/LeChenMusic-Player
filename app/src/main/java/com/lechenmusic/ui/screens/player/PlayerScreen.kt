@@ -68,6 +68,7 @@ fun PlayerScreen(
     val shuffleMode by playerManager.shuffleMode.collectAsState()
     val repeatMode by playerManager.repeatMode.collectAsState()
     val isStarred by playerManager.isStarred.collectAsState()
+    val starredRadioIds by viewModel.starredRadioIds.collectAsState()
     val playlist by playerManager.playlist.collectAsState()
     val currentIndex by playerManager.currentIndex.collectAsState()
     val currentLyrics by viewModel.currentLyrics.collectAsState()
@@ -355,6 +356,9 @@ fun PlayerScreen(
 
             // Action Bar: 收藏, 添加到歌单, 定时, 队列
             val isRadioStation = song.id.startsWith("radio_")
+            val radioStationId = if (isRadioStation) song.id.removePrefix("radio_") else ""
+            val isRadioStarred = isRadioStation && starredRadioIds.contains(radioStationId)
+            val displayStarred = if (isRadioStation) isRadioStarred else isStarred
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -362,21 +366,26 @@ fun PlayerScreen(
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.clickable(enabled = !isRadioStation) { playerManager.toggleStar() }) {
+                    modifier = Modifier.clickable {
+                        if (isRadioStation) {
+                            if (isRadioStarred) viewModel.unstarRadio(radioStationId)
+                            else viewModel.starRadio(radioStationId)
+                        } else {
+                            playerManager.toggleStar()
+                        }
+                    }) {
                     Icon(
-                        if (isStarred) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        if (displayStarred) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                         contentDescription = "收藏",
-                        tint = if (isStarred) Color.Red
-                        else if (isRadioStation) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                        tint = if (displayStarred) Color.Red
                         else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(24.dp)
                     )
                     Text("收藏", fontSize = 10.sp,
-                        color = if (isRadioStation) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
-                        else MaterialTheme.colorScheme.onSurfaceVariant)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.clickable(enabled = !isRadioStation) {
+                    modifier = Modifier.clickable {
                         val currentPlaylist = playlist.toMutableList()
                         if (currentPlaylist.none { it.id == song.id }) {
                             currentPlaylist.add(song)
@@ -387,12 +396,10 @@ fun PlayerScreen(
                         }
                     }) {
                     Icon(Icons.Default.QueueMusic, contentDescription = "添加到播放列表",
-                        tint = if (isRadioStation) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
-                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(24.dp))
                     Text("入队", fontSize = 10.sp,
-                        color = if (isRadioStation) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
-                        else MaterialTheme.colorScheme.onSurfaceVariant)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.clickable { showPlaylistSelectionDialog = true }) {

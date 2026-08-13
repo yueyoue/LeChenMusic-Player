@@ -15,10 +15,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import com.lechenmusic.data.api.ApiClient
 import com.lechenmusic.data.model.InternetRadioStation
 import com.lechenmusic.ui.MainViewModel
 import com.lechenmusic.ui.responsive.ResponsiveConfig
@@ -30,6 +33,10 @@ fun RadioScreen(
     onBack: () -> Unit
 ) {
     val radioStations by viewModel.radioStations.collectAsState()
+    val serverUrl by viewModel.serverUrl.collectAsState()
+    val username by viewModel.username.collectAsState()
+    val password by viewModel.password.collectAsState()
+    val starredRadioIds by viewModel.starredRadioIds.collectAsState()
 
     val radioColors = listOf(
         Color(0xFFFF4757),
@@ -82,10 +89,19 @@ fun RadioScreen(
             ) {
                 items(radioStations) { station ->
                     val color = radioColors[radioStations.indexOf(station) % radioColors.size]
+                    val isStarred = starredRadioIds.contains(station.id)
                     RadioListItem(
                         station = station,
                         color = color,
-                        onClick = { viewModel.playerManager.playRadioStation(station) }
+                        serverUrl = serverUrl,
+                        username = username,
+                        password = password,
+                        isStarred = isStarred,
+                        onClick = { viewModel.playerManager.playRadioStation(station) },
+                        onStarToggle = {
+                            if (isStarred) viewModel.unstarRadio(station.id)
+                            else viewModel.starRadio(station.id)
+                        }
                     )
                 }
             }
@@ -97,7 +113,12 @@ fun RadioScreen(
 private fun RadioListItem(
     station: InternetRadioStation,
     color: Color,
-    onClick: () -> Unit
+    serverUrl: String = "",
+    username: String = "",
+    password: String = "",
+    isStarred: Boolean = false,
+    onClick: () -> Unit,
+    onStarToggle: () -> Unit = {}
 ) {
     Surface(
         modifier = Modifier
@@ -116,12 +137,22 @@ private fun RadioListItem(
                 color = color
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        Icons.Default.Radio,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(24.dp)
-                    )
+                    // 优先显示电台封面图
+                    if (!station.coverArt.isNullOrEmpty() && serverUrl.isNotEmpty()) {
+                        AsyncImage(
+                            model = ApiClient.getCoverArtUrl(serverUrl, username, password, station.coverArt),
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(24.dp)),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Icon(
+                            Icons.Default.Radio,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
                 }
             }
             Spacer(modifier = Modifier.width(16.dp))
@@ -137,6 +168,15 @@ private fun RadioListItem(
                     "网络电台",
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            // 收藏按钮
+            IconButton(onClick = onStarToggle) {
+                Icon(
+                    if (isStarred) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                    contentDescription = if (isStarred) "取消收藏" else "收藏",
+                    tint = if (isStarred) Color.Red else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(22.dp)
                 )
             }
             Icon(

@@ -114,6 +114,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _radioStations = MutableStateFlow<List<InternetRadioStation>>(emptyList())
     val radioStations: StateFlow<List<InternetRadioStation>> = _radioStations.asStateFlow()
 
+    // Starred Radio Stations
+    private val _starredRadioIds = MutableStateFlow<Set<String>>(emptySet())
+    val starredRadioIds: StateFlow<Set<String>> = _starredRadioIds.asStateFlow()
+    private val _starredRadios = MutableStateFlow<List<InternetRadioStation>>(emptyList())
+    val starredRadios: StateFlow<List<InternetRadioStation>> = _starredRadios.asStateFlow()
+
     // Timer countdown (seconds remaining)
     private val _timerRemainingSeconds = MutableStateFlow(0L)
     val timerRemainingSeconds: StateFlow<Long> = _timerRemainingSeconds.asStateFlow()
@@ -403,6 +409,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _allSongs.value = emptyList()
             _cachedSongs.value = emptyList()
             _radioStations.value = emptyList()
+            _starredRadioIds.value = emptySet()
+            _starredRadios.value = emptyList()
             _currentAlbum.value = null
             _currentArtist.value = null
             _currentPlaylist.value = null
@@ -531,6 +539,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 _radioStations.value = it
                 try { settings.saveCachedRadioStationsJson(gson.toJson(it)) } catch (_: Exception) {}
             }
+
+            // Load starred radio IDs from local storage
+            try {
+                val starredRadioIdsJson = settings.starredRadioIds.first()
+                if (starredRadioIdsJson.isNotBlank()) {
+                    val ids = starredRadioIdsJson.split(",").filter { it.isNotEmpty() }.toSet()
+                    _starredRadioIds.value = ids
+                }
+            } catch (_: Exception) {}
+            // Update starred radios list
+            updateStarredRadios()
 
             // Load starred songs
             try {
@@ -1045,7 +1064,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 repository.getPlaylists().onSuccess { _playlists.value = it }
 
                 // Sync radio stations
-                repository.getInternetRadioStations().onSuccess { _radioStations.value = it }
+                repository.getInternetRadioStations().onSuccess {
+                    _radioStations.value = it
+                    updateStarredRadios()
+                }
 
                 // Sync artists
                 _syncStatus.value = "同步歌手 (2/4)..."
@@ -1542,6 +1564,35 @@ fun loadAudiobooks() {
                 android.util.Log.e("LeChenMusic", "unstarPlaylist exception: ${e.message}")
                 if (cp != null) _currentPlaylist.value = cp
             }
+        }
+    }
+
+    // ===== Radio Star/Unstar =====
+
+    fun isRadioStarred(stationId: String): Boolean = _starredRadioIds.value.contains(stationId)
+
+    private fun updateStarredRadios() {
+        val ids = _starredRadioIds.value
+        _starredRadios.value = _radioStations.value.filter { it.id in ids }
+    }
+
+    fun starRadio(stationId: String) {
+        _starredRadioIds.value = _starredRadioIds.value + stationId
+        updateStarredRadios()
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                settings.saveStarredRadioIds(_starredRadioIds.value.joinToString(","))
+            } catch (_: Exception) {}
+        }
+    }
+
+    fun unstarRadio(stationId: String) {
+        _starredRadioIds.value = _starredRadioIds.value - stationId
+        updateStarredRadios()
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                settings.saveStarredRadioIds(_starredRadioIds.value.joinToString(","))
+            } catch (_: Exception) {}
         }
     }
 

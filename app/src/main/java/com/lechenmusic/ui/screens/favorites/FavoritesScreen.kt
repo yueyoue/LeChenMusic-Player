@@ -18,6 +18,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -30,6 +31,7 @@ import coil.compose.AsyncImage
 import com.lechenmusic.data.api.ApiClient
 import com.lechenmusic.data.model.Album
 import com.lechenmusic.data.model.Audiobook
+import com.lechenmusic.data.model.InternetRadioStation
 import com.lechenmusic.data.model.Playlist
 import com.lechenmusic.data.model.Song
 import com.lechenmusic.ui.MainViewModel
@@ -54,6 +56,7 @@ fun FavoritesScreen(
     val starredAlbums by viewModel.starredAlbums.collectAsState()
     val starredAudiobooks by viewModel.starredAudiobooks.collectAsState()
     val starredPlaylists by viewModel.starredPlaylists.collectAsState()
+    val starredRadios by viewModel.starredRadios.collectAsState()
     val playlists by viewModel.playlists.collectAsState()
     val serverUrl by viewModel.serverUrl.collectAsState()
     val username by viewModel.username.collectAsState()
@@ -72,7 +75,7 @@ fun FavoritesScreen(
         var searchText by remember { mutableStateOf("") }
         var isSearchActive by remember { mutableStateOf(false) }
 
-        val tabs = listOf("单曲" to starredSongs.size, "专辑" to starredAlbums.size, "歌单" to starredPlaylists.size, "有声书" to starredAudiobooks.size)
+        val tabs = listOf("单曲" to starredSongs.size, "专辑" to starredAlbums.size, "歌单" to starredPlaylists.size, "有声书" to starredAudiobooks.size, "电台" to starredRadios.size)
 
         Column(modifier = Modifier.fillMaxSize()) {
             // ===== 顶部: 标题 + Tab栏 + 搜索框 =====
@@ -189,6 +192,7 @@ fun FavoritesScreen(
                     1 -> Text("共 ${starredAlbums.size} 张专辑", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     2 -> Text("共 ${starredPlaylists.size} 个歌单", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     3 -> Text("共 ${starredAudiobooks.size} 本有声书", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    4 -> Text("共 ${starredRadios.size} 个电台", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
 
@@ -226,11 +230,20 @@ fun FavoritesScreen(
                     password = password,
                     onAudiobookClick = onAudiobookClick
                 )
+                4 -> TabletRadiosTab(
+                    stations = starredRadios,
+                    responsiveConfig = config!!,
+                    serverUrl = serverUrl,
+                    username = username,
+                    password = password,
+                    onPlayRadio = { viewModel.playerManager.playRadioStation(it) },
+                    onUnstarRadio = { viewModel.unstarRadio(it.id) }
+                )
             }
         }
     } else {
         // ═══ 手机布局 ═══
-        val tabs = listOf("音乐", "专辑", "歌单", "有声书")
+        val tabs = listOf("音乐", "专辑", "歌单", "有声书", "电台")
 
         Column(modifier = Modifier.fillMaxSize()) {
             Row(
@@ -272,6 +285,14 @@ fun FavoritesScreen(
                 1 -> AlbumsTab(starredAlbums, serverUrl, username, password, onAlbumClick)
                 2 -> PlaylistsTab(starredPlaylists, serverUrl, username, password, onPlaylistClick)
                 3 -> AudiobooksTab(starredAudiobooks, serverUrl, username, password, onAudiobookClick)
+                4 -> RadiosTab(
+                    stations = starredRadios,
+                    serverUrl = serverUrl,
+                    username = username,
+                    password = password,
+                    onPlayRadio = { viewModel.playerManager.playRadioStation(it) },
+                    onUnstarRadio = { viewModel.unstarRadio(it.id) }
+                )
             }
         }
     }
@@ -600,6 +621,91 @@ private fun PlaylistsTab(
                     modifier = Modifier.size(16.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun RadiosTab(
+    stations: List<InternetRadioStation>,
+    serverUrl: String,
+    username: String,
+    password: String,
+    onPlayRadio: (InternetRadioStation) -> Unit,
+    onUnstarRadio: (InternetRadioStation) -> Unit
+) {
+    if (stations.isEmpty()) {
+        EmptyState("暂无收藏电台", "📻")
+        return
+    }
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(bottom = 160.dp)
+    ) {
+        item {
+            Text(
+                "${stations.size} 个电台",
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
+            )
+        }
+        items(stations) { station ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onPlayRadio(station) }
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    modifier = Modifier.size(48.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        if (!station.coverArt.isNullOrEmpty() && serverUrl.isNotEmpty()) {
+                            coil.compose.AsyncImage(
+                                model = com.lechenmusic.data.api.ApiClient.getCoverArtUrl(serverUrl, username, password, station.coverArt),
+                                contentDescription = null,
+                                modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp)),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Icon(
+                                Icons.Default.Radio,
+                                null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        station.name,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        "网络电台",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                // 取消收藏按钮
+                IconButton(onClick = { onUnstarRadio(station) }) {
+                    Icon(
+                        Icons.Default.Favorite,
+                        contentDescription = "取消收藏",
+                        tint = Color.Red,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
         }
     }
@@ -963,6 +1069,92 @@ private fun TabletAudiobooksTab(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun TabletRadiosTab(
+    stations: List<InternetRadioStation>,
+    responsiveConfig: ResponsiveConfig,
+    serverUrl: String,
+    username: String,
+    password: String,
+    onPlayRadio: (InternetRadioStation) -> Unit,
+    onUnstarRadio: (InternetRadioStation) -> Unit
+) {
+    if (stations.isEmpty()) {
+        TabletEmptyFavorites("暂无收藏电台")
+        return
+    }
+
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(responsiveConfig.gridColumns.coerceIn(3, 5)),
+        contentPadding = PaddingValues(
+            start = responsiveConfig.contentPadding,
+            end = responsiveConfig.contentPadding,
+            bottom = 160.dp
+        ),
+        horizontalArrangement = Arrangement.spacedBy(responsiveConfig.itemSpacing),
+        verticalArrangement = Arrangement.spacedBy(responsiveConfig.itemSpacing)
+    ) {
+        gridItems(stations) { station ->
+            Column(modifier = Modifier.clickable { onPlayRadio(station) }) {
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(1f)
+                ) {
+                    if (!station.coverArt.isNullOrEmpty() && serverUrl.isNotEmpty()) {
+                        AsyncImage(
+                            model = com.lechenmusic.data.api.ApiClient.getCoverArtUrl(serverUrl, username, password, station.coverArt),
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Icon(
+                                Icons.Default.Radio,
+                                null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            station.name,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            "网络电台",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1
+                        )
+                    }
+                    IconButton(onClick = { onUnstarRadio(station) }, modifier = Modifier.size(32.dp)) {
+                        Icon(
+                            Icons.Default.Favorite,
+                            contentDescription = "取消收藏",
+                            tint = Color.Red,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
             }
         }
     }

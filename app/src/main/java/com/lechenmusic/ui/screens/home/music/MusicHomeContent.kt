@@ -1,5 +1,6 @@
 package com.lechenmusic.ui.screens.home.music
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -7,6 +8,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -33,6 +36,7 @@ import com.lechenmusic.data.model.Playlist
 import com.lechenmusic.data.model.Song
 import com.lechenmusic.data.model.SlideConfig
 import com.lechenmusic.ui.responsive.ResponsiveConfig
+import kotlinx.coroutines.delay
 
 // ═══════════════════════════════════════════════════════════
 // MusicHomeContent — 音乐首页（手机+平板自适应）
@@ -46,7 +50,7 @@ import com.lechenmusic.ui.responsive.ResponsiveConfig
 //   4. 歌单广场 (横向滚动封面)
 //   5. 每日推荐 (歌曲列表)
 //   6. 最新专辑 (横向滚动封面)
-//   7. 随机专辑 (横向滚动封面)
+//   7. 随机专辑 (仅平板，手机已移除)
 //   8. 最近播放 (歌曲列表)
 //   9. 电台 (网格卡片)
 // ═══════════════════════════════════════════════════════════
@@ -181,7 +185,7 @@ fun MusicHomeContent(
                 // 电台
                 item { Spacer(modifier = Modifier.height(8.dp)) }
                 item { SectionHead(title = "电台", action = "更多 ›", titleSize = config.sectionTitleSize, captionSize = config.captionFontSize, onClick = onNavigateToRadio) }
-                item { RadioGrid(stations = radioStations, titleSize = config.cardSubtitleSize, subtitleSize = config.captionFontSize, onClick = onPlayRadio) }
+                item { RadioGrid(stations = radioStations, titleSize = config.cardSubtitleSize, subtitleSize = config.captionFontSize, serverUrl = serverUrl, username = username, password = password, onClick = onPlayRadio) }
             }
         }
     } else {
@@ -253,27 +257,13 @@ fun MusicHomeContent(
             )
         }
 
-        // ── 6. 最新专辑 ──
+        // ── 6. 最新专辑（只显示2个） ──
         item {
             SectionHead(title = "最新专辑", action = "更多 ›", titleSize = config.sectionTitleSize, captionSize = config.captionFontSize, onClick = onNavigateToAlbums)
         }
         item {
             AlbumGrid(
-                albums = newestAlbums,
-                serverUrl = serverUrl,
-                username = username,
-                password = password,
-                onClick = onAlbumClick
-            )
-        }
-
-        // ── 7. 随机专辑 ──
-        item {
-            SectionHead(title = "随机专辑", action = "换一批 ↻", titleSize = config.sectionTitleSize, captionSize = config.captionFontSize)
-        }
-        item {
-            AlbumGrid(
-                albums = randomAlbums,
+                albums = newestAlbums.take(2),
                 serverUrl = serverUrl,
                 username = username,
                 password = password,
@@ -307,6 +297,9 @@ fun MusicHomeContent(
                 stations = radioStations,
                 titleSize = config.cardSubtitleSize,
                 subtitleSize = config.captionFontSize,
+                serverUrl = serverUrl,
+                username = username,
+                password = password,
                 onClick = onPlayRadio
             )
         }
@@ -321,6 +314,7 @@ fun MusicHomeContent(
 
 // ── Hero Banner ──────────────────────────────────────────
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun MusicHero(
     slides: List<SlideConfig>,
@@ -333,98 +327,179 @@ private fun MusicHero(
     bodySize: TextUnit,
     onPlaylistClick: ((String) -> Unit)? = null
 ) {
-    // 优先显示随机歌单，否则显示幻灯
-    val randomPlaylist = remember(playlists) {
-        if (playlists.isNotEmpty()) playlists.random() else null
+    // 取最多5个随机歌单用于幻灯显示
+    val heroPlaylists = remember(playlists) {
+        if (playlists.isNotEmpty()) playlists.shuffled().take(5) else emptyList()
     }
-    val slide = if (randomPlaylist == null) slides.firstOrNull() else null
-    val title = randomPlaylist?.name ?: slide?.title ?: "每日推荐"
-    val coverArt = randomPlaylist?.coverArt
-    val playlistId = randomPlaylist?.id
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(heroHeight)
-            .clip(RoundedCornerShape(20.dp))
-            .background(Brush.linearGradient(listOf(Color(0xFF6C5CE7), Color(0xFFA78BFA), Color(0xFFD4BBFF))))
-            .then(
-                if (playlistId != null && onPlaylistClick != null)
-                    Modifier.clickable { onPlaylistClick(playlistId) }
-                else Modifier
-            )
-    ) {
-        // 背景图（歌单封面或幻灯图片）
-        if (coverArt != null && coverArt.isNotEmpty()) {
-            AsyncImage(
-                model = ApiClient.getCoverArtUrl(serverUrl, username, password, coverArt),
-                contentDescription = null,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop,
-                alpha = 0.3f
-            )
-        } else if (slide != null && slide.imageUrl.isNotEmpty()) {
-            val fullUrl = if (slide.imageUrl.startsWith("http")) slide.imageUrl
-            else "${serverUrl.trimEnd('/')}${slide.imageUrl}"
-            AsyncImage(
-                model = fullUrl,
-                contentDescription = null,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop,
-                alpha = 0.3f
-            )
-        }
-
-        // 渐变遮罩
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.5f))))
-        )
-
-        // 内容
-        Column(
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(24.dp)
-        ) {
-            Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = Color.White.copy(alpha = 0.15f)
-            ) {
-                Text(
-                    "✨ 精选推荐",
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color.White
+    // 合并歌单和幻灯作为展示项
+    val carouselItems = remember(heroPlaylists, slides) {
+        if (heroPlaylists.isNotEmpty()) {
+            heroPlaylists.map { pl ->
+                CarouselItem(
+                    title = pl.name,
+                    coverArt = pl.coverArt,
+                    imageUrl = null,
+                    playlistId = pl.id
                 )
             }
-            Spacer(modifier = Modifier.height(10.dp))
-            Text(
-                title,
-                fontSize = (titleSize.value + 6).sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
+        } else {
+            slides.map { slide ->
+                CarouselItem(
+                    title = slide.title.ifEmpty { "每日推荐" },
+                    coverArt = null,
+                    imageUrl = slide.imageUrl,
+                    playlistId = null
+                )
+            }
+        }
+    }
+
+    if (carouselItems.isEmpty()) return
+
+    val pagerState = rememberPagerState(pageCount = { carouselItems.size })
+
+    // 自动轮播
+    LaunchedEffect(pagerState.currentPage) {
+        delay(4000)
+        val nextPage = (pagerState.currentPage + 1) % carouselItems.size
+        pagerState.animateScrollToPage(nextPage)
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+    ) {
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(heroHeight)
+        ) { page ->
+            val item = carouselItems[page]
+            val gradients = listOf(
+                listOf(Color(0xFF6C5CE7), Color(0xFFA78BFA), Color(0xFFD4BBFF)),
+                listOf(Color(0xFFE94560), Color(0xFFFF6B81), Color(0xFFFF8787)),
+                listOf(Color(0xFF00B894), Color(0xFF55EFC4), Color(0xFF81ECEC)),
+                listOf(Color(0xFFF39C12), Color(0xFFFDCB6E), Color(0xFFFFF3CD)),
+                listOf(Color(0xFF3498DB), Color(0xFF74B9FF), Color(0xFFA8D8EA))
             )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text("根据你的听歌口味，AI 智能推荐", fontSize = bodySize, color = Color.White.copy(alpha = 0.8f))
-            Spacer(modifier = Modifier.height(14.dp))
-            Button(
-                onClick = { /* 播放全部 */ },
-                shape = RoundedCornerShape(50.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.2f)),
-                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp)
+            val gradient = gradients[page % gradients.size]
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Brush.linearGradient(gradient))
+                    .then(
+                        if (item.playlistId != null && onPlaylistClick != null)
+                            Modifier.clickable { onPlaylistClick(item.playlistId) }
+                        else Modifier
+                    )
             ) {
-                Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(16.dp), tint = Color.White)
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("播放全部", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+                // 背景图
+                if (item.coverArt != null && item.coverArt.isNotEmpty()) {
+                    AsyncImage(
+                        model = ApiClient.getCoverArtUrl(serverUrl, username, password, item.coverArt),
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop,
+                        alpha = 0.3f
+                    )
+                } else if (item.imageUrl != null && item.imageUrl.isNotEmpty()) {
+                    val fullUrl = if (item.imageUrl.startsWith("http")) item.imageUrl
+                    else "${serverUrl.trimEnd('/')}${item.imageUrl}"
+                    AsyncImage(
+                        model = fullUrl,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop,
+                        alpha = 0.3f
+                    )
+                }
+
+                // 渐变遮罩
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.5f))))
+                )
+
+                // 内容
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(24.dp)
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = Color.White.copy(alpha = 0.15f)
+                    ) {
+                        Text(
+                            "✨ 精选推荐",
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color.White
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        item.title,
+                        fontSize = (titleSize.value + 6).sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text("根据你的听歌口味，AI 智能推荐", fontSize = bodySize, color = Color.White.copy(alpha = 0.8f))
+                    Spacer(modifier = Modifier.height(14.dp))
+                    Button(
+                        onClick = { /* 播放全部 */ },
+                        shape = RoundedCornerShape(50.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.2f)),
+                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp)
+                    ) {
+                        Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(16.dp), tint = Color.White)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("播放全部", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+                    }
+                }
+            }
+        }
+
+        // 页面指示器
+        if (carouselItems.size > 1) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp),
+                horizontalArrangement = Arrangement.Center
+            ) {
+                repeat(carouselItems.size) { index ->
+                    Box(
+                        modifier = Modifier
+                            .padding(horizontal = 3.dp)
+                            .size(if (pagerState.currentPage == index) 8.dp else 6.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (pagerState.currentPage == index) Color.White
+                                else Color.White.copy(alpha = 0.4f)
+                            )
+                    )
+                }
             }
         }
     }
 }
+
+/** 幻灯展示项 */
+private data class CarouselItem(
+    val title: String,
+    val coverArt: String?,
+    val imageUrl: String?,
+    val playlistId: String?
+)
 
 
 // ── 快捷入口 ─────────────────────────────────────────────
@@ -891,6 +966,9 @@ private fun RadioGrid(
     stations: List<InternetRadioStation>,
     titleSize: TextUnit,
     subtitleSize: TextUnit,
+    serverUrl: String = "",
+    username: String = "",
+    password: String = "",
     onClick: (InternetRadioStation) -> Unit
 ) {
     val gradients = listOf(
@@ -929,7 +1007,17 @@ private fun RadioGrid(
                                     .background(gradients[colorIdx % gradients.size]),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(Icons.Default.Radio, null, modifier = Modifier.size(20.dp), tint = Color.White)
+                                // 优先显示电台封面图
+                                if (!station.coverArt.isNullOrEmpty() && serverUrl.isNotEmpty()) {
+                                    AsyncImage(
+                                        model = ApiClient.getCoverArtUrl(serverUrl, username, password, station.coverArt),
+                                        contentDescription = null,
+                                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp)),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                } else {
+                                    Icon(Icons.Default.Radio, null, modifier = Modifier.size(20.dp), tint = Color.White)
+                                }
                             }
                             Spacer(modifier = Modifier.width(12.dp))
                             Column {
