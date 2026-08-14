@@ -162,7 +162,7 @@ fun SongItem(
                             fontSize = 7.sp,
                             fontWeight = FontWeight.Bold,
                             color = getQualityColor(song),
-                            modifier = Modifier.padding(horizontal = 3.dp, vertical = 0.5.dp)
+                            modifier = Modifier.padding(horizontal = 3.dp, vertical = 0.dp)
                         )
                     }
                     Spacer(modifier = Modifier.width(4.dp))
@@ -512,7 +512,7 @@ fun SongItemWithMenu(
                             fontSize = 7.sp,
                             fontWeight = FontWeight.Bold,
                             color = getQualityColor(song),
-                            modifier = Modifier.padding(horizontal = 3.dp, vertical = 0.5.dp)
+                            modifier = Modifier.padding(horizontal = 3.dp, vertical = 0.dp)
                         )
                     }
                     Spacer(modifier = Modifier.width(4.dp))

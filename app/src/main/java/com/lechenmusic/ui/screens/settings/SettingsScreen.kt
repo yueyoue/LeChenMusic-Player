@@ -367,7 +367,20 @@ fun SettingsScreen(
                 val progress = com.lechenmusic.data.model.UserLevelSystem.getLevelProgress(totalMinutes)
                 val isMaxLevel = nextLevel == null
 
-                val gradientColors = when (level.level) {
+                val isDark = androidx.compose.foundation.isSystemInDarkTheme()
+                val gradientColors = if (isDark) when (level.level) {
+                    1 -> listOf(Color(0xFF2A2A2A), Color(0xFF3A3A3A))
+                    2 -> listOf(Color(0xFF1B3A1B), Color(0xFF2D4A2D))
+                    3 -> listOf(Color(0xFF1A2E4A), Color(0xFF2A3E5A))
+                    4 -> listOf(Color(0xFF2A1A4A), Color(0xFF3A2A5A))
+                    5 -> listOf(Color(0xFF4A1A0A), Color(0xFF5A2A1A))
+                    6 -> listOf(Color(0xFF4A3010), Color(0xFF5A3A1A))
+                    7 -> listOf(Color(0xFF4A1010), Color(0xFF5A1A1A))
+                    8 -> listOf(Color(0xFF3A1040), Color(0xFF4A1A50))
+                    9 -> listOf(Color(0xFF4A3A00), Color(0xFF5A4A10))
+                    10 -> listOf(Color(0xFF4A0A20), Color(0xFF5A1A30))
+                    else -> listOf(Color(0xFF2A2A2A), Color(0xFF3A3A3A))
+                } else when (level.level) {
                     1 -> listOf(Color(0xFF9E9E9E), Color(0xFFBDBDBD))
                     2 -> listOf(Color(0xFF66BB6A), Color(0xFFA5D6A7))
                     3 -> listOf(Color(0xFF42A5F5), Color(0xFF90CAF9))
@@ -420,7 +433,7 @@ fun SettingsScreen(
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     if (isMaxLevel) "已满级 🎉"
-                                    else "距下一级「${nextLevel!!.title}」还有 ${minutesToNext} 分钟",
+                                    else "距下一级还有 ${minutesToNext} 分钟",
                                     fontSize = 12.sp,
                                     color = Color.White.copy(alpha = 0.85f)
                                 )
@@ -734,7 +747,20 @@ private fun TabletUserLevelCard(viewModel: MainViewModel) {
     val progress = com.lechenmusic.data.model.UserLevelSystem.getLevelProgress(totalMinutes)
     val isMaxLevel = nextLevel == null
 
-    val gradientColors = when (level.level) {
+    val isDark = androidx.compose.foundation.isSystemInDarkTheme()
+    val gradientColors = if (isDark) when (level.level) {
+        1 -> listOf(Color(0xFF2A2A2A), Color(0xFF3A3A3A))
+        2 -> listOf(Color(0xFF1B3A1B), Color(0xFF2D4A2D))
+        3 -> listOf(Color(0xFF1A2E4A), Color(0xFF2A3E5A))
+        4 -> listOf(Color(0xFF2A1A4A), Color(0xFF3A2A5A))
+        5 -> listOf(Color(0xFF4A1A0A), Color(0xFF5A2A1A))
+        6 -> listOf(Color(0xFF4A3010), Color(0xFF5A3A1A))
+        7 -> listOf(Color(0xFF4A1010), Color(0xFF5A1A1A))
+        8 -> listOf(Color(0xFF3A1040), Color(0xFF4A1A50))
+        9 -> listOf(Color(0xFF4A3A00), Color(0xFF5A4A10))
+        10 -> listOf(Color(0xFF4A0A20), Color(0xFF5A1A30))
+        else -> listOf(Color(0xFF2A2A2A), Color(0xFF3A3A3A))
+    } else when (level.level) {
         1 -> listOf(Color(0xFF9E9E9E), Color(0xFFBDBDBD))
         2 -> listOf(Color(0xFF66BB6A), Color(0xFFA5D6A7))
         3 -> listOf(Color(0xFF42A5F5), Color(0xFF90CAF9))
@@ -789,7 +815,7 @@ private fun TabletUserLevelCard(viewModel: MainViewModel) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         if (isMaxLevel) "已满级 🎉"
-                        else "距下一级「${nextLevel!!.title}」还有 ${minutesToNext} 分钟",
+                        else "距下一级还有 ${minutesToNext} 分钟",
                         fontSize = 13.sp,
                         color = Color.White.copy(alpha = 0.85f)
                     )
