@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -357,24 +358,24 @@ private fun MusicHero(
     if (carouselItems.isEmpty()) return
 
     val pagerState = rememberPagerState(pageCount = { carouselItems.size })
+    val coroutineScope = rememberCoroutineScope()
 
     // 自动轮播
     LaunchedEffect(pagerState.currentPage) {
         delay(4000)
         val nextPage = (pagerState.currentPage + 1) % carouselItems.size
-        pagerState.animateScrollToPage(nextPage)
+        coroutineScope.launch {
+            pagerState.animateScrollToPage(nextPage)
+        }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-    ) {
+    Column {
         HorizontalPager(
             state = pagerState,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(heroHeight)
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .height(170.dp)
         ) { page ->
             val item = carouselItems[page]
             val gradients = listOf(
@@ -386,83 +387,79 @@ private fun MusicHero(
             )
             val gradient = gradients[page % gradients.size]
 
-            Box(
+            Surface(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Brush.linearGradient(gradient))
                     .then(
                         if (item.playlistId != null && onPlaylistClick != null)
                             Modifier.clickable { onPlaylistClick(item.playlistId) }
                         else Modifier
-                    )
+                    ),
+                shape = RoundedCornerShape(18.dp),
+                color = Color.Transparent
             ) {
-                // 背景图
-                if (item.coverArt != null && item.coverArt.isNotEmpty()) {
-                    AsyncImage(
-                        model = ApiClient.getCoverArtUrl(serverUrl, username, password, item.coverArt),
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop,
-                        alpha = 0.3f
-                    )
-                } else if (item.imageUrl != null && item.imageUrl.isNotEmpty()) {
-                    val fullUrl = if (item.imageUrl.startsWith("http")) item.imageUrl
-                    else "${serverUrl.trimEnd('/')}${item.imageUrl}"
-                    AsyncImage(
-                        model = fullUrl,
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop,
-                        alpha = 0.3f
-                    )
-                }
-
-                // 渐变遮罩
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.5f))))
-                )
-
-                // 内容
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(24.dp)
+                        .background(Brush.linearGradient(gradient))
                 ) {
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = Color.White.copy(alpha = 0.15f)
-                    ) {
-                        Text(
-                            "✨ 精选推荐",
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color.White
+                    // 背景图
+                    if (item.coverArt != null && item.coverArt.isNotEmpty()) {
+                        AsyncImage(
+                            model = ApiClient.getCoverArtUrl(serverUrl, username, password, item.coverArt),
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop,
+                            alpha = 0.3f
+                        )
+                    } else if (item.imageUrl != null && item.imageUrl.isNotEmpty()) {
+                        val fullUrl = if (item.imageUrl.startsWith("http")) item.imageUrl
+                        else "${serverUrl.trimEnd('/')}${item.imageUrl}"
+                        AsyncImage(
+                            model = fullUrl,
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop,
+                            alpha = 0.3f
                         )
                     }
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Text(
-                        item.title,
-                        fontSize = (titleSize.value + 6).sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
+
+                    // 渐变遮罩
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.5f))))
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text("根据你的听歌口味，AI 智能推荐", fontSize = bodySize, color = Color.White.copy(alpha = 0.8f))
-                    Spacer(modifier = Modifier.height(14.dp))
-                    Button(
-                        onClick = { /* 播放全部 */ },
-                        shape = RoundedCornerShape(50.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.2f)),
-                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp)
+
+                    // 内容
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(16.dp)
                     ) {
-                        Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(16.dp), tint = Color.White)
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("播放全部", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = Color.White.copy(alpha = 0.15f)
+                        ) {
+                            Text(
+                                "✨ 精选推荐",
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color.White
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            item.title,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text("根据你的听歌口味，AI 智能推荐", fontSize = 12.sp, color = Color.White.copy(alpha = 0.8f))
                     }
                 }
             }
@@ -473,19 +470,23 @@ private fun MusicHero(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 8.dp),
+                    .padding(top = 4.dp),
                 horizontalArrangement = Arrangement.Center
             ) {
                 repeat(carouselItems.size) { index ->
+                    val color = if (pagerState.currentPage == index)
+                        MaterialTheme.colorScheme.primary
+                    else
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
                     Box(
                         modifier = Modifier
                             .padding(horizontal = 3.dp)
-                            .size(if (pagerState.currentPage == index) 8.dp else 6.dp)
-                            .clip(CircleShape)
-                            .background(
-                                if (pagerState.currentPage == index) Color.White
-                                else Color.White.copy(alpha = 0.4f)
+                            .size(
+                                width = if (pagerState.currentPage == index) 16.dp else 6.dp,
+                                height = 6.dp
                             )
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(color)
                     )
                 }
             }

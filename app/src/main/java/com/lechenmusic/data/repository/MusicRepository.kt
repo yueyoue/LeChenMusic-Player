@@ -212,8 +212,9 @@ class MusicRepository {
                     android.util.Log.e("LeChenMusic", "getStarred: getPlaylists fallback failed: ${e.message}")
                 }
             }
-            val result = StarredData(songs = starred?.song ?: emptyList(), albums = starred?.album ?: emptyList(), artists = starred?.artist ?: emptyList(), playlists = playlists)
-            android.util.Log.d("LeChenMusic", "getStarred FINAL: songs=${result.songs.size} albums=${result.albums.size} playlists=${result.playlists.size} artists=${result.artists.size}")
+            val starredRadios = body.starred2?.radio ?: emptyList()
+            val result = StarredData(songs = starred?.song ?: emptyList(), albums = starred?.album ?: emptyList(), artists = starred?.artist ?: emptyList(), playlists = playlists, radios = starredRadios)
+            android.util.Log.d("LeChenMusic", "getStarred FINAL: songs=${result.songs.size} albums=${result.albums.size} playlists=${result.playlists.size} artists=${result.artists.size} radios=${result.radios.size}")
             Result.success(result)
         } catch (e: Exception) {
             android.util.Log.e("LeChenMusic", "getStarred EXCEPTION: ${e.javaClass.simpleName}: ${e.message}")
@@ -858,6 +859,6 @@ class MusicRepository {
 
 }
 
-data class StarredData(val songs: List<com.lechenmusic.data.model.Song> = emptyList(), val albums: List<com.lechenmusic.data.model.Album> = emptyList(), val artists: List<com.lechenmusic.data.model.Artist> = emptyList(), val playlists: List<com.lechenmusic.data.model.Playlist> = emptyList())
+data class StarredData(val songs: List<com.lechenmusic.data.model.Song> = emptyList(), val albums: List<com.lechenmusic.data.model.Album> = emptyList(), val artists: List<com.lechenmusic.data.model.Artist> = emptyList(), val playlists: List<com.lechenmusic.data.model.Playlist> = emptyList(), val radios: List<com.lechenmusic.data.model.StarredRadio> = emptyList())
 data class ServerStats(val songCount: Int = 0, val albumCount: Int = 0, val playlistCount: Int = 0, val artistCount: Int = 0, val audiobookCount: Int = 0)
 

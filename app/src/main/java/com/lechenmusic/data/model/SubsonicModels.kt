@@ -190,7 +190,16 @@ data class Starred2Data(
     val song: List<Song>? = null,
     val album: List<Album>? = null,
     val artist: List<Artist>? = null,
-    val playlist: List<Playlist>? = null
+    val playlist: List<Playlist>? = null,
+    val radio: List<StarredRadio>? = null
+)
+
+data class StarredRadio(
+    val id: String = "",
+    val name: String = "",
+    val title: String = "",
+    val coverArt: String? = null,
+    val starred: String? = null
 )
 
 data class LyricsData(

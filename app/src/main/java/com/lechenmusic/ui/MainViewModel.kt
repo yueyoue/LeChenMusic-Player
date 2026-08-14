@@ -540,14 +540,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 try { settings.saveCachedRadioStationsJson(gson.toJson(it)) } catch (_: Exception) {}
             }
 
-            // Load starred radio IDs from local storage
-            try {
-                val starredRadioIdsJson = settings.starredRadioIds.first()
-                if (starredRadioIdsJson.isNotBlank()) {
-                    val ids = starredRadioIdsJson.split(",").filter { it.isNotEmpty() }.toSet()
-                    _starredRadioIds.value = ids
-                }
-            } catch (_: Exception) {}
+            // Load starred radio IDs from server (via getStarred)
+            // This is handled below in the getStarred call
+
             // Update starred radios list
             updateStarredRadios()
 
@@ -560,7 +555,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     _starredAlbums.value = starred?.albums ?: emptyList()
                     _starredPlaylists.value = starred?.playlists ?: emptyList()
                     _starredArtists.value = starred?.artists ?: emptyList()
-                    android.util.Log.d("LeChenMusic", "getStarred: songs=${starred?.songs?.size} albums=${starred?.albums?.size} playlists=${starred?.playlists?.size}")
+                    // Load starred radio IDs from server response
+                    val radioIds = starred?.radios?.map { it.id }?.toSet() ?: emptySet()
+                    _starredRadioIds.value = radioIds
+                    updateStarredRadios()
+                    android.util.Log.d("LeChenMusic", "getStarred: songs=${starred?.songs?.size} albums=${starred?.albums?.size} playlists=${starred?.playlists?.size} radios=${starred?.radios?.size}")
                 } else {
                     android.util.Log.e("LeChenMusic", "getStarred FAILED: ${starredResult.exceptionOrNull()?.message}")
                 }
@@ -1080,6 +1079,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     _starredAlbums.value = it.albums
                     _starredPlaylists.value = it.playlists
                     _starredArtists.value = it.artists ?: emptyList()
+                    // Sync starred radio IDs from server
+                    val radioIds = it.radios.map { r -> r.id }.toSet()
+                    _starredRadioIds.value = radioIds
+                    updateStarredRadios()
                 }
                 loadStarredAudiobooks()
 
@@ -1110,6 +1113,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 _starredAlbums.value = it.albums
                 _starredPlaylists.value = it.playlists
                 _starredArtists.value = it.artists ?: emptyList()
+                val radioIds = it.radios.map { r -> r.id }.toSet()
+                _starredRadioIds.value = radioIds
+                updateStarredRadios()
             }
             loadStarredAudiobooks()
         }
@@ -1577,22 +1583,46 @@ fun loadAudiobooks() {
     }
 
     fun starRadio(stationId: String) {
+        // Optimistic update
         _starredRadioIds.value = _starredRadioIds.value + stationId
         updateStarredRadios()
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                settings.saveStarredRadioIds(_starredRadioIds.value.joinToString(","))
-            } catch (_: Exception) {}
+                repository.star(stationId).onSuccess {
+                    android.util.Log.d("LeChenMusic", "starRadio SUCCESS: id=$stationId")
+                }.onFailure { e ->
+                    android.util.Log.e("LeChenMusic", "starRadio FAILED: ${e.message}")
+                    // Revert on failure
+                    _starredRadioIds.value = _starredRadioIds.value - stationId
+                    updateStarredRadios()
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("LeChenMusic", "starRadio EXCEPTION: ${e.message}")
+                _starredRadioIds.value = _starredRadioIds.value - stationId
+                updateStarredRadios()
+            }
         }
     }
 
     fun unstarRadio(stationId: String) {
+        // Optimistic update
         _starredRadioIds.value = _starredRadioIds.value - stationId
         updateStarredRadios()
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                settings.saveStarredRadioIds(_starredRadioIds.value.joinToString(","))
-            } catch (_: Exception) {}
+                repository.unstar(stationId).onSuccess {
+                    android.util.Log.d("LeChenMusic", "unstarRadio SUCCESS: id=$stationId")
+                }.onFailure { e ->
+                    android.util.Log.e("LeChenMusic", "unstarRadio FAILED: ${e.message}")
+                    // Revert on failure
+                    _starredRadioIds.value = _starredRadioIds.value + stationId
+                    updateStarredRadios()
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("LeChenMusic", "unstarRadio EXCEPTION: ${e.message}")
+                _starredRadioIds.value = _starredRadioIds.value + stationId
+                updateStarredRadios()
+            }
         }
     }
 
