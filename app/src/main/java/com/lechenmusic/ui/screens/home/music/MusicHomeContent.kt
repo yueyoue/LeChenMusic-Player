@@ -359,11 +359,18 @@ private fun MusicHero(
 
     val pagerState = rememberPagerState(pageCount = { carouselItems.size })
 
-    // 自动轮播
-    LaunchedEffect(pagerState.currentPage) {
-        delay(4000)
-        val nextPage = (pagerState.currentPage + 1) % carouselItems.size
-        pagerState.animateScrollToPage(nextPage)
+    // 自动轮播 — 使用 snapshotFlow 避免动画期间的竞态条件
+    LaunchedEffect(carouselItems.size) {
+        while (true) {
+            delay(4000)
+            if (pagerState.isScrollInProgress) continue
+            val nextPage = (pagerState.currentPage + 1) % carouselItems.size
+            try {
+                pagerState.animateScrollToPage(nextPage)
+            } catch (_: Exception) {
+                // 动画被中断时安全恢复，继续下一轮
+            }
+        }
     }
 
     Column {
@@ -372,7 +379,7 @@ private fun MusicHero(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 8.dp)
-                .height(170.dp)
+                .height(heroHeight)
         ) { page ->
             val item = carouselItems[page]
             val gradients = listOf(
