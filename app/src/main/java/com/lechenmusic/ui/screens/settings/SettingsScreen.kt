@@ -367,98 +367,78 @@ fun SettingsScreen(
                 val progress = com.lechenmusic.data.model.UserLevelSystem.getLevelProgress(totalMinutes)
                 val isMaxLevel = nextLevel == null
 
-                val isDark = androidx.compose.foundation.isSystemInDarkTheme()
-                val gradientColors = if (isDark) when (level.level) {
-                    1 -> listOf(Color(0xFF2A2A2A), Color(0xFF3A3A3A))
-                    2 -> listOf(Color(0xFF1B3A1B), Color(0xFF2D4A2D))
-                    3 -> listOf(Color(0xFF1A2E4A), Color(0xFF2A3E5A))
-                    4 -> listOf(Color(0xFF2A1A4A), Color(0xFF3A2A5A))
-                    5 -> listOf(Color(0xFF4A1A0A), Color(0xFF5A2A1A))
-                    6 -> listOf(Color(0xFF4A3010), Color(0xFF5A3A1A))
-                    7 -> listOf(Color(0xFF4A1010), Color(0xFF5A1A1A))
-                    8 -> listOf(Color(0xFF3A1040), Color(0xFF4A1A50))
-                    9 -> listOf(Color(0xFF4A3A00), Color(0xFF5A4A10))
-                    10 -> listOf(Color(0xFF4A0A20), Color(0xFF5A1A30))
-                    else -> listOf(Color(0xFF2A2A2A), Color(0xFF3A3A3A))
-                } else when (level.level) {
-                    1 -> listOf(Color(0xFF9E9E9E), Color(0xFFBDBDBD))
-                    2 -> listOf(Color(0xFF66BB6A), Color(0xFFA5D6A7))
-                    3 -> listOf(Color(0xFF42A5F5), Color(0xFF90CAF9))
-                    4 -> listOf(Color(0xFF7E57C2), Color(0xFFB39DDB))
-                    5 -> listOf(Color(0xFFFF7043), Color(0xFFFFAB91))
-                    6 -> listOf(Color(0xFFFFA726), Color(0xFFFFCC80))
-                    7 -> listOf(Color(0xFFEF5350), Color(0xFFEF9A9A))
-                    8 -> listOf(Color(0xFFAB47BC), Color(0xFFCE93D8))
-                    9 -> listOf(Color(0xFFFFD700), Color(0xFFFFF176))
-                    10 -> listOf(Color(0xFFE91E63), Color(0xFFFF80AB))
-                    else -> listOf(Color(0xFF9E9E9E), Color(0xFFBDBDBD))
+                // 等级对应的主题色
+                val levelColor = when (level.level) {
+                    1 -> Color(0xFF78909C)
+                    2 -> Color(0xFF4CAF50)
+                    3 -> Color(0xFF42A5F5)
+                    4 -> Color(0xFF7E57C2)
+                    5 -> Color(0xFFFF7043)
+                    6 -> Color(0xFFFFA726)
+                    7 -> Color(0xFFEF5350)
+                    8 -> Color(0xFFAB47BC)
+                    9 -> Color(0xFFFFB300)
+                    10 -> Color(0xFFE91E63)
+                    else -> Color(0xFF78909C)
                 }
 
                 Card(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(Brush.linearGradient(gradientColors))
+                    Column(
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)
                     ) {
-                        Column(
-                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)
-                        ) {
-                            // 第一行：等级称号大字
-                            Text(
-                                level.title,
-                                fontSize = 22.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
-                            Spacer(modifier = Modifier.height(6.dp))
-                            // 第二行：等级 + 距下一级
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                // 等级徽章
-                                Surface(
-                                    shape = RoundedCornerShape(6.dp),
-                                    color = Color.White.copy(alpha = 0.25f)
-                                ) {
-                                    Text(
-                                        "Lv${level.level}",
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color.White
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(8.dp))
+                        // 第一行：等级称号
+                        Text(
+                            level.title,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = levelColor
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        // 第二行：等级 + 距下一级
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = levelColor.copy(alpha = 0.12f)
+                            ) {
                                 Text(
-                                    if (isMaxLevel) "已满级 🎉"
-                                    else "距下一级还有 ${minutesToNext} 分钟",
+                                    "Lv${level.level}",
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                                     fontSize = 12.sp,
-                                    color = Color.White.copy(alpha = 0.85f)
+                                    fontWeight = FontWeight.Bold,
+                                    color = levelColor
                                 )
                             }
-                            Spacer(modifier = Modifier.height(10.dp))
-                            // 进度条
-                            LinearProgressIndicator(
-                                progress = { progress },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(6.dp)
-                                    .clip(RoundedCornerShape(3.dp)),
-                                color = Color.White,
-                                trackColor = Color.White.copy(alpha = 0.3f)
-                            )
-                            Spacer(modifier = Modifier.height(6.dp))
-                            // 累计时长
-                            val hours = totalMinutes / 60
-                            val mins = totalMinutes % 60
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                "累计听歌 ${hours} 小时 ${mins} 分钟",
-                                fontSize = 11.sp,
-                                color = Color.White.copy(alpha = 0.7f)
+                                if (isMaxLevel) "已满级 🎉"
+                                else "距下一级还有 ${minutesToNext} 分钟",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
+                        Spacer(modifier = Modifier.height(10.dp))
+                        // 进度条
+                        LinearProgressIndicator(
+                            progress = { progress },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(6.dp)
+                                .clip(RoundedCornerShape(3.dp)),
+                            color = levelColor,
+                            trackColor = levelColor.copy(alpha = 0.12f)
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        val hours = totalMinutes / 60
+                        val mins = totalMinutes % 60
+                        Text(
+                            "累计听歌 ${hours} 小时 ${mins} 分钟",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }
@@ -747,97 +727,78 @@ private fun TabletUserLevelCard(viewModel: MainViewModel) {
     val progress = com.lechenmusic.data.model.UserLevelSystem.getLevelProgress(totalMinutes)
     val isMaxLevel = nextLevel == null
 
-    val isDark = androidx.compose.foundation.isSystemInDarkTheme()
-    val gradientColors = if (isDark) when (level.level) {
-        1 -> listOf(Color(0xFF2A2A2A), Color(0xFF3A3A3A))
-        2 -> listOf(Color(0xFF1B3A1B), Color(0xFF2D4A2D))
-        3 -> listOf(Color(0xFF1A2E4A), Color(0xFF2A3E5A))
-        4 -> listOf(Color(0xFF2A1A4A), Color(0xFF3A2A5A))
-        5 -> listOf(Color(0xFF4A1A0A), Color(0xFF5A2A1A))
-        6 -> listOf(Color(0xFF4A3010), Color(0xFF5A3A1A))
-        7 -> listOf(Color(0xFF4A1010), Color(0xFF5A1A1A))
-        8 -> listOf(Color(0xFF3A1040), Color(0xFF4A1A50))
-        9 -> listOf(Color(0xFF4A3A00), Color(0xFF5A4A10))
-        10 -> listOf(Color(0xFF4A0A20), Color(0xFF5A1A30))
-        else -> listOf(Color(0xFF2A2A2A), Color(0xFF3A3A3A))
-    } else when (level.level) {
-        1 -> listOf(Color(0xFF9E9E9E), Color(0xFFBDBDBD))
-        2 -> listOf(Color(0xFF66BB6A), Color(0xFFA5D6A7))
-        3 -> listOf(Color(0xFF42A5F5), Color(0xFF90CAF9))
-        4 -> listOf(Color(0xFF7E57C2), Color(0xFFB39DDB))
-        5 -> listOf(Color(0xFFFF7043), Color(0xFFFFAB91))
-        6 -> listOf(Color(0xFFFFA726), Color(0xFFFFCC80))
-        7 -> listOf(Color(0xFFEF5350), Color(0xFFEF9A9A))
-        8 -> listOf(Color(0xFFAB47BC), Color(0xFFCE93D8))
-        9 -> listOf(Color(0xFFFFD700), Color(0xFFFFF176))
-        10 -> listOf(Color(0xFFE91E63), Color(0xFFFF80AB))
-        else -> listOf(Color(0xFF9E9E9E), Color(0xFFBDBDBD))
+    val levelColor = when (level.level) {
+        1 -> Color(0xFF78909C)
+        2 -> Color(0xFF4CAF50)
+        3 -> Color(0xFF42A5F5)
+        4 -> Color(0xFF7E57C2)
+        5 -> Color(0xFFFF7043)
+        6 -> Color(0xFFFFA726)
+        7 -> Color(0xFFEF5350)
+        8 -> Color(0xFFAB47BC)
+        9 -> Color(0xFFFFB300)
+        10 -> Color(0xFFE91E63)
+        else -> Color(0xFF78909C)
     }
 
     Surface(
-        shape = RoundedCornerShape(20.dp),
-        color = Color.Transparent,
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
         modifier = Modifier.fillMaxWidth()
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Brush.linearGradient(gradientColors))
+        Row(
+            modifier = Modifier.padding(24.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                modifier = Modifier.padding(24.dp),
-                verticalAlignment = Alignment.CenterVertically
+            // 左侧：等级徽章
+            Surface(
+                shape = CircleShape,
+                color = levelColor.copy(alpha = 0.12f),
+                modifier = Modifier.size(56.dp)
             ) {
-                // 左侧：等级徽章
-                Surface(
-                    shape = CircleShape,
-                    color = Color.White.copy(alpha = 0.2f),
-                    modifier = Modifier.size(56.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Text(
-                            "Lv${level.level}",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.width(20.dp))
-                // 右侧：等级信息
-                Column(modifier = Modifier.weight(1f)) {
+                Box(contentAlignment = Alignment.Center) {
                     Text(
-                        level.title,
-                        fontSize = 24.sp,
+                        "Lv${level.level}",
+                        fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        if (isMaxLevel) "已满级 🎉"
-                        else "距下一级还有 ${minutesToNext} 分钟",
-                        fontSize = 13.sp,
-                        color = Color.White.copy(alpha = 0.85f)
-                    )
-                    Spacer(modifier = Modifier.height(10.dp))
-                    LinearProgressIndicator(
-                        progress = { progress },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(6.dp)
-                            .clip(RoundedCornerShape(3.dp)),
-                        color = Color.White,
-                        trackColor = Color.White.copy(alpha = 0.3f)
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    val hours = totalMinutes / 60
-                    val mins = totalMinutes % 60
-                    Text(
-                        "累计听歌 ${hours} 小时 ${mins} 分钟",
-                        fontSize = 11.sp,
-                        color = Color.White.copy(alpha = 0.7f)
+                        color = levelColor
                     )
                 }
+            }
+            Spacer(modifier = Modifier.width(20.dp))
+            // 右侧：等级信息
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    level.title,
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = levelColor
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    if (isMaxLevel) "已满级 🎉"
+                    else "距下一级还有 ${minutesToNext} 分钟",
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                LinearProgressIndicator(
+                    progress = { progress },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(6.dp)
+                        .clip(RoundedCornerShape(3.dp)),
+                    color = levelColor,
+                    trackColor = levelColor.copy(alpha = 0.12f)
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                val hours = totalMinutes / 60
+                val mins = totalMinutes % 60
+                Text(
+                    "累计听歌 ${hours} 小时 ${mins} 分钟",
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }
