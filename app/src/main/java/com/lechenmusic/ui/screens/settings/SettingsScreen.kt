@@ -650,11 +650,11 @@ private fun SectionTitle(title: String) {
 
 @Composable
 private fun InfoRow(label: String, value: String) {
-    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
         Text(label, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(value, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+        Text(value, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
-    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
 }
 
 // ==================== 平板组件 ====================
