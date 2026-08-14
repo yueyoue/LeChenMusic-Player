@@ -946,7 +946,8 @@ class MusicPlayerManager(private val context: Context) {
             title = station.name,
             artist = "电台",
             album = "电台",
-            duration = 0
+            duration = 0,
+            coverArt = station.coverArt
         )
         _playlist.value = emptyList()
         _currentIndex.value = 0

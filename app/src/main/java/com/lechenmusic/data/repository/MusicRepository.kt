@@ -5,6 +5,7 @@ import com.lechenmusic.data.api.SubsonicApi
 import com.lechenmusic.data.model.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
 
 class MusicRepository {
     private var api: SubsonicApi? = null
@@ -861,7 +862,7 @@ class MusicRepository {
     suspend fun reportPlayDuration(itemType: String, itemId: String, itemTitle: String, itemArtist: String, duration: Int) {
         try {
             val api = api ?: return
-            val token = com.lechenmusic.data.api.ApiClient.NavidromeAuth.token ?: return
+            val token = com.lechenmusic.data.api.NavidromeAuth.token ?: return
             val body = com.google.gson.Gson().toJson(
                 com.lechenmusic.data.model.PlayLogRequest(
                     itemType = itemType,

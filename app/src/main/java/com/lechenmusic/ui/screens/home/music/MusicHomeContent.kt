@@ -358,15 +358,12 @@ private fun MusicHero(
     if (carouselItems.isEmpty()) return
 
     val pagerState = rememberPagerState(pageCount = { carouselItems.size })
-    val coroutineScope = rememberCoroutineScope()
 
     // 自动轮播
     LaunchedEffect(pagerState.currentPage) {
         delay(4000)
         val nextPage = (pagerState.currentPage + 1) % carouselItems.size
-        coroutineScope.launch {
-            pagerState.animateScrollToPage(nextPage)
-        }
+        pagerState.animateScrollToPage(nextPage)
     }
 
     Column {
