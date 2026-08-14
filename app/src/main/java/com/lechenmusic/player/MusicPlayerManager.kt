@@ -715,13 +715,14 @@ class MusicPlayerManager(private val context: Context) {
     fun toggleStar() {
         val song = _currentSong.value ?: return
         val repo = repository ?: return
-        if (song.id.startsWith("radio_")) return
         scope.launch(Dispatchers.IO) {
             try {
+                // 电台ID需要去掉radio_前缀
+                val apiId = if (song.id.startsWith("radio_")) song.id.removePrefix("radio_") else song.id
                 val result = if (_isStarred.value) {
-                    repo.unstar(song.id)
+                    repo.unstar(apiId)
                 } else {
-                    repo.star(song.id)
+                    repo.star(apiId)
                 }
                 if (result.isSuccess) {
                     _isStarred.value = !_isStarred.value
@@ -906,6 +907,18 @@ class MusicPlayerManager(private val context: Context) {
         _currentIndex.value = 0
         _isStarred.value = false
         updateNotification()
+        // 异步检查收藏状态
+        scope.launch(Dispatchers.IO) {
+            try {
+                val repo = repository ?: return@launch
+                val starredResult = repo.getStarred()
+                if (starredResult.isSuccess) {
+                    val starredRadios = starredResult.getOrNull()?.radios ?: emptyList()
+                    _isStarred.value = starredRadios.any { it.id == station.id }
+                    updateNotification()
+                }
+            } catch (_: Exception) {}
+        }
     }
 
     // ===== Audiobook playback =====
