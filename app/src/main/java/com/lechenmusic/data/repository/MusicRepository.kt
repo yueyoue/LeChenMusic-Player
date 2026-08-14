@@ -876,6 +876,20 @@ class MusicRepository {
         } catch (_: Exception) {}
     }
 
+    // 从服务端获取用户播放统计（用于跨设备同步和重装恢复）
+    suspend fun fetchUserPlayStats(): com.lechenmusic.data.model.UserPlayStats? {
+        return try {
+            val api = api ?: return null
+            val token = com.lechenmusic.data.api.NavidromeAuth.token ?: return null
+            val response = api.getMyStats("Bearer $token")
+            if (response.isSuccessful) {
+                val json = response.body()?.asJsonObject ?: return null
+                val data = json.getAsJsonObject("data") ?: return null
+                com.google.gson.Gson().fromJson(data, com.lechenmusic.data.model.UserPlayStats::class.java)
+            } else null
+        } catch (_: Exception) { null }
+    }
+
 }
 
 data class StarredData(val songs: List<com.lechenmusic.data.model.Song> = emptyList(), val albums: List<com.lechenmusic.data.model.Album> = emptyList(), val artists: List<com.lechenmusic.data.model.Artist> = emptyList(), val playlists: List<com.lechenmusic.data.model.Playlist> = emptyList(), val radios: List<com.lechenmusic.data.model.StarredRadio> = emptyList())

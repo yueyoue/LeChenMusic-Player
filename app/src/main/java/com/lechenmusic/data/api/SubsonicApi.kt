@@ -361,6 +361,11 @@ interface SubsonicApi {
         @retrofit2.http.Header("X-ND-Authorization") authHeader: String
     ): retrofit2.Response<com.google.gson.JsonElement>
 
+    @retrofit2.http.GET("api/stats/me")
+    suspend fun getMyStats(
+        @retrofit2.http.Header("X-ND-Authorization") authHeader: String
+    ): retrofit2.Response<com.google.gson.JsonElement>
+
     companion object {
         /** Build narrator avatar URL for loading with Coil/AsyncImage */
         fun getNarratorAvatarUrl(serverUrl: String, narratorName: String, token: String? = null): String {

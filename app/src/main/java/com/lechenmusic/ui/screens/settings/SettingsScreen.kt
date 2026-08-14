@@ -20,6 +20,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.style.TextOverflow
 import com.lechenmusic.ui.MainViewModel
 import com.lechenmusic.ui.responsive.ResponsiveConfig
@@ -122,6 +126,11 @@ fun SettingsScreen(
                     }
                 }
             }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // ===== 听歌等级卡片 =====
+            TabletUserLevelCard(viewModel)
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -324,48 +333,117 @@ fun SettingsScreen(
             }
 
             item {
+                // ── 听歌等级卡片（同步服务端 + 本地缓存）──
                 val totalSeconds = remember {
                     mutableStateOf(
                         context.getSharedPreferences("play_stats", Context.MODE_PRIVATE)
                             .getLong("total_play_seconds", 0L)
                     )
                 }
-                // 定期刷新统计
+                // 启动时从服务端同步，解决重装丢失问题
                 LaunchedEffect(Unit) {
+                    val serverStats = viewModel.fetchUserPlayStats()
+                    if (serverStats != null) {
+                        val serverSeconds = serverStats.totalDuration.toLong()
+                        val localSeconds = context.getSharedPreferences("play_stats", Context.MODE_PRIVATE)
+                            .getLong("total_play_seconds", 0L)
+                        // 取服务端和本地的较大值，避免本地上报延迟导致数据倒退
+                        val maxSeconds = maxOf(serverSeconds, localSeconds)
+                        context.getSharedPreferences("play_stats", Context.MODE_PRIVATE)
+                            .edit().putLong("total_play_seconds", maxSeconds).apply()
+                        totalSeconds.value = maxSeconds
+                    }
+                    // 定期刷新本地统计
                     while (true) {
                         kotlinx.coroutines.delay(5000)
                         totalSeconds.value = context.getSharedPreferences("play_stats", Context.MODE_PRIVATE)
                             .getLong("total_play_seconds", 0L)
                     }
                 }
-                val totalMin = (totalSeconds.value / 60).toInt()
+                val totalMinutes = totalSeconds.value / 60
+                val level = com.lechenmusic.data.model.UserLevelSystem.getCurrentLevel(totalMinutes)
+                val nextLevel = com.lechenmusic.data.model.UserLevelSystem.getNextLevel(totalMinutes)
+                val minutesToNext = com.lechenmusic.data.model.UserLevelSystem.getMinutesToNextLevel(totalMinutes)
+                val progress = com.lechenmusic.data.model.UserLevelSystem.getLevelProgress(totalMinutes)
+                val isMaxLevel = nextLevel == null
+
+                val gradientColors = when (level.level) {
+                    1 -> listOf(Color(0xFF9E9E9E), Color(0xFFBDBDBD))
+                    2 -> listOf(Color(0xFF66BB6A), Color(0xFFA5D6A7))
+                    3 -> listOf(Color(0xFF42A5F5), Color(0xFF90CAF9))
+                    4 -> listOf(Color(0xFF7E57C2), Color(0xFFB39DDB))
+                    5 -> listOf(Color(0xFFFF7043), Color(0xFFFFAB91))
+                    6 -> listOf(Color(0xFFFFA726), Color(0xFFFFCC80))
+                    7 -> listOf(Color(0xFFEF5350), Color(0xFFEF9A9A))
+                    8 -> listOf(Color(0xFFAB47BC), Color(0xFFCE93D8))
+                    9 -> listOf(Color(0xFFFFD700), Color(0xFFFFF176))
+                    10 -> listOf(Color(0xFFE91E63), Color(0xFFFF80AB))
+                    else -> listOf(Color(0xFF9E9E9E), Color(0xFFBDBDBD))
+                }
+
                 Card(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.Transparent)
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Brush.linearGradient(gradientColors))
                     ) {
-                        Icon(
-                            Icons.Default.Headphones,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(28.dp)
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
+                        Column(
+                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)
+                        ) {
+                            // 第一行：等级称号大字
                             Text(
-                                "${totalMin}",
-                                style = MaterialTheme.typography.headlineSmall,
+                                level.title,
+                                fontSize = 22.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
+                                color = Color.White
                             )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            // 第二行：等级 + 距下一级
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                // 等级徽章
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = Color.White.copy(alpha = 0.25f)
+                                ) {
+                                    Text(
+                                        "Lv${level.level}",
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    if (isMaxLevel) "已满级 🎉"
+                                    else "距下一级「${nextLevel!!.title}」还有 ${minutesToNext} 分钟",
+                                    fontSize = 12.sp,
+                                    color = Color.White.copy(alpha = 0.85f)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(10.dp))
+                            // 进度条
+                            LinearProgressIndicator(
+                                progress = { progress },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(6.dp)
+                                    .clip(RoundedCornerShape(3.dp)),
+                                color = Color.White,
+                                trackColor = Color.White.copy(alpha = 0.3f)
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            // 累计时长
+                            val hours = totalMinutes / 60
+                            val mins = totalMinutes % 60
                             Text(
-                                "累计听歌（分钟）",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                "累计听歌 ${hours} 小时 ${mins} 分钟",
+                                fontSize = 11.sp,
+                                color = Color.White.copy(alpha = 0.7f)
                             )
                         }
                     }
@@ -619,6 +697,124 @@ private fun TabletSettingsInfoRow(label: String, value: String) {
         modifier = Modifier.padding(horizontal = 20.dp),
         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
     )
+}
+
+// ==================== 平板等级卡片 ====================
+
+@Composable
+private fun TabletUserLevelCard(viewModel: MainViewModel) {
+    val context = LocalContext.current
+    val totalSeconds = remember {
+        mutableStateOf(
+            context.getSharedPreferences("play_stats", Context.MODE_PRIVATE)
+                .getLong("total_play_seconds", 0L)
+        )
+    }
+    LaunchedEffect(Unit) {
+        val serverStats = viewModel.fetchUserPlayStats()
+        if (serverStats != null) {
+            val serverSeconds = serverStats.totalDuration.toLong()
+            val localSeconds = context.getSharedPreferences("play_stats", Context.MODE_PRIVATE)
+                .getLong("total_play_seconds", 0L)
+            val maxSeconds = maxOf(serverSeconds, localSeconds)
+            context.getSharedPreferences("play_stats", Context.MODE_PRIVATE)
+                .edit().putLong("total_play_seconds", maxSeconds).apply()
+            totalSeconds.value = maxSeconds
+        }
+        while (true) {
+            kotlinx.coroutines.delay(5000)
+            totalSeconds.value = context.getSharedPreferences("play_stats", Context.MODE_PRIVATE)
+                .getLong("total_play_seconds", 0L)
+        }
+    }
+    val totalMinutes = totalSeconds.value / 60
+    val level = com.lechenmusic.data.model.UserLevelSystem.getCurrentLevel(totalMinutes)
+    val nextLevel = com.lechenmusic.data.model.UserLevelSystem.getNextLevel(totalMinutes)
+    val minutesToNext = com.lechenmusic.data.model.UserLevelSystem.getMinutesToNextLevel(totalMinutes)
+    val progress = com.lechenmusic.data.model.UserLevelSystem.getLevelProgress(totalMinutes)
+    val isMaxLevel = nextLevel == null
+
+    val gradientColors = when (level.level) {
+        1 -> listOf(Color(0xFF9E9E9E), Color(0xFFBDBDBD))
+        2 -> listOf(Color(0xFF66BB6A), Color(0xFFA5D6A7))
+        3 -> listOf(Color(0xFF42A5F5), Color(0xFF90CAF9))
+        4 -> listOf(Color(0xFF7E57C2), Color(0xFFB39DDB))
+        5 -> listOf(Color(0xFFFF7043), Color(0xFFFFAB91))
+        6 -> listOf(Color(0xFFFFA726), Color(0xFFFFCC80))
+        7 -> listOf(Color(0xFFEF5350), Color(0xFFEF9A9A))
+        8 -> listOf(Color(0xFFAB47BC), Color(0xFFCE93D8))
+        9 -> listOf(Color(0xFFFFD700), Color(0xFFFFF176))
+        10 -> listOf(Color(0xFFE91E63), Color(0xFFFF80AB))
+        else -> listOf(Color(0xFF9E9E9E), Color(0xFFBDBDBD))
+    }
+
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = Color.Transparent,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Brush.linearGradient(gradientColors))
+        ) {
+            Row(
+                modifier = Modifier.padding(24.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // 左侧：等级徽章
+                Surface(
+                    shape = CircleShape,
+                    color = Color.White.copy(alpha = 0.2f),
+                    modifier = Modifier.size(56.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            "Lv${level.level}",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.width(20.dp))
+                // 右侧：等级信息
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        level.title,
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        if (isMaxLevel) "已满级 🎉"
+                        else "距下一级「${nextLevel!!.title}」还有 ${minutesToNext} 分钟",
+                        fontSize = 13.sp,
+                        color = Color.White.copy(alpha = 0.85f)
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    LinearProgressIndicator(
+                        progress = { progress },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(6.dp)
+                            .clip(RoundedCornerShape(3.dp)),
+                        color = Color.White,
+                        trackColor = Color.White.copy(alpha = 0.3f)
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    val hours = totalMinutes / 60
+                    val mins = totalMinutes % 60
+                    Text(
+                        "累计听歌 ${hours} 小时 ${mins} 分钟",
+                        fontSize = 11.sp,
+                        color = Color.White.copy(alpha = 0.7f)
+                    )
+                }
+            }
+        }
+    }
 }
 
 // ==================== 共享组件 ====================

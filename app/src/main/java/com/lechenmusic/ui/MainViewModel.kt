@@ -747,6 +747,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /** 从服务端获取用户播放统计（用于等级计算和重装恢复） */
+    suspend fun fetchUserPlayStats(): com.lechenmusic.data.model.UserPlayStats? {
+        return repository.fetchUserPlayStats()
+    }
+
     fun loadArtists() {
         viewModelScope.launch {
             repository.getArtists().onSuccess { _artists.value = it }
