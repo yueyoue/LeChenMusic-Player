@@ -75,7 +75,7 @@ fun FavoritesScreen(
         var searchText by remember { mutableStateOf("") }
         var isSearchActive by remember { mutableStateOf(false) }
 
-        val tabs = listOf("单曲" to starredSongs.size, "专辑" to starredAlbums.size, "歌单" to starredPlaylists.size, "有声书" to starredAudiobooks.size, "电台" to starredRadios.size)
+        val tabs = listOf("单曲" to starredSongs.size, "专辑" to starredAlbums.size, "歌单" to starredPlaylists.size, "小说" to starredAudiobooks.size, "电台" to starredRadios.size)
 
         Column(modifier = Modifier.fillMaxSize()) {
             // ===== 顶部: 标题 + Tab栏 + 搜索框 =====
@@ -191,7 +191,7 @@ fun FavoritesScreen(
                     0 -> Text("共 ${starredSongs.size} 首", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     1 -> Text("共 ${starredAlbums.size} 张专辑", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     2 -> Text("共 ${starredPlaylists.size} 个歌单", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    3 -> Text("共 ${starredAudiobooks.size} 本有声书", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    3 -> Text("共 ${starredAudiobooks.size} 本小说", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     4 -> Text("共 ${starredRadios.size} 个电台", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
@@ -243,7 +243,7 @@ fun FavoritesScreen(
         }
     } else {
         // ═══ 手机布局 ═══
-        val tabs = listOf("音乐", "专辑", "歌单", "有声书", "电台")
+        val tabs = listOf("音乐", "专辑", "歌单", "小说", "电台")
 
         Column(modifier = Modifier.fillMaxSize()) {
             Row(
@@ -377,7 +377,7 @@ private fun AudiobooksTab(
     onAudiobookClick: (String) -> Unit
 ) {
     if (audiobooks.isEmpty()) {
-        EmptyState("暂无收藏有声书", "📖")
+        EmptyState("暂无收藏小说", "📖")
         return
     }
 
@@ -387,7 +387,7 @@ private fun AudiobooksTab(
     ) {
         item {
             Text(
-                "${audiobooks.size} 本有声书",
+                "${audiobooks.size} 本小说",
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
@@ -1014,7 +1014,7 @@ private fun TabletAudiobooksTab(
     onAudiobookClick: (String) -> Unit
 ) {
     if (audiobooks.isEmpty()) {
-        TabletEmptyFavorites("暂无收藏有声书")
+        TabletEmptyFavorites("暂无收藏小说")
         return
     }
 

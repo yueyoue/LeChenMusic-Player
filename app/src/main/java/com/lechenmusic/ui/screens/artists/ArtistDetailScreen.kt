@@ -462,17 +462,17 @@ fun ArtistDetailScreen(
                                     modifier = Modifier.size(48.dp).clip(RoundedCornerShape(8.dp))
                                 )
                                 Column(modifier = Modifier.weight(1f).padding(start = 12.dp)) {
+                                    Text(song.title, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(song.title, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                                         val qualityText = com.lechenmusic.ui.components.getQualityText(song)
                                         if (qualityText.isNotEmpty()) {
-                                            Spacer(modifier = Modifier.width(6.dp))
-                                            Surface(shape = RoundedCornerShape(4.dp), color = com.lechenmusic.ui.components.getQualityColor(song).copy(alpha = 0.15f)) {
-                                                Text(qualityText, fontSize = 8.sp, fontWeight = FontWeight.Bold, color = com.lechenmusic.ui.components.getQualityColor(song), modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp))
+                                            Surface(shape = RoundedCornerShape(3.dp), color = com.lechenmusic.ui.components.getQualityColor(song).copy(alpha = 0.15f)) {
+                                                Text(qualityText, fontSize = 7.sp, fontWeight = FontWeight.Bold, color = com.lechenmusic.ui.components.getQualityColor(song), modifier = Modifier.padding(horizontal = 3.dp, vertical = 0.5.dp))
                                             }
+                                            Spacer(modifier = Modifier.width(4.dp))
                                         }
+                                        Text(song.album, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                     }
-                                    Text(song.album, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 }
                                 Text(song.durationFormatted, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
