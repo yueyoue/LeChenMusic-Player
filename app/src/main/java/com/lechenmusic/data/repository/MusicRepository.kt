@@ -857,6 +857,24 @@ class MusicRepository {
         }
     }
 
+    // 上报播放时长到服务端
+    suspend fun reportPlayDuration(itemType: String, itemId: String, itemTitle: String, itemArtist: String, duration: Int) {
+        try {
+            val api = api ?: return
+            val token = com.lechenmusic.data.api.ApiClient.NavidromeAuth.token ?: return
+            val body = com.google.gson.Gson().toJson(
+                com.lechenmusic.data.model.PlayLogRequest(
+                    itemType = itemType,
+                    itemId = itemId,
+                    itemTitle = itemTitle,
+                    itemArtist = itemArtist,
+                    duration = duration
+                )
+            ).toRequestBody("application/json".toMediaType())
+            api.reportPlayLog(body, "Bearer $token")
+        } catch (_: Exception) {}
+    }
+
 }
 
 data class StarredData(val songs: List<com.lechenmusic.data.model.Song> = emptyList(), val albums: List<com.lechenmusic.data.model.Album> = emptyList(), val artists: List<com.lechenmusic.data.model.Artist> = emptyList(), val playlists: List<com.lechenmusic.data.model.Playlist> = emptyList(), val radios: List<com.lechenmusic.data.model.StarredRadio> = emptyList())

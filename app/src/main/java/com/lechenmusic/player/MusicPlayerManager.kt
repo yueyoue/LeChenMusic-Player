@@ -58,6 +58,12 @@ class MusicPlayerManager(private val context: Context) {
     private var cacheDataSourceFactory: CacheDataSource.Factory? = null
     private var currentCacheSizeBytes: Long = 4L * 1024 * 1024 * 1024 // default 4GB
 
+    // 播放时长统计
+    private val playTimePrefs = context.getSharedPreferences("play_stats", Context.MODE_PRIVATE)
+    private var playStartTimeMs: Long = 0L
+    private val _totalPlayMinutes = MutableStateFlow(playTimePrefs.getLong("total_play_seconds", 0) / 60)
+    val totalPlayMinutes: StateFlow<Long> = _totalPlayMinutes.asStateFlow()
+
     // Fully played song IDs — only these should appear in cache list
     private val fullyPlayedPrefs by lazy { context.getSharedPreferences("fully_played_songs", Context.MODE_PRIVATE) }
     private val fullyPlayedSongIds: MutableSet<String> by lazy {
@@ -137,6 +143,16 @@ class MusicPlayerManager(private val context: Context) {
                 addListener(object : Player.Listener {
                     override fun onIsPlayingChanged(isPlaying: Boolean) {
                         _isPlaying.value = isPlaying
+                        // 播放时长统计
+                        if (isPlaying) {
+                            playStartTimeMs = System.currentTimeMillis()
+                        } else if (playStartTimeMs > 0) {
+                            val elapsed = (System.currentTimeMillis() - playStartTimeMs) / 1000
+                            playStartTimeMs = 0
+                            if (elapsed > 0) {
+                                addPlayTime(elapsed)
+                            }
+                        }
                         // If timer expired and player auto-resumed (e.g. audio focus regain), force pause
                         if (isPlaying && timerExpired) {
                             player?.pause()
@@ -385,6 +401,29 @@ class MusicPlayerManager(private val context: Context) {
             }
             val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             manager.createNotificationChannel(channel)
+        }
+    }
+
+    // 播放时长统计
+    private fun addPlayTime(seconds: Long) {
+        val current = playTimePrefs.getLong("total_play_seconds", 0)
+        playTimePrefs.edit().putLong("total_play_seconds", current + seconds).apply()
+        _totalPlayMinutes.value = (current + seconds) / 60
+        // 异步上报到服务端（粗略统计，每累积60秒上报一次）
+        if (seconds >= 60 || (current + seconds) % 60 < seconds) {
+            scope.launch(Dispatchers.IO) {
+                try {
+                    val repo = repository ?: return@launch
+                    val song = _currentSong.value
+                    repo.reportPlayDuration(
+                        itemType = if (song?.id?.startsWith("radio_") == true) "music" else "music",
+                        itemId = song?.id ?: "unknown",
+                        itemTitle = song?.title ?: "unknown",
+                        itemArtist = song?.artist ?: "unknown",
+                        duration = seconds.toInt()
+                    )
+                } catch (_: Exception) {}
+            }
         }
     }
 
@@ -861,6 +900,12 @@ class MusicPlayerManager(private val context: Context) {
     }
 
     fun release() {
+        // 保存未结算的播放时长
+        if (playStartTimeMs > 0) {
+            val elapsed = (System.currentTimeMillis() - playStartTimeMs) / 1000
+            playStartTimeMs = 0
+            if (elapsed > 0) addPlayTime(elapsed)
+        }
         alarmReceiver?.let {
             try { context.unregisterReceiver(it) } catch (_: Exception) { }
         }
