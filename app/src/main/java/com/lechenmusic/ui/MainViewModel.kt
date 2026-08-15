@@ -287,6 +287,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     loadAllSongs()
                     // 恢复有声书播放状态（如果正在播放）
                     restoreAudiobookState()
+                    // 恢复定时器状态
+                    restoreTimerIfNeeded()
                 }
             }
         }
@@ -1019,19 +1021,41 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // Timer countdown job
     private var countdownJob: kotlinx.coroutines.Job? = null
     private var timerTargetTime: Long = 0L
+    private val timerPrefs = application.getSharedPreferences("timer_prefs", android.content.Context.MODE_PRIVATE)
 
-    fun setTimerWithCountdown(minutes: Int) {
-        // Cancel any existing timer
-        cancelTimerWithCountdown()
-        // Clear timer expired flag for new timer
-        playerManager.clearTimerExpired()
-        // Also set alarm as backup (works even if app is killed)
-        playerManager.setTimer(minutes)
-        _timerRemainingSeconds.value = minutes * 60L
-        timerTargetTime = System.currentTimeMillis() + minutes * 60 * 1000L
-        // Use Dispatchers.Default to survive background throttling
+    private var timerType = "" // "music" or "audiobook"
+
+    private fun saveTimerTarget(targetMs: Long, minutes: Int, type: String) {
+        timerPrefs.edit().putLong("target_time", targetMs).putInt("timer_minutes", minutes).putString("timer_type", type).apply()
+    }
+
+    private fun clearTimerTarget() {
+        timerPrefs.edit().clear().apply()
+    }
+
+    fun restoreTimerIfNeeded() {
+        val savedTarget = timerPrefs.getLong("target_time", 0L)
+        val savedMinutes = timerPrefs.getInt("timer_minutes", 0)
+        val savedType = timerPrefs.getString("timer_type", "") ?: ""
+        if (savedTarget > 0L && savedMinutes > 0) {
+            val remaining = ((savedTarget - System.currentTimeMillis()) / 1000).coerceAtLeast(0)
+            if (remaining > 0) {
+                timerTargetTime = savedTarget
+                timerType = savedType
+                _timerRemainingSeconds.value = remaining
+                if (savedType == "music") _musicTimerMinutes.value = savedMinutes
+                else _audiobookTimerMinutes.value = savedMinutes
+                startCountdown()
+            } else {
+                clearTimerTarget()
+                _timerRemainingSeconds.value = 0
+            }
+        }
+    }
+
+    private fun startCountdown() {
+        countdownJob?.cancel()
         countdownJob = viewModelScope.launch(kotlinx.coroutines.Dispatchers.Default) {
-            // Use absolute time to avoid drift when app goes to background
             while (true) {
                 kotlinx.coroutines.delay(500)
                 val remaining = ((timerTargetTime - System.currentTimeMillis()) / 1000).coerceAtLeast(0)
@@ -1052,23 +1076,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     try { playerManager.forcePause() } catch (_: Exception) {}
                 }
             }
+            clearTimerTarget()
         }
     }
 
-    /**
-     * Resume countdown on app foreground - recalculate from target time
-     */
+    fun setTimerWithCountdown(minutes: Int, type: String = "music") {
+        cancelTimerWithCountdown()
+        playerManager.clearTimerExpired()
+        playerManager.setTimer(minutes)
+        _timerRemainingSeconds.value = minutes * 60L
+        timerTargetTime = System.currentTimeMillis() + minutes * 60 * 1000L
+        timerType = type
+        saveTimerTarget(timerTargetTime, minutes, type)
+        startCountdown()
+    }
+
     fun resumeCountdownIfNeeded() {
-        if (timerTargetTime > 0L) {
-            val remaining = ((timerTargetTime - System.currentTimeMillis()) / 1000).coerceAtLeast(0)
-            _timerRemainingSeconds.value = remaining
-            if (remaining <= 0 && countdownJob?.isActive != true) {
-                // Timer expired while in background, force pause
-                viewModelScope.launch {
-                    try { playerManager.forcePause() } catch (_: Exception) {}
-                }
-            }
-        }
+        restoreTimerIfNeeded()
     }
 
     fun cancelTimerWithCountdown() {
@@ -1076,6 +1100,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         countdownJob = null
         timerTargetTime = 0L
         playerManager.cancelTimer()
+        clearTimerTarget()
         _timerRemainingSeconds.value = 0
     }
 
@@ -1251,7 +1276,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun audiobookSetTimer(minutes: Int) {
         _audiobookTimerMinutes.value = minutes
         if (minutes > 0) {
-            setTimerWithCountdown(minutes)
+            setTimerWithCountdown(minutes, "audiobook")
         } else {
             cancelTimerWithCountdown()
         }
