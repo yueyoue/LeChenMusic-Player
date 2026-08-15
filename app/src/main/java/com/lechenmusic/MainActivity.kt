@@ -118,6 +118,7 @@ class MainActivity : ComponentActivity() {
 
             // Resume timer countdown when app comes to foreground
             val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
+            var timerRestored by remember { mutableStateOf(false) }
             androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
                 val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
                     if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
@@ -125,6 +126,11 @@ class MainActivity : ComponentActivity() {
                     }
                 }
                 lifecycleOwner.lifecycle.addObserver(observer)
+                // Restore timer on first composition
+                if (!timerRestored) {
+                    timerRestored = true
+                    viewModel.restoreTimerIfNeeded()
+                }
                 onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
             }
 

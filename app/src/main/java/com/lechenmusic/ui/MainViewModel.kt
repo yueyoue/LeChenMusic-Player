@@ -287,8 +287,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     loadAllSongs()
                     // 恢复有声书播放状态（如果正在播放）
                     restoreAudiobookState()
-                    // 恢复定时器状态
-                    restoreTimerIfNeeded()
                 }
             }
         }
@@ -1021,7 +1019,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // Timer countdown job
     private var countdownJob: kotlinx.coroutines.Job? = null
     private var timerTargetTime: Long = 0L
-    private val timerPrefs by lazy { getApplication<Application>().getSharedPreferences("timer_prefs", android.content.Context.MODE_PRIVATE) }
+    private val timerPrefs = application.getSharedPreferences("timer_prefs", android.content.Context.MODE_PRIVATE)
 
     private var timerType = "" // "music" or "audiobook"
 
