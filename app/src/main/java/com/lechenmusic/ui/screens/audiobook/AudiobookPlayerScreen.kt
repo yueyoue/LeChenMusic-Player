@@ -55,6 +55,7 @@ fun AudiobookPlayerScreen(
     coverUrl: String?,
     playbackSpeed: Float = 1f,
     timerMinutes: Int = 0,
+    timerRemainingSeconds: Long = 0L,
     onBack: () -> Unit,
     onPlayPause: () -> Unit,
     onSeekTo: (Long) -> Unit,
@@ -299,24 +300,31 @@ fun AudiobookPlayerScreen(
                             tint = if (timerMinutes > 0) MaterialTheme.colorScheme.primary
                                    else MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        if (timerMinutes > 0) {
+                        if (timerMinutes > 0 && timerRemainingSeconds > 0) {
+                            val remMin = (timerRemainingSeconds / 60).toInt()
+                            val remSec = (timerRemainingSeconds % 60).toInt()
+                            Text("%02d:%02d".format(remMin, remSec), fontSize = 9.sp, color = MaterialTheme.colorScheme.primary)
+                        } else if (timerMinutes > 0) {
                             Text("${timerMinutes}分", fontSize = 9.sp, color = MaterialTheme.colorScheme.primary)
                         }
                     }
                 }
 
                 // Speed
-                IconButton(onClick = { showSpeedSheet = true }) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            "${playbackSpeed}x",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (playbackSpeed != 1f) MaterialTheme.colorScheme.primary
-                                    else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text("倍速", fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .clickable { showSpeedSheet = true }
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                ) {
+                    Text(
+                        "${playbackSpeed}x",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (playbackSpeed != 1f) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text("倍速", fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
 
                 // Queue (chapter list)
@@ -332,14 +340,6 @@ fun AudiobookPlayerScreen(
                     }
                 }
             }
-
-            // 定时器倒计时显示条
-            com.lechenmusic.ui.components.SleepTimerCountdownBar(
-                timerMinutes = timerMinutes,
-                onCancelTimer = { onSetTimer(0) }
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
 
             // Timer dialog（共享组件）
             if (showTimerSheet) {

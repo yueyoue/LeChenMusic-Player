@@ -48,6 +48,7 @@ fun TabletAudiobookPlayerScreen(
     coverUrl: String?,
     playbackSpeed: Float = 1f,
     timerMinutes: Int = 0,
+    timerRemainingSeconds: Long = 0L,
     onBack: () -> Unit,
     onPlayPause: () -> Unit,
     onSeekTo: (Long) -> Unit,
@@ -284,9 +285,18 @@ fun TabletAudiobookPlayerScreen(
                         // 定时
                         var showTimerDialog by remember { mutableStateOf(false) }
                         IconButton(onClick = { showTimerDialog = true }) {
-                            Icon(Icons.Default.Timer, "定时",
-                                tint = if (timerMinutes > 0) Color(0xFFFBBF24) else Color.White.copy(alpha = 0.7f),
-                                modifier = Modifier.size(24.dp))
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(Icons.Default.Timer, "定时",
+                                    tint = if (timerMinutes > 0) Color(0xFFFBBF24) else Color.White.copy(alpha = 0.7f),
+                                    modifier = Modifier.size(24.dp))
+                                if (timerMinutes > 0 && timerRemainingSeconds > 0) {
+                                    val remMin = (timerRemainingSeconds / 60).toInt()
+                                    val remSec = (timerRemainingSeconds % 60).toInt()
+                                    Text("%02d:%02d".format(remMin, remSec), fontSize = 9.sp, color = Color(0xFFFBBF24))
+                                } else if (timerMinutes > 0) {
+                                    Text("${timerMinutes}分", fontSize = 9.sp, color = Color(0xFFFBBF24))
+                                }
+                            }
                         }
                         if (showTimerDialog) {
                             var customMinutes by remember { mutableStateOf("") }

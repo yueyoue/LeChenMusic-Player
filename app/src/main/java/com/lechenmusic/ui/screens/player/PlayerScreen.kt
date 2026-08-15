@@ -1,6 +1,9 @@
 package com.lechenmusic.ui.screens.player
 
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -25,6 +28,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
@@ -170,47 +174,91 @@ fun PlayerScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Content area with horizontal swipe (view switch) + vertical swipe (song switch)
+            // TikTok-style vertical page animation
+            var verticalDragOffset by remember { mutableFloatStateOf(0f) }
+            var isVerticalDragging by remember { mutableStateOf(false) }
+            var swipeDirection by remember { mutableStateOf(0) } // -1=up(next), 1=down(prev)
+            val animatedOffset = remember { Animatable(0f) }
+            val swipeThreshold = 120f
+
+            // When song changes, reset animation state
+            LaunchedEffect(song.id) {
+                if (swipeDirection != 0) {
+                    // Animate new content in from the opposite direction
+                    val startOffset = if (swipeDirection == -1) 600f else -600f
+                    animatedOffset.snapTo(startOffset)
+                    animatedOffset.animateTo(0f, animationSpec = tween(350, easing = FastOutSlowInEasing))
+                    swipeDirection = 0
+                }
+            }
+
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
                     .pointerInput(Unit) {
-                        detectDragGestures { _, dragAmount ->
-                            val (dx, dy) = dragAmount
-                            if (kotlin.math.abs(dx) > kotlin.math.abs(dy)) {
-                                // 水平滑动 → 切换视图
-                                if (dx < -50) {
-                                    currentView = when (currentView) {
-                                        PlayerView.COVER -> PlayerView.LYRICS
-                                        PlayerView.LYRICS -> PlayerView.SIMILAR
-                                        PlayerView.SIMILAR -> PlayerView.SIMILAR
-                                    }
-                                } else if (dx > 50) {
-                                    currentView = when (currentView) {
-                                        PlayerView.SIMILAR -> PlayerView.LYRICS
-                                        PlayerView.LYRICS -> PlayerView.COVER
-                                        PlayerView.COVER -> PlayerView.COVER
+                        detectDragGestures(
+                            onDragStart = { verticalDragOffset = 0f; isVerticalDragging = false },
+                            onDragEnd = {
+                                if (kotlin.math.abs(verticalDragOffset) > swipeThreshold) {
+                                    if (verticalDragOffset < 0) {
+                                        swipeDirection = -1 // up → next
+                                        playerManager.skipNext()
+                                    } else {
+                                        swipeDirection = 1 // down → prev
+                                        playerManager.skipPrevious()
                                     }
                                 }
-                            } else {
-                                // 垂直滑动 → 切换歌曲（上滑下一首，下滑上一首）
-                                if (dy < -80) {
-                                    playerManager.skipNext()
-                                } else if (dy > 80) {
-                                    playerManager.skipPrevious()
+                                verticalDragOffset = 0f
+                                isVerticalDragging = false
+                            },
+                            onDragCancel = { verticalDragOffset = 0f; isVerticalDragging = false },
+                            onVerticalDrag = { change, dragAmount ->
+                                change.consume()
+                                verticalDragOffset += dragAmount
+                                isVerticalDragging = true
+                            }
+                        )
+                    }
+                    .pointerInput(Unit) {
+                        detectHorizontalDragGestures { _, dragAmount ->
+                            if (dragAmount < -50) {
+                                currentView = when (currentView) {
+                                    PlayerView.COVER -> PlayerView.LYRICS
+                                    PlayerView.LYRICS -> PlayerView.SIMILAR
+                                    PlayerView.SIMILAR -> PlayerView.SIMILAR
+                                }
+                            } else if (dragAmount > 50) {
+                                currentView = when (currentView) {
+                                    PlayerView.SIMILAR -> PlayerView.LYRICS
+                                    PlayerView.LYRICS -> PlayerView.COVER
+                                    PlayerView.COVER -> PlayerView.COVER
                                 }
                             }
                         }
                     }
             ) {
-                when (currentView) {
-                    PlayerView.COVER -> CoverView(song, serverUrl, username, password)
-                    PlayerView.LYRICS -> LyricsView(song, currentLyrics, currentPosition, duration)
-                    PlayerView.SIMILAR -> SimilarView(
-                        aiRecommendedSongs, aiRecommendLoading,
-                        serverUrl, username, password
-                    ) {
-                        playerManager.playSong(it, aiRecommendedSongs)
+                val contentOffset = if (isVerticalDragging) verticalDragOffset else animatedOffset.value
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .offset(y = (contentOffset / 2).dp)
+                        .graphicsLayer {
+                            // Scale down slightly while dragging for parallax effect
+                            val progress = (kotlin.math.abs(contentOffset) / 500f).coerceIn(0f, 0.08f)
+                            scaleX = 1f - progress
+                            scaleY = 1f - progress
+                        }
+                ) {
+                    when (currentView) {
+                        PlayerView.COVER -> CoverView(song, serverUrl, username, password)
+                        PlayerView.LYRICS -> LyricsView(song, currentLyrics, currentPosition, duration)
+                        PlayerView.SIMILAR -> SimilarView(
+                            aiRecommendedSongs, aiRecommendLoading,
+                            serverUrl, username, password
+                        ) {
+                            playerManager.playSong(it, aiRecommendedSongs)
+                        }
                     }
                 }
             }

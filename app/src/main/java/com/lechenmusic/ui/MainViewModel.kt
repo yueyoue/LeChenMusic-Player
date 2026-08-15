@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val app = application as LeChenApp
@@ -1017,6 +1018,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     // Timer countdown job
     private var countdownJob: kotlinx.coroutines.Job? = null
+    private var timerTargetTime: Long = 0L
 
     fun setTimerWithCountdown(minutes: Int) {
         // Cancel any existing timer
@@ -1026,28 +1028,45 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         // Also set alarm as backup (works even if app is killed)
         playerManager.setTimer(minutes)
         _timerRemainingSeconds.value = minutes * 60L
-        val targetTime = System.currentTimeMillis() + minutes * 60 * 1000L
-        countdownJob = viewModelScope.launch {
+        timerTargetTime = System.currentTimeMillis() + minutes * 60 * 1000L
+        // Use Dispatchers.Default to survive background throttling
+        countdownJob = viewModelScope.launch(kotlinx.coroutines.Dispatchers.Default) {
             // Use absolute time to avoid drift when app goes to background
             while (true) {
                 kotlinx.coroutines.delay(500)
-                val remaining = ((targetTime - System.currentTimeMillis()) / 1000).coerceAtLeast(0)
+                val remaining = ((timerTargetTime - System.currentTimeMillis()) / 1000).coerceAtLeast(0)
                 _timerRemainingSeconds.value = remaining
                 if (remaining <= 0) break
             }
             // Timer reached zero - force pause playback
-            try {
-                playerManager.forcePause()
-                // If still playing after forcePause, toggle it
-                kotlinx.coroutines.delay(300)
-                if (playerManager.isPlaying.value) {
-                    playerManager.togglePlayPause()
+            withContext(kotlinx.coroutines.Dispatchers.Main) {
+                try {
+                    playerManager.forcePause()
+                    kotlinx.coroutines.delay(300)
+                    if (playerManager.isPlaying.value) {
+                        playerManager.togglePlayPause()
+                    }
+                    kotlinx.coroutines.delay(200)
+                    playerManager.forcePause()
+                } catch (_: Exception) {
+                    try { playerManager.forcePause() } catch (_: Exception) {}
                 }
-                // Final force pause for reliability
-                kotlinx.coroutines.delay(200)
-                playerManager.forcePause()
-            } catch (_: Exception) {
-                try { playerManager.forcePause() } catch (_: Exception) {}
+            }
+        }
+    }
+
+    /**
+     * Resume countdown on app foreground - recalculate from target time
+     */
+    fun resumeCountdownIfNeeded() {
+        if (timerTargetTime > 0L) {
+            val remaining = ((timerTargetTime - System.currentTimeMillis()) / 1000).coerceAtLeast(0)
+            _timerRemainingSeconds.value = remaining
+            if (remaining <= 0 && countdownJob?.isActive != true) {
+                // Timer expired while in background, force pause
+                viewModelScope.launch {
+                    try { playerManager.forcePause() } catch (_: Exception) {}
+                }
             }
         }
     }
@@ -1055,6 +1074,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun cancelTimerWithCountdown() {
         countdownJob?.cancel()
         countdownJob = null
+        timerTargetTime = 0L
         playerManager.cancelTimer()
         _timerRemainingSeconds.value = 0
     }
@@ -1231,9 +1251,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun audiobookSetTimer(minutes: Int) {
         _audiobookTimerMinutes.value = minutes
         if (minutes > 0) {
-            playerManager.setTimer(minutes)
+            setTimerWithCountdown(minutes)
         } else {
-            playerManager.cancelTimer()
+            cancelTimerWithCountdown()
         }
     }
 

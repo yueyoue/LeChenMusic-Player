@@ -26,7 +26,7 @@ private val LightColorScheme = lightColorScheme(
 val PlayerStatusBarColor = mutableStateOf<Color?>(null)
 
 @Composable
-fun LeChenMusicTheme(darkTheme: Boolean = false, content: @Composable () -> Unit) {
+fun LeChenMusicTheme(darkTheme: Boolean = true, content: @Composable () -> Unit) {
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
     val view = LocalView.current
     val playerColor = PlayerStatusBarColor.value

@@ -116,6 +116,18 @@ class MainActivity : ComponentActivity() {
             val themeMode by viewModel.themeMode.collectAsState()
             val isDark = themeMode == "dark"
 
+            // Resume timer countdown when app comes to foreground
+            val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+            androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+                val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+                    if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                        viewModel.resumeCountdownIfNeeded()
+                    }
+                }
+                lifecycleOwner.lifecycle.addObserver(observer)
+                onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+            }
+
             LeChenMusicTheme(darkTheme = isDark) {
                 // 更新弹窗（启动时自动检查 + 设置页手动检查 都会触发）
                 val updateInfo by viewModel.updateInfo.collectAsState()
@@ -1084,6 +1096,7 @@ fun NavGraphBuilder.sharedNavRoutes(
         val audiobookCoverUrl by viewModel.playerManager.audiobookCoverUrl.collectAsState()
         val playbackSpeed by viewModel.audiobookPlaybackSpeed.collectAsState()
         val timerMinutes by viewModel.audiobookTimerMinutes.collectAsState()
+        val timerRemainingSeconds by viewModel.timerRemainingSeconds.collectAsState()
 
         val audiobookCallbacks: @Composable (com.lechenmusic.data.model.Audiobook) -> Unit = { book ->
             if (responsiveCfg.isMedium || responsiveCfg.isExpanded) {
@@ -1100,6 +1113,7 @@ fun NavGraphBuilder.sharedNavRoutes(
                     coverUrl = audiobookCoverUrl,
                     playbackSpeed = playbackSpeed,
                     timerMinutes = timerMinutes,
+                    timerRemainingSeconds = timerRemainingSeconds,
                     onBack = onBack,
                     onPlayPause = { viewModel.audiobookTogglePlayPause() },
                     onSeekTo = { viewModel.audiobookSeekTo(it) },
@@ -1130,6 +1144,7 @@ fun NavGraphBuilder.sharedNavRoutes(
                     coverUrl = audiobookCoverUrl,
                     playbackSpeed = playbackSpeed,
                     timerMinutes = timerMinutes,
+                    timerRemainingSeconds = timerRemainingSeconds,
                     onBack = onBack,
                     onPlayPause = { viewModel.audiobookTogglePlayPause() },
                     onSeekTo = { viewModel.audiobookSeekTo(it) },
