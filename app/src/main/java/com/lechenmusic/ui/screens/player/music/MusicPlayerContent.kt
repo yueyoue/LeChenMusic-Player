@@ -161,7 +161,7 @@ fun MusicPlayerContent(
         modifier = Modifier.fillMaxSize(),
         beyondBoundsPageCount = 0
     ) { page ->
-        val pSong = playlist.getOrNull(page) ?: return@VerticalPager
+        val pSong = playlist.getOrNull(page) ?: song
         val pCoverUrl = ApiClient.getCoverArtUrl(serverUrl, username, password, pSong.coverArt ?: pSong.albumId)
         val pBgColor = rememberCoverColor(pCoverUrl)
         val pIsLightBg = (pBgColor.red * 0.299f + pBgColor.green * 0.587f + pBgColor.blue * 0.114f) > 0.5f
@@ -621,7 +621,7 @@ private fun PlayerControls(
 @Composable
 fun rememberCoverColor(coverUrl: String?): Color {
     val context = LocalContext.current
-    var bgColor by remember { mutableStateOf(Color(0xFF1a1a2e)) }
+    var bgColor by remember { mutableStateOf(Color(0xFF2d2d5e)) }
 
     LaunchedEffect(coverUrl) {
         if (coverUrl == null) return@LaunchedEffect
