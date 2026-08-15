@@ -3,16 +3,12 @@ package com.lechenmusic.ui.screens.player.music
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -94,9 +90,35 @@ fun MusicPlayerContent(
 
     val song = currentSong ?: return
     val isTablet = config.isMedium || config.isExpanded
-    LaunchedEffect(song.id) { viewModel.loadLyrics(song) }
+    val playlist by playerManager.playlist.collectAsState()
+    val currentIndex by playerManager.currentIndex.collectAsState()
 
-    val coverUrl = ApiClient.getCoverArtUrl(serverUrl, username, password, song.coverArt ?: song.albumId)
+    // VerticalPager state - sync with current song index
+    val pagerState = androidx.compose.foundation.pager.rememberPagerState(
+        initialPage = currentIndex.coerceAtLeast(0),
+        pageCount = { playlist.size.coerceAtLeast(1) }
+    )
+
+    // When the pager settles on a new page, play that song
+    LaunchedEffect(pagerState.settledPage) {
+        val targetIndex = pagerState.settledPage
+        if (targetIndex in playlist.indices && targetIndex != currentIndex) {
+            playerManager.playSong(playlist[targetIndex], playlist)
+        }
+    }
+
+    // When the current song changes externally (e.g. from notification), sync pager
+    LaunchedEffect(currentIndex) {
+        if (currentIndex in playlist.indices && currentIndex != pagerState.currentPage) {
+            pagerState.animateScrollToPage(currentIndex)
+        }
+    }
+
+    // Current page's song data
+    val pageSong = playlist.getOrNull(pagerState.currentPage) ?: song
+    LaunchedEffect(pageSong.id) { viewModel.loadLyrics(pageSong) }
+
+    val coverUrl = ApiClient.getCoverArtUrl(serverUrl, username, password, pageSong.coverArt ?: pageSong.albumId)
     val coverBgColor = rememberCoverColor(coverUrl)
 
     // 根据背景亮度决定文字颜色（亮背景用深色文字，暗背景用白色文字）
@@ -132,59 +154,22 @@ fun MusicPlayerContent(
         else emptyList()
     }
 
-    // TikTok-style vertical swipe animation state
-    var verticalDragOffset by remember { mutableFloatStateOf(0f) }
-    var isVerticalDragging by remember { mutableStateOf(false) }
-    var swipeDirection by remember { mutableStateOf(0) } // -1=up(next), 1=down(prev)
-    val animatedOffset = remember { Animatable(0f) }
-    val swipeThreshold = 150f
-
-    // When song changes after a swipe, animate new content in
-    LaunchedEffect(song.id) {
-        if (swipeDirection != 0) {
-            val startOffset = if (swipeDirection == -1) 800f else -800f
-            animatedOffset.snapTo(startOffset)
-            animatedOffset.animateTo(0f, animationSpec = tween(350, easing = FastOutSlowInEasing))
-            swipeDirection = 0
+    // VerticalPager - TikTok-style swipe between songs
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Layer 1: VerticalPager for background + cover transition
+        VerticalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxSize(),
+            beyondBoundsPageCount = 0
+        ) { page ->
+            val pSong = playlist.getOrNull(page) ?: return@VerticalPager
+            val pCoverUrl = ApiClient.getCoverArtUrl(serverUrl, username, password, pSong.coverArt ?: pSong.albumId)
+            val pBgColor = rememberCoverColor(pCoverUrl)
+            Box(modifier = Modifier.fillMaxSize().background(pBgColor))
         }
-    }
 
-    // Apply drag offset or animation offset with parallax scale
-    val contentOffset = if (isVerticalDragging) verticalDragOffset else animatedOffset.value
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(coverBgColor)
-            .offset(y = (contentOffset / 2).dp)
-            .graphicsLayer {
-                val progress = (kotlin.math.abs(contentOffset) / 600f).coerceIn(0f, 0.08f)
-                scaleX = 1f - progress
-                scaleY = 1f - progress
-            }
-    ) {
-        Column(modifier = Modifier.fillMaxSize()
-            .pointerInput(Unit) {
-                detectVerticalDragGestures(
-                    onDragStart = { verticalDragOffset = 0f; isVerticalDragging = false },
-                    onVerticalDrag = { _, dragAmount ->
-                        verticalDragOffset += dragAmount
-                        isVerticalDragging = true
-                    },
-                    onDragEnd = {
-                        if (verticalDragOffset < -swipeThreshold) {
-                            swipeDirection = -1
-                            playerManager.skipNext()
-                        } else if (verticalDragOffset > swipeThreshold) {
-                            swipeDirection = 1
-                            playerManager.skipPrevious()
-                        }
-                        verticalDragOffset = 0f
-                        isVerticalDragging = false
-                    }
-                )
-            }
-        ) {
+        // Layer 2: Player UI on top, uses current page's song
+        Column(modifier = Modifier.fillMaxSize()) {
             // ── 顶部返回按钮 ──
             IconButton(
                 onClick = onBack,
@@ -220,10 +205,10 @@ fun MusicPlayerContent(
                 }
             } else {
                 // ── 手机：HorizontalPager 左右滑动 ──
-                val pagerState = rememberPagerState(pageCount = { 2 })
+                val hPagerState = rememberPagerState(pageCount = { 2 })
 
                 HorizontalPager(
-                    state = pagerState,
+                    state = hPagerState,
                     modifier = Modifier.weight(1f).fillMaxWidth()
                 ) { page ->
                     when (page) {
@@ -285,9 +270,9 @@ fun MusicPlayerContent(
                         Box(
                             modifier = Modifier
                                 .padding(horizontal = 4.dp)
-                                .size(if (pagerState.currentPage == idx) 8.dp else 6.dp)
+                                .size(if (hPagerState.currentPage == idx) 8.dp else 6.dp)
                                 .clip(CircleShape)
-                                .background(if (pagerState.currentPage == idx) playerTextColor else playerTextTertiary)
+                                .background(if (hPagerState.currentPage == idx) playerTextColor else playerTextTertiary)
                         )
                     }
                 }
@@ -337,6 +322,7 @@ fun MusicPlayerContent(
                 )
             }
         }
+        } // end outer Box
     }
 }
 
