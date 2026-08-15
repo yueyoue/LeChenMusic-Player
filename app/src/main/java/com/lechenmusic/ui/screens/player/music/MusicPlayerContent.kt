@@ -155,174 +155,125 @@ fun MusicPlayerContent(
     }
 
     // VerticalPager - TikTok-style swipe between songs
-    Box(modifier = Modifier.fillMaxSize()) {
-        // Layer 1: VerticalPager for background + cover transition
-        VerticalPager(
-            state = pagerState,
-            modifier = Modifier.fillMaxSize(),
-            beyondBoundsPageCount = 0
-        ) { page ->
-            val pSong = playlist.getOrNull(page) ?: return@VerticalPager
-            val pCoverUrl = ApiClient.getCoverArtUrl(serverUrl, username, password, pSong.coverArt ?: pSong.albumId)
-            val pBgColor = rememberCoverColor(pCoverUrl)
-            Box(modifier = Modifier.fillMaxSize().background(pBgColor))
+    // Each page renders the full player content for its song
+    VerticalPager(
+        state = pagerState,
+        modifier = Modifier.fillMaxSize(),
+        beyondBoundsPageCount = 0
+    ) { page ->
+        val pSong = playlist.getOrNull(page) ?: return@VerticalPager
+        val pCoverUrl = ApiClient.getCoverArtUrl(serverUrl, username, password, pSong.coverArt ?: pSong.albumId)
+        val pBgColor = rememberCoverColor(pCoverUrl)
+        val pIsLightBg = (pBgColor.red * 0.299f + pBgColor.green * 0.587f + pBgColor.blue * 0.114f) > 0.5f
+        val pTextColor = if (pIsLightBg) Color(0xFF1A1A2E) else Color.White
+        val pTextSecondary = if (pIsLightBg) Color(0xFF1A1A2E).copy(alpha = 0.7f) else Color.White.copy(alpha = 0.7f)
+        val pTextTertiary = if (pIsLightBg) Color(0xFF1A1A2E).copy(alpha = 0.4f) else Color.White.copy(alpha = 0.4f)
+        val pIconTint = if (pIsLightBg) Color(0xFF1A1A2E) else Color.White
+        val pIconTintSecondary = if (pIsLightBg) Color(0xFF1A1A2E).copy(alpha = 0.6f) else Color.White.copy(alpha = 0.6f)
+        val pSliderActive = if (pIsLightBg) Color(0xFF1A1A2E) else Color.White
+        val pSliderInactive = if (pIsLightBg) Color(0xFF1A1A2E).copy(alpha = 0.3f) else Color.White.copy(alpha = 0.3f)
+
+        // Update status bar for current visible page
+        LaunchedEffect(pBgColor) {
+            if (page == pagerState.currentPage) {
+                com.lechenmusic.ui.theme.PlayerStatusBarColor.value = pBgColor
+                val window = (context as? android.app.Activity)?.window
+                window?.navigationBarColor = pBgColor.toArgb()
+            }
         }
 
-        // Layer 2: Player UI on top, uses current page's song
-        Column(modifier = Modifier.fillMaxSize()) {
-            // ── 顶部返回按钮 ──
-            IconButton(
-                onClick = onBack,
-                modifier = Modifier.padding(start = 8.dp, top = 8.dp)
-            ) {
-                Icon(Icons.Default.KeyboardArrowDown, "返回", tint = playerIconTint, modifier = Modifier.size(32.dp))
-            }
+        // Load lyrics for current visible page
+        LaunchedEffect(pSong.id) {
+            if (page == pagerState.currentPage) viewModel.loadLyrics(pSong)
+        }
 
-            // ── 主内容区 ──
-            if (isTablet) {
-                // 平板：横排
-                Row(
-                    modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 32.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+        val pLrcLines = if (page == pagerState.currentPage) lrcLines else null
+        val pPlainLines = if (page == pagerState.currentPage) plainLines else emptyList()
+
+        Box(modifier = Modifier.fillMaxSize().background(pBgColor)) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                // ── 顶部返回按钮 ──
+                IconButton(
+                    onClick = onBack,
+                    modifier = Modifier.padding(start = 8.dp, top = 8.dp)
                 ) {
-                    // 左侧封面
-                    Box(modifier = Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
-                        CoverImageDisplay(coverUrl = coverUrl, size = 320)
-                    }
-                    Spacer(modifier = Modifier.width(32.dp))
-                    // 右侧歌词
-                    Column(modifier = Modifier.weight(1f).fillMaxHeight(), horizontalAlignment = Alignment.CenterHorizontally) {
-                        val artistSearchScope = rememberCoroutineScope()
-                        SongInfo(song = song, titleSize = 28.sp, artistSize = 18.sp, onArtistClick = { if (song.artistId.isNotBlank()) onNavigateToArtist(song.artistId) }, onArtistNameClick = { name ->
-                            artistSearchScope.launch {
-                                val id = viewModel.findArtistIdByName(name)
-                                if (id != null) onNavigateToArtist(id)
-                            }
-                        }, center = true, playerTextColor = playerTextColor, playerTextSecondary = playerTextSecondary)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        LyricsPanel(lrcLines = lrcLines, plainLines = plainLines, currentPosition = currentPosition, playerTextColor = playerTextColor, playerTextTertiary = playerTextTertiary, modifier = Modifier.weight(1f))
-                    }
+                    Icon(Icons.Default.KeyboardArrowDown, "返回", tint = pIconTint, modifier = Modifier.size(32.dp))
                 }
-            } else {
-                // ── 手机：HorizontalPager 左右滑动 ──
-                val hPagerState = rememberPagerState(pageCount = { 2 })
 
-                HorizontalPager(
-                    state = hPagerState,
-                    modifier = Modifier.weight(1f).fillMaxWidth()
-                ) { page ->
-                    when (page) {
-                        0 -> {
-                            // ── 第1页：封面 + 歌曲名 ──
-                            Column(
+                // ── 主内容区 ──
+                if (isTablet) {
+                    Row(
+                        modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 32.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(modifier = Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
+                            CoverImageDisplay(coverUrl = pCoverUrl, size = 320)
+                        }
+                        Spacer(modifier = Modifier.width(32.dp))
+                        Column(modifier = Modifier.weight(1f).fillMaxHeight(), horizontalAlignment = Alignment.CenterHorizontally) {
+                            SongInfo(song = pSong, titleSize = 28.sp, artistSize = 18.sp, onArtistClick = { if (pSong.artistId.isNotBlank()) onNavigateToArtist(pSong.artistId) }, center = true, playerTextColor = pTextColor, playerTextSecondary = pTextSecondary)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            LyricsPanel(lrcLines = pLrcLines, plainLines = pPlainLines, currentPosition = currentPosition, playerTextColor = pTextColor, playerTextTertiary = pTextTertiary, modifier = Modifier.weight(1f))
+                        }
+                    }
+                } else {
+                    // 手机：HorizontalPager 左右滑动
+                    val hPagerState = rememberPagerState(pageCount = { 2 })
+                    HorizontalPager(state = hPagerState, modifier = Modifier.weight(1f).fillMaxWidth()) { hPage ->
+                        when (hPage) {
+                            0 -> Column(
                                 modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.Center
                             ) {
-                                CoverImageDisplay(coverUrl = coverUrl, size = 260)
+                                CoverImageDisplay(coverUrl = pCoverUrl, size = 260)
                                 Spacer(modifier = Modifier.height(32.dp))
-                                val artistSearchScopePhone = rememberCoroutineScope()
-                                SongInfo(
-                                    song = song, titleSize = 22.sp, artistSize = 14.sp,
-                                    onArtistClick = { if (song.artistId.isNotBlank()) onNavigateToArtist(song.artistId) },
-                                    onArtistNameClick = { name ->
-                                        artistSearchScopePhone.launch {
-                                            val id = viewModel.findArtistIdByName(name)
-                                            if (id != null) onNavigateToArtist(id)
-                                        }
-                                    },
-                                    center = true, playerTextColor = playerTextColor, playerTextSecondary = playerTextSecondary
-                                )
+                                SongInfo(song = pSong, titleSize = 22.sp, artistSize = 14.sp, onArtistClick = { if (pSong.artistId.isNotBlank()) onNavigateToArtist(pSong.artistId) }, center = true, playerTextColor = pTextColor, playerTextSecondary = pTextSecondary)
                             }
-                        }
-                        1 -> {
-                            // ── 第2页：歌词 ──
-                            Column(
+                            1 -> Column(
                                 modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                // 顶部小封面 + 歌曲名（居中）
-                                Row(
-                                    modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
-                                    horizontalArrangement = Arrangement.Center,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    CoverImageDisplay(coverUrl = coverUrl, size = 48)
+                                Row(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                                    CoverImageDisplay(coverUrl = pCoverUrl, size = 48)
                                     Spacer(modifier = Modifier.width(12.dp))
                                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text(song.title, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = playerTextColor, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
-                                        Text(song.artist, fontSize = 12.sp, color = playerTextSecondary, textAlign = TextAlign.Center)
+                                        Text(pSong.title, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = pTextColor, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
+                                        Text(pSong.artist, fontSize = 12.sp, color = pTextSecondary, textAlign = TextAlign.Center)
                                     }
                                 }
-                                // 歌词
-                                LyricsPanel(lrcLines = lrcLines, plainLines = plainLines, currentPosition = currentPosition, playerTextColor = playerTextColor, playerTextTertiary = playerTextTertiary, modifier = Modifier.weight(1f))
+                                LyricsPanel(lrcLines = pLrcLines, plainLines = pPlainLines, currentPosition = currentPosition, playerTextColor = pTextColor, playerTextTertiary = pTextTertiary, modifier = Modifier.weight(1f))
                             }
+                        }
+                    }
+                    // 页码指示器
+                    Row(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.Center) {
+                        repeat(2) { idx ->
+                            Box(modifier = Modifier.padding(horizontal = 4.dp).size(if (hPagerState.currentPage == idx) 8.dp else 6.dp).clip(CircleShape).background(if (hPagerState.currentPage == idx) pTextColor else pTextTertiary))
                         }
                     }
                 }
 
-                // 页码指示器
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    repeat(2) { idx ->
-                        Box(
-                            modifier = Modifier
-                                .padding(horizontal = 4.dp)
-                                .size(if (hPagerState.currentPage == idx) 8.dp else 6.dp)
-                                .clip(CircleShape)
-                                .background(if (hPagerState.currentPage == idx) playerTextColor else playerTextTertiary)
-                        )
-                    }
+                // ── 底部控制栏 ──
+                var showSleepTimerDialog by remember { mutableStateOf(false) }
+                PlayerControls(
+                    isTablet = isTablet, progress = progress, currentPosition = currentPosition, duration = duration,
+                    isPlaying = isPlaying, isStarred = isStarred, shuffleMode = shuffleMode, repeatMode = repeatMode,
+                    isLightBg = pIsLightBg, playerTextColor = pTextColor, playerTextSecondary = pTextSecondary, playerTextTertiary = pTextTertiary,
+                    playerIconTint = pIconTint, playerIconTintSecondary = pIconTintSecondary, sliderActiveColor = pSliderActive, sliderInactiveColor = pSliderInactive,
+                    timerMinutes = timerMinutes, timerRemainingSeconds = timerRemainingSeconds,
+                    onSeek = { playerManager.seekToProgress(it) }, onPlayPause = { playerManager.togglePlayPause() },
+                    onPrevious = { playerManager.skipPrevious() }, onNext = { playerManager.skipNext() },
+                    onToggleStar = { playerManager.toggleStar() }, onToggleShuffle = { playerManager.toggleShuffle() }, onToggleRepeat = { playerManager.toggleRepeat() },
+                    onShowAddToPlaylist = onShowAddToPlaylist, onShowQueue = onShowQueue, onAddToQueue = { playerManager.addToQueue(pSong) },
+                    onShowTimer = { showSleepTimerDialog = true }
+                )
+                if (showSleepTimerDialog) {
+                    com.lechenmusic.ui.components.SleepTimerDialog(timerMinutes = timerMinutes, onSetTimer = onSetTimer, onDismiss = { showSleepTimerDialog = false })
                 }
             }
-
-            // ── 底部控制栏（共用） ──
-            var showSleepTimerDialog by remember { mutableStateOf(false) }
-
-            PlayerControls(
-                isTablet = isTablet,
-                progress = progress,
-                currentPosition = currentPosition,
-                duration = duration,
-                isPlaying = isPlaying,
-                isStarred = isStarred,
-                shuffleMode = shuffleMode,
-                repeatMode = repeatMode,
-                isLightBg = isLightBg,
-                playerTextColor = playerTextColor,
-                playerTextSecondary = playerTextSecondary,
-                playerTextTertiary = playerTextTertiary,
-                playerIconTint = playerIconTint,
-                playerIconTintSecondary = playerIconTintSecondary,
-                sliderActiveColor = sliderActiveColor,
-                sliderInactiveColor = sliderInactiveColor,
-                timerMinutes = timerMinutes,
-                timerRemainingSeconds = timerRemainingSeconds,
-                onSeek = { playerManager.seekToProgress(it) },
-                onPlayPause = { playerManager.togglePlayPause() },
-                onPrevious = { playerManager.skipPrevious() },
-                onNext = { playerManager.skipNext() },
-                onToggleStar = { playerManager.toggleStar() },
-                onToggleShuffle = { playerManager.toggleShuffle() },
-                onToggleRepeat = { playerManager.toggleRepeat() },
-                onShowAddToPlaylist = onShowAddToPlaylist,
-                onShowQueue = onShowQueue,
-                onAddToQueue = { playerManager.addToQueue(song) },
-                onShowTimer = { showSleepTimerDialog = true }
-            )
-
-            // 睡眠定时器弹窗
-            if (showSleepTimerDialog) {
-                com.lechenmusic.ui.components.SleepTimerDialog(
-                    timerMinutes = timerMinutes,
-                    onSetTimer = onSetTimer,
-                    onDismiss = { showSleepTimerDialog = false }
-                )
-            }
         }
-        } // end outer Box
+    }
 }
 
 
