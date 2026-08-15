@@ -117,7 +117,7 @@ class MainActivity : ComponentActivity() {
             val isDark = themeMode == "dark"
 
             // Resume timer countdown when app comes to foreground
-            val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+            val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
             androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
                 val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
                     if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {

@@ -213,9 +213,9 @@ fun PlayerScreen(
                                 isVerticalDragging = false
                             },
                             onDragCancel = { verticalDragOffset = 0f; isVerticalDragging = false },
-                            onVerticalDrag = { change, dragAmount ->
+                            onDrag = { change, dragAmount ->
                                 change.consume()
-                                verticalDragOffset += dragAmount
+                                verticalDragOffset += dragAmount.y
                                 isVerticalDragging = true
                             }
                         )
