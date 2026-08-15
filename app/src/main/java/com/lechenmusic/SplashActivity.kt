@@ -14,7 +14,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -94,46 +96,78 @@ fun SplashScreen(
         onFinished()
     }
 
-    // Fade-in animation
+    // Animations
     val alpha = remember { Animatable(0f) }
+    val logoScale = remember { Animatable(0.6f) }
+    val titleAlpha = remember { Animatable(0f) }
+    val subtitleAlpha = remember { Animatable(0f) }
+
     LaunchedEffect(Unit) {
-        alpha.animateTo(1f, animationSpec = tween(800))
+        alpha.animateTo(1f, animationSpec = tween(600))
+        logoScale.animateTo(1f, animationSpec = spring(dampingRatio = 0.6f, stiffness = 200f))
+        titleAlpha.animateTo(1f, animationSpec = tween(500, delayMillis = 300))
+        subtitleAlpha.animateTo(1f, animationSpec = tween(500, delayMillis = 500))
     }
 
-    // Loading dots animation
-    val infiniteTransition = rememberInfiniteTransition(label = "dots")
-    val dotAlpha1 by infiniteTransition.animateFloat(
-        initialValue = 0.3f, targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(600), RepeatMode.Reverse), label = "d1"
+    // Floating music notes animation
+    val infiniteTransition = rememberInfiniteTransition(label = "float")
+    val noteOffset1 by infiniteTransition.animateFloat(
+        initialValue = 0f, targetValue = -60f,
+        animationSpec = infiniteRepeatable(tween(3000, easing = LinearEasing), RepeatMode.Reverse), label = "n1"
     )
-    val dotAlpha2 by infiniteTransition.animateFloat(
-        initialValue = 0.3f, targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(600), RepeatMode.Reverse, initialStartOffset = StartOffset(200)), label = "d2"
+    val noteAlpha1 by infiniteTransition.animateFloat(
+        initialValue = 0.6f, targetValue = 0.15f,
+        animationSpec = infiniteRepeatable(tween(3000), RepeatMode.Reverse), label = "na1"
     )
-    val dotAlpha3 by infiniteTransition.animateFloat(
-        initialValue = 0.3f, targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(600), RepeatMode.Reverse, initialStartOffset = StartOffset(400)), label = "d3"
+    val noteOffset2 by infiniteTransition.animateFloat(
+        initialValue = 0f, targetValue = -80f,
+        animationSpec = infiniteRepeatable(tween(4000, easing = LinearEasing), RepeatMode.Reverse), label = "n2"
+    )
+    val noteAlpha2 by infiniteTransition.animateFloat(
+        initialValue = 0.5f, targetValue = 0.1f,
+        animationSpec = infiniteRepeatable(tween(4000), RepeatMode.Reverse), label = "na2"
+    )
+    val noteOffset3 by infiniteTransition.animateFloat(
+        initialValue = 0f, targetValue = -50f,
+        animationSpec = infiniteRepeatable(tween(3500, easing = LinearEasing), RepeatMode.Reverse), label = "n3"
+    )
+    val noteAlpha3 by infiniteTransition.animateFloat(
+        initialValue = 0.4f, targetValue = 0.1f,
+        animationSpec = infiniteRepeatable(tween(3500), RepeatMode.Reverse), label = "na3"
     )
 
-    val warmColor = Color(0xFFE8833A)
+    // Pulsing ring animation
+    val ringScale by infiniteTransition.animateFloat(
+        initialValue = 1f, targetValue = 1.3f,
+        animationSpec = infiniteRepeatable(tween(2000, easing = FastOutSlowInEasing), RepeatMode.Restart), label = "ring"
+    )
+    val ringAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.3f, targetValue = 0f,
+        animationSpec = infiniteRepeatable(tween(2000, easing = LinearEasing), RepeatMode.Restart), label = "ringA"
+    )
+
+    val primaryColor = Color(0xFF6C63FF)
+    val accentColor = Color(0xFFFF6584)
+    val bgDark = Color(0xFF0D0D1A)
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(Color(0xFF1A1A2E), Color(0xFF16213E), Color(0xFF0F3460))
-                )
-            )
+            .background(bgDark)
     ) {
-        // Decorative circle top-right
+        // Gradient background overlay
         Box(
             modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = 80.dp, end = 40.dp)
-                .size(48.dp)
-                .clip(CircleShape)
-                .background(warmColor.copy(alpha = 0.15f))
+                .fillMaxSize()
+                .background(
+                    Brush.radialGradient(
+                        colors = listOf(
+                            primaryColor.copy(alpha = 0.15f),
+                            Color.Transparent
+                        ),
+                        radius = 800f
+                    )
+                )
         )
 
         // Background splash image (if configured)
@@ -142,17 +176,66 @@ fun SplashScreen(
                 AsyncImage(
                     model = splashImageUrl,
                     contentDescription = null,
-                    modifier = Modifier.fillMaxSize().alpha(alpha.value),
-                    contentScale = ContentScale.Fit
+                    modifier = Modifier.fillMaxSize().alpha(alpha.value * 0.3f).blur(20.dp),
+                    contentScale = ContentScale.Crop
                 )
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp)
-                        .align(Alignment.BottomCenter)
-                        .background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xFF1A1A2E))))
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(
+                                    bgDark.copy(alpha = 0.7f),
+                                    bgDark.copy(alpha = 0.9f)
+                                )
+                            )
+                        )
                 )
             }
+        }
+
+        // Floating music notes (decorative)
+        Box(modifier = Modifier.fillMaxSize()) {
+            Text(
+                "♪",
+                fontSize = 28.sp,
+                color = primaryColor,
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(start = 60.dp, top = 180.dp)
+                    .offset(y = noteOffset1.dp)
+                    .alpha(noteAlpha1)
+            )
+            Text(
+                "♫",
+                fontSize = 22.sp,
+                color = accentColor,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(end = 50.dp, top = 220.dp)
+                    .offset(y = noteOffset2.dp)
+                    .alpha(noteAlpha2)
+            )
+            Text(
+                "♪",
+                fontSize = 18.sp,
+                color = primaryColor.copy(alpha = 0.7f),
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .padding(start = 40.dp)
+                    .offset(y = noteOffset3.dp)
+                    .alpha(noteAlpha3)
+            )
+            Text(
+                "♫",
+                fontSize = 24.sp,
+                color = accentColor.copy(alpha = 0.6f),
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 70.dp, bottom = 200.dp)
+                    .offset(y = noteOffset1.dp)
+                    .alpha(noteAlpha1)
+            )
         }
 
         // Main content
@@ -162,28 +245,33 @@ fun SplashScreen(
                 .alpha(alpha.value),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.weight(1.2f))
 
-            // Logo icon — 120dp rounded square
-            Box(
-                modifier = Modifier
-                    .size(120.dp)
-                    .clip(RoundedCornerShape(32.dp))
-                    .background(warmColor),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("🎵", fontSize = 56.sp)
-                // Sparkle badge
+            // Logo with pulsing ring
+            Box(contentAlignment = Alignment.Center) {
+                // Pulsing ring
                 Box(
                     modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .offset(x = 4.dp, y = (-4).dp)
-                        .size(28.dp)
+                        .size(140.dp)
+                        .scale(ringScale)
+                        .alpha(ringAlpha)
                         .clip(CircleShape)
-                        .background(Color.White),
+                        .background(primaryColor.copy(alpha = 0.3f))
+                )
+                // Logo
+                Box(
+                    modifier = Modifier
+                        .size(110.dp)
+                        .scale(logoScale.value)
+                        .clip(RoundedCornerShape(30.dp))
+                        .background(
+                            Brush.linearGradient(
+                                colors = listOf(primaryColor, accentColor)
+                            )
+                        ),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("✨", fontSize = 14.sp)
+                    Text("🎵", fontSize = 52.sp)
                 }
             }
 
@@ -192,40 +280,60 @@ fun SplashScreen(
             // App name
             Text(
                 "悦音",
-                fontSize = 32.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
+                fontSize = 36.sp,
+                fontWeight = FontWeight.Black,
+                color = Color.White,
+                modifier = Modifier.alpha(titleAlpha.value)
             )
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            // Subtitle
-            Text(
-                "MUSIC · AUDIOBOOK",
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                color = warmColor,
-                letterSpacing = 0.15.sp
-            )
+            // Subtitle with gradient-like effect
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.alpha(subtitleAlpha.value)
+            ) {
+                Text(
+                    "MUSIC",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = primaryColor,
+                    letterSpacing = 3.sp
+                )
+                Text(
+                    " · ",
+                    fontSize = 12.sp,
+                    color = Color.White.copy(alpha = 0.4f)
+                )
+                Text(
+                    "AUDIOBOOK",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = accentColor,
+                    letterSpacing = 3.sp
+                )
+            }
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // Loading dots
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                modifier = Modifier.padding(bottom = 32.dp)
+            // Loading indicator
+            Box(
+                modifier = Modifier.padding(bottom = 16.dp),
+                contentAlignment = Alignment.Center
             ) {
-                Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(warmColor.copy(alpha = dotAlpha1)))
-                Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(warmColor.copy(alpha = dotAlpha2)))
-                Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(warmColor.copy(alpha = dotAlpha3)))
+                CircularProgressIndicator(
+                    modifier = Modifier.size(28.dp),
+                    color = primaryColor.copy(alpha = 0.6f),
+                    strokeWidth = 2.dp
+                )
             }
 
             // Copyright
             Text(
                 "© 2024 悦音 · 音乐有声书",
                 fontSize = 11.sp,
-                color = Color.White.copy(alpha = 0.5f),
-                modifier = Modifier.padding(bottom = 40.dp)
+                color = Color.White.copy(alpha = 0.3f),
+                modifier = Modifier.padding(bottom = 48.dp)
             )
         }
     }
