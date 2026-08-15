@@ -323,7 +323,6 @@ fun MusicPlayerContent(
             }
         }
         } // end outer Box
-    }
 }
 
 
