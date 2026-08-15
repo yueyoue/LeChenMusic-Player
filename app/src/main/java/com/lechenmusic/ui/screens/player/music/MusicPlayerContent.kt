@@ -149,7 +149,20 @@ fun MusicPlayerContent(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(coverBgColor)) {
+    // Apply drag offset or animation offset with parallax scale
+    val contentOffset = if (isVerticalDragging) verticalDragOffset else animatedOffset.value
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(coverBgColor)
+            .offset(y = (contentOffset / 2).dp)
+            .graphicsLayer {
+                val progress = (kotlin.math.abs(contentOffset) / 600f).coerceIn(0f, 0.08f)
+                scaleX = 1f - progress
+                scaleY = 1f - progress
+            }
+    ) {
         Column(modifier = Modifier.fillMaxSize()
             .pointerInput(Unit) {
                 detectVerticalDragGestures(
@@ -172,18 +185,6 @@ fun MusicPlayerContent(
                 )
             }
         ) {
-            // Apply drag offset or animation offset with parallax scale
-            val contentOffset = if (isVerticalDragging) verticalDragOffset else animatedOffset.value
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .offset(y = (contentOffset / 2).dp)
-                    .graphicsLayer {
-                        val progress = (kotlin.math.abs(contentOffset) / 600f).coerceIn(0f, 0.08f)
-                        scaleX = 1f - progress
-                        scaleY = 1f - progress
-                    }
-            ) {
             // ── 顶部返回按钮 ──
             IconButton(
                 onClick = onBack,
@@ -335,7 +336,6 @@ fun MusicPlayerContent(
                     onDismiss = { showSleepTimerDialog = false }
                 )
             }
-            } // end content Box
         }
     }
 }
