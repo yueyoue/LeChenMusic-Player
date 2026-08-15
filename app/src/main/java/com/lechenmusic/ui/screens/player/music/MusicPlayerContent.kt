@@ -5,6 +5,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -128,29 +132,58 @@ fun MusicPlayerContent(
         else emptyList()
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(coverBgColor)) {
-        // 垂直滑动切歌状态
-        var verticalDragOffset by remember { mutableFloatStateOf(0f) }
-        val swipeThreshold = 150f
+    // TikTok-style vertical swipe animation state
+    var verticalDragOffset by remember { mutableFloatStateOf(0f) }
+    var isVerticalDragging by remember { mutableStateOf(false) }
+    var swipeDirection by remember { mutableStateOf(0) } // -1=up(next), 1=down(prev)
+    val animatedOffset = remember { Animatable(0f) }
+    val swipeThreshold = 150f
 
+    // When song changes after a swipe, animate new content in
+    LaunchedEffect(song.id) {
+        if (swipeDirection != 0) {
+            val startOffset = if (swipeDirection == -1) 800f else -800f
+            animatedOffset.snapTo(startOffset)
+            animatedOffset.animateTo(0f, animationSpec = tween(350, easing = FastOutSlowInEasing))
+            swipeDirection = 0
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize().background(coverBgColor)) {
         Column(modifier = Modifier.fillMaxSize()
             .pointerInput(Unit) {
                 detectVerticalDragGestures(
-                    onDragStart = { verticalDragOffset = 0f },
-                    onVerticalDrag = { _, dragAmount -> verticalDragOffset += dragAmount },
+                    onDragStart = { verticalDragOffset = 0f; isVerticalDragging = false },
+                    onVerticalDrag = { _, dragAmount ->
+                        verticalDragOffset += dragAmount
+                        isVerticalDragging = true
+                    },
                     onDragEnd = {
                         if (verticalDragOffset < -swipeThreshold) {
-                            // 上滑 -> 下一首
+                            swipeDirection = -1
                             playerManager.skipNext()
                         } else if (verticalDragOffset > swipeThreshold) {
-                            // 下滑 -> 上一首
+                            swipeDirection = 1
                             playerManager.skipPrevious()
                         }
                         verticalDragOffset = 0f
+                        isVerticalDragging = false
                     }
                 )
             }
         ) {
+            // Apply drag offset or animation offset with parallax scale
+            val contentOffset = if (isVerticalDragging) verticalDragOffset else animatedOffset.value
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .offset(y = (contentOffset / 2).dp)
+                    .graphicsLayer {
+                        val progress = (kotlin.math.abs(contentOffset) / 600f).coerceIn(0f, 0.08f)
+                        scaleX = 1f - progress
+                        scaleY = 1f - progress
+                    }
+            ) {
             // ── 顶部返回按钮 ──
             IconButton(
                 onClick = onBack,
@@ -302,6 +335,7 @@ fun MusicPlayerContent(
                     onDismiss = { showSleepTimerDialog = false }
                 )
             }
+            } // end content Box
         }
     }
 }
