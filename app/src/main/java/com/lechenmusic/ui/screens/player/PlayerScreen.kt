@@ -169,24 +169,35 @@ fun PlayerScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Content area with swipe
+            // Content area with horizontal swipe (view switch) + vertical swipe (song switch)
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
                     .pointerInput(Unit) {
-                        detectHorizontalDragGestures { _, dragAmount ->
-                            if (dragAmount < -50) {
-                                currentView = when (currentView) {
-                                    PlayerView.COVER -> PlayerView.LYRICS
-                                    PlayerView.LYRICS -> PlayerView.SIMILAR
-                                    PlayerView.SIMILAR -> PlayerView.SIMILAR
+                        detectDragGestures { _, dragAmount ->
+                            val (dx, dy) = dragAmount
+                            if (kotlin.math.abs(dx) > kotlin.math.abs(dy)) {
+                                // 水平滑动 → 切换视图
+                                if (dx < -50) {
+                                    currentView = when (currentView) {
+                                        PlayerView.COVER -> PlayerView.LYRICS
+                                        PlayerView.LYRICS -> PlayerView.SIMILAR
+                                        PlayerView.SIMILAR -> PlayerView.SIMILAR
+                                    }
+                                } else if (dx > 50) {
+                                    currentView = when (currentView) {
+                                        PlayerView.SIMILAR -> PlayerView.LYRICS
+                                        PlayerView.LYRICS -> PlayerView.COVER
+                                        PlayerView.COVER -> PlayerView.COVER
+                                    }
                                 }
-                            } else if (dragAmount > 50) {
-                                currentView = when (currentView) {
-                                    PlayerView.SIMILAR -> PlayerView.LYRICS
-                                    PlayerView.LYRICS -> PlayerView.COVER
-                                    PlayerView.COVER -> PlayerView.COVER
+                            } else {
+                                // 垂直滑动 → 切换歌曲（上滑下一首，下滑上一首）
+                                if (dy < -80) {
+                                    playerManager.skipNext()
+                                } else if (dy > 80) {
+                                    playerManager.skipPrevious()
                                 }
                             }
                         }
@@ -429,128 +440,21 @@ fun PlayerScreen(
                     Text("队列", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
+
+            // 定时器倒计时显示条
+            com.lechenmusic.ui.components.SleepTimerCountdownBar(
+                timerMinutes = timerMinutes,
+                onCancelTimer = { viewModel.audiobookSetTimer(0) }
+            )
         }
     }
 
-    // Timer Dialog
+    // Timer Dialog（共享组件）
     if (showTimerDialog) {
-        var customMinutes by remember { mutableStateOf("") }
-        AlertDialog(
-            onDismissRequest = { showTimerDialog = false },
-            title = {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        Icons.Default.Timer,
-                        contentDescription = null,
-                        modifier = Modifier.size(36.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("定时关闭", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                }
-            },
-            text = {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    // Current timer display
-                    if (timerMinutes > 0) {
-                        Text(
-                            "当前定时：${timerMinutes} 分钟",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(bottom = 16.dp)
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                    }
-
-                    // Preset time buttons
-                    val presets = listOf("15分钟" to 15, "30分钟" to 30, "45分钟" to 45, "60分钟" to 60, "90分钟" to 90)
-                    FlowRow(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        maxItemsInEachRow = 3
-                    ) {
-                        presets.forEach { (label, min) ->
-                            Surface(
-                                shape = RoundedCornerShape(20.dp),
-                                color = if (timerMinutes == min) MaterialTheme.colorScheme.primary
-                                        else MaterialTheme.colorScheme.surfaceVariant,
-                                modifier = Modifier
-                                    .padding(horizontal = 4.dp)
-                                    .clickable {
-                                        viewModel.audiobookSetTimer(min)
-                                        showTimerDialog = false
-                                    }
-                            ) {
-                                Text(
-                                    label,
-                                    fontSize = 13.sp,
-                                    color = if (timerMinutes == min) Color.White else MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-                    HorizontalDivider()
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    // Custom time input
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedTextField(
-                            value = customMinutes,
-                            onValueChange = { customMinutes = it.filter { c -> c.isDigit() } },
-                            placeholder = { Text("自定义时间", fontSize = 14.sp) },
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.weight(1f),
-                            textStyle = LocalTextStyle.current.copy(fontSize = 14.sp)
-                        )
-                        Button(
-                            onClick = {
-                                val min = customMinutes.toIntOrNull()
-                                if (min != null && min > 0) {
-                                    viewModel.audiobookSetTimer(min)
-                                    showTimerDialog = false
-                                } else {
-                                    Toast.makeText(context, "请输入有效时间", Toast.LENGTH_SHORT).show()
-                                }
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                        ) {
-                            Text("设置", fontSize = 14.sp)
-                        }
-                    }
-
-                    // Cancel timer button
-                    if (timerMinutes > 0) {
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Button(
-                            onClick = {
-                                viewModel.audiobookSetTimer(0)
-                                showTimerDialog = false
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF6B6B))
-                        ) {
-                            Text("取消定时", fontSize = 15.sp, color = Color.White)
-                        }
-                    }
-                }
-            },
-            confirmButton = {},
-            dismissButton = {
-                TextButton(onClick = { showTimerDialog = false }) { Text("关闭") }
-            }
+        com.lechenmusic.ui.components.SleepTimerDialog(
+            timerMinutes = timerMinutes,
+            onSetTimer = { viewModel.audiobookSetTimer(it) },
+            onDismiss = { showTimerDialog = false }
         )
     }
 

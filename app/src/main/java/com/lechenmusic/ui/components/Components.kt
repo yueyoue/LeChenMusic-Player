@@ -549,3 +549,201 @@ fun SongItemWithMenu(
         )
     }
 }
+
+// ==================== 共享定时器对话框 ====================
+
+/**
+ * 睡眠定时器对话框 — 音乐和有声书共用
+ * @param timerMinutes 当前设定的定时分钟数，0表示未设定
+ * @param onSetTimer 设置定时回调，传0表示取消
+ * @param onDismiss 关闭对话框回调
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun SleepTimerDialog(
+    timerMinutes: Int,
+    onSetTimer: (Int) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var customMinutes by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(Icons.Default.Timer, null, modifier = Modifier.size(36.dp), tint = MaterialTheme.colorScheme.primary)
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("睡眠定时", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            }
+        },
+        text = {
+            Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                // 当前定时状态
+                if (timerMinutes > 0) {
+                    Text(
+                        "当前定时：${timerMinutes} 分钟",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+                }
+
+                // 预设按钮（两行）
+                val presets = listOf(15 to "15分钟", 30 to "30分钟", 45 to "45分钟", 60 to "60分钟", 90 to "90分钟")
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    presets.take(3).forEach { (min, label) ->
+                        Surface(
+                            shape = RoundedCornerShape(20.dp),
+                            color = if (timerMinutes == min) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.surfaceVariant,
+                            modifier = Modifier.padding(horizontal = 4.dp).clickable { onSetTimer(min); onDismiss() }
+                        ) {
+                            Text(label, fontSize = 13.sp,
+                                color = if (timerMinutes == min) Color.White else MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp))
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    presets.drop(3).forEach { (min, label) ->
+                        Surface(
+                            shape = RoundedCornerShape(20.dp),
+                            color = if (timerMinutes == min) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.surfaceVariant,
+                            modifier = Modifier.padding(horizontal = 4.dp).clickable { onSetTimer(min); onDismiss() }
+                        ) {
+                            Text(label, fontSize = 13.sp,
+                                color = if (timerMinutes == min) Color.White else MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp))
+                        }
+                    }
+                    // 取消按钮
+                    if (timerMinutes > 0) {
+                        Surface(
+                            shape = RoundedCornerShape(20.dp),
+                            color = MaterialTheme.colorScheme.error.copy(alpha = 0.1f),
+                            modifier = Modifier.padding(horizontal = 4.dp).clickable { onSetTimer(0); onDismiss() }
+                        ) {
+                            Text("取消", fontSize = 13.sp, color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp))
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+                HorizontalDivider()
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // 自定义时间输入
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedTextField(
+                        value = customMinutes,
+                        onValueChange = { customMinutes = it.filter { c -> c.isDigit() } },
+                        placeholder = { Text("自定义分钟数", fontSize = 14.sp) },
+                        singleLine = true,
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                            keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                        ),
+                        modifier = Modifier.weight(1f),
+                        textStyle = LocalTextStyle.current.copy(fontSize = 14.sp)
+                    )
+                    Button(
+                        onClick = {
+                            val min = customMinutes.toIntOrNull()
+                            if (min != null && min > 0) {
+                                onSetTimer(min)
+                                onDismiss()
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                    ) {
+                        Text("设置", fontSize = 14.sp)
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismiss) { Text("关闭") } }
+    )
+}
+
+/**
+ * 定时器倒计时显示条 — 底部悬浮显示
+ * @param timerMinutes 当前设定的定时分钟数
+ * @param onCancelTimer 取消定时回调
+ */
+@Composable
+fun SleepTimerCountdownBar(
+    timerMinutes: Int,
+    onCancelTimer: () -> Unit
+) {
+    if (timerMinutes <= 0) return
+
+    // 倒计时状态
+    var remainingSeconds by remember(timerMinutes) { mutableStateOf(timerMinutes * 60L) }
+    val targetTime = remember(timerMinutes) { System.currentTimeMillis() + timerMinutes * 60 * 1000L }
+
+    LaunchedEffect(timerMinutes) {
+        while (true) {
+            kotlinx.coroutines.delay(1000)
+            remainingSeconds = ((targetTime - System.currentTimeMillis()) / 1000).coerceAtLeast(0)
+            if (remainingSeconds <= 0) break
+        }
+    }
+
+    val hours = remainingSeconds / 3600
+    val mins = (remainingSeconds % 3600) / 60
+    val secs = remainingSeconds % 60
+    val timeStr = if (hours > 0) "%d:%02d:%02d".format(hours, mins, secs)
+                  else "%02d:%02d".format(mins, secs)
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.primaryContainer,
+        shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                Icons.Default.Timer,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                "定时关闭 $timeStr",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Surface(
+                onClick = onCancelTimer,
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.error.copy(alpha = 0.15f)
+            ) {
+                Text(
+                    "取消",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                )
+            }
+        }
+    }
+}

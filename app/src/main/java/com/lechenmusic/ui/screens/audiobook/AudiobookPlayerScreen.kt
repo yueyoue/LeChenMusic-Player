@@ -333,103 +333,20 @@ fun AudiobookPlayerScreen(
                 }
             }
 
+            // 定时器倒计时显示条
+            com.lechenmusic.ui.components.SleepTimerCountdownBar(
+                timerMinutes = timerMinutes,
+                onCancelTimer = { onSetTimer(0) }
+            )
+
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Timer bottom sheet
+            // Timer dialog（共享组件）
             if (showTimerSheet) {
-                var customMinutes by remember { mutableStateOf("") }
-                AlertDialog(
-                    onDismissRequest = { showTimerSheet = false },
-                    title = {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(Icons.Default.Timer, null, modifier = Modifier.size(36.dp), tint = MaterialTheme.colorScheme.primary)
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text("睡眠定时", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                        }
-                    },
-                    text = {
-                        Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                            val presets = listOf(15 to "15分钟", 30 to "30分钟", 45 to "45分钟", 60 to "60分钟", 90 to "90分钟")
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.Center
-                            ) {
-                                presets.take(3).forEach { (min, label) ->
-                                    Surface(
-                                        shape = RoundedCornerShape(20.dp),
-                                        color = if (timerMinutes == min) MaterialTheme.colorScheme.primary
-                                                else MaterialTheme.colorScheme.surfaceVariant,
-                                        modifier = Modifier.padding(horizontal = 4.dp).clickable { onSetTimer(min); showTimerSheet = false }
-                                    ) {
-                                        Text(label, fontSize = 13.sp,
-                                            color = if (timerMinutes == min) Color.White else MaterialTheme.colorScheme.onSurface,
-                                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp))
-                                    }
-                                }
-                            }
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.Center
-                            ) {
-                                presets.drop(3).forEach { (min, label) ->
-                                    Surface(
-                                        shape = RoundedCornerShape(20.dp),
-                                        color = if (timerMinutes == min) MaterialTheme.colorScheme.primary
-                                                else MaterialTheme.colorScheme.surfaceVariant,
-                                        modifier = Modifier.padding(horizontal = 4.dp).clickable { onSetTimer(min); showTimerSheet = false }
-                                    ) {
-                                        Text(label, fontSize = 13.sp,
-                                            color = if (timerMinutes == min) Color.White else MaterialTheme.colorScheme.onSurface,
-                                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp))
-                                    }
-                                }
-                                // Cancel timer
-                                if (timerMinutes > 0) {
-                                    Surface(
-                                        shape = RoundedCornerShape(20.dp),
-                                        color = MaterialTheme.colorScheme.error.copy(alpha = 0.1f),
-                                        modifier = Modifier.padding(horizontal = 4.dp).clickable { onSetTimer(0); showTimerSheet = false }
-                                    ) {
-                                        Text("取消", fontSize = 13.sp, color = MaterialTheme.colorScheme.error,
-                                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp))
-                                    }
-                                }
-                            }
-                            Spacer(modifier = Modifier.height(16.dp))
-                            HorizontalDivider()
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                OutlinedTextField(
-                                    value = customMinutes,
-                                    onValueChange = { customMinutes = it.filter { c -> c.isDigit() } },
-                                    placeholder = { Text("自定义分钟数", fontSize = 14.sp) },
-                                    singleLine = true,
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                    modifier = Modifier.weight(1f),
-                                    textStyle = LocalTextStyle.current.copy(fontSize = 14.sp)
-                                )
-                                Button(
-                                    onClick = {
-                                        val min = customMinutes.toIntOrNull()
-                                        if (min != null && min > 0) {
-                                            onSetTimer(min)
-                                            showTimerSheet = false
-                                        }
-                                    },
-                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                                ) {
-                                    Text("设置", fontSize = 14.sp)
-                                }
-                            }
-                        }
-                    },
-                    confirmButton = {},
-                    dismissButton = { TextButton(onClick = { showTimerSheet = false }) { Text("关闭") } }
+                com.lechenmusic.ui.components.SleepTimerDialog(
+                    timerMinutes = timerMinutes,
+                    onSetTimer = onSetTimer,
+                    onDismiss = { showTimerSheet = false }
                 )
             }
 
