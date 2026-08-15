@@ -1021,7 +1021,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // Timer countdown job
     private var countdownJob: kotlinx.coroutines.Job? = null
     private var timerTargetTime: Long = 0L
-    private val timerPrefs = application.getSharedPreferences("timer_prefs", android.content.Context.MODE_PRIVATE)
+    private val timerPrefs by lazy { getApplication<Application>().getSharedPreferences("timer_prefs", android.content.Context.MODE_PRIVATE) }
 
     private var timerType = "" // "music" or "audiobook"
 
