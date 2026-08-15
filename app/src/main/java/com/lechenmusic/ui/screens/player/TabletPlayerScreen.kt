@@ -240,14 +240,20 @@ fun TabletPlayerScreen(
                         }
                         // 定时
                         var showSleepTimer by remember { mutableStateOf(false) }
+                        val timerMin by viewModel.audiobookTimerMinutes.collectAsState()
                         IconButton(onClick = { showSleepTimer = true }) {
-                            Icon(Icons.Default.Timer, "定时", tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(24.dp))
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(Icons.Default.Timer, "定时", tint = if (timerMin > 0) Color(0xFF4CAF50) else Color.White.copy(alpha = 0.7f), modifier = Modifier.size(24.dp))
+                                if (timerMin > 0) Text("${timerMin}分", fontSize = 9.sp, color = Color(0xFF4CAF50))
+                            }
                         }
                         DropdownMenu(expanded = showSleepTimer, onDismissRequest = { showSleepTimer = false }) {
                             listOf(15, 30, 45, 60, 90).forEach { min ->
-                                DropdownMenuItem(text = { Text("${min}分钟后") }, onClick = { showSleepTimer = false })
+                                DropdownMenuItem(text = { Text("${min}分钟后") }, onClick = { viewModel.audiobookSetTimer(min); showSleepTimer = false })
                             }
-                            DropdownMenuItem(text = { Text("播放完当前") }, onClick = { showSleepTimer = false })
+                            if (timerMin > 0) {
+                                DropdownMenuItem(text = { Text("取消定时", color = MaterialTheme.colorScheme.error) }, onClick = { viewModel.audiobookSetTimer(0); showSleepTimer = false })
+                            }
                         }
 
                         Spacer(modifier = Modifier.width(16.dp))

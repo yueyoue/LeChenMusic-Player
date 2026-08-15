@@ -81,7 +81,7 @@ fun PlayerScreen(
     var showPlaylistSheet by remember { mutableStateOf(false) }
     var showMoreSheet by remember { mutableStateOf(false) }
     var showPlaylistSelectionDialog by remember { mutableStateOf(false) }
-    val timerRemainingSeconds by viewModel.timerRemainingSeconds.collectAsState()
+    val timerMinutes by viewModel.audiobookTimerMinutes.collectAsState()
     val toastMessage by viewModel.toastMessage.collectAsState()
     val context = LocalContext.current
 
@@ -411,18 +411,14 @@ fun PlayerScreen(
                     Icon(
                         Icons.Default.Timer,
                         contentDescription = "定时",
-                        tint = if (timerRemainingSeconds > 0) MaterialTheme.colorScheme.primary
+                        tint = if (timerMinutes > 0) MaterialTheme.colorScheme.primary
                         else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(24.dp)
                     )
                     Text(
-                        if (timerRemainingSeconds > 0) {
-                            val min = timerRemainingSeconds / 60
-                            val sec = timerRemainingSeconds % 60
-                            "%d:%02d".format(min, sec)
-                        } else "定时",
+                        if (timerMinutes > 0) "${timerMinutes}分" else "定时",
                         fontSize = 10.sp,
-                        color = if (timerRemainingSeconds > 0) MaterialTheme.colorScheme.primary
+                        color = if (timerMinutes > 0) MaterialTheme.colorScheme.primary
                         else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -458,14 +454,11 @@ fun PlayerScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Countdown display
-                    if (timerRemainingSeconds > 0) {
-                        val remainHour = timerRemainingSeconds / 3600
-                        val remainMin = (timerRemainingSeconds % 3600) / 60
-                        val remainSec = timerRemainingSeconds % 60
+                    // Current timer display
+                    if (timerMinutes > 0) {
                         Text(
-                            "剩余 %02d:%02d:%02d".format(remainHour, remainMin, remainSec),
-                            fontSize = 28.sp,
+                            "当前定时：${timerMinutes} 分钟",
+                            fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.padding(bottom = 16.dp)
@@ -484,18 +477,19 @@ fun PlayerScreen(
                         presets.forEach { (label, min) ->
                             Surface(
                                 shape = RoundedCornerShape(20.dp),
-                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                color = if (timerMinutes == min) MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.surfaceVariant,
                                 modifier = Modifier
                                     .padding(horizontal = 4.dp)
                                     .clickable {
-                                        viewModel.setTimerWithCountdown(min)
+                                        viewModel.audiobookSetTimer(min)
                                         showTimerDialog = false
                                     }
                             ) {
                                 Text(
                                     label,
                                     fontSize = 13.sp,
-                                    color = MaterialTheme.colorScheme.onSurface,
+                                    color = if (timerMinutes == min) Color.White else MaterialTheme.colorScheme.onSurface,
                                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                                 )
                             }
@@ -525,7 +519,7 @@ fun PlayerScreen(
                             onClick = {
                                 val min = customMinutes.toIntOrNull()
                                 if (min != null && min > 0) {
-                                    viewModel.setTimerWithCountdown(min)
+                                    viewModel.audiobookSetTimer(min)
                                     showTimerDialog = false
                                 } else {
                                     Toast.makeText(context, "请输入有效时间", Toast.LENGTH_SHORT).show()
@@ -538,11 +532,11 @@ fun PlayerScreen(
                     }
 
                     // Cancel timer button
-                    if (timerRemainingSeconds > 0) {
+                    if (timerMinutes > 0) {
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(
                             onClick = {
-                                viewModel.cancelTimerWithCountdown()
+                                viewModel.audiobookSetTimer(0)
                                 showTimerDialog = false
                             },
                             modifier = Modifier.fillMaxWidth(),
