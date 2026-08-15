@@ -1237,6 +1237,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    private val _musicTimerMinutes = MutableStateFlow(0)
+    val musicTimerMinutes: StateFlow<Int> = _musicTimerMinutes.asStateFlow()
+
+    fun musicSetTimer(minutes: Int) {
+        _musicTimerMinutes.value = minutes
+        if (minutes > 0) {
+            setTimerWithCountdown(minutes)
+        } else {
+            cancelTimerWithCountdown()
+        }
+    }
+
     fun audiobookChangeSpeed(speed: Float) {
         _audiobookPlaybackSpeed.value = speed
         playerManager.setPlaybackSpeed(speed)

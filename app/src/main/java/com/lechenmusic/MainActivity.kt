@@ -728,6 +728,8 @@ fun NavGraphBuilder.sharedNavRoutes(
             }
             var showAddToPlaylistDialog by remember { mutableStateOf(false) }
             var showQueueDialog by remember { mutableStateOf(false) }
+            val musicTimerMinutes by viewModel.musicTimerMinutes.collectAsState()
+            val musicTimerRemaining by viewModel.timerRemainingSeconds.collectAsState()
 
             MusicPlayerContent(
                 config = responsiveCfg,
@@ -739,7 +741,10 @@ fun NavGraphBuilder.sharedNavRoutes(
                 onBack = onBack,
                 onNavigateToArtist = { navController.navigate(Screen.ArtistDetail.createRoute(it)) },
                 onShowAddToPlaylist = { showAddToPlaylistDialog = true },
-                onShowQueue = { showQueueDialog = true }
+                onShowQueue = { showQueueDialog = true },
+                timerMinutes = musicTimerMinutes,
+                timerRemainingSeconds = musicTimerRemaining,
+                onSetTimer = { viewModel.musicSetTimer(it) }
             )
 
             // 添加到歌单弹窗
@@ -830,6 +835,8 @@ fun NavGraphBuilder.sharedNavRoutes(
         } else {
             var showQueueDialogPhone by remember { mutableStateOf(false) }
             var showAddToPlaylistDialogPhone by remember { mutableStateOf(false) }
+            val musicTimerMinutesPhone by viewModel.musicTimerMinutes.collectAsState()
+            val musicTimerRemainingPhone by viewModel.timerRemainingSeconds.collectAsState()
 
             MusicPlayerContent(
                 config = responsiveCfg,
@@ -841,7 +848,10 @@ fun NavGraphBuilder.sharedNavRoutes(
                 onBack = onBack,
                 onNavigateToArtist = { navController.navigate(Screen.ArtistDetail.createRoute(it)) },
                 onShowAddToPlaylist = { showAddToPlaylistDialogPhone = true },
-                onShowQueue = { showQueueDialogPhone = true }
+                onShowQueue = { showQueueDialogPhone = true },
+                timerMinutes = musicTimerMinutesPhone,
+                timerRemainingSeconds = musicTimerRemainingPhone,
+                onSetTimer = { viewModel.musicSetTimer(it) }
             )
 
             // 手机端播放队列弹窗

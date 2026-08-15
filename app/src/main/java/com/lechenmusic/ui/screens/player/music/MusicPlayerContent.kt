@@ -3,6 +3,7 @@ package com.lechenmusic.ui.screens.player.music
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -71,7 +72,10 @@ fun MusicPlayerContent(
     onNavigateToArtist: (String) -> Unit = {},
     onNavigateToArtistByName: (suspend (String) -> String?)? = null,
     onShowAddToPlaylist: () -> Unit = {},
-    onShowQueue: () -> Unit = {}
+    onShowQueue: () -> Unit = {},
+    timerMinutes: Int = 0,
+    timerRemainingSeconds: Long = 0L,
+    onSetTimer: (Int) -> Unit = {}
 ) {
     val currentSong by playerManager.currentSong.collectAsState()
     val isPlaying by playerManager.isPlaying.collectAsState()
@@ -124,7 +128,28 @@ fun MusicPlayerContent(
     }
 
     Box(modifier = Modifier.fillMaxSize().background(coverBgColor)) {
-        Column(modifier = Modifier.fillMaxSize()) {
+        // 垂直滑动切歌状态
+        var verticalDragOffset by remember { mutableFloatStateOf(0f) }
+        val swipeThreshold = 150f
+
+        Column(modifier = Modifier.fillMaxSize()
+            .pointerInput(Unit) {
+                detectVerticalDragGestures(
+                    onDragStart = { verticalDragOffset = 0f },
+                    onVerticalDrag = { _, dragAmount -> verticalDragOffset += dragAmount },
+                    onDragEnd = {
+                        if (verticalDragOffset < -swipeThreshold) {
+                            // 上滑 -> 下一首
+                            playerManager.skipNext()
+                        } else if (verticalDragOffset > swipeThreshold) {
+                            // 下滑 -> 上一首
+                            playerManager.skipPrevious()
+                        }
+                        verticalDragOffset = 0f
+                    }
+                )
+            }
+        ) {
             // ── 顶部返回按钮 ──
             IconButton(
                 onClick = onBack,
@@ -234,6 +259,8 @@ fun MusicPlayerContent(
             }
 
             // ── 底部控制栏（共用） ──
+            var showSleepTimerDialog by remember { mutableStateOf(false) }
+
             PlayerControls(
                 isTablet = isTablet,
                 progress = progress,
@@ -251,6 +278,8 @@ fun MusicPlayerContent(
                 playerIconTintSecondary = playerIconTintSecondary,
                 sliderActiveColor = sliderActiveColor,
                 sliderInactiveColor = sliderInactiveColor,
+                timerMinutes = timerMinutes,
+                timerRemainingSeconds = timerRemainingSeconds,
                 onSeek = { playerManager.seekToProgress(it) },
                 onPlayPause = { playerManager.togglePlayPause() },
                 onPrevious = { playerManager.skipPrevious() },
@@ -260,8 +289,18 @@ fun MusicPlayerContent(
                 onToggleRepeat = { playerManager.toggleRepeat() },
                 onShowAddToPlaylist = onShowAddToPlaylist,
                 onShowQueue = onShowQueue,
-                onAddToQueue = { playerManager.addToQueue(song) }
+                onAddToQueue = { playerManager.addToQueue(song) },
+                onShowTimer = { showSleepTimerDialog = true }
             )
+
+            // 睡眠定时器弹窗
+            if (showSleepTimerDialog) {
+                com.lechenmusic.ui.components.SleepTimerDialog(
+                    timerMinutes = timerMinutes,
+                    onSetTimer = onSetTimer,
+                    onDismiss = { showSleepTimerDialog = false }
+                )
+            }
         }
     }
 }
@@ -422,6 +461,8 @@ private fun PlayerControls(
     playerIconTintSecondary: Color = Color.White.copy(alpha = 0.6f),
     sliderActiveColor: Color = Color.White,
     sliderInactiveColor: Color = Color.White.copy(alpha = 0.3f),
+    timerMinutes: Int = 0,
+    timerRemainingSeconds: Long = 0L,
     onSeek: (Float) -> Unit,
     onPlayPause: () -> Unit,
     onPrevious: () -> Unit,
@@ -431,7 +472,8 @@ private fun PlayerControls(
     onToggleRepeat: () -> Unit,
     onShowAddToPlaylist: () -> Unit,
     onShowQueue: () -> Unit,
-    onAddToQueue: () -> Unit
+    onAddToQueue: () -> Unit,
+    onShowTimer: () -> Unit
 ) {
     Surface(modifier = Modifier.fillMaxWidth(), color = Color.Transparent) {
         Column(modifier = Modifier.padding(horizontal = 32.dp, vertical = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -459,13 +501,18 @@ private fun PlayerControls(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // 左侧：定时 + 收藏
-                    var showTimer by remember { mutableStateOf(false) }
-                    IconButton(onClick = { showTimer = true }, modifier = Modifier.size(40.dp)) {
-                        Icon(Icons.Default.Timer, "定时", tint = playerIconTintSecondary, modifier = Modifier.size(20.dp))
-                    }
-                    DropdownMenu(expanded = showTimer, onDismissRequest = { showTimer = false }) {
-                        listOf(15, 30, 45, 60, 90).forEach { min ->
-                            DropdownMenuItem(text = { Text("${min}分钟后") }, onClick = { showTimer = false })
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        IconButton(onClick = onShowTimer, modifier = Modifier.size(40.dp)) {
+                            Icon(Icons.Default.Timer, "定时",
+                                tint = if (timerMinutes > 0) playerIconTint else playerIconTintSecondary,
+                                modifier = Modifier.size(20.dp))
+                        }
+                        if (timerMinutes > 0 && timerRemainingSeconds > 0) {
+                            val remMin = (timerRemainingSeconds / 60).toInt()
+                            val remSec = (timerRemainingSeconds % 60).toInt()
+                            Text("%02d:%02d".format(remMin, remSec), fontSize = 9.sp, color = playerIconTint)
+                        } else if (timerMinutes > 0) {
+                            Text("${timerMinutes}分", fontSize = 9.sp, color = playerIconTint)
                         }
                     }
                     IconButton(onClick = onToggleStar, modifier = Modifier.size(40.dp)) {
@@ -564,13 +611,18 @@ private fun PlayerControls(
                         Icon(if (isStarred) Icons.Default.Favorite else Icons.Default.FavoriteBorder, "收藏",
                             tint = if (isStarred) Color(0xFFFF4D6A) else playerIconTintSecondary, modifier = Modifier.size(20.dp))
                     }
-                    var showTimer by remember { mutableStateOf(false) }
-                    IconButton(onClick = { showTimer = true }, modifier = Modifier.size(40.dp)) {
-                        Icon(Icons.Default.Timer, "定时", tint = playerIconTintSecondary, modifier = Modifier.size(20.dp))
-                    }
-                    DropdownMenu(expanded = showTimer, onDismissRequest = { showTimer = false }) {
-                        listOf(15, 30, 45, 60, 90).forEach { min ->
-                            DropdownMenuItem(text = { Text("${min}分钟后") }, onClick = { showTimer = false })
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        IconButton(onClick = onShowTimer, modifier = Modifier.size(40.dp)) {
+                            Icon(Icons.Default.Timer, "定时",
+                                tint = if (timerMinutes > 0) playerIconTint else playerIconTintSecondary,
+                                modifier = Modifier.size(20.dp))
+                        }
+                        if (timerMinutes > 0 && timerRemainingSeconds > 0) {
+                            val remMin = (timerRemainingSeconds / 60).toInt()
+                            val remSec = (timerRemainingSeconds % 60).toInt()
+                            Text("%02d:%02d".format(remMin, remSec), fontSize = 9.sp, color = playerIconTint)
+                        } else if (timerMinutes > 0) {
+                            Text("${timerMinutes}分", fontSize = 9.sp, color = playerIconTint)
                         }
                     }
                     var showAddMenu by remember { mutableStateOf(false) }
