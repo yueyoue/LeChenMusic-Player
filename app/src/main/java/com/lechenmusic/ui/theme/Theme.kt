@@ -1,5 +1,6 @@
 package com.lechenmusic.ui.theme
 import android.app.Activity
+import android.graphics.drawable.ColorDrawable
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
@@ -33,6 +34,9 @@ fun LeChenMusicTheme(darkTheme: Boolean = true, content: @Composable () -> Unit)
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
+            // 设置窗口背景色与 APP 背景色一致，避免系统栏区域出现异色
+            val bgColor = if (darkTheme) DarkBackground else LightBackground
+            window.setBackgroundDrawable(ColorDrawable(bgColor.toArgb()))
             // 如果播放器设置了自定义状态栏颜色，则使用它；否则用透明
             if (playerColor != null) {
                 window.statusBarColor = playerColor.toArgb()

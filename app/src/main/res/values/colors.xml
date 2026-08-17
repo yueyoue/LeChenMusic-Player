@@ -4,4 +4,5 @@
     <color name="primary_dark">#E8414F</color>
     <color name="black">#FF0E0E0E</color>
     <color name="white">#FFFFFFFF</color>
+    <color name="window_background">#FF0A0A14</color>
 </resources>

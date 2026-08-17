@@ -99,17 +99,24 @@ fun MusicPlayerContent(
         pageCount = { playlist.size.coerceAtLeast(1) }
     )
 
+    // 标记：是否由用户滑动触发的切歌（防止双向同步导致回弹）
+    var isUserSwiping by remember { mutableStateOf(false) }
+
     // When the pager settles on a new page, play that song
     LaunchedEffect(pagerState.settledPage) {
         val targetIndex = pagerState.settledPage
         if (targetIndex in playlist.indices && targetIndex != currentIndex) {
+            isUserSwiping = true
             playerManager.playSong(playlist[targetIndex], playlist)
         }
     }
 
     // When the current song changes externally (e.g. from notification), sync pager
     LaunchedEffect(currentIndex) {
-        if (currentIndex in playlist.indices && currentIndex != pagerState.currentPage) {
+        if (isUserSwiping) {
+            // 用户滑动触发的切歌，跳过同步，重置标记
+            isUserSwiping = false
+        } else if (currentIndex in playlist.indices && currentIndex != pagerState.currentPage) {
             pagerState.animateScrollToPage(currentIndex)
         }
     }
