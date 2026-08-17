@@ -5,8 +5,11 @@ import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -91,37 +94,8 @@ fun TabletSettingsScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // ===== 用户信息卡片 =====
-        Surface(
-            shape = RoundedCornerShape(20.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerLow,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Row(
-                modifier = Modifier.padding(24.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Surface(
-                    shape = RoundedCornerShape(50),
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    modifier = Modifier.size(64.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Text(
-                            username.take(1).uppercase(),
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.width(20.dp))
-                Column {
-                    Text(username, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                    Text(serverUrl, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-        }
+        // ===== 用户等级卡片 =====
+        TabletUserLevelCard(viewModel)
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -129,8 +103,6 @@ fun TabletSettingsScreen(
         SectionTitle("服务器信息")
         SettingsCard {
             val statsLoaded = serverStats.songCount > 0 || serverStats.albumCount > 0
-            SettingsInfoRow("服务器地址", serverUrl)
-            SettingsInfoRow("用户名", username)
             SettingsInfoRow("歌曲数量", if (statsLoaded) "${serverStats.songCount}" else "加载中...")
             SettingsInfoRow("专辑数量", if (statsLoaded) "${serverStats.albumCount}" else "加载中...")
             SettingsInfoRow("歌手数量", if (statsLoaded) "${serverStats.artistCount}" else "加载中...")
@@ -532,6 +504,118 @@ private fun VideoServerSettings(viewModel: VideoViewModel) {
                 }
             }
         )
+    }
+}
+
+// ==================== 用户等级卡片 ====================
+
+@Composable
+private fun TabletUserLevelCard(viewModel: MainViewModel) {
+    val context = LocalContext.current
+    val totalSeconds = remember {
+        mutableStateOf(
+            context.getSharedPreferences("play_stats", Context.MODE_PRIVATE)
+                .getLong("total_play_seconds", 0L)
+        )
+    }
+    LaunchedEffect(Unit) {
+        val serverStats = viewModel.fetchUserPlayStats()
+        if (serverStats != null) {
+            val serverSeconds = serverStats.totalDuration.toLong()
+            val localSeconds = context.getSharedPreferences("play_stats", Context.MODE_PRIVATE)
+                .getLong("total_play_seconds", 0L)
+            val maxSeconds = maxOf(serverSeconds, localSeconds)
+            context.getSharedPreferences("play_stats", Context.MODE_PRIVATE)
+                .edit().putLong("total_play_seconds", maxSeconds).apply()
+            totalSeconds.value = maxSeconds
+        }
+        while (true) {
+            kotlinx.coroutines.delay(5000)
+            totalSeconds.value = context.getSharedPreferences("play_stats", Context.MODE_PRIVATE)
+                .getLong("total_play_seconds", 0L)
+        }
+    }
+    val totalMinutes = totalSeconds.value / 60
+    val level = com.lechenmusic.data.model.UserLevelSystem.getCurrentLevel(totalMinutes)
+    val nextLevel = com.lechenmusic.data.model.UserLevelSystem.getNextLevel(totalMinutes)
+    val minutesToNext = com.lechenmusic.data.model.UserLevelSystem.getMinutesToNextLevel(totalMinutes)
+    val progress = com.lechenmusic.data.model.UserLevelSystem.getLevelProgress(totalMinutes)
+    val isMaxLevel = nextLevel == null
+
+    val levelColor = when (level.level) {
+        1 -> Color(0xFF78909C)
+        2 -> Color(0xFF4CAF50)
+        3 -> Color(0xFF42A5F5)
+        4 -> Color(0xFF7E57C2)
+        5 -> Color(0xFFFF7043)
+        6 -> Color(0xFFFFA726)
+        7 -> Color(0xFFEF5350)
+        8 -> Color(0xFFAB47BC)
+        9 -> Color(0xFFFFB300)
+        10 -> Color(0xFFE91E63)
+        else -> Color(0xFF78909C)
+    }
+
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(24.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // 左侧：等级徽章
+            Surface(
+                shape = CircleShape,
+                color = levelColor.copy(alpha = 0.12f),
+                modifier = Modifier.size(56.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        "Lv${level.level}",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = levelColor
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.width(20.dp))
+            // 右侧：等级信息
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    level.title,
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = levelColor
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    if (isMaxLevel) "已满级 🎉"
+                    else "距下一级还有 ${minutesToNext} 分钟",
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                LinearProgressIndicator(
+                    progress = { progress },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(6.dp)
+                        .clip(RoundedCornerShape(3.dp)),
+                    color = levelColor,
+                    trackColor = levelColor.copy(alpha = 0.12f)
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                val hours = totalMinutes / 60
+                val mins = totalMinutes % 60
+                Text(
+                    "累计听歌 ${hours} 小时 ${mins} 分钟",
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
     }
 }
 
