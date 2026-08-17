@@ -151,18 +151,10 @@ fun MusicHomeContent(
                 // 歌单广场
                 item { SectionHead(title = "歌单广场", action = "更多 ›", titleSize = config.sectionTitleSize, captionSize = config.captionFontSize, onClick = onNavigateToAllPlaylists) }
                 item { PlaylistRow(playlists = playlists, coverSize = config.playlistCardSize, titleSize = config.cardTitleSize, subtitleSize = config.cardSubtitleSize, gap = gap, serverUrl = serverUrl, username = username, password = password, onClick = onPlaylistClick) }
-                // 每日推荐（双列）
+                // 每日推荐（单列，和手机一致）
                 item { SectionHead(title = "每日推荐", action = "换一批 ↻", titleSize = config.sectionTitleSize, captionSize = config.captionFontSize, onClick = onRefreshDaily) }
-                val chunkedSongs = dailySongs.take(6).chunked(2)
-                items(chunkedSongs.size) { rowIdx ->
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap)) {
-                        chunkedSongs[rowIdx].forEach { song ->
-                            Box(modifier = Modifier.weight(1f)) {
-                                SongListItem(song = song, serverUrl = serverUrl, username = username, password = password, titleSize = config.bodyFontSize, subtitleSize = config.captionFontSize, coverSize = config.songCoverSize, onClick = { onSongClick(song, dailySongs) })
-                            }
-                        }
-                        if (chunkedSongs[rowIdx].size < 2) Spacer(modifier = Modifier.weight(1f))
-                    }
+                items(dailySongs.take(6)) { song ->
+                    SongListItem(song = song, serverUrl = serverUrl, username = username, password = password, titleSize = config.bodyFontSize, subtitleSize = config.captionFontSize, coverSize = config.songCoverSize, onClick = { onSongClick(song, dailySongs) })
                 }
                 // 最新专辑
                 item { SectionHead(title = "最新专辑", action = "更多 ›", titleSize = config.sectionTitleSize, captionSize = config.captionFontSize, onClick = onNavigateToAlbums) }
