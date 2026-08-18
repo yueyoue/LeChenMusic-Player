@@ -86,12 +86,18 @@ fun MusicHomeContent(
     onRefreshDaily: () -> Unit = {},
     onPlayRadio: (InternetRadioStation) -> Unit = {},
     onSongMenu: ((Song) -> Unit)? = null,
+    starredRadioIds: Set<String> = emptySet(),
     // 手机头部（搜索栏+模式切换，仅手机传入）
     headerContent: (@Composable () -> Unit)? = null
 ) {
     val pad = config.contentPadding
     val gap = config.itemSpacing
     val isTablet = config.isMedium || config.isExpanded
+
+    // Sort radio stations: starred (pinned) first
+    val sortedRadioStations = remember(radioStations, starredRadioIds) {
+        radioStations.sortedByDescending { starredRadioIds.contains(it.id) }
+    }
 
     if (isTablet) {
         // ═══ 平板布局：左侧主内容 + 右侧边栏 ═══
@@ -178,7 +184,7 @@ fun MusicHomeContent(
                 // 电台
                 item { Spacer(modifier = Modifier.height(8.dp)) }
                 item { SectionHead(title = "电台", action = "更多 ›", titleSize = config.sectionTitleSize, captionSize = config.captionFontSize, onClick = onNavigateToRadio) }
-                item { RadioGrid(stations = radioStations, titleSize = config.cardSubtitleSize, subtitleSize = config.captionFontSize, serverUrl = serverUrl, username = username, password = password, onClick = onPlayRadio) }
+                item { RadioGrid(stations = sortedRadioStations.take(6), titleSize = config.cardSubtitleSize, subtitleSize = config.captionFontSize, serverUrl = serverUrl, username = username, password = password, onClick = onPlayRadio) }
             }
         }
     } else {
@@ -287,7 +293,7 @@ fun MusicHomeContent(
         }
         item {
             RadioGrid(
-                stations = radioStations,
+                stations = sortedRadioStations.take(6),
                 titleSize = config.cardSubtitleSize,
                 subtitleSize = config.captionFontSize,
                 serverUrl = serverUrl,

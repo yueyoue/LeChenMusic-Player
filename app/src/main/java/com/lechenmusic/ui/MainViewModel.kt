@@ -323,6 +323,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         loadCachedSongs()
                     }
                 }
+                // Auto-play next album if we're playing from an album
+                if (_currentPlayingAlbumId != null) {
+                    android.util.Log.d("LeChenMusic", "Album finished, auto-playing next album")
+                    playNextAlbum()
+                }
             }
         }
 
@@ -847,7 +852,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun playSong(song: Song, playlist: List<Song> = listOf(song)) {
+    // Album auto-play context: tracks which album is currently playing
+    private var _currentPlayingAlbumId: String? = null
+    private var _currentPlayingAlbumSongs: List<Song> = emptyList()
+
+    fun playSong(song: Song, playlist: List<Song> = listOf(song), albumId: String? = null) {
         // Save audiobook progress before switching to music
         saveAudiobookProgress()
 
@@ -856,6 +865,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _currentAudiobookChapters.value = emptyList()
         _audiobookIsPlaying.value = false
         playerManager.clearAudiobookCoverUrl()
+
+        // Track album context for auto-play next album
+        _currentPlayingAlbumId = albumId
+        _currentPlayingAlbumSongs = if (albumId != null) playlist else emptyList()
 
         playerManager.playSong(song, playlist)
         viewModelScope.launch {
@@ -868,6 +881,44 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             // Refresh cached songs after a delay (allow ExoPlayer to cache)
             kotlinx.coroutines.delay(3000)
             loadCachedSongs()
+        }
+    }
+
+    /**
+     * Auto-play next album when current album finishes.
+     * Finds the next album in the albums list and plays it.
+     */
+    private fun playNextAlbum() {
+        val albumId = _currentPlayingAlbumId ?: return
+        val allAlbums = _newestAlbums.value.ifEmpty { _randomAlbums.value }
+        if (allAlbums.isEmpty()) return
+
+        val currentIndex = allAlbums.indexOfFirst { it.id == albumId }
+        if (currentIndex < 0) return
+
+        val nextIndex = (currentIndex + 1) % allAlbums.size
+        val nextAlbum = allAlbums[nextIndex]
+
+        android.util.Log.d("LeChenMusic", "Auto-play next album: ${nextAlbum.name} (id=${nextAlbum.id})")
+
+        // Load next album's songs and play them
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val result = repository.getAlbum(nextAlbum.id)
+                if (result.isSuccess) {
+                    val albumDetail = result.getOrNull()
+                    val songs = albumDetail?.song ?: emptyList()
+                    if (songs.isNotEmpty()) {
+                        withContext(Dispatchers.Main) {
+                            _currentPlayingAlbumId = nextAlbum.id
+                            _currentPlayingAlbumSongs = songs
+                            playerManager.playSong(songs.first(), songs)
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("LeChenMusic", "playNextAlbum failed: ${e.message}")
+            }
         }
     }
 

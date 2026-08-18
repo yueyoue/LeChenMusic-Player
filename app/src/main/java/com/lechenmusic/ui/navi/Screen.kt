@@ -37,6 +37,7 @@ sealed class Screen(val route: String) {
     object NarratorDetail : Screen("narrator_detail/{narratorName}") {
         fun createRoute(narratorName: String) = "narrator_detail/$narratorName"
     }
+    object RecentAudiobookListened : Screen("recent_audiobook_listened")
 
     // 影视模块
     object Video : Screen("video")

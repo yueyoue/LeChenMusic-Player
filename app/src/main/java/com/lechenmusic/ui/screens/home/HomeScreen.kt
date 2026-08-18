@@ -73,6 +73,7 @@ fun HomeScreen(
     onNavigateToAudiobookDetail: (String) -> Unit = {},
     onNavigateToNarrator: (String) -> Unit = {},
     onNavigateToNarratorList: () -> Unit = {},
+    onNavigateToRecentAudiobookListened: () -> Unit = {},
     onNavigateToVideoDetail: (String, String) -> Unit = { _, _ -> },
     onNavigateToVideoPlayer: () -> Unit = {},
     onNavigateToVideoCategory: (String) -> Unit = {},
@@ -96,6 +97,7 @@ fun HomeScreen(
     val password by viewModel.password.collectAsState()
     val musicSlides by viewModel.musicSlides.collectAsState()
     val audiobookSlides by viewModel.audiobookSlides.collectAsState()
+    val starredRadioIds by viewModel.starredRadioIds.collectAsState()
 
     // 影视状态
     val isVideoLoggedIn = videoViewModel?.isLoggedIn?.collectAsState()?.value ?: false
@@ -148,7 +150,8 @@ fun HomeScreen(
                             onNavigateToCachedMusic = onNavigateToCachedMusic,
                             onRefreshDaily = { viewModel.refreshDailySongs() },
                             onPlayRadio = { viewModel.playerManager.playRadioStation(it) },
-                            onSongMenu = { _ -> }
+                            onSongMenu = { _ -> },
+                            starredRadioIds = starredRadioIds
                         )
                     }
                 }
@@ -167,7 +170,8 @@ fun HomeScreen(
                             onNavigateToAudiobookDetail = onNavigateToAudiobookDetail,
                             onNavigateToNarrator = onNavigateToNarrator,
                             responsiveConfig = config,
-                            onNavigateToNarratorList = onNavigateToNarratorList
+                            onNavigateToNarratorList = onNavigateToNarratorList,
+                            onNavigateToRecentAudiobookListened = onNavigateToRecentAudiobookListened
                         )
                     }
                 }
@@ -224,6 +228,7 @@ fun HomeScreen(
                     onRefreshDaily = { viewModel.refreshDailySongs() },
                     onPlayRadio = { viewModel.playerManager.playRadioStation(it) },
                     onSongMenu = { _ -> },
+                    starredRadioIds = starredRadioIds,
                     headerContent = {
                         // 搜索栏
                         Surface(
@@ -294,7 +299,8 @@ fun HomeScreen(
                             onNavigateToAudiobookDetail = onNavigateToAudiobookDetail,
                             onNavigateToNarrator = onNavigateToNarrator,
                             responsiveConfig = config,
-                            onNavigateToNarratorList = onNavigateToNarratorList
+                            onNavigateToNarratorList = onNavigateToNarratorList,
+                            onNavigateToRecentAudiobookListened = onNavigateToRecentAudiobookListened
                         )
                     }
                 } else if (homeMode == "audiobook") {
@@ -322,7 +328,7 @@ fun HomeScreen(
                     // Continue listening (like ting-reader: always show section)
                     val booksWithProgress = audiobookWithProgress.filter { it.progress != null && !it.progress.completed }
                     item {
-                        SecHd("⏱️ 继续收听", "全部 ›") {}
+                        SecHd("⏱️ 继续收听", "全部 ›") { onNavigateToRecentAudiobookListened() }
                     }
                     if (booksWithProgress.isNotEmpty()) {
                         items(booksWithProgress.take(20), key = { it.id }) { bwp ->
@@ -2203,7 +2209,11 @@ private fun TabletMusicHomeContent(
             // ===== Radio =====
             item { TabletSecHd("电台", "", config) }
             if (radioStations.isNotEmpty()) {
-                items(radioStations.take(4), key = { it.id }) { TabletRadioRow(it, config) { viewModel.playerManager.playRadioStation(it) } }
+                val starredIds by viewModel.starredRadioIds.collectAsState()
+                val sortedRadios = remember(radioStations, starredIds) {
+                    radioStations.sortedByDescending { starredIds.contains(it.id) }
+                }
+                items(sortedRadios.take(4), key = { it.id }) { TabletRadioRow(it, config) { viewModel.playerManager.playRadioStation(it) } }
             }
         }
     }

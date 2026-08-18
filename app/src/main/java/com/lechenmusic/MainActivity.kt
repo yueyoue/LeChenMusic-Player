@@ -114,7 +114,11 @@ class MainActivity : ComponentActivity() {
             val viewModel: MainViewModel = viewModel()
             val videoViewModel: VideoViewModel = viewModel()
             val themeMode by viewModel.themeMode.collectAsState()
-            val isDark = themeMode == "dark"
+            // 平板UI默认使用深色模式
+            val configuration = LocalContext.current.resources.configuration
+            val screenWidthDp = configuration.screenWidthDp
+            val isTablet = screenWidthDp >= 600
+            val isDark = if (isTablet) true else themeMode == "dark"
 
             // Resume timer countdown when app comes to foreground
             val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
@@ -455,6 +459,7 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                                         onNavigateToAudiobookDetail = { id -> navController.navigate(Screen.AudiobookDetail.createRoute(id)) },
                                         onNavigateToNarrator = { name -> navController.navigate(Screen.NarratorDetail.createRoute(name)) },
                                         onNavigateToNarratorList = { navController.navigate(Screen.NarratorList.route) },
+                                        onNavigateToRecentAudiobookListened = { navController.navigate(Screen.RecentAudiobookListened.route) },
                                         onNavigateToVideoDetail = { source, videoId -> navController.navigate(Screen.VideoDetail.createRoute(source, videoId)) },
                                         onNavigateToVideoPlayer = { navController.navigate(Screen.VideoPlayerDirect.route) },
                                         onNavigateToVideoCategory = { type -> navController.navigate(Screen.VideoCategory.createRoute(type)) },
@@ -522,6 +527,7 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                                 onNavigateToAudiobookDetail = { id -> navController.navigate(Screen.AudiobookDetail.createRoute(id)) },
                                 onNavigateToNarrator = { name -> navController.navigate(Screen.NarratorDetail.createRoute(name)) },
                                 onNavigateToNarratorList = { navController.navigate(Screen.NarratorList.route) },
+                                onNavigateToRecentAudiobookListened = { navController.navigate(Screen.RecentAudiobookListened.route) },
                                 onNavigateToVideoDetail = { source, videoId -> navController.navigate(Screen.VideoDetail.createRoute(source, videoId)) },
                                 onNavigateToVideoPlayer = { navController.navigate(Screen.VideoPlayerDirect.route) },
                                 onNavigateToVideoCategory = { type -> navController.navigate(Screen.VideoCategory.createRoute(type)) },
@@ -692,6 +698,16 @@ fun NavGraphBuilder.sharedNavRoutes(
             onSongClick = { s, p -> viewModel.playSong(s, p) },
             onArtistClick = { navController.navigate(Screen.ArtistDetail.createRoute(it)) },
             onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) }
+        )
+    }
+
+    composable(Screen.RecentAudiobookListened.route) {
+        val responsiveCfg = com.lechenmusic.ui.responsive.rememberResponsiveConfig(windowSizeClass)
+        com.lechenmusic.ui.screens.audiobook.RecentAudiobookListenedScreen(
+            viewModel = viewModel,
+            responsiveConfig = responsiveCfg,
+            onBack = onBack,
+            onAudiobookClick = { id -> navController.navigate(Screen.AudiobookDetail.createRoute(id)) }
         )
     }
 
@@ -968,7 +984,7 @@ fun NavGraphBuilder.sharedNavRoutes(
             albumId = albumId,
             responsiveConfig = responsiveCfg,
             onBack = onBack,
-            onSongClick = { s, p -> viewModel.playSong(s, p) },
+            onSongClick = { s, p -> viewModel.playSong(s, p, albumId = albumId) },
             onArtistClick = { navController.navigate(Screen.ArtistDetail.createRoute(it)) },
             onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) }
         )

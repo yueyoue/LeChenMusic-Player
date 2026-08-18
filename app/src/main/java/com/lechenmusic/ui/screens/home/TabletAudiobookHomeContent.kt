@@ -54,7 +54,8 @@ fun TabletAudiobookHomeContent(
     onNavigateToAudiobook: (String?) -> Unit,
     onNavigateToAudiobookDetail: (String) -> Unit,
     onNavigateToNarrator: (String) -> Unit,
-    onNavigateToNarratorList: () -> Unit
+    onNavigateToNarratorList: () -> Unit,
+    onNavigateToRecentAudiobookListened: () -> Unit = {}
 ) {
     val cardSize = responsiveConfig?.albumCardSize ?: 150.dp
     val gap = responsiveConfig?.itemSpacing ?: 16.dp
@@ -260,7 +261,7 @@ fun TabletAudiobookHomeContent(
                         "最近播放 ›",
                         fontSize = responsiveConfig?.captionFontSize ?: 12.sp,
                         color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.clickable { onNavigateToAudiobook(null) }
+                        modifier = Modifier.clickable { onNavigateToRecentAudiobookListened() }
                     )
                 }
                 Spacer(modifier = Modifier.height(8.dp))

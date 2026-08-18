@@ -61,6 +61,11 @@ fun RadioScreen(
             Text("电台", fontSize = 18.sp, fontWeight = FontWeight.Bold)
         }
 
+        // Sort: starred (pinned) stations first
+        val sortedStations = remember(radioStations, starredRadioIds) {
+            radioStations.sortedByDescending { starredRadioIds.contains(it.id) }
+        }
+
         if (radioStations.isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxSize(),
@@ -87,8 +92,8 @@ fun RadioScreen(
                 contentPadding = PaddingValues(horizontal = 20.dp, vertical = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(radioStations) { station ->
-                    val color = radioColors[radioStations.indexOf(station) % radioColors.size]
+                items(sortedStations) { station ->
+                    val color = radioColors[sortedStations.indexOf(station) % radioColors.size]
                     val isStarred = starredRadioIds.contains(station.id)
                     RadioListItem(
                         station = station,
@@ -170,12 +175,12 @@ private fun RadioListItem(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            // 收藏按钮
+            // 置顶按钮
             IconButton(onClick = onStarToggle) {
                 Icon(
-                    if (isStarred) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                    contentDescription = if (isStarred) "取消收藏" else "收藏",
-                    tint = if (isStarred) Color.Red else MaterialTheme.colorScheme.onSurfaceVariant,
+                    if (isStarred) Icons.Default.PushPin else Icons.Default.PushPin,
+                    contentDescription = if (isStarred) "取消置顶" else "置顶",
+                    tint = if (isStarred) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                     modifier = Modifier.size(22.dp)
                 )
             }
