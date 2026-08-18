@@ -1994,6 +1994,10 @@ private fun TabletMusicHomeContent(
     val videoHomeData = videoViewModel?.homeData?.collectAsState()?.value
     val videoHomeLoading = videoViewModel?.homeLoading?.collectAsState()?.value ?: false
     val videoPlayRecords = videoViewModel?.playRecords?.collectAsState()?.value ?: emptyList()
+    val starredRadioIds by viewModel.starredRadioIds.collectAsState()
+    val sortedRadioStations = remember(radioStations, starredRadioIds) {
+        radioStations.sortedByDescending { starredRadioIds.contains(it.id) }
+    }
 
     val pad = config.contentPadding
     val gap = config.itemSpacing
@@ -2209,11 +2213,7 @@ private fun TabletMusicHomeContent(
             // ===== Radio =====
             item { TabletSecHd("电台", "", config) }
             if (radioStations.isNotEmpty()) {
-                val starredIds by viewModel.starredRadioIds.collectAsState()
-                val sortedRadios = remember(radioStations, starredIds) {
-                    radioStations.sortedByDescending { starredIds.contains(it.id) }
-                }
-                items(sortedRadios.take(4), key = { it.id }) { TabletRadioRow(it, config) { viewModel.playerManager.playRadioStation(it) } }
+                items(sortedRadioStations.take(4), key = { it.id }) { TabletRadioRow(it, config) { viewModel.playerManager.playRadioStation(it) } }
             }
         }
     }
