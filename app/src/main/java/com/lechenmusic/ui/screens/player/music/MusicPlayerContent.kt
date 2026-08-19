@@ -509,7 +509,7 @@ private fun PlayerControls(
                         onClick = onPlayPause,
                         modifier = Modifier.size(56.dp),
                         shape = CircleShape,
-                        colors = IconButtonDefaults.filledIconButtonColors(containerColor = playerTextColor, contentColor = Color.White)
+                        colors = IconButtonDefaults.filledIconButtonColors(containerColor = Color.White, contentColor = Color(0xFF1A1A2E))
                     ) {
                         Icon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, "播放", modifier = Modifier.size(28.dp))
                     }
@@ -560,7 +560,7 @@ private fun PlayerControls(
                         onClick = onPlayPause,
                         modifier = Modifier.size(56.dp),
                         shape = CircleShape,
-                        colors = IconButtonDefaults.filledIconButtonColors(containerColor = playerTextColor, contentColor = Color.White)
+                        colors = IconButtonDefaults.filledIconButtonColors(containerColor = Color.White, contentColor = Color(0xFF1A1A2E))
                     ) {
                         Icon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, "播放", modifier = Modifier.size(28.dp))
                     }
