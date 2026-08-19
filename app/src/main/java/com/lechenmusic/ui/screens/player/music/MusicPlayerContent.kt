@@ -128,15 +128,14 @@ fun MusicPlayerContent(
     val coverUrl = ApiClient.getCoverArtUrl(serverUrl, username, password, pageSong.coverArt ?: pageSong.albumId)
     val coverBgColor = rememberCoverColor(coverUrl)
 
-    // 根据背景亮度决定文字颜色（亮背景用深色文字，暗背景用白色文字）
-    val isLightBg = (coverBgColor.red * 0.299f + coverBgColor.green * 0.587f + coverBgColor.blue * 0.114f) > 0.5f
-    val playerTextColor = if (isLightBg) Color(0xFF1A1A2E) else Color.White
-    val playerTextSecondary = if (isLightBg) Color(0xFF1A1A2E).copy(alpha = 0.7f) else Color.White.copy(alpha = 0.7f)
-    val playerTextTertiary = if (isLightBg) Color(0xFF1A1A2E).copy(alpha = 0.4f) else Color.White.copy(alpha = 0.4f)
-    val playerIconTint = if (isLightBg) Color(0xFF1A1A2E) else Color.White
-    val playerIconTintSecondary = if (isLightBg) Color(0xFF1A1A2E).copy(alpha = 0.6f) else Color.White.copy(alpha = 0.6f)
-    val sliderActiveColor = if (isLightBg) Color(0xFF1A1A2E) else Color.White
-    val sliderInactiveColor = if (isLightBg) Color(0xFF1A1A2E).copy(alpha = 0.3f) else Color.White.copy(alpha = 0.3f)
+    // 始终使用白色文字和按钮（背景色已保证足够暗）
+    val playerTextColor = Color.White
+    val playerTextSecondary = Color.White.copy(alpha = 0.7f)
+    val playerTextTertiary = Color.White.copy(alpha = 0.4f)
+    val playerIconTint = Color.White
+    val playerIconTintSecondary = Color.White.copy(alpha = 0.6f)
+    val sliderActiveColor = Color.White
+    val sliderInactiveColor = Color.White.copy(alpha = 0.3f)
 
     // 设置状态栏和导航栏颜色跟随播放器背景色
     val context = LocalContext.current
@@ -171,14 +170,14 @@ fun MusicPlayerContent(
         val pSong = playlist.getOrNull(page) ?: song
         val pCoverUrl = ApiClient.getCoverArtUrl(serverUrl, username, password, pSong.coverArt ?: pSong.albumId)
         val pBgColor = rememberCoverColor(pCoverUrl)
-        val pIsLightBg = (pBgColor.red * 0.299f + pBgColor.green * 0.587f + pBgColor.blue * 0.114f) > 0.5f
-        val pTextColor = if (pIsLightBg) Color(0xFF1A1A2E) else Color.White
-        val pTextSecondary = if (pIsLightBg) Color(0xFF1A1A2E).copy(alpha = 0.7f) else Color.White.copy(alpha = 0.7f)
-        val pTextTertiary = if (pIsLightBg) Color(0xFF1A1A2E).copy(alpha = 0.4f) else Color.White.copy(alpha = 0.4f)
-        val pIconTint = if (pIsLightBg) Color(0xFF1A1A2E) else Color.White
-        val pIconTintSecondary = if (pIsLightBg) Color(0xFF1A1A2E).copy(alpha = 0.6f) else Color.White.copy(alpha = 0.6f)
-        val pSliderActive = if (pIsLightBg) Color(0xFF1A1A2E) else Color.White
-        val pSliderInactive = if (pIsLightBg) Color(0xFF1A1A2E).copy(alpha = 0.3f) else Color.White.copy(alpha = 0.3f)
+        // 始终使用白色（背景色已保证足够暗）
+        val pTextColor = Color.White
+        val pTextSecondary = Color.White.copy(alpha = 0.7f)
+        val pTextTertiary = Color.White.copy(alpha = 0.4f)
+        val pIconTint = Color.White
+        val pIconTintSecondary = Color.White.copy(alpha = 0.6f)
+        val pSliderActive = Color.White
+        val pSliderInactive = Color.White.copy(alpha = 0.3f)
 
         // Update status bar for current visible page
         LaunchedEffect(pBgColor) {
@@ -626,6 +625,13 @@ private fun PlayerControls(
 // ── 封面颜色提取 ─────────────────────────────────────────
 
 @Composable
+// 播放器备选深色背景色列表（当封面颜色太浅时使用）
+private val fallbackDarkColors = listOf(
+    Color(0xFF1a1a2e), Color(0xFF16213e), Color(0xFF0f3460),
+    Color(0xFF1b1b2f), Color(0xFF2d2d5e), Color(0xFF1e1e3f),
+    Color(0xFF0d1b2a), Color(0xFF1b2838), Color(0xFF2c003e)
+)
+
 fun rememberCoverColor(coverUrl: String?): Color {
     val context = LocalContext.current
     var bgColor by remember { mutableStateOf(Color(0xFF2d2d5e)) }
@@ -633,20 +639,39 @@ fun rememberCoverColor(coverUrl: String?): Color {
     LaunchedEffect(coverUrl) {
         if (coverUrl == null) return@LaunchedEffect
         try {
-            // 复用全局 Coil ImageLoader，避免每次创建新实例导致 GC 压力
             val imageLoader = coil.ImageLoader(context)
             val request = ImageRequest.Builder(context).data(coverUrl).allowHardware(false).build()
             val drawable = imageLoader.execute(request).drawable
             val bitmap = drawable?.toBitmap(128, 128)
             if (bitmap != null) {
                 val palette = withContext(Dispatchers.Default) { Palette.from(bitmap).generate() }
-                val color = palette.vibrantSwatch?.rgb
-                    ?: palette.darkVibrantSwatch?.rgb
+                // 优先取深色 swatch，避免与白色文字冲突
+                val color = palette.darkVibrantSwatch?.rgb
+                    ?: palette.darkMutedSwatch?.rgb
+                    ?: palette.vibrantSwatch?.rgb
                     ?: palette.mutedSwatch?.rgb
                     ?: palette.dominantSwatch?.rgb
-                if (color != null) bgColor = Color(color).copy(alpha = 0.85f)
+                if (color != null) {
+                    val c = Color(color)
+                    val luminance = c.red * 0.299f + c.green * 0.587f + c.blue * 0.114f
+                    // 如果颜色太亮（与白色文字冲突），降低亮度或使用备选深色
+                    bgColor = if (luminance > 0.45f) {
+                        // 尝试降低亮度到可用范围
+                        val hsv = FloatArray(3)
+                        android.graphics.Color.colorToHSV(color, hsv)
+                        hsv[2] = (hsv[2] * 0.4f).coerceAtMost(0.4f) // 限制明度
+                        Color(android.graphics.Color.HSVToColor((0.85f * 255).toInt(), hsv))
+                    } else {
+                        c.copy(alpha = 0.85f)
+                    }
+                } else {
+                    // 提取失败，随机选一个备选深色
+                    bgColor = fallbackDarkColors.random()
+                }
             }
-        } catch (_: Exception) {}
+        } catch (_: Exception) {
+            bgColor = fallbackDarkColors.random()
+        }
     }
     return bgColor
 }

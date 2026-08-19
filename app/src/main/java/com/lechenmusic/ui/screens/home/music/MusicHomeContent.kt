@@ -98,6 +98,8 @@ fun MusicHomeContent(
     val sortedRadioStations = remember(radioStations, starredRadioIds) {
         radioStations.sortedByDescending { starredRadioIds.contains(it.id) }
     }
+    // 歌单随机排序（每次进入首页重新打乱）
+    val shuffledPlaylists = remember(playlists) { playlists.shuffled() }
 
     if (isTablet) {
         // ═══ 平板布局：左侧主内容 + 右侧边栏 ═══
@@ -156,7 +158,7 @@ fun MusicHomeContent(
                 }
                 // 歌单广场
                 item { SectionHead(title = "歌单广场", action = "更多 ›", titleSize = config.sectionTitleSize, captionSize = config.captionFontSize, onClick = onNavigateToAllPlaylists) }
-                item { PlaylistRow(playlists = playlists, coverSize = config.playlistCardSize, titleSize = config.cardTitleSize, subtitleSize = config.cardSubtitleSize, gap = gap, serverUrl = serverUrl, username = username, password = password, onClick = onPlaylistClick) }
+                item { PlaylistRow(playlists = shuffledPlaylists, coverSize = config.playlistCardSize, titleSize = config.cardTitleSize, subtitleSize = config.cardSubtitleSize, gap = gap, serverUrl = serverUrl, username = username, password = password, onClick = onPlaylistClick) }
                 // 每日推荐（单列，和手机一致）
                 item { SectionHead(title = "每日推荐", action = "换一批 ↻", titleSize = config.sectionTitleSize, captionSize = config.captionFontSize, onClick = onRefreshDaily) }
                 items(dailySongs.take(6)) { song ->
@@ -230,7 +232,7 @@ fun MusicHomeContent(
         }
         item {
             PlaylistGrid(
-                playlists = playlists,
+                playlists = shuffledPlaylists,
                 serverUrl = serverUrl,
                 username = username,
                 password = password,
@@ -521,7 +523,7 @@ private fun QuickActions(
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceEvenly
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
         QuickItem(Icons.Default.Person, "歌手", Color(0xFFA855F7), iconSize, labelSize, onArtists)
         QuickItem(Icons.Default.Album, "专辑", Color(0xFF4A9EFF), iconSize, labelSize, onAlbums)

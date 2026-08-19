@@ -1206,9 +1206,30 @@ private fun AudiobookCarousel(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(Brush.linearGradient(gradient))
-                        .padding(16.dp)
                 ) {
-                    Column {
+                    // 封面图作为背景（和�kindle板一致）
+                    val coverUrl = getAudiobookCoverUrl(serverUrl, username, password, book.id)
+                    if (coverUrl != null) {
+                        AsyncImage(
+                            model = coverUrl,
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop,
+                            alpha = 0.3f
+                        )
+                    }
+                    // 渐变遮罩
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.5f))))
+                    )
+                    // 文本内容
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(16.dp)
+                    ) {
                         Surface(
                             shape = RoundedCornerShape(10.dp),
                             color = Color.White.copy(alpha = 0.15f)
@@ -1242,27 +1263,6 @@ private fun AudiobookCarousel(
                                 fontSize = 12.sp,
                                 color = Color.White.copy(alpha = 0.8f)
                             )
-                        }
-                    }
-                    // Cover on the right
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.CenterEnd)
-                            .size(80.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(Color.White.copy(alpha = 0.1f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        val url = getAudiobookCoverUrl(serverUrl, username, password, book.id)
-                        if (url != null) {
-                            AsyncImage(
-                                model = url,
-                                contentDescription = null,
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop
-                            )
-                        } else {
-                            Text("\uD83D\uDCD6", fontSize = 36.sp)
                         }
                     }
                 }
