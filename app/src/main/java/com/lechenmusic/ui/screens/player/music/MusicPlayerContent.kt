@@ -623,7 +623,6 @@ private fun PlayerControls(
 
 // ── 封面颜色提取 ─────────────────────────────────────────
 
-@Composable
 // 播放器备选深色背景色列表（当封面颜色太浅时使用）
 private val fallbackDarkColors = listOf(
     Color(0xFF1a1a2e), Color(0xFF16213e), Color(0xFF0f3460),
@@ -631,6 +630,7 @@ private val fallbackDarkColors = listOf(
     Color(0xFF0d1b2a), Color(0xFF1b2838), Color(0xFF2c003e)
 )
 
+@Composable
 fun rememberCoverColor(coverUrl: String?): Color {
     val context = LocalContext.current
     var bgColor by remember { mutableStateOf(Color(0xFF2d2d5e)) }
