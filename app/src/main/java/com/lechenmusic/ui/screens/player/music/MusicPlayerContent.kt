@@ -265,7 +265,7 @@ fun MusicPlayerContent(
                 PlayerControls(
                     isTablet = isTablet, progress = progress, currentPosition = currentPosition, duration = duration,
                     isPlaying = isPlaying, isStarred = isStarred, shuffleMode = shuffleMode, repeatMode = repeatMode,
-                    isLightBg = pIsLightBg, playerTextColor = pTextColor, playerTextSecondary = pTextSecondary, playerTextTertiary = pTextTertiary,
+                    playerTextColor = pTextColor, playerTextSecondary = pTextSecondary, playerTextTertiary = pTextTertiary,
                     playerIconTint = pIconTint, playerIconTintSecondary = pIconTintSecondary, sliderActiveColor = pSliderActive, sliderInactiveColor = pSliderInactive,
                     timerMinutes = timerMinutes, timerRemainingSeconds = timerRemainingSeconds,
                     onSeek = { playerManager.seekToProgress(it) }, onPlayPause = { playerManager.togglePlayPause() },
@@ -430,7 +430,6 @@ private fun PlayerControls(
     isStarred: Boolean,
     shuffleMode: Boolean,
     repeatMode: RepeatMode,
-    isLightBg: Boolean = false,
     playerTextColor: Color = Color.White,
     playerTextSecondary: Color = Color.White.copy(alpha = 0.7f),
     playerTextTertiary: Color = Color.White.copy(alpha = 0.4f),
@@ -510,7 +509,7 @@ private fun PlayerControls(
                         onClick = onPlayPause,
                         modifier = Modifier.size(56.dp),
                         shape = CircleShape,
-                        colors = IconButtonDefaults.filledIconButtonColors(containerColor = playerTextColor, contentColor = if (isLightBg) Color.White else Color.Black)
+                        colors = IconButtonDefaults.filledIconButtonColors(containerColor = playerTextColor, contentColor = Color.White)
                     ) {
                         Icon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, "播放", modifier = Modifier.size(28.dp))
                     }
@@ -561,7 +560,7 @@ private fun PlayerControls(
                         onClick = onPlayPause,
                         modifier = Modifier.size(56.dp),
                         shape = CircleShape,
-                        colors = IconButtonDefaults.filledIconButtonColors(containerColor = playerTextColor, contentColor = if (isLightBg) Color.White else Color.Black)
+                        colors = IconButtonDefaults.filledIconButtonColors(containerColor = playerTextColor, contentColor = Color.White)
                     ) {
                         Icon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, "播放", modifier = Modifier.size(28.dp))
                     }
