@@ -1985,6 +1985,7 @@ private fun TabletMusicHomeContent(
     onNavigateToArtists: () -> Unit,
     onNavigateToAllPlaylists: () -> Unit,
     onNavigateToCachedMusic: () -> Unit,
+    onNavigateToPlayer: () -> Unit = {},
     onNavigateToAudiobook: (String?) -> Unit,
     onNavigateToAudiobookDetail: (String) -> Unit,
     onNavigateToNarrator: (String) -> Unit,
