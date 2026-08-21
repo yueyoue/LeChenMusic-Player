@@ -1031,7 +1031,8 @@ fun NavGraphBuilder.sharedNavRoutes(
     composable(Screen.Radio.route) {
         RadioScreen(
             viewModel = viewModel,
-            onBack = onBack
+            onBack = onBack,
+            onNavigateToPlayer = { navController.navigate(Screen.Player.route) }
         )
     }
 

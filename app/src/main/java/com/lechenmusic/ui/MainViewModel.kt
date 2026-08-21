@@ -856,6 +856,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var _currentPlayingAlbumId: String? = null
     private var _currentPlayingAlbumSongs: List<Song> = emptyList()
 
+    fun playRadioStation(station: com.lechenmusic.data.model.InternetRadioStation, allStations: List<com.lechenmusic.data.model.InternetRadioStation> = emptyList()) {
+        // Save audiobook progress before switching to radio
+        saveAudiobookProgress()
+
+        // Clear audiobook state when playing radio
+        _currentAudiobook.value = null
+        _currentAudiobookChapters.value = emptyList()
+        _audiobookIsPlaying.value = false
+
+        playerManager.playRadioStation(station, allStations)
+    }
+
     fun playSong(song: Song, playlist: List<Song> = listOf(song), albumId: String? = null) {
         // Save audiobook progress before switching to music
         saveAudiobookProgress()

@@ -30,7 +30,8 @@ import com.lechenmusic.ui.responsive.ResponsiveConfig
 fun RadioScreen(
     responsiveConfig: ResponsiveConfig? = null,
     viewModel: MainViewModel,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onNavigateToPlayer: () -> Unit = {}
 ) {
     val radioStations by viewModel.radioStations.collectAsState()
     val serverUrl by viewModel.serverUrl.collectAsState()
@@ -102,7 +103,7 @@ fun RadioScreen(
                         username = username,
                         password = password,
                         isStarred = isStarred,
-                        onClick = { viewModel.playerManager.playRadioStation(station, sortedStations) },
+                        onClick = { viewModel.playRadioStation(station, sortedStations); onNavigateToPlayer() },
                         onStarToggle = {
                             if (isStarred) viewModel.unstarRadio(station.id)
                             else viewModel.starRadio(station.id)

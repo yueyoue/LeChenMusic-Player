@@ -150,7 +150,7 @@ fun HomeScreen(
                             onNavigateToAllPlaylists = onNavigateToAllPlaylists,
                             onNavigateToCachedMusic = onNavigateToCachedMusic,
                             onRefreshDaily = { viewModel.refreshDailySongs() },
-                            onPlayRadio = { viewModel.playerManager.playRadioStation(it, radioStations) },
+                            onPlayRadio = { viewModel.playRadioStation(it, radioStations) },
                             onSongMenu = { _ -> },
                             starredRadioIds = starredRadioIds
                         )
@@ -228,7 +228,7 @@ fun HomeScreen(
                     onNavigateToArtists = onNavigateToArtists, onNavigateToAllPlaylists = onNavigateToAllPlaylists,
                     onNavigateToCachedMusic = onNavigateToCachedMusic,
                     onRefreshDaily = { viewModel.refreshDailySongs() },
-                    onPlayRadio = { viewModel.playerManager.playRadioStation(it, radioStations) },
+                    onPlayRadio = { viewModel.playRadioStation(it, radioStations) },
                     onSongMenu = { _ -> },
                     starredRadioIds = starredRadioIds,
                     headerContent = {
@@ -2216,7 +2216,7 @@ private fun TabletMusicHomeContent(
             // ===== Radio =====
             item { TabletSecHd("电台", "", config) }
             if (radioStations.isNotEmpty()) {
-                items(sortedRadioStations.take(4), key = { it.id }) { TabletRadioRow(it, config) { viewModel.playerManager.playRadioStation(it, sortedRadioStations) } }
+                items(sortedRadioStations.take(4), key = { it.id }) { TabletRadioRow(it, config) { viewModel.playRadioStation(it, sortedRadioStations) } }
             }
         }
     }

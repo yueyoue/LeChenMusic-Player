@@ -237,7 +237,7 @@ fun FavoritesScreen(
                     serverUrl = serverUrl,
                     username = username,
                     password = password,
-                    onPlayRadio = { viewModel.playerManager.playRadioStation(it, radioStations) },
+                    onPlayRadio = { viewModel.playRadioStation(it, radioStations) },
                     onUnstarRadio = { viewModel.unstarRadio(it.id) }
                 )
             }
@@ -291,7 +291,7 @@ fun FavoritesScreen(
                     serverUrl = serverUrl,
                     username = username,
                     password = password,
-                    onPlayRadio = { viewModel.playerManager.playRadioStation(it, radioStations) },
+                    onPlayRadio = { viewModel.playRadioStation(it, radioStations) },
                     onUnstarRadio = { viewModel.unstarRadio(it.id) }
                 )
             }

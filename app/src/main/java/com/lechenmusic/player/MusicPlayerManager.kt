@@ -949,6 +949,8 @@ class MusicPlayerManager(private val context: Context) {
     }
 
     fun playRadioStation(station: com.lechenmusic.data.model.InternetRadioStation, allStations: List<com.lechenmusic.data.model.InternetRadioStation> = emptyList()) {
+        // 清除有声书状态，避免MiniPlayer/PlayerPage显示有声书内容
+        _audiobookCoverUrl.value = null
         player?.apply {
             val mediaItem = MediaItem.Builder()
                 .setUri(station.streamUrl)

@@ -41,7 +41,7 @@ fun TabletFavoritesScreen(
     onAlbumClick: (String) -> Unit,
     onAudiobookClick: (String) -> Unit,
     onPlaylistClick: (String) -> Unit = {},
-    onPlayRadio: (InternetRadioStation) -> Unit = { viewModel.playerManager.playRadioStation(it) },
+    onPlayRadio: (InternetRadioStation) -> Unit = { viewModel.playRadioStation(it) },
     onUnstarRadio: (InternetRadioStation) -> Unit = { viewModel.unstarRadio(it.id) }
 ) {
     val starredSongs by viewModel.starredSongs.collectAsState()
