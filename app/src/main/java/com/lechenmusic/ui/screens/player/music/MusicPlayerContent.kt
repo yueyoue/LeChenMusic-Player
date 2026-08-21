@@ -623,30 +623,36 @@ private fun PlayerControls(
 
 // ── 封面颜色提取 ─────────────────────────────────────────
 
-// 高饱和度多巴胺背景色（深色系，保证白色文字可读）
+// 高饱和度多巴胺背景色（明亮+暗色穿插，保证白色文字可读）
 private val vibrantBackgroundColors = listOf(
-    // 深紫/靛蓝系
-    Color(0xFF2D1B69), Color(0xFF1A0A3E), Color(0xFF3B1F8E),
-    Color(0xFF4A1A8A), Color(0xFF2E1065), Color(0xFF3C0F7A),
-    // 深红/玫红系
-    Color(0xFF5C1A1A), Color(0xFF4A0E2E), Color(0xFF6B1D3B),
-    Color(0xFF7A1B3D), Color(0xFF4E1128), Color(0xFF8B1A4A),
-    // 深蓝/宝蓝系
-    Color(0xFF0A2463), Color(0xFF1B3A5C), Color(0xFF0D2F5E),
-    Color(0xFF143D6B), Color(0xFF0B2E50), Color(0xFF1A4A7A),
-    // 深青/孔雀绿系
-    Color(0xFF0A3D3D), Color(0xFF0E4A4A), Color(0xFF1A5C5C),
-    Color(0xFF0D3F3F), Color(0xFF0B3535), Color(0xFF1A4F4F),
-    // 深橙/琥珀系
-    Color(0xFF4A2C0A), Color(0xFF5C3A1A), Color(0xFF6B4423),
-    Color(0xFF3D2208), Color(0xFF4E3010), Color(0xFF5A3518),
-    // 深绿/森林系
-    Color(0xFF1A3A1A), Color(0xFF0E2E0E), Color(0xFF2D4A2D),
-    Color(0xFF1A4A1A), Color(0xFF0D350D), Color(0xFF2A3D2A),
-    // 霓虹深色系（高饱和度深色）
-    Color(0xFF1A0A2E), Color(0xFF2E0A1A), Color(0xFF0A1A2E),
-    Color(0xFF2E1A0A), Color(0xFF0A2E1A), Color(0xFF1A2E0A),
-    // 电影感深色
+    // 🌸 粉色/玫红系（明亮鲜艳）
+    Color(0xFFC2185B), Color(0xFFAD1457), Color(0xFF880E4F),
+    Color(0xFFD81B60), Color(0xFFE91E63), Color(0xFFEC407A),
+    Color(0xFFAB47BC), Color(0xFF9C27B0), Color(0xFF7B1FA2),
+    // 💜 紫色/靛蓝系（鲜艳）
+    Color(0xFF6A1B9A), Color(0xFF4A148C), Color(0xFF7C4DFF),
+    Color(0xFF651FFF), Color(0xFF6200EA), Color(0xFFAA00FF),
+    Color(0xFFD500F9), Color(0xFFCE93D8), Color(0xFFBA68C8),
+    // 🔴 红色/橙红系（鲜艳）
+    Color(0xFFD32F2F), Color(0xFFC62828), Color(0xFFB71C1C),
+    Color(0xFFFF5252), Color(0xFFFF1744), Color(0xFFD50000),
+    Color(0xFFFF6D00), Color(0xFFFF9100), Color(0xFFFFAB40),
+    // 🟠 橙色/琥珀系（明亮）
+    Color(0xFFE65100), Color(0xFFBF360C), Color(0xFFFF6D00),
+    Color(0xFFDD2C00), Color(0xFFFF6F00), Color(0xFFFF8F00),
+    Color(0xFFFFA000), Color(0xFFFFB300), Color(0xFFFFC107),
+    // 🟡 黄色/金色系（明亮醒目）
+    Color(0xFFF9A825), Color(0xFFF57F17), Color(0xFFFFD600),
+    Color(0xFFFFAB00), Color(0xFFFF8F00), Color(0xFFFF6F00),
+    // 🟢 绿色/青绿系（鲜艳）
+    Color(0xFF2E7D32), Color(0xFF1B5E20), Color(0xFF00C853),
+    Color(0xFF00E676), Color(0xFF69F0AE), Color(0xFF00BFA5),
+    Color(0xFF00897B), Color(0xFF00695C), Color(0xFF004D40),
+    // 🔵 蓝色/宝蓝系（鲜艳）
+    Color(0xFF1565C0), Color(0xFF0D47A1), Color(0xFF2979FF),
+    Color(0xFF2962FF), Color(0xFF0091EA), Color(0xFF00B0FF),
+    Color(0xFF00B8D4), Color(0xFF0097A7), Color(0xFF00838F),
+    // 🎬 电影感深色（经典暗色穿插）
     Color(0xFF1A1A2E), Color(0xFF16213E), Color(0xFF0F3460),
     Color(0xFF1B1B2F), Color(0xFF2D2D5E), Color(0xFF1E1E3F),
     Color(0xFF0D1B2A), Color(0xFF1B2838), Color(0xFF2C003E)

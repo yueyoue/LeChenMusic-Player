@@ -30,7 +30,8 @@ fun TabletAudiobookDetailScreen(
     audiobookId: String,
     responsiveConfig: ResponsiveConfig,
     onBack: () -> Unit,
-    onPlayChapter: (Audiobook, AudiobookChapter, List<AudiobookChapter>) -> Unit
+    onPlayChapter: (Audiobook, AudiobookChapter, List<AudiobookChapter>) -> Unit,
+    onResumeAudiobook: (Audiobook) -> Unit = { viewModel.resumeAudiobook(it) }
 ) {
     val audiobookDetail by viewModel.audiobookDetail.collectAsState()
     val serverUrl by viewModel.serverUrl.collectAsState()
@@ -209,7 +210,7 @@ fun TabletAudiobookDetailScreen(
                     Text("从头播放", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 }
                 OutlinedButton(
-                    onClick = { viewModel.resumeAudiobook(book) },
+                    onClick = { onResumeAudiobook(book) },
                     modifier = Modifier.weight(1f).height(40.dp),
                     shape = RoundedCornerShape(10.dp)
                 ) {

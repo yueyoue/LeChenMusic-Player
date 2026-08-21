@@ -1067,6 +1067,10 @@ fun NavGraphBuilder.sharedNavRoutes(
                 onPlayChapter = { book, chapter, chapters ->
                     viewModel.playAudiobookChapter(book, chapter, chapters)
                     navController.navigate(Screen.AudiobookPlayer.route)
+                },
+                onResumeAudiobook = { book ->
+                    viewModel.resumeAudiobook(book)
+                    navController.navigate(Screen.AudiobookPlayer.route)
                 }
             )
         } else {
@@ -1077,6 +1081,10 @@ fun NavGraphBuilder.sharedNavRoutes(
                 onBack = onBack,
                 onPlayChapter = { book, chapter, chapters ->
                     viewModel.playAudiobookChapter(book, chapter, chapters)
+                    navController.navigate(Screen.AudiobookPlayer.route)
+                },
+                onResumeAudiobook = { book ->
+                    viewModel.resumeAudiobook(book)
                     navController.navigate(Screen.AudiobookPlayer.route)
                 }
             )
