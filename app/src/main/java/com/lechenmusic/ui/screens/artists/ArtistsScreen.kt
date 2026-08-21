@@ -232,12 +232,18 @@ fun ArtistsScreen(
         }
     } else {
         // ═══ 手机布局 ═══
+        var searchQuery by remember { mutableStateOf("") }
+
         // Flat list: each item is either a section header or an artist
-        val flatList = remember(grouped) {
+        val flatList = remember(grouped, searchQuery) {
             val list = mutableListOf<Any>()
             for ((letter, artistList) in grouped) {
-                list.add(letter) // header
-                list.addAll(artistList) // artists
+                val filtered = if (searchQuery.isBlank()) artistList
+                    else artistList.filter { it.name.contains(searchQuery, ignoreCase = true) }
+                if (filtered.isNotEmpty()) {
+                    list.add(letter)
+                    list.addAll(filtered)
+                }
             }
             list
         }
@@ -278,15 +284,33 @@ fun ArtistsScreen(
                             .fillMaxWidth()
                             .padding(horizontal = 20.dp),
                         shape = RoundedCornerShape(21.dp),
-                        color = MaterialTheme.colorScheme.surface
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 0.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("搜索歌手", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
+                            Icon(Icons.Default.Search, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+                            androidx.compose.foundation.text.BasicTextField(
+                                value = searchQuery,
+                                onValueChange = { searchQuery = it },
+                                modifier = Modifier.weight(1f).padding(vertical = 10.dp),
+                                textStyle = androidx.compose.ui.text.TextStyle(fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface),
+                                singleLine = true,
+                                decorationBox = { innerTextField ->
+                                    Box {
+                                        if (searchQuery.isEmpty()) {
+                                            Text("搜索歌手...", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
+                                        innerTextField()
+                                    }
+                                }
+                            )
+                            if (searchQuery.isNotEmpty()) {
+                                IconButton(onClick = { searchQuery = "" }, modifier = Modifier.size(20.dp)) {
+                                    Icon(Icons.Default.Close, "清除", modifier = Modifier.size(16.dp))
+                                }
+                            }
                         }
                     }
                 }

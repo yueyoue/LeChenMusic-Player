@@ -725,7 +725,7 @@ private fun PlaylistGrid(
     onClick: (String) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        playlists.take(6).chunked(2).forEach { row ->
+        playlists.take(2).chunked(2).forEach { row ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)

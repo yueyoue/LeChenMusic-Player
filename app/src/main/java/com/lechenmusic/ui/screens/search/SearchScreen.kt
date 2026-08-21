@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -88,7 +89,7 @@ fun SearchScreen(
                     }
                 },
                 modifier = Modifier.weight(1f),
-                placeholder = { Text("搜索音乐、有声书、影视") },
+                placeholder = { Text("搜索歌曲、歌手、专辑、有声书、影视") },
                 shape = RoundedCornerShape(12.dp),
                 singleLine = true,
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
@@ -160,6 +161,44 @@ fun SearchScreen(
             } else {
                 when (selectedTab) {
                     0 -> {
+                        // 歌手搜索结果（横向头像列表，显示在歌曲顶部）
+                        val artists = searchResults?.artist ?: emptyList()
+                        if (artists.isNotEmpty()) {
+                            item {
+                                Text("歌手 (${artists.size})", fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp))
+                            }
+                            item {
+                                LazyRow(
+                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                ) {
+                                    items(artists) { artist ->
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            modifier = Modifier.width(72.dp).clickable { onArtistClick(artist.id) }
+                                        ) {
+                                            if (artist.artistImageUrl != null) {
+                                                AsyncImage(model = artist.artistImageUrl, contentDescription = artist.name,
+                                                    modifier = Modifier.size(64.dp).clip(RoundedCornerShape(32.dp)),
+                                                    contentScale = ContentScale.Crop)
+                                            } else {
+                                                Surface(modifier = Modifier.size(64.dp), shape = RoundedCornerShape(32.dp),
+                                                    color = MaterialTheme.colorScheme.surfaceVariant) {
+                                                    Box(contentAlignment = Alignment.Center) {
+                                                        Icon(Icons.Default.Person, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                    }
+                                                }
+                                            }
+                                            Spacer(modifier = Modifier.height(6.dp))
+                                            Text(artist.name, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                                textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
                         // 音乐搜索结果
                         val rawSongs = searchResults?.song ?: emptyList()
                         val q = query.lowercase()
@@ -181,38 +220,7 @@ fun SearchScreen(
                             }
                         }
 
-                        // 歌手
-                        val artists = searchResults?.artist ?: emptyList()
-                        if (artists.isNotEmpty()) {
-                            item {
-                                Text("歌手 (${artists.size})", fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
-                                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp))
-                            }
-                            items(artists) { artist ->
-                                Row(
-                                    modifier = Modifier.fillMaxWidth().clickable { onArtistClick(artist.id) }
-                                        .padding(horizontal = 20.dp, vertical = 12.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    if (artist.artistImageUrl != null) {
-                                        AsyncImage(model = artist.artistImageUrl, contentDescription = artist.name,
-                                            modifier = Modifier.size(56.dp).clip(RoundedCornerShape(28.dp)),
-                                            contentScale = ContentScale.Crop)
-                                    } else {
-                                        Surface(modifier = Modifier.size(56.dp), shape = RoundedCornerShape(28.dp),
-                                            color = MaterialTheme.colorScheme.surfaceVariant) {
-                                            Box(contentAlignment = Alignment.Center) {
-                                                Icon(Icons.Default.Person, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                                            }
-                                        }
-                                    }
-                                    Column(modifier = Modifier.padding(start = 14.dp)) {
-                                        Text(artist.name, fontSize = 15.sp, fontWeight = FontWeight.Medium)
-                                        Text("${artist.albumCount} 张专辑", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    }
-                                }
-                            }
-                        }
+
 
                         // 专辑
                         val albums = searchResults?.album ?: emptyList()

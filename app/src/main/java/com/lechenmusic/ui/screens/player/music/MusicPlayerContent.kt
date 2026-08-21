@@ -623,56 +623,52 @@ private fun PlayerControls(
 
 // ── 封面颜色提取 ─────────────────────────────────────────
 
-// 播放器备选深色背景色列表（当封面颜色太浅时使用）
-private val fallbackDarkColors = listOf(
-    Color(0xFF1a1a2e), Color(0xFF16213e), Color(0xFF0f3460),
-    Color(0xFF1b1b2f), Color(0xFF2d2d5e), Color(0xFF1e1e3f),
-    Color(0xFF0d1b2a), Color(0xFF1b2838), Color(0xFF2c003e)
+// 高饱和度多巴胺背景色（深色系，保证白色文字可读）
+private val vibrantBackgroundColors = listOf(
+    // 深紫/靛蓝系
+    Color(0xFF2D1B69), Color(0xFF1A0A3E), Color(0xFF3B1F8E),
+    Color(0xFF4A1A8A), Color(0xFF2E1065), Color(0xFF3C0F7A),
+    // 深红/玫红系
+    Color(0xFF5C1A1A), Color(0xFF4A0E2E), Color(0xFF6B1D3B),
+    Color(0xFF7A1B3D), Color(0xFF4E1128), Color(0xFF8B1A4A),
+    // 深蓝/宝蓝系
+    Color(0xFF0A2463), Color(0xFF1B3A5C), Color(0xFF0D2F5E),
+    Color(0xFF143D6B), Color(0xFF0B2E50), Color(0xFF1A4A7A),
+    // 深青/孔雀绿系
+    Color(0xFF0A3D3D), Color(0xFF0E4A4A), Color(0xFF1A5C5C),
+    Color(0xFF0D3F3F), Color(0xFF0B3535), Color(0xFF1A4F4F),
+    // 深橙/琥珀系
+    Color(0xFF4A2C0A), Color(0xFF5C3A1A), Color(0xFF6B4423),
+    Color(0xFF3D2208), Color(0xFF4E3010), Color(0xFF5A3518),
+    // 深绿/森林系
+    Color(0xFF1A3A1A), Color(0xFF0E2E0E), Color(0xFF2D4A2D),
+    Color(0xFF1A4A1A), Color(0xFF0D350D), Color(0xFF2A3D2A),
+    // 霓虹深色系（高饱和度深色）
+    Color(0xFF1A0A2E), Color(0xFF2E0A1A), Color(0xFF0A1A2E),
+    Color(0xFF2E1A0A), Color(0xFF0A2E1A), Color(0xFF1A2E0A),
+    // 电影感深色
+    Color(0xFF1A1A2E), Color(0xFF16213E), Color(0xFF0F3460),
+    Color(0xFF1B1B2F), Color(0xFF2D2D5E), Color(0xFF1E1E3F),
+    Color(0xFF0D1B2A), Color(0xFF1B2838), Color(0xFF2C003E)
 )
+
+private val coverColorCache = object : android.util.LruCache<String, Color>(100) {
+    override fun sizeOf(key: String, value: Color) = 1
+}
 
 @Composable
 fun rememberCoverColor(coverUrl: String?): Color {
-    val context = LocalContext.current
-    var bgColor by remember { mutableStateOf(Color(0xFF2d2d5e)) }
-
-    LaunchedEffect(coverUrl) {
-        if (coverUrl == null) return@LaunchedEffect
-        try {
-            val imageLoader = coil.ImageLoader(context)
-            val request = ImageRequest.Builder(context).data(coverUrl).allowHardware(false).build()
-            val drawable = imageLoader.execute(request).drawable
-            val bitmap = drawable?.toBitmap(128, 128)
-            if (bitmap != null) {
-                val palette = withContext(Dispatchers.Default) { Palette.from(bitmap).generate() }
-                // 优先取深色 swatch，避免与白色文字冲突
-                val color = palette.darkVibrantSwatch?.rgb
-                    ?: palette.darkMutedSwatch?.rgb
-                    ?: palette.vibrantSwatch?.rgb
-                    ?: palette.mutedSwatch?.rgb
-                    ?: palette.dominantSwatch?.rgb
-                if (color != null) {
-                    val c = Color(color)
-                    val luminance = c.red * 0.299f + c.green * 0.587f + c.blue * 0.114f
-                    // 如果颜色太亮（与白色文字冲突），降低亮度或使用备选深色
-                    bgColor = if (luminance > 0.45f) {
-                        // 尝试降低亮度到可用范围
-                        val hsv = FloatArray(3)
-                        android.graphics.Color.colorToHSV(color, hsv)
-                        hsv[2] = (hsv[2] * 0.4f).coerceAtMost(0.4f) // 限制明度
-                        Color(android.graphics.Color.HSVToColor((0.85f * 255).toInt(), hsv))
-                    } else {
-                        c.copy(alpha = 0.85f)
-                    }
-                } else {
-                    // 提取失败，随机选一个备选深色
-                    bgColor = fallbackDarkColors.random()
-                }
-            }
-        } catch (_: Exception) {
-            bgColor = fallbackDarkColors.random()
+    val color = remember(coverUrl) {
+        if (coverUrl == null) return@remember Color(0xFF2D1B69)
+        coverColorCache.get(coverUrl) ?: run {
+            // Use URL hash to pick a consistent but varied color
+            val hash = coverUrl.hashCode().let { if (it < 0) -it else it }
+            val picked = vibrantBackgroundColors[hash % vibrantBackgroundColors.size]
+            coverColorCache.put(coverUrl, picked)
+            picked
         }
     }
-    return bgColor
+    return color
 }
 
 

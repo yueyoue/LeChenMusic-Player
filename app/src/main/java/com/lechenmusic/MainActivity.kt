@@ -443,7 +443,7 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                                     HomeScreen(
                                         viewModel = viewModel,
                                         onAlbumClick = { aId -> navController.navigate(Screen.AlbumDetail.createRoute(aId)) },
-                                        onSongClick = { s: com.lechenmusic.data.model.Song, p: List<com.lechenmusic.data.model.Song> -> viewModel.playSong(s, p) },
+                                        onSongClick = { s: com.lechenmusic.data.model.Song, p: List<com.lechenmusic.data.model.Song> -> viewModel.playSong(s, p); navController.navigate(Screen.Player.route) },
                                         onPlaylistClick = { navController.navigate(Screen.PlaylistDetail.createRoute(it)) },
                                         onSettingsClick = { navController.navigate(Screen.Settings.route) },
                                         onNavigateToAlbums = { navController.navigate(Screen.Albums.route) },
@@ -511,7 +511,7 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                             HomeScreen(
                                 viewModel = viewModel,
                                 onAlbumClick = { aId -> navController.navigate(Screen.AlbumDetail.createRoute(aId)) },
-                                onSongClick = { s: com.lechenmusic.data.model.Song, p: List<com.lechenmusic.data.model.Song> -> viewModel.playSong(s, p) },
+                                onSongClick = { s: com.lechenmusic.data.model.Song, p: List<com.lechenmusic.data.model.Song> -> viewModel.playSong(s, p); navController.navigate(Screen.Player.route) },
                                 onPlaylistClick = { navController.navigate(Screen.PlaylistDetail.createRoute(it)) },
                                 onSettingsClick = { navController.navigate(Screen.Settings.route) },
                                 onNavigateToAlbums = { navController.navigate(Screen.Albums.route) },
@@ -567,7 +567,7 @@ fun NavGraphBuilder.sharedNavRoutes(
             com.lechenmusic.ui.screens.favorites.TabletFavoritesScreen(
                 viewModel = viewModel,
                 responsiveConfig = responsiveCfg,
-                onSongClick = { s, p -> viewModel.playSong(s, p) },
+                onSongClick = { s, p -> viewModel.playSong(s, p); navController.navigate(Screen.Player.route) },
                 onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) },
                 onAudiobookClick = { navController.navigate(Screen.AudiobookDetail.createRoute(it)) },
                 onPlaylistClick = { navController.navigate(Screen.PlaylistDetail.createRoute(it)) }
@@ -577,7 +577,7 @@ fun NavGraphBuilder.sharedNavRoutes(
                 viewModel = viewModel,
                 responsiveConfig = responsiveCfg,
                 onBack = onBack,
-                onSongClick = { s, p -> viewModel.playSong(s, p) },
+                onSongClick = { s, p -> viewModel.playSong(s, p); navController.navigate(Screen.Player.route) },
                 onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) },
                 onAudiobookClick = { navController.navigate(Screen.AudiobookDetail.createRoute(it)) },
                 onPlaylistClick = { navController.navigate(Screen.PlaylistDetail.createRoute(it)) }
@@ -591,7 +591,7 @@ fun NavGraphBuilder.sharedNavRoutes(
             viewModel = viewModel,
             videoViewModel = videoViewModel,
             responsiveConfig = responsiveCfg,
-            onSongClick = { s, p -> viewModel.playSong(s, p) },
+            onSongClick = { s, p -> viewModel.playSong(s, p); navController.navigate(Screen.Player.route) },
             onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) },
             onArtistClick = { navController.navigate(Screen.ArtistDetail.createRoute(it)) },
             onAudiobookClick = { navController.navigate(Screen.AudiobookDetail.createRoute(it)) },
@@ -641,7 +641,7 @@ fun NavGraphBuilder.sharedNavRoutes(
         val responsiveCfg = com.lechenmusic.ui.responsive.rememberResponsiveConfig(windowSizeClass)
         AllSongsScreen(
             viewModel = viewModel,
-            onSongClick = { s, p -> viewModel.playSong(s, p) },
+            onSongClick = { s, p -> viewModel.playSong(s, p); navController.navigate(Screen.Player.route) },
             onArtistClick = { navController.navigate(Screen.ArtistDetail.createRoute(it)) },
             onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) },
             onBack = if (responsiveCfg.isMedium || responsiveCfg.isExpanded) onBack else null,
@@ -674,7 +674,7 @@ fun NavGraphBuilder.sharedNavRoutes(
                 viewModel = viewModel,
                 responsiveConfig = responsiveCfg,
                 onBack = onBack,
-                onSongClick = { s, p -> viewModel.playSong(s, p) },
+                onSongClick = { s, p -> viewModel.playSong(s, p); navController.navigate(Screen.Player.route) },
                 onArtistClick = { navController.navigate(Screen.ArtistDetail.createRoute(it)) },
                 onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) }
             )
@@ -682,7 +682,7 @@ fun NavGraphBuilder.sharedNavRoutes(
             CachedMusicScreen(
                 viewModel = viewModel,
                 onBack = onBack,
-                onSongClick = { s, p -> viewModel.playSong(s, p) },
+                onSongClick = { s, p -> viewModel.playSong(s, p); navController.navigate(Screen.Player.route) },
                 onArtistClick = { navController.navigate(Screen.ArtistDetail.createRoute(it)) },
                 onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) }
             )
@@ -695,7 +695,7 @@ fun NavGraphBuilder.sharedNavRoutes(
             viewModel = viewModel,
             responsiveConfig = responsiveCfg,
             onBack = onBack,
-            onSongClick = { s, p -> viewModel.playSong(s, p) },
+            onSongClick = { s, p -> viewModel.playSong(s, p); navController.navigate(Screen.Player.route) },
             onArtistClick = { navController.navigate(Screen.ArtistDetail.createRoute(it)) },
             onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) }
         )
@@ -984,7 +984,7 @@ fun NavGraphBuilder.sharedNavRoutes(
             albumId = albumId,
             responsiveConfig = responsiveCfg,
             onBack = onBack,
-            onSongClick = { s, p -> viewModel.playSong(s, p, albumId = albumId) },
+            onSongClick = { s, p -> viewModel.playSong(s, p, albumId = albumId); navController.navigate(Screen.Player.route) },
             onArtistClick = { navController.navigate(Screen.ArtistDetail.createRoute(it)) },
             onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) }
         )
@@ -1000,7 +1000,7 @@ fun NavGraphBuilder.sharedNavRoutes(
                 responsiveConfig = responsiveCfg,
                 onBack = onBack,
                 onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) },
-                onSongClick = { s, p -> viewModel.playSong(s, p) }
+                onSongClick = { s, p -> viewModel.playSong(s, p); navController.navigate(Screen.Player.route) }
             )
         } else {
             ArtistDetailScreen(
@@ -1009,7 +1009,7 @@ fun NavGraphBuilder.sharedNavRoutes(
                 responsiveConfig = responsiveCfg,
                 onBack = onBack,
                 onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) },
-                onSongClick = { s, p -> viewModel.playSong(s, p) }
+                onSongClick = { s, p -> viewModel.playSong(s, p); navController.navigate(Screen.Player.route) }
             )
         }
     }
@@ -1020,7 +1020,7 @@ fun NavGraphBuilder.sharedNavRoutes(
             viewModel = viewModel,
             playlistId = playlistId,
             onBack = onBack,
-            onSongClick = { s, p -> viewModel.playSong(s, p) },
+            onSongClick = { s, p -> viewModel.playSong(s, p); navController.navigate(Screen.Player.route) },
             onArtistClick = { navController.navigate(Screen.ArtistDetail.createRoute(it)) },
             onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) }
         )
