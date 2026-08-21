@@ -31,11 +31,21 @@ fun AudiobookDetailScreen(
     responsiveConfig: ResponsiveConfig? = null,
     onBack: () -> Unit,
     onPlayChapter: (Audiobook, AudiobookChapter, List<AudiobookChapter>) -> Unit,
-    onResumeAudiobook: (Audiobook) -> Unit = { viewModel.resumeAudiobook(it) }
+    onResumeAudiobook: (Audiobook) -> Unit = { viewModel.resumeAudiobook(it, navigateOnReady = true) },
+    onNavigateToAudiobookPlayer: () -> Unit = {}
 ) {
     val config = responsiveConfig
     val isTablet = config != null && (config.isMedium || config.isExpanded)
     val audiobookDetail by viewModel.audiobookDetail.collectAsState()
+
+    // 有声书继续播放后，状态就绪时导航到播放器
+    val pendingResumeNav by viewModel.pendingResumeNavigation.collectAsState()
+    LaunchedEffect(pendingResumeNav) {
+        if (pendingResumeNav) {
+            viewModel.consumeResumeNavigation()
+            onNavigateToAudiobookPlayer()
+        }
+    }
     val serverUrl by viewModel.serverUrl.collectAsState()
     val username by viewModel.username.collectAsState()
     val password by viewModel.password.collectAsState()

@@ -455,6 +455,7 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                                         onNavigateToArtists = { navController.navigate(Screen.Artists.route) },
                                         onNavigateToAllPlaylists = { navController.navigate(Screen.AllPlaylists.route) },
                                         onNavigateToCachedMusic = { navController.navigate(Screen.CachedMusic.route) },
+                                        onNavigateToPlayer = { navController.navigate(Screen.Player.route) },
                                         onNavigateToAudiobook = { genre -> navController.navigate(Screen.Audiobook.createRoute(genre)) },
                                         onNavigateToAudiobookDetail = { id -> navController.navigate(Screen.AudiobookDetail.createRoute(id)) },
                                         onNavigateToAudiobookPlayer = { navController.navigate(Screen.AudiobookPlayer.route) },
@@ -524,6 +525,7 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                                 onNavigateToArtists = { navController.navigate(Screen.Artists.route) },
                                 onNavigateToAllPlaylists = { navController.navigate(Screen.AllPlaylists.route) },
                                 onNavigateToCachedMusic = { navController.navigate(Screen.CachedMusic.route) },
+                                onNavigateToPlayer = { navController.navigate(Screen.Player.route) },
                                 onNavigateToAudiobook = { genre -> navController.navigate(Screen.Audiobook.createRoute(genre)) },
                                 onNavigateToAudiobookDetail = { id -> navController.navigate(Screen.AudiobookDetail.createRoute(id)) },
                                 onNavigateToAudiobookPlayer = { navController.navigate(Screen.AudiobookPlayer.route) },
@@ -1072,9 +1074,9 @@ fun NavGraphBuilder.sharedNavRoutes(
                     navController.navigate(Screen.AudiobookPlayer.route)
                 },
                 onResumeAudiobook = { book ->
-                    viewModel.resumeAudiobook(book)
-                    navController.navigate(Screen.AudiobookPlayer.route)
-                }
+                    viewModel.resumeAudiobook(book, navigateOnReady = true)
+                },
+                onNavigateToAudiobookPlayer = { navController.navigate(Screen.AudiobookPlayer.route) }
             )
         } else {
             AudiobookDetailScreen(
@@ -1087,9 +1089,9 @@ fun NavGraphBuilder.sharedNavRoutes(
                     navController.navigate(Screen.AudiobookPlayer.route)
                 },
                 onResumeAudiobook = { book ->
-                    viewModel.resumeAudiobook(book)
-                    navController.navigate(Screen.AudiobookPlayer.route)
-                }
+                    viewModel.resumeAudiobook(book, navigateOnReady = true)
+                },
+                onNavigateToAudiobookPlayer = { navController.navigate(Screen.AudiobookPlayer.route) }
             )
         }
     }

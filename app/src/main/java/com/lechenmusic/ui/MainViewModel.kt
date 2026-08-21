@@ -1843,7 +1843,13 @@ fun loadAudiobooks() {
         }
     }
 
-    fun resumeAudiobook(book: com.lechenmusic.data.model.Audiobook) {
+    // 有声书继续播放后是否需要导航到播放器
+    private val _pendingResumeNavigation = MutableStateFlow(false)
+    val pendingResumeNavigation: StateFlow<Boolean> = _pendingResumeNavigation.asStateFlow()
+
+    fun consumeResumeNavigation() { _pendingResumeNavigation.value = false }
+
+    fun resumeAudiobook(book: com.lechenmusic.data.model.Audiobook, navigateOnReady: Boolean = false) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 // First try to use already-loaded detail (avoid extra API call)
@@ -1883,6 +1889,7 @@ fun loadAudiobooks() {
                         _currentChapterIndex.value = chapterIndex
                         playerManager.playUrl(url, resumeChapter.title, book.title, "audiobook_${book.id}_${resumeChapter.id}", coverUrl, initialSeekMs = seekToMs)
                         _audiobookIsPlaying.value = true
+                        if (navigateOnReady) _pendingResumeNavigation.value = true
                     }
                 } else {
                     // No progress found, play from beginning
@@ -1897,6 +1904,7 @@ fun loadAudiobooks() {
                         _currentChapterIndex.value = 0
                         playerManager.playUrl(url, firstChapter.title, book.title, "audiobook_${book.id}_${firstChapter.id}", coverUrl)
                         _audiobookIsPlaying.value = true
+                        if (navigateOnReady) _pendingResumeNavigation.value = true
                     }
                 }
             } catch (e: Exception) {

@@ -69,6 +69,7 @@ fun HomeScreen(
     onNavigateToArtists: () -> Unit = {},
     onNavigateToAllPlaylists: () -> Unit = {},
     onNavigateToCachedMusic: () -> Unit = {},
+    onNavigateToPlayer: () -> Unit = {},
     onNavigateToAudiobook: (String?) -> Unit = {},
     onNavigateToAudiobookDetail: (String) -> Unit = {},
     onNavigateToAudiobookPlayer: () -> Unit = {},
@@ -116,6 +117,15 @@ fun HomeScreen(
     val config = responsiveConfig
     val isTablet = config != null && (config.isMedium || config.isExpanded)
 
+    // 有声书继续播放后，状态就绪时导航到播放器
+    val pendingResumeNav by viewModel.pendingResumeNavigation.collectAsState()
+    LaunchedEffect(pendingResumeNav) {
+        if (pendingResumeNav) {
+            viewModel.consumeResumeNavigation()
+            onNavigateToAudiobookPlayer()
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -150,7 +160,7 @@ fun HomeScreen(
                             onNavigateToAllPlaylists = onNavigateToAllPlaylists,
                             onNavigateToCachedMusic = onNavigateToCachedMusic,
                             onRefreshDaily = { viewModel.refreshDailySongs() },
-                            onPlayRadio = { viewModel.playRadioStation(it, radioStations) },
+                            onPlayRadio = { viewModel.playRadioStation(it, radioStations); onNavigateToPlayer() },
                             onSongMenu = { _ -> },
                             starredRadioIds = starredRadioIds
                         )
@@ -228,7 +238,7 @@ fun HomeScreen(
                     onNavigateToArtists = onNavigateToArtists, onNavigateToAllPlaylists = onNavigateToAllPlaylists,
                     onNavigateToCachedMusic = onNavigateToCachedMusic,
                     onRefreshDaily = { viewModel.refreshDailySongs() },
-                    onPlayRadio = { viewModel.playRadioStation(it, radioStations) },
+                    onPlayRadio = { viewModel.playRadioStation(it, radioStations); onNavigateToPlayer() },
                     onSongMenu = { _ -> },
                     starredRadioIds = starredRadioIds,
                     headerContent = {
@@ -342,8 +352,7 @@ fun HomeScreen(
                                 password,
                                 progress = bwp.progress
                             ) {
-                                viewModel.resumeAudiobook(bwp.toAudiobook())
-                                onNavigateToAudiobookPlayer()
+                                viewModel.resumeAudiobook(bwp.toAudiobook(), navigateOnReady = true)
                             }
                         }
                     } else {
@@ -2216,7 +2225,7 @@ private fun TabletMusicHomeContent(
             // ===== Radio =====
             item { TabletSecHd("电台", "", config) }
             if (radioStations.isNotEmpty()) {
-                items(sortedRadioStations.take(4), key = { it.id }) { TabletRadioRow(it, config) { viewModel.playRadioStation(it, sortedRadioStations) } }
+                items(sortedRadioStations.take(4), key = { it.id }) { TabletRadioRow(it, config) { viewModel.playRadioStation(it, sortedRadioStations); onNavigateToPlayer() } }
             }
         }
     }

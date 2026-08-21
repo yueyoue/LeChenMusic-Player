@@ -278,8 +278,7 @@ fun TabletAudiobookHomeContent(
                         username = username,
                         password = password,
                         onClick = {
-                            viewModel.resumeAudiobook(bwp.toAudiobook())
-                            onNavigateToAudiobookPlayer()
+                            viewModel.resumeAudiobook(bwp.toAudiobook(), navigateOnReady = true)
                         }
                     )
                 }
