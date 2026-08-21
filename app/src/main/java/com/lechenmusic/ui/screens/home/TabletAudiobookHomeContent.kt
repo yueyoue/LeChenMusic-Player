@@ -55,7 +55,8 @@ fun TabletAudiobookHomeContent(
     onNavigateToAudiobookDetail: (String) -> Unit,
     onNavigateToNarrator: (String) -> Unit,
     onNavigateToNarratorList: () -> Unit,
-    onNavigateToRecentAudiobookListened: () -> Unit = {}
+    onNavigateToRecentAudiobookListened: () -> Unit = {},
+    onNavigateToAudiobookPlayer: () -> Unit = {}
 ) {
     val cardSize = responsiveConfig?.albumCardSize ?: 150.dp
     val gap = responsiveConfig?.itemSpacing ?: 16.dp
@@ -276,7 +277,10 @@ fun TabletAudiobookHomeContent(
                         serverUrl = serverUrl,
                         username = username,
                         password = password,
-                        onClick = { onNavigateToAudiobookDetail(bwp.id) }
+                        onClick = {
+                            viewModel.resumeAudiobook(bwp.toAudiobook())
+                            onNavigateToAudiobookPlayer()
+                        }
                     )
                 }
             } else {

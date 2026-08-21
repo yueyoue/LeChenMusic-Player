@@ -71,6 +71,7 @@ fun HomeScreen(
     onNavigateToCachedMusic: () -> Unit = {},
     onNavigateToAudiobook: (String?) -> Unit = {},
     onNavigateToAudiobookDetail: (String) -> Unit = {},
+    onNavigateToAudiobookPlayer: () -> Unit = {},
     onNavigateToNarrator: (String) -> Unit = {},
     onNavigateToNarratorList: () -> Unit = {},
     onNavigateToRecentAudiobookListened: () -> Unit = {},
@@ -149,7 +150,7 @@ fun HomeScreen(
                             onNavigateToAllPlaylists = onNavigateToAllPlaylists,
                             onNavigateToCachedMusic = onNavigateToCachedMusic,
                             onRefreshDaily = { viewModel.refreshDailySongs() },
-                            onPlayRadio = { viewModel.playerManager.playRadioStation(it) },
+                            onPlayRadio = { viewModel.playerManager.playRadioStation(it, radioStations) },
                             onSongMenu = { _ -> },
                             starredRadioIds = starredRadioIds
                         )
@@ -171,7 +172,8 @@ fun HomeScreen(
                             onNavigateToNarrator = onNavigateToNarrator,
                             responsiveConfig = config,
                             onNavigateToNarratorList = onNavigateToNarratorList,
-                            onNavigateToRecentAudiobookListened = onNavigateToRecentAudiobookListened
+                            onNavigateToRecentAudiobookListened = onNavigateToRecentAudiobookListened,
+                            onNavigateToAudiobookPlayer = onNavigateToAudiobookPlayer
                         )
                     }
                 }
@@ -226,7 +228,7 @@ fun HomeScreen(
                     onNavigateToArtists = onNavigateToArtists, onNavigateToAllPlaylists = onNavigateToAllPlaylists,
                     onNavigateToCachedMusic = onNavigateToCachedMusic,
                     onRefreshDaily = { viewModel.refreshDailySongs() },
-                    onPlayRadio = { viewModel.playerManager.playRadioStation(it) },
+                    onPlayRadio = { viewModel.playerManager.playRadioStation(it, radioStations) },
                     onSongMenu = { _ -> },
                     starredRadioIds = starredRadioIds,
                     headerContent = {
@@ -300,7 +302,8 @@ fun HomeScreen(
                             onNavigateToNarrator = onNavigateToNarrator,
                             responsiveConfig = config,
                             onNavigateToNarratorList = onNavigateToNarratorList,
-                            onNavigateToRecentAudiobookListened = onNavigateToRecentAudiobookListened
+                            onNavigateToRecentAudiobookListened = onNavigateToRecentAudiobookListened,
+                            onNavigateToAudiobookPlayer = onNavigateToAudiobookPlayer
                         )
                     }
                 } else if (homeMode == "audiobook") {
@@ -340,7 +343,7 @@ fun HomeScreen(
                                 progress = bwp.progress
                             ) {
                                 viewModel.resumeAudiobook(bwp.toAudiobook())
-                                onNavigateToAudiobookDetail(bwp.id)
+                                onNavigateToAudiobookPlayer()
                             }
                         }
                     } else {
@@ -2213,7 +2216,7 @@ private fun TabletMusicHomeContent(
             // ===== Radio =====
             item { TabletSecHd("电台", "", config) }
             if (radioStations.isNotEmpty()) {
-                items(sortedRadioStations.take(4), key = { it.id }) { TabletRadioRow(it, config) { viewModel.playerManager.playRadioStation(it) } }
+                items(sortedRadioStations.take(4), key = { it.id }) { TabletRadioRow(it, config) { viewModel.playerManager.playRadioStation(it, sortedRadioStations) } }
             }
         }
     }

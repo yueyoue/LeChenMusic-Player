@@ -102,7 +102,7 @@ fun RadioScreen(
                         username = username,
                         password = password,
                         isStarred = isStarred,
-                        onClick = { viewModel.playerManager.playRadioStation(station) },
+                        onClick = { viewModel.playerManager.playRadioStation(station, sortedStations) },
                         onStarToggle = {
                             if (isStarred) viewModel.unstarRadio(station.id)
                             else viewModel.starRadio(station.id)

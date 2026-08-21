@@ -57,6 +57,7 @@ fun FavoritesScreen(
     val starredAudiobooks by viewModel.starredAudiobooks.collectAsState()
     val starredPlaylists by viewModel.starredPlaylists.collectAsState()
     val starredRadios by viewModel.starredRadios.collectAsState()
+    val radioStations by viewModel.radioStations.collectAsState()
     val playlists by viewModel.playlists.collectAsState()
     val serverUrl by viewModel.serverUrl.collectAsState()
     val username by viewModel.username.collectAsState()
@@ -236,7 +237,7 @@ fun FavoritesScreen(
                     serverUrl = serverUrl,
                     username = username,
                     password = password,
-                    onPlayRadio = { viewModel.playerManager.playRadioStation(it) },
+                    onPlayRadio = { viewModel.playerManager.playRadioStation(it, radioStations) },
                     onUnstarRadio = { viewModel.unstarRadio(it.id) }
                 )
             }
@@ -290,7 +291,7 @@ fun FavoritesScreen(
                     serverUrl = serverUrl,
                     username = username,
                     password = password,
-                    onPlayRadio = { viewModel.playerManager.playRadioStation(it) },
+                    onPlayRadio = { viewModel.playerManager.playRadioStation(it, radioStations) },
                     onUnstarRadio = { viewModel.unstarRadio(it.id) }
                 )
             }

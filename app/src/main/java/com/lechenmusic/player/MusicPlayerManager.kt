@@ -609,6 +609,9 @@ class MusicPlayerManager(private val context: Context) {
         }
     }
 
+    // 存储电台流地址，用于播放列表切换
+    private val radioStreamUrls = mutableMapOf<String, String>()
+
     fun playSong(song: Song, songs: List<Song> = listOf(song)) {
         _playlist.value = songs
         val index = songs.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
@@ -616,7 +619,12 @@ class MusicPlayerManager(private val context: Context) {
 
         player?.apply {
             val mediaItems = songs.map { s ->
-                val url = repository!!.getStreamUrl(s.id)
+                // 电台使用存储的流地址，普通歌曲使用 repository
+                val url = if (s.id.startsWith("radio_")) {
+                    radioStreamUrls[s.id] ?: repository!!.getStreamUrl(s.id)
+                } else {
+                    repository!!.getStreamUrl(s.id)
+                }
                 MediaItem.Builder()
                     .setUri(url)
                     .setMediaId(s.id)
@@ -634,7 +642,23 @@ class MusicPlayerManager(private val context: Context) {
             play()
         }
         _currentSong.value = song
-        checkStarred(song.id)
+        // 电台不检查收藏状态（走单独的逻辑）
+        if (!song.id.startsWith("radio_")) {
+            checkStarred(song.id)
+        } else {
+            _isStarred.value = false
+            scope.launch(Dispatchers.IO) {
+                try {
+                    val repo = repository ?: return@launch
+                    val starredResult = repo.getStarred()
+                    if (starredResult.isSuccess) {
+                        val starredRadios = starredResult.getOrNull()?.radios ?: emptyList()
+                        val radioId = song.id.removePrefix("radio_")
+                        _isStarred.value = starredRadios.any { it.id == radioId }
+                    }
+                } catch (_: Exception) {}
+            }
+        }
         updateNotification()
     }
 
@@ -924,7 +948,7 @@ class MusicPlayerManager(private val context: Context) {
         } catch (_: Exception) { }
     }
 
-    fun playRadioStation(station: com.lechenmusic.data.model.InternetRadioStation) {
+    fun playRadioStation(station: com.lechenmusic.data.model.InternetRadioStation, allStations: List<com.lechenmusic.data.model.InternetRadioStation> = emptyList()) {
         player?.apply {
             val mediaItem = MediaItem.Builder()
                 .setUri(station.streamUrl)
@@ -949,8 +973,31 @@ class MusicPlayerManager(private val context: Context) {
             duration = 0,
             coverArt = station.coverArt
         )
-        _playlist.value = emptyList()
-        _currentIndex.value = 0
+        // 设置播放列表为所有电台，支持上下滑动切换
+        if (allStations.isNotEmpty()) {
+            // 存储所有电台的流地址
+            radioStreamUrls.clear()
+            allStations.forEach { s ->
+                radioStreamUrls["radio_${s.id}"] = s.streamUrl
+            }
+            val songs = allStations.map { s ->
+                com.lechenmusic.data.model.Song(
+                    id = "radio_${s.id}",
+                    title = s.name,
+                    artist = "电台",
+                    album = "电台",
+                    duration = 0,
+                    coverArt = s.coverArt
+                )
+            }
+            _playlist.value = songs
+            _currentIndex.value = allStations.indexOfFirst { it.id == station.id }.coerceAtLeast(0)
+        } else {
+            // 单个电台也存储流地址
+            radioStreamUrls["radio_${station.id}"] = station.streamUrl
+            _playlist.value = emptyList()
+            _currentIndex.value = 0
+        }
         _isStarred.value = false
         updateNotification()
         // 异步检查收藏状态
