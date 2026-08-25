@@ -623,58 +623,111 @@ private fun PlayerControls(
 
 // ── 封面颜色提取 ─────────────────────────────────────────
 
-// 高饱和度多巴胺背景色（明亮+暗色穿插，保证白色文字可读）
-private val vibrantBackgroundColors = listOf(
-    // 🌸 粉色/玫红系（明亮鲜艳）
-    Color(0xFFC2185B), Color(0xFFAD1457), Color(0xFF880E4F),
-    Color(0xFFD81B60), Color(0xFFE91E63), Color(0xFFEC407A),
-    Color(0xFFAB47BC), Color(0xFF9C27B0), Color(0xFF7B1FA2),
-    // 💜 紫色/靛蓝系（鲜艳）
-    Color(0xFF6A1B9A), Color(0xFF4A148C), Color(0xFF7C4DFF),
-    Color(0xFF651FFF), Color(0xFF6200EA), Color(0xFFAA00FF),
-    Color(0xFFD500F9), Color(0xFFCE93D8), Color(0xFFBA68C8),
-    // 🔴 红色/橙红系（鲜艳）
-    Color(0xFFD32F2F), Color(0xFFC62828), Color(0xFFB71C1C),
-    Color(0xFFFF5252), Color(0xFFFF1744), Color(0xFFD50000),
-    Color(0xFFFF6D00), Color(0xFFFF9100), Color(0xFFFFAB40),
-    // 🟠 橙色/琥珀系（明亮）
-    Color(0xFFE65100), Color(0xFFBF360C), Color(0xFFFF6D00),
-    Color(0xFFDD2C00), Color(0xFFFF6F00), Color(0xFFFF8F00),
-    Color(0xFFFFA000), Color(0xFFFFB300), Color(0xFFFFC107),
-    // 🟡 黄色/金色系（明亮醒目）
-    Color(0xFFF9A825), Color(0xFFF57F17), Color(0xFFFFD600),
-    Color(0xFFFFAB00), Color(0xFFFF8F00), Color(0xFFFF6F00),
-    // 🟢 绿色/青绿系（鲜艳）
-    Color(0xFF2E7D32), Color(0xFF1B5E20), Color(0xFF00C853),
-    Color(0xFF00E676), Color(0xFF69F0AE), Color(0xFF00BFA5),
-    Color(0xFF00897B), Color(0xFF00695C), Color(0xFF004D40),
-    // 🔵 蓝色/宝蓝系（鲜艳）
-    Color(0xFF1565C0), Color(0xFF0D47A1), Color(0xFF2979FF),
-    Color(0xFF2962FF), Color(0xFF0091EA), Color(0xFF00B0FF),
-    Color(0xFF00B8D4), Color(0xFF0097A7), Color(0xFF00838F),
-    // 🎬 电影感深色（经典暗色穿插）
-    Color(0xFF1A1A2E), Color(0xFF16213E), Color(0xFF0F3460),
-    Color(0xFF1B1B2F), Color(0xFF2D2D5E), Color(0xFF1E1E3F),
-    Color(0xFF0D1B2A), Color(0xFF1B2838), Color(0xFF2C003E)
-)
-
+// 封面主色缓存（URL -> 提取后的暗化背景色）
 private val coverColorCache = object : android.util.LruCache<String, Color>(100) {
     override fun sizeOf(key: String, value: Color) = 1
 }
 
+// 默认深色背景（封面加载前 / 提取失败时使用）
+private val defaultCoverColor = Color(0xFF1A1A2E)
+
+/**
+ * 从封面图提取主色作为播放器背景色。
+ *
+ * 参考业界做法（Apple Music / Spotify / 网易云）：
+ * 1. 用 Palette 提取封面图的 Dominant / Muted / Vibrant 色
+ * 2. 优先选 Muted（柔和）或 Dominant，避免高饱和色刺眼
+ * 3. 降低亮度（确保白色文字可读）+ 稍微增加饱和度（避免灰蒙蒙）
+ * 4. 如果提取结果亮度仍然过高，则进一步压暗
+ */
 @Composable
 fun rememberCoverColor(coverUrl: String?): Color {
-    val color = remember(coverUrl) {
-        if (coverUrl == null) return@remember Color(0xFF2D1B69)
-        coverColorCache.get(coverUrl) ?: run {
-            // Use URL hash to pick a consistent but varied color
-            val hash = coverUrl.hashCode().let { if (it < 0) -it else it }
-            val picked = vibrantBackgroundColors[hash % vibrantBackgroundColors.size]
-            coverColorCache.put(coverUrl, picked)
-            picked
+    val context = LocalContext.current
+    // 默认深色，避免闪烁
+    var color by remember(coverUrl) { mutableStateOf(coverColorCache.get(coverUrl) ?: defaultCoverColor) }
+
+    LaunchedEffect(coverUrl) {
+        if (coverUrl == null) {
+            color = defaultCoverColor
+            return@LaunchedEffect
+        }
+        // 先检查缓存
+        coverColorCache.get(coverUrl)?.let {
+            color = it
+            return@LaunchedEffect
+        }
+        // 异步加载封面图并提取颜色
+        try {
+            val bitmap = withContext(Dispatchers.IO) {
+                val request = ImageRequest.Builder(context)
+                    .data(coverUrl)
+                    .size(128) // 小图即可，只要提取颜色
+                    .allowHardware(false) // Palette 需要 software bitmap
+                    .build()
+                val result = coil.ImageLoader(context).execute(request)
+                (result.drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap
+            }
+            if (bitmap != null) {
+                val palette = withContext(Dispatchers.Default) {
+                    Palette.from(bitmap)
+                        .maximumColorCount(16)
+                        .resizeBitmapArea(128 * 128) // 控制计算量
+                        .generate()
+                }
+                // 选色优先级：Muted > Vibrant > DarkMuted > DarkVibrant > Dominant
+                // Muted 色柔和不刺眼，最适合作为背景
+                val swatch = palette.mutedSwatch
+                    ?: palette.vibrantSwatch
+                    ?: palette.darkMutedSwatch
+                    ?: palette.darkVibrantSwatch
+                    ?: palette.dominantSwatch
+
+                if (swatch != null) {
+                    val extracted = Color(swatch.rgb)
+                    val darkened = ensureDarkBackground(extracted)
+                    color = darkened
+                    coverColorCache.put(coverUrl, darkened)
+                } else {
+                    // Palette 没提取到颜色，用封面图主色的近似值
+                    color = defaultCoverColor
+                    coverColorCache.put(coverUrl, defaultCoverColor)
+                }
+            }
+        } catch (_: Exception) {
+            // 加载失败，保持默认色
         }
     }
     return color
+}
+
+/**
+ * 确保背景色足够暗，白色文字可读。
+ *
+ * 策略（参考 Spotify / Apple Music）：
+ * - 目标亮度 (L in HSL) ≤ 0.35（白色文字 WCAG 对比度 ≥ 4.5:1）
+ * - 如果亮度过高，直接压暗到目标亮度
+ * - 同时稍微提高饱和度，避免压暗后颜色发灰
+ * - 如果原始色已是深色，保持不变
+ */
+private fun ensureDarkBackground(color: Color): Color {
+    val hsv = FloatArray(3)
+    android.graphics.Color.colorToHSV(color.toArgb(), hsv)
+    val hue = hsv[0]        // 0-360
+    val saturation = hsv[1] // 0-1
+    val brightness = hsv[2] // 0-1
+
+    // 目标：亮度 ≤ 0.35，饱和度保持或略增
+    val targetBrightness = 0.35f
+    val newBrightness = brightness.coerceAtMost(targetBrightness)
+    // 如果压暗了亮度，适当增加饱和度（避免发灰）
+    val newSaturation = if (brightness > targetBrightness) {
+        (saturation * 1.3f).coerceAtMost(1.0f)
+    } else {
+        saturation
+    }
+
+    val newColor = android.graphics.Color.HSVToColor(floatArrayOf(hue, newSaturation, newBrightness))
+    return Color(newColor)
 }
 
 

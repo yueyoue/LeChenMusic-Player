@@ -39,7 +39,7 @@ import kotlinx.coroutines.withContext
 @Composable
 fun rememberCoverColor(coverUrl: String?): Color {
     val context = LocalContext.current
-    var bgColor by remember { mutableStateOf(Color(0xFF1a1a2e)) }
+    var bgColor by remember { mutableStateOf(Color(0xFF1A1A2E)) }
 
     LaunchedEffect(coverUrl) {
         if (coverUrl == null) return@LaunchedEffect
@@ -51,19 +51,38 @@ fun rememberCoverColor(coverUrl: String?): Color {
                 val palette = withContext(Dispatchers.Default) {
                     Palette.from(bitmap).generate()
                 }
-                // 优先取高饱和度颜色，其次暗色，最后主色调
-                val color = palette.vibrantSwatch?.rgb
-                    ?: palette.darkVibrantSwatch?.rgb
-                    ?: palette.mutedSwatch?.rgb
-                    ?: palette.dominantSwatch?.rgb
-                if (color != null) {
-                    bgColor = Color(color).copy(alpha = 0.85f)
+                // 选色优先级：Muted > Vibrant > DarkMuted > Dominant
+                // Muted 色柔和不刺眼，最适合作为背景
+                val swatch = palette.mutedSwatch
+                    ?: palette.vibrantSwatch
+                    ?: palette.darkMutedSwatch
+                    ?: palette.darkVibrantSwatch
+                    ?: palette.dominantSwatch
+                if (swatch != null) {
+                    bgColor = ensureDarkBackground(Color(swatch.rgb))
                 }
             }
         } catch (_: Exception) {}
     }
 
     return bgColor
+}
+
+/**
+ * 确保背景色足够暗，白色文字可读。
+ * 目标亮度 (HSL L) ≤ 0.35，同时适当提高饱和度避免发灰。
+ */
+private fun ensureDarkBackground(color: Color): Color {
+    val hsv = FloatArray(3)
+    android.graphics.Color.colorToHSV(color.toArgb(), hsv)
+    val targetBrightness = 0.35f
+    val newBrightness = hsv[2].coerceAtMost(targetBrightness)
+    val newSaturation = if (hsv[2] > targetBrightness) {
+        (hsv[1] * 1.3f).coerceAtMost(1.0f)
+    } else {
+        hsv[1]
+    }
+    return Color(android.graphics.Color.HSVToColor(floatArrayOf(hsv[0], newSaturation, newBrightness)))
 }
 
 // ==================== Cover Image Display ====================
