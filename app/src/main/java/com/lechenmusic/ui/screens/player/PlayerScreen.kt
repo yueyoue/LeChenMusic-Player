@@ -28,6 +28,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -778,9 +779,8 @@ private fun CoverView(song: Song, serverUrl: String, username: String, password:
             coil.compose.AsyncImage(
                 model = coverUrl,
                 contentDescription = null,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                alpha = 0.35f
+                modifier = Modifier.fillMaxSize().alpha(0.35f),
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop
             )
             // 顶部渐变遮罩
             Box(
