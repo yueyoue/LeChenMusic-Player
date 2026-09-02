@@ -189,10 +189,8 @@ fun MusicPlayerContent(
             }
         }
 
-        // Load lyrics for current visible page
-        LaunchedEffect(pSong.id) {
-            if (page == pagerState.currentPage) viewModel.loadLyrics(pSong)
-        }
+        // Load lyrics for current visible page (only trigger load, don't clear here)
+        // Lyrics loading is handled by the outer LaunchedEffect(pageSong.id)
 
         val pLrcLines = if (page == pagerState.currentPage) lrcLines else null
         val pPlainLines = if (page == pagerState.currentPage) plainLines else emptyList()
@@ -225,6 +223,10 @@ fun MusicPlayerContent(
                     }
                 } else {
                     // ── 手机：封面图铺满左右，从返回按钮下方开始 ──
+                    // HorizontalPager：左滑歌词页，右滑封面页
+                    val hPagerState = rememberPagerState(pageCount = { 2 })
+
+                    // 封面图区域（固定在顶部，不参与滑动）
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -248,11 +250,11 @@ fun MusicPlayerContent(
                                 Icon(Icons.Default.MusicNote, null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f), modifier = Modifier.size(64.dp))
                             }
                         }
-                        // 顶部渐变遮罩（封面上边缘融入背景色）
+                        // 顶部渐变遮罩（100dp，封面上边缘融入背景色）
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(80.dp)
+                                .height(100.dp)
                                 .align(Alignment.TopCenter)
                                 .background(
                                     Brush.verticalGradient(
@@ -273,22 +275,81 @@ fun MusicPlayerContent(
                                 )
                         )
                     }
-                    // 歌曲信息
+                    // 歌曲信息（固定在封面下方）
                     Column(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         SongInfo(song = pSong, titleSize = 22.sp, artistSize = 14.sp, onArtistClick = { if (pSong.artistId.isNotBlank()) onNavigateToArtist(pSong.artistId) }, center = true, playerTextColor = pTextColor, playerTextSecondary = pTextSecondary)
                     }
-                    // 歌词区域
-                    LyricsPanel(
-                        lrcLines = pLrcLines,
-                        plainLines = pPlainLines,
-                        currentPosition = currentPosition,
-                        playerTextColor = pTextColor,
-                        playerTextTertiary = pTextTertiary,
-                        modifier = Modifier.weight(1f).padding(horizontal = 24.dp)
-                    )
+                    // 可滑动区域：封面歌词 | 全屏歌词
+                    HorizontalPager(
+                        state = hPagerState,
+                        modifier = Modifier.weight(1f).fillMaxWidth()
+                    ) { hPage ->
+                        when (hPage) {
+                            0 -> {
+                                // 第1页：当前歌词预览（小字显示）
+                                val previewLrcIndex = if (pLrcLines != null) findActiveLyricLine(pLrcLines, currentPosition) else -1
+                                if (pLrcLines != null && pLrcLines.isNotEmpty()) {
+                                    // 显示当前歌词上下文
+                                    val context = 4
+                                    val start = (previewLrcIndex - context).coerceAtLeast(0)
+                                    val end = (previewLrcIndex + context + 1).coerceAtMost(pLrcLines.size)
+                                    val visibleLines = pLrcLines.subList(start, end)
+                                    LazyColumn(
+                                        modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp),
+                                        contentPadding = PaddingValues(vertical = 16.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        itemsIndexed(visibleLines) { idx, line ->
+                                            val actualIndex = start + idx
+                                            val isActive = actualIndex == previewLrcIndex
+                                            Text(
+                                                text = line.text,
+                                                fontSize = 15.sp,
+                                                fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
+                                                color = if (isActive) pTextColor else pTextTertiary,
+                                                textAlign = TextAlign.Center,
+                                                modifier = Modifier.padding(vertical = 4.dp).fillMaxWidth()
+                                            )
+                                        }
+                                    }
+                                } else if (pPlainLines.isNotEmpty()) {
+                                    LazyColumn(
+                                        modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp),
+                                        contentPadding = PaddingValues(vertical = 16.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        itemsIndexed(pPlainLines) { _, line ->
+                                            Text(line.trim(), fontSize = 15.sp, color = pTextTertiary, textAlign = TextAlign.Center, modifier = Modifier.padding(vertical = 4.dp).fillMaxWidth())
+                                        }
+                                    }
+                                } else {
+                                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                        Text("暂无歌词", fontSize = 15.sp, color = pTextTertiary)
+                                    }
+                                }
+                            }
+                            1 -> {
+                                // 第2页：全屏歌词
+                                LyricsPanel(
+                                    lrcLines = pLrcLines,
+                                    plainLines = pPlainLines,
+                                    currentPosition = currentPosition,
+                                    playerTextColor = pTextColor,
+                                    playerTextTertiary = pTextTertiary,
+                                    modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp)
+                                )
+                            }
+                        }
+                    }
+                    // 页码指示器
+                    Row(modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp), horizontalArrangement = Arrangement.Center) {
+                        repeat(2) { idx ->
+                            Box(modifier = Modifier.padding(horizontal = 4.dp).size(if (hPagerState.currentPage == idx) 8.dp else 6.dp).clip(CircleShape).background(if (hPagerState.currentPage == idx) pTextColor else pTextTertiary))
+                        }
+                    }
                 }
 
                 // ── 底部控制栏 ──
@@ -368,33 +429,30 @@ private fun SongInfo(
         // 多歌手支持：用 · 分隔，每个歌手可独立点击
         val artistParts = song.artist.split("·", "、", "/").map { it.trim() }.filter { it.isNotEmpty() }
         if (artistParts.size > 1 && onArtistNameClick != null) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = if (center) Arrangement.Center else Arrangement.Start,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                artistParts.forEachIndexed { index, artistName ->
-                    if (index > 0) {
-                        Text(
-                            " · ",
-                            fontSize = artistSize,
-                            color = playerTextSecondary
-                        )
+            // 多歌手：最多显示2行，超出截断
+            Text(
+                text = buildString {
+                    artistParts.forEachIndexed { index, name ->
+                        if (index > 0) append(" · ")
+                        append(name)
                     }
-                    Text(
-                        artistName,
-                        fontSize = artistSize,
-                        color = playerTextSecondary,
-                        modifier = Modifier.clickable { onArtistNameClick(artistName) }
-                    )
-                }
-            }
+                }.toString(),
+                fontSize = artistSize,
+                color = playerTextSecondary,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = if (center) TextAlign.Center else TextAlign.Start,
+                modifier = Modifier.fillMaxWidth()
+            )
         } else {
             Text(
                 song.artist,
                 fontSize = artistSize,
                 color = playerTextSecondary,
-                modifier = Modifier.clickable(onClick = onArtistClick)
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = if (center) TextAlign.Center else TextAlign.Start,
+                modifier = Modifier.fillMaxWidth().clickable(onClick = onArtistClick)
             )
         }
     }
@@ -485,17 +543,18 @@ private fun PlayerControls(
     Surface(modifier = Modifier.fillMaxWidth(), color = Color.Transparent) {
         Column(modifier = Modifier.padding(horizontal = 32.dp, vertical = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             // 进度条
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                Text(formatTime(currentPosition), fontSize = 12.sp, color = playerTextSecondary)
-                Spacer(modifier = Modifier.width(12.dp))
-                Slider(
-                    value = progress,
-                    onValueChange = onSeek,
-                    modifier = Modifier.weight(1f),
-                    colors = SliderDefaults.colors(thumbColor = playerTextColor, activeTrackColor = sliderActiveColor, inactiveTrackColor = sliderInactiveColor)
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                Text(formatTime(duration), fontSize = 12.sp, color = playerTextSecondary)
+            Slider(
+                value = progress,
+                onValueChange = onSeek,
+                modifier = Modifier.fillMaxWidth(),
+                colors = SliderDefaults.colors(thumbColor = playerTextColor, activeTrackColor = sliderActiveColor, inactiveTrackColor = sliderInactiveColor)
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(formatTime(currentPosition), fontSize = 11.sp, color = playerTextSecondary)
+                Text(formatTime(duration), fontSize = 11.sp, color = playerTextSecondary)
             }
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -705,12 +764,12 @@ fun rememberCoverColor(coverUrl: String?): Color {
                         .resizeBitmapArea(128 * 128) // 控制计算量
                         .generate()
                 }
-                // 选色优先级：Muted > Vibrant > DarkMuted > DarkVibrant > Dominant
-                // Muted 色柔和不刺眼，最适合作为背景
-                val swatch = palette.mutedSwatch
-                    ?: palette.vibrantSwatch
-                    ?: palette.darkMutedSwatch
+                // 选色优先级：DarkMuted > DarkVibrant > Muted > Vibrant > Dominant
+                // 优先选深色系，与封面图自然融合
+                val swatch = palette.darkMutedSwatch
                     ?: palette.darkVibrantSwatch
+                    ?: palette.mutedSwatch
+                    ?: palette.vibrantSwatch
                     ?: palette.dominantSwatch
 
                 if (swatch != null) {
