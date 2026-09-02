@@ -222,125 +222,143 @@ fun MusicPlayerContent(
                         }
                     }
                 } else {
-                    // ── 手机：封面图铺满左右，从返回按钮下方开始 ──
-                    // HorizontalPager：左滑歌词页，右滑封面页
+                    // ── 手机：封面+歌曲信息+歌词 全部可左右滑动 ──
                     val hPagerState = rememberPagerState(pageCount = { 2 })
 
-                    // 封面图区域（固定在顶部，不参与滑动）
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .aspectRatio(1f)
-                    ) {
-                        // 全宽封面图
-                        if (pCoverUrl != null) {
-                            AsyncImage(
-                                model = pCoverUrl,
-                                contentDescription = null,
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop
-                            )
-                        } else {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(Icons.Default.MusicNote, null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f), modifier = Modifier.size(64.dp))
-                            }
-                        }
-                        // 顶部渐变遮罩（100dp，封面上边缘融入背景色）
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(100.dp)
-                                .align(Alignment.TopCenter)
-                                .background(
-                                    Brush.verticalGradient(
-                                        colors = listOf(pBgColor, Color.Transparent)
-                                    )
-                                )
-                        )
-                        // 底部渐变遮罩（封面下边缘融入背景色）
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(120.dp)
-                                .align(Alignment.BottomCenter)
-                                .background(
-                                    Brush.verticalGradient(
-                                        colors = listOf(Color.Transparent, pBgColor)
-                                    )
-                                )
-                        )
-                    }
-                    // 歌曲信息（固定在封面下方）
-                    Column(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        SongInfo(song = pSong, titleSize = 22.sp, artistSize = 14.sp, onArtistClick = { if (pSong.artistId.isNotBlank()) onNavigateToArtist(pSong.artistId) }, center = true, playerTextColor = pTextColor, playerTextSecondary = pTextSecondary)
-                    }
-                    // 可滑动区域：封面歌词 | 全屏歌词
                     HorizontalPager(
                         state = hPagerState,
                         modifier = Modifier.weight(1f).fillMaxWidth()
                     ) { hPage ->
                         when (hPage) {
                             0 -> {
-                                // 第1页：当前歌词预览（小字显示）
-                                val previewLrcIndex = if (pLrcLines != null) findActiveLyricLine(pLrcLines, currentPosition) else -1
-                                if (pLrcLines != null && pLrcLines.isNotEmpty()) {
-                                    // 显示当前歌词上下文
-                                    val context = 4
-                                    val start = (previewLrcIndex - context).coerceAtLeast(0)
-                                    val end = (previewLrcIndex + context + 1).coerceAtMost(pLrcLines.size)
-                                    val visibleLines = pLrcLines.subList(start, end)
-                                    LazyColumn(
-                                        modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp),
-                                        contentPadding = PaddingValues(vertical = 16.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally
+                                // 第1页：封面图 + 歌曲信息 + 歌词预览
+                                Column(
+                                    modifier = Modifier.fillMaxSize(),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    // 封面图（全宽，带渐变遮罩）
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .aspectRatio(1f)
                                     ) {
-                                        itemsIndexed(visibleLines) { idx, line ->
-                                            val actualIndex = start + idx
-                                            val isActive = actualIndex == previewLrcIndex
-                                            Text(
-                                                text = line.text,
-                                                fontSize = 15.sp,
-                                                fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
-                                                color = if (isActive) pTextColor else pTextTertiary,
-                                                textAlign = TextAlign.Center,
-                                                modifier = Modifier.padding(vertical = 4.dp).fillMaxWidth()
+                                        if (pCoverUrl != null) {
+                                            AsyncImage(
+                                                model = pCoverUrl,
+                                                contentDescription = null,
+                                                modifier = Modifier.fillMaxSize(),
+                                                contentScale = ContentScale.Crop
                                             )
+                                        } else {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(Icons.Default.MusicNote, null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f), modifier = Modifier.size(64.dp))
+                                            }
                                         }
+                                        // 顶部渐变遮罩（自然过渡）
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(160.dp)
+                                                .align(Alignment.TopCenter)
+                                                .background(
+                                                    Brush.verticalGradient(
+                                                        colorStops = arrayOf(
+                                                            0.0f to pBgColor,
+                                                            0.3f to pBgColor.copy(alpha = 0.8f),
+                                                            0.6f to pBgColor.copy(alpha = 0.4f),
+                                                            1.0f to Color.Transparent
+                                                        )
+                                                    )
+                                                )
+                                        )
+                                        // 底部渐变遮罩（自然过渡）
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(180.dp)
+                                                .align(Alignment.BottomCenter)
+                                                .background(
+                                                    Brush.verticalGradient(
+                                                        colorStops = arrayOf(
+                                                            0.0f to Color.Transparent,
+                                                            0.4f to pBgColor.copy(alpha = 0.4f),
+                                                            0.7f to pBgColor.copy(alpha = 0.8f),
+                                                            1.0f to pBgColor
+                                                        )
+                                                    )
+                                                )
+                                        )
                                     }
-                                } else if (pPlainLines.isNotEmpty()) {
-                                    LazyColumn(
-                                        modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp),
-                                        contentPadding = PaddingValues(vertical = 16.dp),
+                                    // 歌曲信息
+                                    Column(
+                                        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                                         horizontalAlignment = Alignment.CenterHorizontally
                                     ) {
-                                        itemsIndexed(pPlainLines) { _, line ->
-                                            Text(line.trim(), fontSize = 15.sp, color = pTextTertiary, textAlign = TextAlign.Center, modifier = Modifier.padding(vertical = 4.dp).fillMaxWidth())
-                                        }
+                                        SongInfo(song = pSong, titleSize = 22.sp, artistSize = 14.sp, onArtistClick = { if (pSong.artistId.isNotBlank()) onNavigateToArtist(pSong.artistId) }, center = true, playerTextColor = pTextColor, playerTextSecondary = pTextSecondary)
                                     }
-                                } else {
-                                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                        Text("暂无歌词", fontSize = 15.sp, color = pTextTertiary)
+                                    // 当前歌词预览
+                                    val previewLrcIndex = if (pLrcLines != null) findActiveLyricLine(pLrcLines, currentPosition) else -1
+                                    if (pLrcLines != null && pLrcLines.isNotEmpty()) {
+                                        val ctx = 4
+                                        val start = (previewLrcIndex - ctx).coerceAtLeast(0)
+                                        val end = (previewLrcIndex + ctx + 1).coerceAtMost(pLrcLines.size)
+                                        val visibleLines = pLrcLines.subList(start, end)
+                                        LazyColumn(
+                                            modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 24.dp),
+                                            contentPadding = PaddingValues(vertical = 16.dp),
+                                            horizontalAlignment = Alignment.CenterHorizontally
+                                        ) {
+                                            itemsIndexed(visibleLines) { idx, line ->
+                                                val actualIndex = start + idx
+                                                val isActive = actualIndex == previewLrcIndex
+                                                Text(
+                                                    text = line.text,
+                                                    fontSize = 15.sp,
+                                                    fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
+                                                    color = if (isActive) pTextColor else pTextTertiary,
+                                                    textAlign = TextAlign.Center,
+                                                    modifier = Modifier.padding(vertical = 4.dp).fillMaxWidth()
+                                                )
+                                            }
+                                        }
+                                    } else if (pPlainLines.isNotEmpty()) {
+                                        LazyColumn(
+                                            modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 24.dp),
+                                            contentPadding = PaddingValues(vertical = 16.dp),
+                                            horizontalAlignment = Alignment.CenterHorizontally
+                                        ) {
+                                            itemsIndexed(pPlainLines) { _, line ->
+                                                Text(line.trim(), fontSize = 15.sp, color = pTextTertiary, textAlign = TextAlign.Center, modifier = Modifier.padding(vertical = 4.dp).fillMaxWidth())
+                                            }
+                                        }
+                                    } else {
+                                        Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                                            Text("暂无歌词", fontSize = 15.sp, color = pTextTertiary)
+                                        }
                                     }
                                 }
                             }
                             1 -> {
-                                // 第2页：全屏歌词
-                                LyricsPanel(
-                                    lrcLines = pLrcLines,
-                                    plainLines = pPlainLines,
-                                    currentPosition = currentPosition,
-                                    playerTextColor = pTextColor,
-                                    playerTextTertiary = pTextTertiary,
-                                    modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp)
-                                )
+                                // 第2页：全屏歌词（整个页面滑入）
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(pBgColor)
+                                ) {
+                                    LyricsPanel(
+                                        lrcLines = pLrcLines,
+                                        plainLines = pPlainLines,
+                                        currentPosition = currentPosition,
+                                        playerTextColor = pTextColor,
+                                        playerTextTertiary = pTextTertiary,
+                                        modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp)
+                                    )
+                                }
                             }
                         }
                     }
