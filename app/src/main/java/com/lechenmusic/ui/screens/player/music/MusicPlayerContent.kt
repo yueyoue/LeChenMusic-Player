@@ -18,7 +18,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import kotlinx.coroutines.launch
 import androidx.compose.ui.draw.shadow
@@ -199,48 +198,6 @@ fun MusicPlayerContent(
         val pPlainLines = if (page == pagerState.currentPage) plainLines else emptyList()
 
         Box(modifier = Modifier.fillMaxSize().background(pBgColor)) {
-            // ── 全屏封面背景（酷狗/QQ音乐风格：封面图铺满，上下渐变遮罩） ──
-            if (!isTablet && pCoverUrl != null) {
-                AsyncImage(
-                    model = pCoverUrl,
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize().alpha(0.35f),
-                    contentScale = ContentScale.Crop
-                )
-                // 顶部渐变遮罩（状态栏区域加深）
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(120.dp)
-                        .align(Alignment.TopCenter)
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(
-                                    pBgColor.copy(alpha = 0.95f),
-                                    pBgColor.copy(alpha = 0.6f),
-                                    Color.Transparent
-                                )
-                            )
-                        )
-                )
-                // 底部渐变遮罩（过渡到底部控制区背景色）
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp)
-                        .align(Alignment.BottomCenter)
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(
-                                    Color.Transparent,
-                                    pBgColor.copy(alpha = 0.6f),
-                                    pBgColor
-                                )
-                            )
-                        )
-                )
-            }
-
             Column(modifier = Modifier.fillMaxSize()) {
                 // ── 顶部返回按钮 ──
                 IconButton(
@@ -267,42 +224,66 @@ fun MusicPlayerContent(
                         }
                     }
                 } else {
-                    // 手机：HorizontalPager 左右滑动
-                    val hPagerState = rememberPagerState(pageCount = { 2 })
-                    HorizontalPager(state = hPagerState, modifier = Modifier.weight(1f).fillMaxWidth()) { hPage ->
-                        when (hPage) {
-                            0 -> Column(
-                                modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
-                            ) {
-                                // 封面图（带阴影，居中显示，不裁切全屏——全屏背景已由上面的AsyncImage实现）
-                                CoverImageDisplay(coverUrl = pCoverUrl, size = 260)
-                                Spacer(modifier = Modifier.height(32.dp))
-                                SongInfo(song = pSong, titleSize = 22.sp, artistSize = 14.sp, onArtistClick = { if (pSong.artistId.isNotBlank()) onNavigateToArtist(pSong.artistId) }, center = true, playerTextColor = pTextColor, playerTextSecondary = pTextSecondary)
-                            }
-                            1 -> Column(
-                                modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Row(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                                    CoverImageDisplay(coverUrl = pCoverUrl, size = 48)
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text(pSong.title, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = pTextColor, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
-                                        Text(pSong.artist, fontSize = 12.sp, color = pTextSecondary, textAlign = TextAlign.Center)
-                                    }
-                                }
-                                LyricsPanel(lrcLines = pLrcLines, plainLines = pPlainLines, currentPosition = currentPosition, playerTextColor = pTextColor, playerTextTertiary = pTextTertiary, modifier = Modifier.weight(1f))
-                            }
+                    // ── 手机：封面图铺满左右，从返回按钮下方开始，高度等比缩放 ──
+                    // 上方渐变过渡
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(16.dp)
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(pBgColor, Color.Transparent)
+                                )
+                            )
+                    )
+                    // 全宽封面图（1:1正方形比例）
+                    if (pCoverUrl != null) {
+                        AsyncImage(
+                            model = pCoverUrl,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(1f),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(1f)
+                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.MusicNote, null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f), modifier = Modifier.size(64.dp))
                         }
                     }
-                    // 页码指示器
-                    Row(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.Center) {
-                        repeat(2) { idx ->
-                            Box(modifier = Modifier.padding(horizontal = 4.dp).size(if (hPagerState.currentPage == idx) 8.dp else 6.dp).clip(CircleShape).background(if (hPagerState.currentPage == idx) pTextColor else pTextTertiary))
-                        }
+                    // 下方渐变过渡
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(24.dp)
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(Color.Transparent, pBgColor)
+                                )
+                            )
+                    )
+                    // 歌曲信息
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        SongInfo(song = pSong, titleSize = 22.sp, artistSize = 14.sp, onArtistClick = { if (pSong.artistId.isNotBlank()) onNavigateToArtist(pSong.artistId) }, center = true, playerTextColor = pTextColor, playerTextSecondary = pTextSecondary)
                     }
+                    // 歌词区域
+                    LyricsPanel(
+                        lrcLines = pLrcLines,
+                        plainLines = pPlainLines,
+                        currentPosition = currentPosition,
+                        playerTextColor = pTextColor,
+                        playerTextTertiary = pTextTertiary,
+                        modifier = Modifier.weight(1f).padding(horizontal = 24.dp)
+                    )
                 }
 
                 // ── 底部控制栏 ──

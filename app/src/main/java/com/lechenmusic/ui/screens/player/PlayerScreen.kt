@@ -28,7 +28,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -768,62 +767,60 @@ private fun CoverView(song: Song, serverUrl: String, username: String, password:
     } else null
     val coverBgColor = com.lechenmusic.ui.screens.player.music.rememberCoverColor(coverUrl)
 
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxSize()
             .background(coverBgColor),
-        contentAlignment = Alignment.Center
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // 全屏封面背景（酷狗/QQ音乐风格）
+        // 上方渐变过渡
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(16.dp)
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(coverBgColor, Color.Transparent)
+                    )
+                )
+        )
+        // 全宽封面图（1:1正方形比例）
         if (coverUrl != null) {
             coil.compose.AsyncImage(
                 model = coverUrl,
                 contentDescription = null,
-                modifier = Modifier.fillMaxSize().alpha(0.35f),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1f),
                 contentScale = androidx.compose.ui.layout.ContentScale.Crop
             )
-            // 顶部渐变遮罩
+        } else {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(120.dp)
-                    .align(Alignment.TopCenter)
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                coverBgColor.copy(alpha = 0.95f),
-                                coverBgColor.copy(alpha = 0.6f),
-                                Color.Transparent
-                            )
-                        )
-                    )
-            )
-            // 底部渐变遮罩
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(200.dp)
-                    .align(Alignment.BottomCenter)
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                Color.Transparent,
-                                coverBgColor.copy(alpha = 0.6f),
-                                coverBgColor
-                            )
-                        )
-                    )
-            )
+                    .aspectRatio(1f)
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                contentAlignment = Alignment.Center
+            ) {
+                CoverImage(
+                    coverArtId = song.coverArt ?: song.albumId,
+                    serverUrl = serverUrl,
+                    username = username,
+                    password = password,
+                    modifier = Modifier.size(120.dp).clip(RoundedCornerShape(16.dp))
+                )
+            }
         }
-        // 封面图（带阴影，居中）
-        CoverImage(
-            coverArtId = song.coverArt ?: song.albumId,
-            serverUrl = serverUrl,
-            username = username,
-            password = password,
+        // 下方渐变过渡
+        Box(
             modifier = Modifier
-                .size(280.dp)
-                .clip(RoundedCornerShape(20.dp))
+                .fillMaxWidth()
+                .height(24.dp)
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(Color.Transparent, coverBgColor)
+                    )
+                )
         )
     }
 }
