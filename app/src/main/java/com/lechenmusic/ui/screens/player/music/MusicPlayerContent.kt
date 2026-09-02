@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import kotlinx.coroutines.launch
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.runtime.DisposableEffect
@@ -197,6 +198,49 @@ fun MusicPlayerContent(
         val pPlainLines = if (page == pagerState.currentPage) plainLines else emptyList()
 
         Box(modifier = Modifier.fillMaxSize().background(pBgColor)) {
+            // ── 全屏封面背景（酷狗/QQ音乐风格：封面图铺满，上下渐变遮罩） ──
+            if (!isTablet && pCoverUrl != null) {
+                AsyncImage(
+                    model = pCoverUrl,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                    alpha = 0.35f
+                )
+                // 顶部渐变遮罩（状态栏区域加深）
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp)
+                        .align(Alignment.TopCenter)
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    pBgColor.copy(alpha = 0.95f),
+                                    pBgColor.copy(alpha = 0.6f),
+                                    Color.Transparent
+                                )
+                            )
+                        )
+                )
+                // 底部渐变遮罩（过渡到底部控制区背景色）
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .align(Alignment.BottomCenter)
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    pBgColor.copy(alpha = 0.6f),
+                                    pBgColor
+                                )
+                            )
+                        )
+                )
+            }
+
             Column(modifier = Modifier.fillMaxSize()) {
                 // ── 顶部返回按钮 ──
                 IconButton(
@@ -232,6 +276,7 @@ fun MusicPlayerContent(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.Center
                             ) {
+                                // 封面图（带阴影，居中显示，不裁切全屏——全屏背景已由上面的AsyncImage实现）
                                 CoverImageDisplay(coverUrl = pCoverUrl, size = 260)
                                 Spacer(modifier = Modifier.height(32.dp))
                                 SongInfo(song = pSong, titleSize = 22.sp, artistSize = 14.sp, onArtistClick = { if (pSong.artistId.isNotBlank()) onNavigateToArtist(pSong.artistId) }, center = true, playerTextColor = pTextColor, playerTextSecondary = pTextSecondary)

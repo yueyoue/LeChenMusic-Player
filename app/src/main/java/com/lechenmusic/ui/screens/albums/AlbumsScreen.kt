@@ -42,28 +42,38 @@ fun AlbumsScreen(
     val serverUrl by viewModel.serverUrl.collectAsState()
     val username by viewModel.username.collectAsState()
     val password by viewModel.password.collectAsState()
+    val cachedAllAlbums by viewModel.cachedAllAlbums.collectAsState()
+    val isLoadingAll by viewModel.allAlbumsLoading.collectAsState()
     var albums by remember { mutableStateOf<List<Album>>(emptyList()) }
     var sortType by remember { mutableStateOf("all") }
-    var isLoadingAll by remember { mutableStateOf(false) }
 
     // Store unsorted albums for client-side sorting
     var allAlbumsUnsorted by remember { mutableStateOf<List<Album>>(emptyList()) }
 
+    // Initialize from cache if available
+    LaunchedEffect(cachedAllAlbums) {
+        if (cachedAllAlbums.isNotEmpty() && allAlbumsUnsorted.isEmpty()) {
+            allAlbumsUnsorted = cachedAllAlbums
+            albums = cachedAllAlbums
+        }
+    }
+
     LaunchedEffect(sortType) {
         when (sortType) {
             "all" -> {
-                isLoadingAll = true
-                viewModel.loadAllAlbums { allAlbumsUnsorted = it; albums = it; isLoadingAll = false }
+                if (allAlbumsUnsorted.isNotEmpty()) {
+                    albums = allAlbumsUnsorted
+                } else {
+                    viewModel.loadAllAlbums { allAlbumsUnsorted = it; albums = it }
+                }
             }
             "name" -> {
                 if (allAlbumsUnsorted.isNotEmpty()) {
                     albums = allAlbumsUnsorted.sortedBy { it.name.lowercase() }
                 } else {
-                    isLoadingAll = true
                     viewModel.loadAllAlbums { unsorted ->
                         allAlbumsUnsorted = unsorted
                         albums = unsorted.sortedBy { it.name.lowercase() }
-                        isLoadingAll = false
                     }
                 }
             }
@@ -71,11 +81,9 @@ fun AlbumsScreen(
                 if (allAlbumsUnsorted.isNotEmpty()) {
                     albums = allAlbumsUnsorted.sortedBy { it.artist.lowercase() }
                 } else {
-                    isLoadingAll = true
                     viewModel.loadAllAlbums { unsorted ->
                         allAlbumsUnsorted = unsorted
                         albums = unsorted.sortedBy { it.artist.lowercase() }
-                        isLoadingAll = false
                     }
                 }
             }
@@ -83,11 +91,9 @@ fun AlbumsScreen(
                 if (allAlbumsUnsorted.isNotEmpty()) {
                     albums = allAlbumsUnsorted.shuffled()
                 } else {
-                    isLoadingAll = true
                     viewModel.loadAllAlbums { unsorted ->
                         allAlbumsUnsorted = unsorted
                         albums = unsorted.shuffled()
-                        isLoadingAll = false
                     }
                 }
             }

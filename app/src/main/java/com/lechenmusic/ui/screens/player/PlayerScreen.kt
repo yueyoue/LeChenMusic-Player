@@ -761,10 +761,61 @@ fun PlayerScreen(
 
 @Composable
 private fun CoverView(song: Song, serverUrl: String, username: String, password: String) {
+    val coverArtId = song.coverArt ?: song.albumId
+    val coverUrl = if (coverArtId.isNotBlank()) {
+        com.lechenmusic.data.api.ApiClient.getCoverArtUrl(serverUrl, username, password, coverArtId)
+    } else null
+    val coverBgColor = com.lechenmusic.ui.screens.player.music.rememberCoverColor(coverUrl)
+
     Box(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .background(coverBgColor),
         contentAlignment = Alignment.Center
     ) {
+        // 全屏封面背景（酷狗/QQ音乐风格）
+        if (coverUrl != null) {
+            coil.compose.AsyncImage(
+                model = coverUrl,
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                alpha = 0.35f
+            )
+            // 顶部渐变遮罩
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp)
+                    .align(Alignment.TopCenter)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                coverBgColor.copy(alpha = 0.95f),
+                                coverBgColor.copy(alpha = 0.6f),
+                                Color.Transparent
+                            )
+                        )
+                    )
+            )
+            // 底部渐变遮罩
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp)
+                    .align(Alignment.BottomCenter)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                coverBgColor.copy(alpha = 0.6f),
+                                coverBgColor
+                            )
+                        )
+                    )
+            )
+        }
+        // 封面图（带阴影，居中）
         CoverImage(
             coverArtId = song.coverArt ?: song.albumId,
             serverUrl = serverUrl,

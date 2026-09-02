@@ -354,9 +354,36 @@ class MusicRepository {
             val allSongs = mutableListOf<Song>()
             val seenIds = mutableSetOf<String>()
 
-            // Strategy 1: Paginate through ALL albums to get every song
-            val albumTypes = listOf("newest", "recent", "frequent", "random", "starred", "alphabeticalByName")
+            // Strategy 1: Paginate through albums in "newest" order first to preserve recency
+            // This ensures songs from newest albums appear first
+            val albumTypes = listOf("newest") // Start with newest to get proper ordering
             for (type in albumTypes) {
+                var offset = 0
+                val pageSize = 500
+                while (true) {
+                    try {
+                        val page = api!!.getAlbumList2(username, password, type = type, size = pageSize, offset = offset)
+                        val albums = page.subsonicResponse.albumList2?.album ?: emptyList()
+                        for (album in albums) {
+                            try {
+                                val detail = api!!.getAlbum(username, password, album.id)
+                                detail.subsonicResponse.album?.song?.forEach { song ->
+                                    if (seenIds.add(song.id)) {
+                                        allSongs.add(song)
+                                    }
+                                }
+                            } catch (_: Exception) { }
+                        }
+                        if (albums.size < pageSize) break
+                        offset += pageSize
+                        if (offset > 50000) break // safety limit
+                    } catch (_: Exception) { break }
+                }
+            }
+
+            // Strategy 1b: Supplement with other album types for completeness
+            val otherTypes = listOf("recent", "frequent", "random", "starred", "alphabeticalByName")
+            for (type in otherTypes) {
                 var offset = 0
                 val pageSize = 500
                 while (true) {

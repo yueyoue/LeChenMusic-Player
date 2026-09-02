@@ -249,6 +249,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _currentAlbum = MutableStateFlow<AlbumDetail?>(null)
     val currentAlbum: StateFlow<AlbumDetail?> = _currentAlbum.asStateFlow()
 
+    // All albums cache (avoids re-fetching every time AlbumsScreen is opened)
+    private val _cachedAllAlbums = MutableStateFlow<List<Album>>(emptyList())
+    val cachedAllAlbums: StateFlow<List<Album>> = _cachedAllAlbums.asStateFlow()
+    private val _allAlbumsLoading = MutableStateFlow(false)
+    val allAlbumsLoading: StateFlow<Boolean> = _allAlbumsLoading.asStateFlow()
+
     // Artist detail
     private val _currentArtist = MutableStateFlow<ArtistDetail?>(null)
     val currentArtist: StateFlow<ArtistDetail?> = _currentArtist.asStateFlow()
@@ -776,6 +782,43 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun loadAllAlbums(callback: (List<Album>) -> Unit) {
+        // If already loaded, return cached data immediately and refresh in background
+        val cached = _cachedAllAlbums.value
+        if (cached.isNotEmpty()) {
+            callback(cached)
+            // Also refresh in background silently
+            viewModelScope.launch {
+                _allAlbumsLoading.value = true
+                val allAlbums = mutableListOf<Album>()
+                val seenIds = mutableSetOf<String>()
+                val types = listOf("newest", "recent", "frequent", "random", "starred", "alphabeticalByName")
+                for (type in types) {
+                    var offset = 0
+                    val pageSize = 500
+                    while (true) {
+                        try {
+                            val albums = repository.getAlbumList2(type, pageSize, offset).getOrNull() ?: break
+                            for (album in albums) {
+                                if (seenIds.add(album.id)) {
+                                    allAlbums.add(album)
+                                }
+                            }
+                            if (albums.size < pageSize) break
+                            offset += pageSize
+                        } catch (_: Exception) { break }
+                    }
+                }
+                // Sort by created date descending (newest first)
+                val sorted = allAlbums.sortedByDescending { it.created }
+                _cachedAllAlbums.value = sorted
+                _allAlbumsLoading.value = false
+                callback(sorted)
+            }
+            return
+        }
+
+        // First load - fetch from server
+        _allAlbumsLoading.value = true
         viewModelScope.launch {
             val allAlbums = mutableListOf<Album>()
             val seenIds = mutableSetOf<String>()
@@ -796,7 +839,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     } catch (_: Exception) { break }
                 }
             }
-            callback(allAlbums)
+            // Sort by created date descending (newest first)
+            val sorted = allAlbums.sortedByDescending { it.created }
+            _cachedAllAlbums.value = sorted
+            _allAlbumsLoading.value = false
+            callback(sorted)
         }
     }
 
@@ -983,23 +1030,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             // Step 2: Fetch fresh data from server
             try {
                 repository.getAllSongs().onSuccess { serverSongs ->
-                    val cachedList = _allSongs.value
-                    val cachedIds = cachedList.map { it.id }.toSet()
-                    val newSongs = serverSongs.filter { it.id !in cachedIds }
-
-                    if (newSongs.isNotEmpty()) {
-                        // Merge: keep cached + add new songs (always grow, never shrink)
-                        val merged = cachedList + newSongs
-                        _allSongs.value = merged
-                        if (showToast) _toastMessage.value = "发现 ${newSongs.size} 首新歌曲"
-                        saveSongsToCache(merged)
-                    } else if (serverSongs.size >= cachedList.size) {
-                        // Server has more (or equal) songs — safe to update
+                    if (serverSongs.isNotEmpty()) {
+                        // Use server results directly (already sorted newest-first by repository)
                         _allSongs.value = serverSongs
                         saveSongsToCache(serverSongs)
+                        if (showToast && cachedList.isNotEmpty() && serverSongs.size > cachedList.size) {
+                            _toastMessage.value = "发现 ${serverSongs.size - cachedList.size} 首新歌曲"
+                        }
                     }
-                    // else: server returned fewer songs (non-deterministic search),
-                    //       keep cached list — do NOT replace with smaller data
                     _allSongsLoading.value = false
                 }.onFailure {
                     if (_allSongs.value.isEmpty()) {

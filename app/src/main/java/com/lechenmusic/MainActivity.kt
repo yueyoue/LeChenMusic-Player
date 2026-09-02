@@ -746,7 +746,33 @@ fun NavGraphBuilder.sharedNavRoutes(
         }
     }
 
-    composable(Screen.Player.route) {
+    composable(
+        Screen.Player.route,
+        enterTransition = {
+            slideInVertically(
+                initialOffsetY = { it },
+                animationSpec = androidx.compose.animation.core.tween(350)
+            ) + fadeIn(animationSpec = androidx.compose.animation.core.tween(350))
+        },
+        exitTransition = {
+            slideOutVertically(
+                targetOffsetY = { it },
+                animationSpec = androidx.compose.animation.core.tween(350)
+            ) + fadeOut(animationSpec = androidx.compose.animation.core.tween(350))
+        },
+        popEnterTransition = {
+            slideInVertically(
+                initialOffsetY = { it },
+                animationSpec = androidx.compose.animation.core.tween(350)
+            ) + fadeIn(animationSpec = androidx.compose.animation.core.tween(350))
+        },
+        popExitTransition = {
+            slideOutVertically(
+                targetOffsetY = { it },
+                animationSpec = androidx.compose.animation.core.tween(350)
+            ) + fadeOut(animationSpec = androidx.compose.animation.core.tween(350))
+        }
+    ) {
         val srvUrl by viewModel.serverUrl.collectAsState()
         val usr by viewModel.username.collectAsState()
         val pwd by viewModel.password.collectAsState()
@@ -1096,7 +1122,33 @@ fun NavGraphBuilder.sharedNavRoutes(
         }
     }
 
-    composable(Screen.AudiobookPlayer.route) {
+    composable(
+        Screen.AudiobookPlayer.route,
+        enterTransition = {
+            slideInVertically(
+                initialOffsetY = { it },
+                animationSpec = androidx.compose.animation.core.tween(350)
+            ) + fadeIn(animationSpec = androidx.compose.animation.core.tween(350))
+        },
+        exitTransition = {
+            slideOutVertically(
+                targetOffsetY = { it },
+                animationSpec = androidx.compose.animation.core.tween(350)
+            ) + fadeOut(animationSpec = androidx.compose.animation.core.tween(350))
+        },
+        popEnterTransition = {
+            slideInVertically(
+                initialOffsetY = { it },
+                animationSpec = androidx.compose.animation.core.tween(350)
+            ) + fadeIn(animationSpec = androidx.compose.animation.core.tween(350))
+        },
+        popExitTransition = {
+            slideOutVertically(
+                targetOffsetY = { it },
+                animationSpec = androidx.compose.animation.core.tween(350)
+            ) + fadeOut(animationSpec = androidx.compose.animation.core.tween(350))
+        }
+    ) {
         val responsiveCfg = com.lechenmusic.ui.responsive.rememberResponsiveConfig(windowSizeClass)
         // 平板全屏播放器：隐藏系统栏 + 保持屏幕常亮
         val abContext = LocalContext.current
