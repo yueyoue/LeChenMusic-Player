@@ -1028,6 +1028,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             // Step 2: Fetch fresh data from server
+            val cachedList = _allSongs.value
             try {
                 repository.getAllSongs().onSuccess { serverSongs ->
                     if (serverSongs.isNotEmpty()) {
