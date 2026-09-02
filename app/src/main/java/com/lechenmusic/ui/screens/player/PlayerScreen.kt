@@ -773,55 +773,61 @@ private fun CoverView(song: Song, serverUrl: String, username: String, password:
             .background(coverBgColor),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // 上方渐变过渡
+        // 封面图区域（带上下渐变遮罩，融入背景色）
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(16.dp)
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(coverBgColor, Color.Transparent)
-                    )
+                .aspectRatio(1f)
+        ) {
+            // 全宽封面图
+            if (coverUrl != null) {
+                coil.compose.AsyncImage(
+                    model = coverUrl,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
                 )
-        )
-        // 全宽封面图（1:1正方形比例）
-        if (coverUrl != null) {
-            coil.compose.AsyncImage(
-                model = coverUrl,
-                contentDescription = null,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(1f),
-                contentScale = androidx.compose.ui.layout.ContentScale.Crop
-            )
-        } else {
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CoverImage(
+                        coverArtId = song.coverArt ?: song.albumId,
+                        serverUrl = serverUrl,
+                        username = username,
+                        password = password,
+                        modifier = Modifier.size(120.dp).clip(RoundedCornerShape(16.dp))
+                    )
+                }
+            }
+            // 顶部渐变遮罩（封面上边缘融入背景色）
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(1f)
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                contentAlignment = Alignment.Center
-            ) {
-                CoverImage(
-                    coverArtId = song.coverArt ?: song.albumId,
-                    serverUrl = serverUrl,
-                    username = username,
-                    password = password,
-                    modifier = Modifier.size(120.dp).clip(RoundedCornerShape(16.dp))
-                )
-            }
-        }
-        // 下方渐变过渡
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(24.dp)
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(Color.Transparent, coverBgColor)
+                    .height(80.dp)
+                    .align(Alignment.TopCenter)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(coverBgColor, Color.Transparent)
+                        )
                     )
-                )
-        )
+            )
+            // 底部渐变遮罩（封面下边缘融入背景色）
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp)
+                    .align(Alignment.BottomCenter)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(Color.Transparent, coverBgColor)
+                        )
+                    )
+            )
+        }
     }
 }
 

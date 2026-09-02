@@ -224,50 +224,55 @@ fun MusicPlayerContent(
                         }
                     }
                 } else {
-                    // ── 手机：封面图铺满左右，从返回按钮下方开始，高度等比缩放 ──
-                    // 上方渐变过渡
+                    // ── 手机：封面图铺满左右，从返回按钮下方开始 ──
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(16.dp)
-                            .background(
-                                Brush.verticalGradient(
-                                    colors = listOf(pBgColor, Color.Transparent)
-                                )
+                            .aspectRatio(1f)
+                    ) {
+                        // 全宽封面图
+                        if (pCoverUrl != null) {
+                            AsyncImage(
+                                model = pCoverUrl,
+                                contentDescription = null,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
                             )
-                    )
-                    // 全宽封面图（1:1正方形比例）
-                    if (pCoverUrl != null) {
-                        AsyncImage(
-                            model = pCoverUrl,
-                            contentDescription = null,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .aspectRatio(1f),
-                            contentScale = ContentScale.Crop
-                        )
-                    } else {
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.MusicNote, null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f), modifier = Modifier.size(64.dp))
+                            }
+                        }
+                        // 顶部渐变遮罩（封面上边缘融入背景色）
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .aspectRatio(1f)
-                                .background(MaterialTheme.colorScheme.surfaceVariant),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Default.MusicNote, null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f), modifier = Modifier.size(64.dp))
-                        }
-                    }
-                    // 下方渐变过渡
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(24.dp)
-                            .background(
-                                Brush.verticalGradient(
-                                    colors = listOf(Color.Transparent, pBgColor)
+                                .height(80.dp)
+                                .align(Alignment.TopCenter)
+                                .background(
+                                    Brush.verticalGradient(
+                                        colors = listOf(pBgColor, Color.Transparent)
+                                    )
                                 )
-                            )
-                    )
+                        )
+                        // 底部渐变遮罩（封面下边缘融入背景色）
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(120.dp)
+                                .align(Alignment.BottomCenter)
+                                .background(
+                                    Brush.verticalGradient(
+                                        colors = listOf(Color.Transparent, pBgColor)
+                                    )
+                                )
+                        )
+                    }
                     // 歌曲信息
                     Column(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
