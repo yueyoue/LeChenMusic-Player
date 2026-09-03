@@ -460,7 +460,7 @@ private fun SongInfo(
 }
 
 
-// ── 封面图下方歌词预览（2行显示 + 打散漂浮消失动画） ──
+// ── 封面图下方歌词预览（2行显示 + 滚动切换 + 打散漂浮消失） ──
 
 @Composable
 private fun SmoothLyricsDisplay(
@@ -474,11 +474,10 @@ private fun SmoothLyricsDisplay(
     // 降低文字透明度，融入背景色
     val dimTextColor = playerTextColor.copy(alpha = 0.6f)
     val dimTextSecondary = playerTextTertiary.copy(alpha = 0.35f)
+    val lineH = 44.dp
 
     if (lrcLines != null && lrcLines.isNotEmpty()) {
-        // ── LRC 歌词：2行固定显示 + 滚动切换 + 粒子消失 ──
         val rawActiveIndex = findActiveLyricLine(lrcLines, currentPosition)
-        // 防止歌曲开始前的元数据行跳动
         val firstRealLyricIndex = remember(lrcLines) {
             var idx = 0
             while (idx < lrcLines.size - 1 &&
@@ -493,59 +492,75 @@ private fun SmoothLyricsDisplay(
             rawActiveIndex
         }
 
-        // 动画状态
-        val lineSpacingPx = with(LocalDensity.current) { 44.dp.toPx() }
-        val animProgress = remember { Animatable(0f) }
+        // 上一行歌词文本（用于消失动画）
+        var prevText by remember { mutableStateOf("") }
         var prevActiveIndex by remember { mutableIntStateOf(activeIndex) }
 
-        // 行切换时启动滚动动画
-        LaunchedEffect(activeIndex) {
-            if (activeIndex != prevActiveIndex) {
-                prevActiveIndex = activeIndex
-                animProgress.snapTo(0f)
-                animProgress.animateTo(
-                    targetValue = 1f,
-                    animationSpec = tween(350, easing = FastOutSlowInEasing)
-                )
-            }
-        }
+        // 滚动动画：下一行 -> 当前行位置
+        val scrollAnim = remember { Animatable(0f) }
+        // 消失动画：当前行 -> 粒子淡出
+        val fadeAnim = remember { Animatable(0f) }
+        // 新行出现动画
+        val appearAnim = remember { Animatable(0f) }
 
-        // 粒子系统状态（用于消失动画）
-        data class Particle(val x: Float, val y: Float, val vx: Float, val vy: Float, val size: Float, val alpha: Float)
+        // 粒子状态
+        data class Particle(val x: Float, val y: Float, val vx: Float, val vy: Float, val size: Float, val a: Float)
         var particles by remember { mutableStateOf(emptyList<Particle>()) }
-        var particleProgress by remember { mutableFloatStateOf(0f) }
+        var particleProgress by remember { mutableFloatStateOf(1f) }
         val particleAnim = remember { Animatable(0f) }
 
-        // 当切换发生时生成粒子
+        // 行切换时：启动三组动画
         LaunchedEffect(activeIndex) {
-            if (activeIndex != rawActiveIndex) return@LaunchedEffect // 跳过初始化
-            // 生成30个随机粒子
-            val rng = java.util.Random()
-            particles = List(30) {
-                Particle(
-                    x = rng.nextFloat() * 0.8f + 0.1f, // 10%~90% 宽度
-                    y = 0.15f + rng.nextFloat() * 0.2f,  // 上部区域
-                    vx = (rng.nextFloat() - 0.5f) * 0.3f,
-                    vy = -0.3f - rng.nextFloat() * 0.5f,  // 向上漂浮
-                    size = 2f + rng.nextFloat() * 4f,
-                    alpha = 0.4f + rng.nextFloat() * 0.4f
-                )
+            if (activeIndex != prevActiveIndex && prevActiveIndex >= 0) {
+                prevText = lrcLines.getOrNull(prevActiveIndex)?.text ?: ""
+                prevActiveIndex = activeIndex
+
+                // 生成粒子
+                val rng = java.util.Random()
+                particles = List(25) {
+                    Particle(
+                        x = rng.nextFloat() * 0.7f + 0.15f,
+                        y = 0.1f + rng.nextFloat() * 0.3f,
+                        vx = (rng.nextFloat() - 0.5f) * 0.4f,
+                        vy = -0.2f - rng.nextFloat() * 0.6f,
+                        size = 2f + rng.nextFloat() * 3f,
+                        a = 0.3f + rng.nextFloat() * 0.5f
+                    )
+                }
+
+                // 并行启动三组动画
+                launch {
+                    scrollAnim.snapTo(0f)
+                    scrollAnim.animateTo(1f, tween(320, easing = FastOutSlowInEasing))
+                }
+                launch {
+                    fadeAnim.snapTo(0f)
+                    fadeAnim.animateTo(1f, tween(400, easing = FastOutSlowInEasing))
+                }
+                launch {
+                    appearAnim.snapTo(0f)
+                    appearAnim.animateTo(1f, tween(350, easing = FastOutSlowInEasing))
+                }
+                launch {
+                    particleAnim.snapTo(0f)
+                    particleProgress = 0f
+                    particleAnim.animateTo(1f, tween(600, easing = LinearEasing))
+                    particleProgress = 1f
+                }
+            } else {
+                prevActiveIndex = activeIndex
             }
-            particleAnim.snapTo(0f)
-            particleAnim.animateTo(
-                targetValue = 1f,
-                animationSpec = tween(500, easing = LinearEasing)
-            )
-            particleProgress = particleAnim.value
         }
 
+        val lineSpacingPx = with(LocalDensity.current) { lineH.toPx() }
+
         Box(modifier = modifier, contentAlignment = Alignment.Center) {
-            // 粒子画布（在歌词上层绘制）
+            // === 粒子画布（最上层） ===
             if (particles.isNotEmpty() && particleProgress < 1f) {
                 Canvas(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(100.dp)
+                        .height(120.dp)
                         .align(Alignment.TopCenter)
                 ) {
                     val w = size.width
@@ -553,11 +568,11 @@ private fun SmoothLyricsDisplay(
                     particles.forEach { p ->
                         val px = p.x * w + p.vx * w * particleProgress
                         val py = p.y * h + p.vy * h * particleProgress
-                        val a = p.alpha * (1f - particleProgress)
-                        if (a > 0.01f && py > -10f) {
+                        val a = p.a * (1f - particleProgress) * fadeAnim.value
+                        if (a > 0.01f && py > -20f) {
                             drawCircle(
                                 color = dimTextColor.copy(alpha = a),
-                                radius = p.size * (1f - particleProgress * 0.5f),
+                                radius = p.size * (1f - particleProgress * 0.3f),
                                 center = Offset(px, py)
                             )
                         }
@@ -565,71 +580,86 @@ private fun SmoothLyricsDisplay(
                 }
             }
 
-            // 2行歌词区域
+            // === 2行歌词区域（固定高度） ===
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(90.dp),
-                contentAlignment = Alignment.Center
+                    .height(lineH * 2),
+                contentAlignment = Alignment.TopCenter
             ) {
-                // 滚动容器：offset 驱动上下移动
-                Box(
-                    modifier = Modifier.graphicsLayer {
-                        translationY = -animProgress.value * lineSpacingPx
-                    }
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(0.dp)
-                    ) {
-                        // 当前行（大字，带消失透明度动画）
-                        val currentAlpha = if (animProgress.value > 0.4f) {
-                            1f - ((animProgress.value - 0.4f) / 0.6f).coerceIn(0f, 1f)
-                        } else 1f
-                        if (activeIndex in lrcLines.indices) {
-                            Text(
-                                text = lrcLines[activeIndex].text,
-                                fontSize = 22.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = dimTextColor.copy(alpha = dimTextColor.alpha * currentAlpha),
-                                textAlign = TextAlign.Center,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(44.dp)
-                                    .padding(horizontal = 16.dp),
-                                lineHeight = 44.sp
-                            )
-                        } else {
-                            Spacer(Modifier.fillMaxWidth().height(44.dp))
-                        }
+                // 上层：上一行歌词（原位消失 + 粒子）
+                if (prevText.isNotEmpty() && fadeAnim.value < 1f) {
+                    Text(
+                        text = prevText,
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = dimTextColor.copy(alpha = dimTextColor.alpha * (1f - fadeAnim.value)),
+                        textAlign = TextAlign.Center,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(lineH)
+                            .padding(horizontal = 16.dp)
+                            .graphicsLayer {
+                                translationY = -fadeAnim.value * lineSpacingPx * 0.3f
+                                scaleX = 1f - fadeAnim.value * 0.05f
+                                scaleY = 1f - fadeAnim.value * 0.05f
+                            },
+                        lineHeight = lineH.value.sp
+                    )
+                }
 
-                        // 下一行（小字）
-                        if (activeIndex + 1 < lrcLines.size) {
-                            Text(
-                                text = lrcLines[activeIndex + 1].text,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Normal,
-                                color = dimTextSecondary,
-                                textAlign = TextAlign.Center,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(44.dp)
-                                    .padding(horizontal = 16.dp),
-                                lineHeight = 44.sp
-                            )
-                        } else {
-                            Spacer(Modifier.fillMaxWidth().height(44.dp))
-                        }
-                    }
+                // 当前行：从下方滑入（小字 -> 大字位置）
+                if (activeIndex in lrcLines.indices) {
+                    Text(
+                        text = lrcLines[activeIndex].text,
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = dimTextColor,
+                        textAlign = TextAlign.Center,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(lineH)
+                            .padding(horizontal = 16.dp)
+                            .graphicsLayer {
+                                translationY = (1f - scrollAnim.value.coerceAtLeast(
+                                    if (prevText.isEmpty()) 1f else 0f
+                                )) * lineSpacingPx
+                            },
+                        lineHeight = lineH.value.sp
+                    )
+                }
+
+                // 下一行（小字）
+                if (activeIndex + 1 < lrcLines.size) {
+                    val nextAlpha = appearAnim.value.coerceAtLeast(
+                        if (prevText.isEmpty()) 1f else 0f
+                    )
+                    Text(
+                        text = lrcLines[activeIndex + 1].text,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Normal,
+                        color = dimTextSecondary.copy(alpha = dimTextSecondary.alpha * nextAlpha),
+                        textAlign = TextAlign.Center,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(lineH)
+                            .padding(horizontal = 16.dp)
+                            .offset(y = lineH)
+                            .graphicsLayer {
+                                translationY = (1f - nextAlpha) * lineSpacingPx * 0.5f
+                            },
+                        lineHeight = lineH.value.sp
+                    )
                 }
             }
         }
     } else if (plainLines.isNotEmpty()) {
-        // ── 纯文本歌词（无时间戳）：静态显示 ──
         Box(modifier = modifier, contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 plainLines.take(2).forEachIndexed { index, line ->
@@ -649,7 +679,6 @@ private fun SmoothLyricsDisplay(
             }
         }
     } else {
-        // ── 无歌词 ──
         Box(modifier = modifier, contentAlignment = Alignment.Center) {
             Text("暂无歌词", fontSize = 15.sp, color = dimTextSecondary, textAlign = TextAlign.Center)
         }
