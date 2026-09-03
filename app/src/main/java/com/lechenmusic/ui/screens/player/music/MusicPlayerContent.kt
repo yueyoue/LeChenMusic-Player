@@ -528,14 +528,15 @@ private fun SmoothLyricsDisplay(
                     )
                 }
 
-                // 并行启动三组动画
+                // 并行启动动画（当前行延迟一点，避免重叠震颤）
                 launch {
                     scrollAnim.snapTo(0f)
-                    scrollAnim.animateTo(1f, tween(320, easing = FastOutSlowInEasing))
+                    kotlinx.coroutines.delay(80)
+                    scrollAnim.animateTo(1f, tween(300, easing = FastOutSlowInEasing))
                 }
                 launch {
                     fadeAnim.snapTo(0f)
-                    fadeAnim.animateTo(1f, tween(400, easing = FastOutSlowInEasing))
+                    fadeAnim.animateTo(1f, tween(350, easing = FastOutSlowInEasing))
                 }
                 launch {
                     appearAnim.snapTo(0f)
@@ -587,7 +588,7 @@ private fun SmoothLyricsDisplay(
                     .height(lineH * 2),
                 contentAlignment = Alignment.TopCenter
             ) {
-                // 上层：上一行歌词（原位消失 + 粒子）
+                // 上层：上一行歌词（原位粒子消失，不动）
                 if (prevText.isNotEmpty() && fadeAnim.value < 1f) {
                     Text(
                         text = prevText,
@@ -600,12 +601,7 @@ private fun SmoothLyricsDisplay(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(lineH)
-                            .padding(horizontal = 16.dp)
-                            .graphicsLayer {
-                                translationY = -fadeAnim.value * lineSpacingPx * 0.3f
-                                scaleX = 1f - fadeAnim.value * 0.05f
-                                scaleY = 1f - fadeAnim.value * 0.05f
-                            },
+                            .padding(horizontal = 16.dp),
                         lineHeight = lineH.value.sp
                     )
                 }
