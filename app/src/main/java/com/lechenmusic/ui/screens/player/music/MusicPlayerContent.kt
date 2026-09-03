@@ -492,25 +492,17 @@ private fun SmoothLyricsDisplay(
 
         val listState = rememberLazyListState()
 
-        // 自动滚动到当前歌词行，居中显示
+        // 自动滚动到当前歌词行
         LaunchedEffect(activeIndex) {
             if (activeIndex >= 0) {
-                // 计算居中偏移：可视区域高度的一半减去半个item高度
-                val viewportHeight = listState.layoutInfo.let {
-                    it.viewportEndOffset - it.viewportStartOffset
-                }
-                val scrollOffset = (viewportHeight / 2) - 60
-                listState.animateScrollToItem(
-                    index = activeIndex,
-                    scrollOffset = -(scrollOffset.coerceAtLeast(0))
-                )
+                listState.animateScrollToItem(activeIndex)
             }
         }
 
         LazyColumn(
             state = listState,
             modifier = modifier,
-            contentPadding = PaddingValues(vertical = 40.dp),
+            contentPadding = PaddingValues(vertical = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             // 禁用手势滑动，避免与HorizontalPager冲突
             // animateScrollToItem 仍然可以程序化滚动
