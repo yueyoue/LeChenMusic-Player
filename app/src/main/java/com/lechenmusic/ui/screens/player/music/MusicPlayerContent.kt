@@ -1,6 +1,5 @@
 package com.lechenmusic.ui.screens.player.music
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -22,13 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
-import androidx.compose.ui.platform.LocalDensity
 import kotlinx.coroutines.launch
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
@@ -36,7 +29,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.runtime.DisposableEffect
 
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -305,7 +297,7 @@ fun MusicPlayerContent(
                                         )
 
                                     }
-                                    // 歌词预览（平滑滚动，禁用手势滑动）
+                                    // 歌词预览（缩放淡变切换，位置上移）
                                     SmoothLyricsDisplay(
                                         lrcLines = pLrcLines,
                                         plainLines = pPlainLines,
@@ -316,12 +308,13 @@ fun MusicPlayerContent(
                                             .weight(1f)
                                             .fillMaxWidth()
                                             .padding(horizontal = 24.dp)
+                                            .padding(bottom = 8.dp)
                                     )
-                                    // 歌曲信息（左侧对齐，显示在歌词下方）
+                                    // 歌曲信息（左侧对齐，显示在歌词下方，位置下移）
                                     Column(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(start = 24.dp, end = 24.dp, bottom = 8.dp),
+                                            .padding(start = 24.dp, end = 24.dp, bottom = 20.dp),
                                         horizontalAlignment = Alignment.Start
                                     ) {
                                         SongInfo(
@@ -464,7 +457,14 @@ private fun SongInfo(
 }
 
 
-// ── 封面图下方歌词预览（2行显示 + 滚动切换 + 打散漂浮消失） ──
+// ── 封面图下方歌词预览（2行显示 + 缩放淡变切换） ──
+//
+// 方案：缩放 + 淡变（Scale + Emphasis Shift）
+// 参考 Apple Music / 网易云音乐
+// - 当前行：大字 22sp，完全不透明
+// - 下一行：小字 15sp，低透明度
+// - 切换时：旧行缩小 + 变暗 + 轻微上移，新行放大 + 变亮 + 从下方升起
+//
 
 @Composable
 private fun SmoothLyricsDisplay(
@@ -475,9 +475,10 @@ private fun SmoothLyricsDisplay(
     playerTextTertiary: Color = Color.White.copy(alpha = 0.4f),
     modifier: Modifier = Modifier
 ) {
-    // 降低文字透明度，融入背景色
-    val dimTextColor = playerTextColor.copy(alpha = 0.6f)
-    val dimTextSecondary = playerTextTertiary.copy(alpha = 0.35f)
+    val activeColor = playerTextColor.copy(alpha = 0.85f)
+    val inactiveColor = playerTextColor.copy(alpha = 0.3f)
+    val activeFontSize = 22.sp
+    val inactiveFontSize = 15.sp
     val lineH = 44.dp
 
     if (lrcLines != null && lrcLines.isNotEmpty()) {
@@ -496,106 +497,68 @@ private fun SmoothLyricsDisplay(
             rawActiveIndex
         }
 
-        // 上一行歌词文本（用于消失动画）
-        var prevText by remember { mutableStateOf("") }
+        // 切换方向标识：+1 向上滚，-1 向下滚，0 无切换
+        var switchDirection by remember { mutableIntStateOf(0) }
         var prevActiveIndex by remember { mutableIntStateOf(activeIndex) }
 
-        // 滚动动画：下一行 -> 当前行位置
-        val scrollAnim = remember { Animatable(0f) }
-        // 消失动画：当前行 -> 粒子淡出
-        val fadeAnim = remember { Animatable(0f) }
-        // 新行出现动画
-        val appearAnim = remember { Animatable(0f) }
+        // 旧行退出动画（缩小 + 变暗 + 上移）
+        val exitAlpha = remember { Animatable(1f) }
+        val exitScale = remember { Animatable(1f) }
+        val exitOffsetY = remember { Animatable(0f) }
 
-        // 粒子状态
-        data class Particle(val x: Float, val y: Float, val vx: Float, val vy: Float, val size: Float, val a: Float)
-        var particles by remember { mutableStateOf(emptyList<Particle>()) }
-        var particleProgress by remember { mutableFloatStateOf(1f) }
-        val particleAnim = remember { Animatable(0f) }
+        // 新行进入动画（从下方升起 + 放大到正常）
+        val enterAlpha = remember { Animatable(1f) }
+        val enterScale = remember { Animatable(1f) }
+        val enterOffsetY = remember { Animatable(0f) }
 
-        // 行切换时：启动三组动画
+        // 行切换时：启动进入/退出动画
         LaunchedEffect(activeIndex) {
             if (activeIndex != prevActiveIndex && prevActiveIndex >= 0) {
-                prevText = lrcLines.getOrNull(prevActiveIndex)?.text ?: ""
+                switchDirection = if (activeIndex > prevActiveIndex) 1 else -1
                 prevActiveIndex = activeIndex
 
-                // 生成粒子（烟雾漂浮效果：小、慢、从文字中心出发）
-                val rng = java.util.Random()
-                particles = List(40) {
-                    Particle(
-                        x = rng.nextFloat() * 0.6f + 0.2f,
-                        y = 0.25f + rng.nextFloat() * 0.15f,
-                        vx = (rng.nextFloat() - 0.5f) * 0.15f,
-                        vy = -0.08f - rng.nextFloat() * 0.18f,
-                        size = 1f + rng.nextFloat() * 2.5f,
-                        a = 0.15f + rng.nextFloat() * 0.35f
-                    )
+                // 重置进入状态（新行从下方、小尺寸、透明开始）
+                enterAlpha.snapTo(0f)
+                enterScale.snapTo(0.85f)
+                enterOffsetY.snapTo(18f * switchDirection)
+
+                // 退出动画：旧行缩小、变暗、向上飘走
+                launch {
+                    exitAlpha.animateTo(0f, tween(320, easing = FastOutSlowInEasing))
+                }
+                launch {
+                    exitScale.animateTo(0.88f, tween(320, easing = FastOutSlowInEasing))
+                }
+                launch {
+                    exitOffsetY.animateTo(-12f * switchDirection, tween(320, easing = FastOutSlowInEasing))
                 }
 
-                // 并行启动动画
+                // 进入动画：新行放大到正常、淡入、升起
                 launch {
-                    scrollAnim.snapTo(0f)
-                    kotlinx.coroutines.delay(120)
-                    scrollAnim.animateTo(1f, tween(300, easing = FastOutSlowInEasing))
+                    enterAlpha.animateTo(1f, tween(350, easing = FastOutSlowInEasing))
                 }
                 launch {
-                    fadeAnim.snapTo(0f)
-                    fadeAnim.animateTo(1f, tween(450, easing = FastOutSlowInEasing))
+                    enterScale.animateTo(1f, tween(350, easing = FastOutSlowInEasing))
                 }
                 launch {
-                    appearAnim.snapTo(0f)
-                    appearAnim.animateTo(1f, tween(350, easing = FastOutSlowInEasing))
-                }
-                launch {
-                    particleAnim.snapTo(0f)
-                    particleProgress = 0f
-                    kotlinx.coroutines.delay(100)
-                    particleAnim.animateTo(1f, tween(800, easing = LinearEasing))
-                    particleProgress = 1f
+                    enterOffsetY.animateTo(0f, tween(350, easing = FastOutSlowInEasing))
                 }
             } else {
                 prevActiveIndex = activeIndex
             }
         }
 
-        val lineSpacingPx = with(LocalDensity.current) { lineH.toPx() }
+        // 首次加载时重置为正常状态
+        LaunchedEffect(Unit) {
+            exitAlpha.snapTo(0f)
+            exitScale.snapTo(0.88f)
+            exitOffsetY.snapTo(0f)
+            enterAlpha.snapTo(1f)
+            enterScale.snapTo(1f)
+            enterOffsetY.snapTo(0f)
+        }
 
         Box(modifier = modifier, contentAlignment = Alignment.Center) {
-            // === 粒子画布（最上层，烟雾漂浮效果） ===
-            if (particles.isNotEmpty() && particleProgress < 1f) {
-                Canvas(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(140.dp)
-                        .align(Alignment.TopCenter)
-                ) {
-                    val w = size.width
-                    val h = size.height
-                    // 缓入缓出的透明度曲线（烟雾渐渐散去）
-                    val easeAlpha = 1f - particleProgress * particleProgress
-                    particles.forEach { p ->
-                        val t = particleProgress
-                        val px = p.x * w + p.vx * w * t + kotlin.math.sin(t * 6.0 + p.x * 20.0).toFloat() * 3f
-                        val py = p.y * h + p.vy * h * t
-                        val a = p.a * easeAlpha
-                        if (a > 0.005f && py > -30f) {
-                            // 绘制柔和的烟雾圆点（半径稍大，透明度更低）
-                            drawCircle(
-                                color = dimTextColor.copy(alpha = a * 0.7f),
-                                radius = p.size * (1f + t * 0.8f),
-                                center = Offset(px, py)
-                            )
-                            // 内层更亮的核心
-                            drawCircle(
-                                color = dimTextColor.copy(alpha = a),
-                                radius = p.size * 0.5f * (1f + t * 0.3f),
-                                center = Offset(px, py)
-                            )
-                        }
-                    }
-                }
-            }
-
             // === 2行歌词区域（固定高度） ===
             Box(
                 modifier = Modifier
@@ -603,72 +566,17 @@ private fun SmoothLyricsDisplay(
                     .height(lineH * 2),
                 contentAlignment = Alignment.TopCenter
             ) {
-                // 上层：上一行歌词（燃烧消失效果 + 粒子）
-                if (prevText.isNotEmpty() && fadeAnim.value < 1f) {
-                    val burnProgress = fadeAnim.value
-                    // 燃烧效果：渐变从左向右扫过，文字像被烧掉一样消失
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(lineH)
-                            .padding(horizontal = 16.dp)
-                    ) {
-                        Text(
-                            text = prevText,
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = dimTextColor,
-                            textAlign = TextAlign.Center,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .drawWithContent {
-                                    drawContent()
-                                    val w = size.width
-                                    val burnEdge = w * burnProgress
-                                    // 燃烧边缘渐变带（透明 -> 不透明 = 保留 -> 擦除）
-                                    val gradientStart = (burnEdge - w * 0.18f).coerceAtLeast(0f)
-                                    val gradientEnd = burnEdge
-                                    if (gradientEnd > 0f) {
-                                        drawRect(
-                                            brush = Brush.horizontalGradient(
-                                                colors = listOf(
-                                                    Color.Black.copy(alpha = 0f),
-                                                    Color.Black.copy(alpha = 0.4f),
-                                                    Color.Black.copy(alpha = 0.8f),
-                                                    Color.Black
-                                                ),
-                                                startX = gradientStart,
-                                                endX = gradientEnd
-                                            ),
-                                            topLeft = Offset(gradientStart, 0f),
-                                            size = Size(gradientEnd - gradientStart, size.height),
-                                            blendMode = BlendMode.DstOut
-                                        )
-                                    }
-                                    // 已燃烧区域完全擦除
-                                    if (gradientStart > 0f) {
-                                        drawRect(
-                                            color = Color.Black,
-                                            topLeft = Offset.Zero,
-                                            size = Size(gradientStart, size.height),
-                                            blendMode = BlendMode.DstOut
-                                        )
-                                    }
-                                },
-                            lineHeight = lineH.value.sp
-                        )
-                    }
-                }
-
-                // 当前行：从下方滑入（小字 -> 大字位置）
+                // ── 当前行（大字，强调） ──
                 if (activeIndex in lrcLines.indices) {
+                    val currentText = lrcLines[activeIndex].text
+                    // 判断是否正在切换中（有旧行在退出）
+                    val isTransitioning = exitAlpha.value < 1f
+
                     Text(
-                        text = lrcLines[activeIndex].text,
-                        fontSize = 22.sp,
+                        text = currentText,
+                        fontSize = activeFontSize,
                         fontWeight = FontWeight.Bold,
-                        color = dimTextColor,
+                        color = activeColor,
                         textAlign = TextAlign.Center,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -677,24 +585,26 @@ private fun SmoothLyricsDisplay(
                             .height(lineH)
                             .padding(horizontal = 16.dp)
                             .graphicsLayer {
-                                translationY = (1f - scrollAnim.value.coerceAtLeast(
-                                    if (prevText.isEmpty()) 1f else 0f
-                                )) * lineSpacingPx
+                                if (isTransitioning) {
+                                    // 新行：使用进入动画参数
+                                    alpha = enterAlpha.value
+                                    scaleX = enterScale.value
+                                    scaleY = enterScale.value
+                                    translationY = enterOffsetY.value
+                                }
+                                // 静止时：identity（alpha=1, scale=1, offset=0）
                             },
                         lineHeight = lineH.value.sp
                     )
                 }
 
-                // 下一行（小字）
-                if (activeIndex + 1 < lrcLines.size) {
-                    val nextAlpha = appearAnim.value.coerceAtLeast(
-                        if (prevText.isEmpty()) 1f else 0f
-                    )
+                // ── 旧行退出（大字状态缩小飘走） ──
+                if (prevActiveIndex in lrcLines.indices && prevActiveIndex != activeIndex && exitAlpha.value > 0.01f) {
                     Text(
-                        text = lrcLines[activeIndex + 1].text,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Normal,
-                        color = dimTextSecondary.copy(alpha = dimTextSecondary.alpha * nextAlpha),
+                        text = lrcLines[prevActiveIndex].text,
+                        fontSize = activeFontSize,
+                        fontWeight = FontWeight.Bold,
+                        color = activeColor,
                         textAlign = TextAlign.Center,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -702,10 +612,31 @@ private fun SmoothLyricsDisplay(
                             .fillMaxWidth()
                             .height(lineH)
                             .padding(horizontal = 16.dp)
-                            .offset(y = lineH)
                             .graphicsLayer {
-                                translationY = (1f - nextAlpha) * lineSpacingPx * 0.5f
+                                alpha = exitAlpha.value
+                                scaleX = exitScale.value
+                                scaleY = exitScale.value
+                                translationY = exitOffsetY.value
                             },
+                        lineHeight = lineH.value.sp
+                    )
+                }
+
+                // ── 下一行（小字，弱化） ──
+                if (activeIndex + 1 < lrcLines.size) {
+                    Text(
+                        text = lrcLines[activeIndex + 1].text,
+                        fontSize = inactiveFontSize,
+                        fontWeight = FontWeight.Normal,
+                        color = inactiveColor,
+                        textAlign = TextAlign.Center,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(lineH)
+                            .padding(horizontal = 16.dp)
+                            .offset(y = lineH),
                         lineHeight = lineH.value.sp
                     )
                 }
@@ -719,7 +650,7 @@ private fun SmoothLyricsDisplay(
                         text = line.trim(),
                         fontSize = if (index == 0) 22.sp else 15.sp,
                         fontWeight = if (index == 0) FontWeight.Bold else FontWeight.Normal,
-                        color = if (index == 0) dimTextColor else dimTextSecondary,
+                        color = if (index == 0) activeColor else inactiveColor,
                         textAlign = TextAlign.Center,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -732,7 +663,7 @@ private fun SmoothLyricsDisplay(
         }
     } else {
         Box(modifier = modifier, contentAlignment = Alignment.Center) {
-            Text("暂无歌词", fontSize = 15.sp, color = dimTextSecondary, textAlign = TextAlign.Center)
+            Text("暂无歌词", fontSize = 15.sp, color = inactiveColor, textAlign = TextAlign.Center)
         }
     }
 }
