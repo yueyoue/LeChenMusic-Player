@@ -308,9 +308,10 @@ fun MusicPlayerContent(
                                             .weight(1f)
                                             .fillMaxWidth()
                                             .padding(horizontal = 24.dp)
-                                            .padding(bottom = 8.dp)
                                     )
-                                    // 歌曲信息（左侧对齐，显示在歌词下方，位置下移）
+                                    // 歌词与歌曲信息之间的间隔
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    // 歌曲信息（左侧对齐，显示在歌词下方）
                                     Column(
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -477,9 +478,9 @@ private fun SmoothLyricsDisplay(
 ) {
     val activeColor = playerTextColor.copy(alpha = 0.85f)
     val inactiveColor = playerTextColor.copy(alpha = 0.3f)
-    val activeFontSize = 22.sp
+    val activeFontSize = 20.sp
     val inactiveFontSize = 15.sp
-    val lineH = 44.dp
+    val lineH = 42.dp
 
     if (lrcLines != null && lrcLines.isNotEmpty()) {
         val rawActiveIndex = findActiveLyricLine(lrcLines, currentPosition)
@@ -648,7 +649,7 @@ private fun SmoothLyricsDisplay(
                 plainLines.take(2).forEachIndexed { index, line ->
                     Text(
                         text = line.trim(),
-                        fontSize = if (index == 0) 22.sp else 15.sp,
+                        fontSize = if (index == 0) 20.sp else 15.sp,
                         fontWeight = if (index == 0) FontWeight.Bold else FontWeight.Normal,
                         color = if (index == 0) activeColor else inactiveColor,
                         textAlign = TextAlign.Center,
