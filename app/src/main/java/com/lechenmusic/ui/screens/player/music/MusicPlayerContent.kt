@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -532,10 +533,8 @@ private fun SmoothLyricsDisplay(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 8.dp, horizontal = 16.dp)
-                        .animateItem(
-                            fadeInSpec = tween(300),
-                            fadeOutSpec = tween(300),
-                            placementSpec = tween(300)
+                        .animateItemPlacement(
+                            animationSpec = tween(300)
                         )
                 )
             }
