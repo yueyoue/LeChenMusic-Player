@@ -15,10 +15,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.animation.core.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.graphicsLayer
 import kotlinx.coroutines.launch
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
@@ -231,12 +234,12 @@ fun MusicPlayerContent(
                     ) { hPage ->
                         when (hPage) {
                             0 -> {
-                                // 第1页：封面图 + 歌曲信息 + 歌词预览
+                                // 第1页：封面图 + 歌词预览 + 歌曲信息
                                 Column(
                                     modifier = Modifier.fillMaxSize(),
                                     horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
-                                    // 封面图（全宽，带渐变遮罩）
+                                    // 封面图（全宽，带渐变遮罩和页码指示器）
                                     Box(
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -293,53 +296,52 @@ fun MusicPlayerContent(
                                                     )
                                                 )
                                         )
-                                    }
-                                    // 歌曲信息
-                                    Column(
-                                        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally
-                                    ) {
-                                        SongInfo(song = pSong, titleSize = 22.sp, artistSize = 14.sp, onArtistClick = { if (pSong.artistId.isNotBlank()) onNavigateToArtist(pSong.artistId) }, center = true, playerTextColor = pTextColor, playerTextSecondary = pTextSecondary)
-                                    }
-                                    // 当前歌词预览
-                                    val previewLrcIndex = if (pLrcLines != null) findActiveLyricLine(pLrcLines, currentPosition) else -1
-                                    if (pLrcLines != null && pLrcLines.isNotEmpty()) {
-                                        val ctx = 4
-                                        val start = (previewLrcIndex - ctx).coerceAtLeast(0)
-                                        val end = (previewLrcIndex + ctx + 1).coerceAtMost(pLrcLines.size)
-                                        val visibleLines = pLrcLines.subList(start, end)
-                                        LazyColumn(
-                                            modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 24.dp),
-                                            contentPadding = PaddingValues(vertical = 16.dp),
-                                            horizontalAlignment = Alignment.CenterHorizontally
+                                        // 页码指示器（封面图顶部居中）
+                                        Row(
+                                            modifier = Modifier
+                                                .align(Alignment.TopCenter)
+                                                .padding(top = 16.dp),
+                                            horizontalArrangement = Arrangement.Center
                                         ) {
-                                            itemsIndexed(visibleLines) { idx, line ->
-                                                val actualIndex = start + idx
-                                                val isActive = actualIndex == previewLrcIndex
-                                                Text(
-                                                    text = line.text,
-                                                    fontSize = 15.sp,
-                                                    fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
-                                                    color = if (isActive) pTextColor else pTextTertiary,
-                                                    textAlign = TextAlign.Center,
-                                                    modifier = Modifier.padding(vertical = 4.dp).fillMaxWidth()
+                                            repeat(2) { idx ->
+                                                Box(
+                                                    modifier = Modifier
+                                                        .padding(horizontal = 4.dp)
+                                                        .size(if (hPagerState.currentPage == idx) 8.dp else 6.dp)
+                                                        .clip(CircleShape)
+                                                        .background(if (hPagerState.currentPage == idx) pTextColor else pTextTertiary)
                                                 )
                                             }
                                         }
-                                    } else if (pPlainLines.isNotEmpty()) {
-                                        LazyColumn(
-                                            modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 24.dp),
-                                            contentPadding = PaddingValues(vertical = 16.dp),
-                                            horizontalAlignment = Alignment.CenterHorizontally
-                                        ) {
-                                            itemsIndexed(pPlainLines) { _, line ->
-                                                Text(line.trim(), fontSize = 15.sp, color = pTextTertiary, textAlign = TextAlign.Center, modifier = Modifier.padding(vertical = 4.dp).fillMaxWidth())
-                                            }
-                                        }
-                                    } else {
-                                        Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                                            Text("暂无歌词", fontSize = 15.sp, color = pTextTertiary)
-                                        }
+                                    }
+                                    // 歌词预览（平滑滚动，禁用手势滑动）
+                                    SmoothLyricsDisplay(
+                                        lrcLines = pLrcLines,
+                                        plainLines = pPlainLines,
+                                        currentPosition = currentPosition,
+                                        playerTextColor = pTextColor,
+                                        playerTextTertiary = pTextTertiary,
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 24.dp)
+                                    )
+                                    // 歌曲信息（左侧对齐，显示在歌词下方）
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(start = 24.dp, end = 24.dp, bottom = 8.dp),
+                                        horizontalAlignment = Alignment.Start
+                                    ) {
+                                        SongInfo(
+                                            song = pSong,
+                                            titleSize = 22.sp,
+                                            artistSize = 14.sp,
+                                            onArtistClick = { if (pSong.artistId.isNotBlank()) onNavigateToArtist(pSong.artistId) },
+                                            center = false,
+                                            playerTextColor = pTextColor,
+                                            playerTextSecondary = pTextSecondary
+                                        )
                                     }
                                 }
                             }
@@ -360,12 +362,6 @@ fun MusicPlayerContent(
                                     )
                                 }
                             }
-                        }
-                    }
-                    // 页码指示器
-                    Row(modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp), horizontalArrangement = Arrangement.Center) {
-                        repeat(2) { idx ->
-                            Box(modifier = Modifier.padding(horizontal = 4.dp).size(if (hPagerState.currentPage == idx) 8.dp else 6.dp).clip(CircleShape).background(if (hPagerState.currentPage == idx) pTextColor else pTextTertiary))
                         }
                     }
                 }
@@ -477,7 +473,163 @@ private fun SongInfo(
 }
 
 
-// ── 歌词面板 ─────────────────────────────────────────────
+// ── 封面图下方歌词预览（平滑滚动，禁用手势滑动，2行显示） ──
+
+@Composable
+private fun SmoothLyricsDisplay(
+    lrcLines: List<com.lechenmusic.ui.screens.player.LyricLine>?,
+    plainLines: List<String>,
+    currentPosition: Long,
+    playerTextColor: Color = Color.White,
+    playerTextTertiary: Color = Color.White.copy(alpha = 0.4f),
+    modifier: Modifier = Modifier
+) {
+    val lineSpacing = 48.dp
+    val lineSpacingPx = with(androidx.compose.ui.platform.LocalDensity.current) { lineSpacing.toPx() }
+
+    if (lrcLines != null && lrcLines.isNotEmpty()) {
+        // ── LRC 歌词：平滑滚动 + 消失动画 ──
+        val activeIndex = findActiveLyricLine(lrcLines, currentPosition)
+
+        // 计算当前行内的播放进度（0~1）
+        val progressInLine = remember(currentPosition, lrcLines, activeIndex) {
+            if (activeIndex < 0 || activeIndex >= lrcLines.size) 0f
+            else if (activeIndex == lrcLines.size - 1) 0f
+            else {
+                val lineStart = lrcLines[activeIndex].timeMs
+                val lineEnd = lrcLines[activeIndex + 1].timeMs
+                val lineDuration = lineEnd - lineStart
+                if (lineDuration <= 0) 0f
+                else ((currentPosition - lineStart).toFloat() / lineDuration).coerceIn(0f, 1f)
+            }
+        }
+
+        // 垂直偏移动画（行切换时平滑滚动）
+        val offsetY = remember { Animatable(0f) }
+        var prevIndex by remember { mutableIntStateOf(activeIndex) }
+
+        LaunchedEffect(activeIndex) {
+            if (activeIndex != prevIndex) {
+                prevIndex = activeIndex
+                offsetY.snapTo(0f)
+                offsetY.animateTo(
+                    targetValue = lineSpacingPx,
+                    animationSpec = tween(
+                        durationMillis = 280,
+                        easing = FastOutSlowInEasing
+                    )
+                )
+                offsetY.snapTo(0f)
+            }
+        }
+
+        Box(modifier = modifier, contentAlignment = Alignment.Center) {
+            Box(
+                modifier = Modifier.graphicsLayer {
+                    translationY = -offsetY.value - progressInLine * lineSpacingPx * 0.5f
+                }
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    // 当前歌词行（大号加粗）
+                    if (activeIndex in lrcLines.indices) {
+                        Text(
+                            text = lrcLines[activeIndex].text,
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = playerTextColor,
+                            textAlign = TextAlign.Center,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp)
+                        )
+                    }
+                    // 下一行歌词（小号，带消失动画）
+                    if (activeIndex + 1 < lrcLines.size) {
+                        val lineAlpha = remember(activeIndex, progressInLine) {
+                            // 当接近切换时(>0.85)，下一行开始淡出
+                            if (progressInLine > 0.85f) {
+                                1f - ((progressInLine - 0.85f) / 0.15f).coerceIn(0f, 1f) * 0.4f
+                            } else 1f
+                        }
+                        Text(
+                            text = lrcLines[activeIndex + 1].text,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Normal,
+                            color = playerTextTertiary,
+                            textAlign = TextAlign.Center,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .alpha(lineAlpha)
+                                .padding(vertical = 8.dp)
+                        )
+                    } else {
+                        // 最后一行，显示空白占位
+                        Spacer(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(31.dp)
+                                .padding(vertical = 8.dp)
+                        )
+                    }
+                    // 已播放歌词淡出区（显示上一行，逐渐透明）
+                    if (activeIndex - 1 >= 0 && activeIndex - 1 < lrcLines.size) {
+                        val fadeAlpha = remember(progressInLine) {
+                            if (progressInLine < 0.15f) {
+                                0.4f * (1f - progressInLine / 0.15f)
+                            } else 0f
+                        }
+                        if (fadeAlpha > 0.01f) {
+                            Text(
+                                text = lrcLines[activeIndex - 1].text,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Normal,
+                                color = playerTextTertiary.copy(alpha = fadeAlpha),
+                                textAlign = TextAlign.Center,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    } else if (plainLines.isNotEmpty()) {
+        // ── 纯文本歌词（无时间戳）：静态显示 ──
+        Box(modifier = modifier, contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                plainLines.take(2).forEachIndexed { index, line ->
+                    Text(
+                        text = line.trim(),
+                        fontSize = if (index == 0) 22.sp else 15.sp,
+                        fontWeight = if (index == 0) FontWeight.Bold else FontWeight.Normal,
+                        color = if (index == 0) playerTextColor else playerTextTertiary,
+                        textAlign = TextAlign.Center,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp)
+                    )
+                }
+            }
+        }
+    } else {
+        // ── 无歌词 ──
+        Box(modifier = modifier, contentAlignment = Alignment.Center) {
+            Text("暂无歌词", fontSize = 15.sp, color = playerTextTertiary, textAlign = TextAlign.Center)
+        }
+    }
+}
+
+
+// ── 歌词面板（全屏歌词页使用） ─────────────────────────────
 
 @Composable
 private fun LyricsPanel(
