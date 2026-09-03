@@ -233,99 +233,95 @@ fun MusicPlayerContent(
                     ) { hPage ->
                         when (hPage) {
                             0 -> {
-                                // 第1页：封面图铺满 + 歌词和歌曲信息叠加在底部
-                                Box(
+                                // 第1页：封面图(上方) + 歌词预览 + 歌曲信息
+                                Column(
                                     modifier = Modifier.fillMaxSize(),
-                                    contentAlignment = Alignment.BottomCenter
+                                    horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
-                                    // 封面图（铺满整个区域）
-                                    if (pCoverUrl != null) {
-                                        AsyncImage(
-                                            model = pCoverUrl,
-                                            contentDescription = null,
-                                            modifier = Modifier.fillMaxSize(),
-                                            contentScale = ContentScale.Crop
-                                        )
-                                    } else {
+                                    // 封面图（上方，限制高度，带渐变遮罩）
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .weight(1f)
+                                            .clipToBounds()
+                                    ) {
+                                        if (pCoverUrl != null) {
+                                            AsyncImage(
+                                                model = pCoverUrl,
+                                                contentDescription = null,
+                                                modifier = Modifier.fillMaxSize(),
+                                                contentScale = ContentScale.Crop
+                                            )
+                                        } else {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(Icons.Default.MusicNote, null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f), modifier = Modifier.size(64.dp))
+                                            }
+                                        }
+                                        // 顶部渐变遮罩
                                         Box(
                                             modifier = Modifier
-                                                .fillMaxSize()
-                                                .background(MaterialTheme.colorScheme.surfaceVariant),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Icon(Icons.Default.MusicNote, null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f), modifier = Modifier.size(64.dp))
-                                        }
+                                                .fillMaxWidth()
+                                                .height(160.dp)
+                                                .align(Alignment.TopCenter)
+                                                .background(
+                                                    Brush.verticalGradient(
+                                                        colorStops = arrayOf(
+                                                            0.0f to pBgColor,
+                                                            0.3f to pBgColor.copy(alpha = 0.8f),
+                                                            0.6f to pBgColor.copy(alpha = 0.4f),
+                                                            1.0f to Color.Transparent
+                                                        )
+                                                    )
+                                                )
+                                        )
+                                        // 底部渐变遮罩
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(80.dp)
+                                                .align(Alignment.BottomCenter)
+                                                .background(
+                                                    Brush.verticalGradient(
+                                                        colorStops = arrayOf(
+                                                            0.0f to Color.Transparent,
+                                                            1.0f to pBgColor
+                                                        )
+                                                    )
+                                                )
+                                        )
                                     }
-                                    // 顶部渐变遮罩（自然过渡）
-                                    Box(
+                                    // 歌词预览（封面下方）
+                                    SmoothLyricsDisplay(
+                                        lrcLines = pLrcLines,
+                                        plainLines = pPlainLines,
+                                        currentPosition = currentPosition,
+                                        playerTextColor = pTextColor,
+                                        playerTextTertiary = pTextTertiary,
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .height(160.dp)
-                                            .align(Alignment.TopCenter)
-                                            .background(
-                                                Brush.verticalGradient(
-                                                    colorStops = arrayOf(
-                                                        0.0f to pBgColor,
-                                                        0.3f to pBgColor.copy(alpha = 0.8f),
-                                                        0.6f to pBgColor.copy(alpha = 0.4f),
-                                                        1.0f to Color.Transparent
-                                                    )
-                                                )
-                                            )
+                                            .padding(horizontal = 24.dp, vertical = 12.dp)
                                     )
-                                    // 底部渐变遮罩（加深，确保歌词和歌曲信息可读）
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(220.dp)
-                                            .align(Alignment.BottomCenter)
-                                            .background(
-                                                Brush.verticalGradient(
-                                                    colorStops = arrayOf(
-                                                        0.0f to Color.Transparent,
-                                                        0.3f to pBgColor.copy(alpha = 0.5f),
-                                                        0.6f to pBgColor.copy(alpha = 0.85f),
-                                                        1.0f to pBgColor
-                                                    )
-                                                )
-                                            )
-                                    )
-                                    // 歌词 + 歌曲信息（叠加在封面底部）
+                                    // 歌曲信息
                                     Column(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(bottom = 20.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally
+                                            .padding(start = 24.dp, end = 24.dp, bottom = 16.dp),
+                                        horizontalAlignment = Alignment.Start
                                     ) {
-                                        // 歌词预览
-                                        SmoothLyricsDisplay(
-                                            lrcLines = pLrcLines,
-                                            plainLines = pPlainLines,
-                                            currentPosition = currentPosition,
+                                        SongInfo(
+                                            song = pSong,
+                                            titleSize = 22.sp,
+                                            artistSize = 14.sp,
+                                            onArtistClick = { if (pSong.artistId.isNotBlank()) onNavigateToArtist(pSong.artistId) },
+                                            center = false,
                                             playerTextColor = pTextColor,
-                                            playerTextTertiary = pTextTertiary,
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(horizontal = 24.dp)
+                                            playerTextSecondary = pTextSecondary
                                         )
-                                        Spacer(modifier = Modifier.height(16.dp))
-                                        // 歌曲信息
-                                        Column(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(horizontal = 24.dp),
-                                            horizontalAlignment = Alignment.Start
-                                        ) {
-                                            SongInfo(
-                                                song = pSong,
-                                                titleSize = 22.sp,
-                                                artistSize = 14.sp,
-                                                onArtistClick = { if (pSong.artistId.isNotBlank()) onNavigateToArtist(pSong.artistId) },
-                                                center = false,
-                                                playerTextColor = pTextColor,
-                                                playerTextSecondary = pTextSecondary
-                                            )
-                                        }
                                     }
                                 }
                             }
