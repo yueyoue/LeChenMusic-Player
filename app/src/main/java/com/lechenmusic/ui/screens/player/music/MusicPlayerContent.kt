@@ -297,7 +297,7 @@ fun MusicPlayerContent(
                                         )
 
                                     }
-                                    // 歌词预览（缩放淡变切换，底部对齐紧贴歌曲信息上方）
+                                    // 歌词预览（固定高度，不扩展，确保与歌曲信息有明确间距）
                                     SmoothLyricsDisplay(
                                         lrcLines = pLrcLines,
                                         plainLines = pPlainLines,
@@ -305,16 +305,14 @@ fun MusicPlayerContent(
                                         playerTextColor = pTextColor,
                                         playerTextTertiary = pTextTertiary,
                                         modifier = Modifier
-                                            .weight(1f)
                                             .fillMaxWidth()
-                                            .padding(horizontal = 24.dp),
-                                        contentAlignment = Alignment.BottomCenter
+                                            .padding(horizontal = 24.dp, vertical = 12.dp)
                                     )
-                                    // 歌曲信息（固定在底部，上方有明确间距）
+                                    // 歌曲信息（固定在底部）
                                     Column(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(start = 24.dp, end = 24.dp, top = 16.dp, bottom = 20.dp),
+                                            .padding(start = 24.dp, end = 24.dp, bottom = 20.dp),
                                         horizontalAlignment = Alignment.Start
                                     ) {
                                         SongInfo(
