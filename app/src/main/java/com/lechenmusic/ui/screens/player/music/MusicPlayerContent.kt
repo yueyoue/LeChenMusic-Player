@@ -297,7 +297,7 @@ fun MusicPlayerContent(
                                         )
 
                                     }
-                                    // 歌词预览（缩放淡变切换，位置上移）
+                                    // 歌词预览（缩放淡变切换，底部对齐紧贴歌曲信息上方）
                                     SmoothLyricsDisplay(
                                         lrcLines = pLrcLines,
                                         plainLines = pPlainLines,
@@ -307,15 +307,14 @@ fun MusicPlayerContent(
                                         modifier = Modifier
                                             .weight(1f)
                                             .fillMaxWidth()
-                                            .padding(horizontal = 24.dp)
+                                            .padding(horizontal = 24.dp),
+                                        contentAlignment = Alignment.BottomCenter
                                     )
-                                    // 歌词与歌曲信息之间的间隔
-                                    Spacer(modifier = Modifier.height(16.dp))
-                                    // 歌曲信息（左侧对齐，显示在歌词下方）
+                                    // 歌曲信息（固定在底部，上方有明确间距）
                                     Column(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(start = 24.dp, end = 24.dp, bottom = 20.dp),
+                                            .padding(start = 24.dp, end = 24.dp, top = 16.dp, bottom = 20.dp),
                                         horizontalAlignment = Alignment.Start
                                     ) {
                                         SongInfo(
@@ -474,7 +473,8 @@ private fun SmoothLyricsDisplay(
     currentPosition: Long,
     playerTextColor: Color = Color.White,
     playerTextTertiary: Color = Color.White.copy(alpha = 0.4f),
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentAlignment: Alignment = Alignment.Center
 ) {
     val activeColor = playerTextColor.copy(alpha = 0.85f)
     val inactiveColor = playerTextColor.copy(alpha = 0.3f)
@@ -559,7 +559,7 @@ private fun SmoothLyricsDisplay(
             enterOffsetY.snapTo(0f)
         }
 
-        Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        Box(modifier = modifier, contentAlignment = contentAlignment) {
             // === 2行歌词区域（固定高度） ===
             Box(
                 modifier = Modifier
@@ -644,7 +644,7 @@ private fun SmoothLyricsDisplay(
             }
         }
     } else if (plainLines.isNotEmpty()) {
-        Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        Box(modifier = modifier, contentAlignment = contentAlignment) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 plainLines.take(2).forEachIndexed { index, line ->
                     Text(
@@ -663,7 +663,7 @@ private fun SmoothLyricsDisplay(
             }
         }
     } else {
-        Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        Box(modifier = modifier, contentAlignment = contentAlignment) {
             Text("暂无歌词", fontSize = 15.sp, color = inactiveColor, textAlign = TextAlign.Center)
         }
     }
