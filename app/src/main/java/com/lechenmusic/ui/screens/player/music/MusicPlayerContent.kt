@@ -24,6 +24,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
 import kotlinx.coroutines.launch
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
@@ -538,7 +539,6 @@ private fun SmoothLyricsDisplay(
             particleProgress = particleAnim.value
         }
 
-        val density = LocalDensity.current
         Box(modifier = modifier, contentAlignment = Alignment.Center) {
             // 粒子画布（在歌词上层绘制）
             if (particles.isNotEmpty() && particleProgress < 1f) {
