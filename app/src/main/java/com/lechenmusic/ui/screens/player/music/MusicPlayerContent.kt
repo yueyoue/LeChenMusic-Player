@@ -458,6 +458,7 @@ private fun SongInfo(
 // ── 封面图下方歌词预览（LazyColumn自动滚动，禁用手势滑动） ──
 // 参考网易云音乐/酷狗音乐 Compose 歌词实现
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun SmoothLyricsDisplay(
     lrcLines: List<com.lechenmusic.ui.screens.player.LyricLine>?,
