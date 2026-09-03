@@ -22,8 +22,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.platform.LocalDensity
 import kotlinx.coroutines.launch
 import androidx.compose.ui.draw.shadow
@@ -515,28 +519,28 @@ private fun SmoothLyricsDisplay(
                 prevText = lrcLines.getOrNull(prevActiveIndex)?.text ?: ""
                 prevActiveIndex = activeIndex
 
-                // 生成粒子
+                // 生成粒子（烟雾漂浮效果：小、慢、从文字中心出发）
                 val rng = java.util.Random()
-                particles = List(25) {
+                particles = List(40) {
                     Particle(
-                        x = rng.nextFloat() * 0.7f + 0.15f,
-                        y = 0.1f + rng.nextFloat() * 0.3f,
-                        vx = (rng.nextFloat() - 0.5f) * 0.4f,
-                        vy = -0.2f - rng.nextFloat() * 0.6f,
-                        size = 2f + rng.nextFloat() * 3f,
-                        a = 0.3f + rng.nextFloat() * 0.5f
+                        x = rng.nextFloat() * 0.6f + 0.2f,
+                        y = 0.25f + rng.nextFloat() * 0.15f,
+                        vx = (rng.nextFloat() - 0.5f) * 0.15f,
+                        vy = -0.08f - rng.nextFloat() * 0.18f,
+                        size = 1f + rng.nextFloat() * 2.5f,
+                        a = 0.15f + rng.nextFloat() * 0.35f
                     )
                 }
 
-                // 并行启动动画（当前行延迟一点，避免重叠震颤）
+                // 并行启动动画
                 launch {
                     scrollAnim.snapTo(0f)
-                    kotlinx.coroutines.delay(80)
+                    kotlinx.coroutines.delay(120)
                     scrollAnim.animateTo(1f, tween(300, easing = FastOutSlowInEasing))
                 }
                 launch {
                     fadeAnim.snapTo(0f)
-                    fadeAnim.animateTo(1f, tween(350, easing = FastOutSlowInEasing))
+                    fadeAnim.animateTo(1f, tween(450, easing = FastOutSlowInEasing))
                 }
                 launch {
                     appearAnim.snapTo(0f)
@@ -545,7 +549,8 @@ private fun SmoothLyricsDisplay(
                 launch {
                     particleAnim.snapTo(0f)
                     particleProgress = 0f
-                    particleAnim.animateTo(1f, tween(600, easing = LinearEasing))
+                    kotlinx.coroutines.delay(100)
+                    particleAnim.animateTo(1f, tween(800, easing = LinearEasing))
                     particleProgress = 1f
                 }
             } else {
@@ -556,24 +561,34 @@ private fun SmoothLyricsDisplay(
         val lineSpacingPx = with(LocalDensity.current) { lineH.toPx() }
 
         Box(modifier = modifier, contentAlignment = Alignment.Center) {
-            // === 粒子画布（最上层） ===
+            // === 粒子画布（最上层，烟雾漂浮效果） ===
             if (particles.isNotEmpty() && particleProgress < 1f) {
                 Canvas(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(120.dp)
+                        .height(140.dp)
                         .align(Alignment.TopCenter)
                 ) {
                     val w = size.width
                     val h = size.height
+                    // 缓入缓出的透明度曲线（烟雾渐渐散去）
+                    val easeAlpha = 1f - particleProgress * particleProgress
                     particles.forEach { p ->
-                        val px = p.x * w + p.vx * w * particleProgress
-                        val py = p.y * h + p.vy * h * particleProgress
-                        val a = p.a * (1f - particleProgress) * fadeAnim.value
-                        if (a > 0.01f && py > -20f) {
+                        val t = particleProgress
+                        val px = p.x * w + p.vx * w * t + kotlin.math.sin(t * 6.0 + p.x * 20.0).toFloat() * 3f
+                        val py = p.y * h + p.vy * h * t
+                        val a = p.a * easeAlpha
+                        if (a > 0.005f && py > -30f) {
+                            // 绘制柔和的烟雾圆点（半径稍大，透明度更低）
+                            drawCircle(
+                                color = dimTextColor.copy(alpha = a * 0.7f),
+                                radius = p.size * (1f + t * 0.8f),
+                                center = Offset(px, py)
+                            )
+                            // 内层更亮的核心
                             drawCircle(
                                 color = dimTextColor.copy(alpha = a),
-                                radius = p.size * (1f - particleProgress * 0.3f),
+                                radius = p.size * 0.5f * (1f + t * 0.3f),
                                 center = Offset(px, py)
                             )
                         }
@@ -588,22 +603,63 @@ private fun SmoothLyricsDisplay(
                     .height(lineH * 2),
                 contentAlignment = Alignment.TopCenter
             ) {
-                // 上层：上一行歌词（原位粒子消失，不动）
+                // 上层：上一行歌词（燃烧消失效果 + 粒子）
                 if (prevText.isNotEmpty() && fadeAnim.value < 1f) {
-                    Text(
-                        text = prevText,
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = dimTextColor.copy(alpha = dimTextColor.alpha * (1f - fadeAnim.value)),
-                        textAlign = TextAlign.Center,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
+                    val burnProgress = fadeAnim.value
+                    // 燃烧效果：渐变从左向右扫过，文字像被烧掉一样消失
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(lineH)
-                            .padding(horizontal = 16.dp),
-                        lineHeight = lineH.value.sp
-                    )
+                            .padding(horizontal = 16.dp)
+                    ) {
+                        Text(
+                            text = prevText,
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = dimTextColor,
+                            textAlign = TextAlign.Center,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .drawWithContent {
+                                    drawContent()
+                                    val w = size.width
+                                    val burnEdge = w * burnProgress
+                                    // 燃烧边缘渐变带（透明 -> 不透明 = 保留 -> 擦除）
+                                    val gradientStart = (burnEdge - w * 0.18f).coerceAtLeast(0f)
+                                    val gradientEnd = burnEdge
+                                    if (gradientEnd > 0f) {
+                                        drawRect(
+                                            brush = Brush.horizontalGradient(
+                                                colors = listOf(
+                                                    Color.Black.copy(alpha = 0f),
+                                                    Color.Black.copy(alpha = 0.4f),
+                                                    Color.Black.copy(alpha = 0.8f),
+                                                    Color.Black
+                                                ),
+                                                startX = gradientStart,
+                                                endX = gradientEnd
+                                            ),
+                                            topLeft = Offset(gradientStart, 0f),
+                                            size = Size(gradientEnd - gradientStart, size.height),
+                                            blendMode = BlendMode.DstOut
+                                        )
+                                    }
+                                    // 已燃烧区域完全擦除
+                                    if (gradientStart > 0f) {
+                                        drawRect(
+                                            color = Color.Black,
+                                            topLeft = Offset.Zero,
+                                            size = Size(gradientStart, size.height),
+                                            blendMode = BlendMode.DstOut
+                                        )
+                                    }
+                                },
+                            lineHeight = lineH.value.sp
+                        )
+                    }
                 }
 
                 // 当前行：从下方滑入（小字 -> 大字位置）
