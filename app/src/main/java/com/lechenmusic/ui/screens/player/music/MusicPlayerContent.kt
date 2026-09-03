@@ -15,13 +15,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.animation.core.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.graphics.graphicsLayer
 import kotlinx.coroutines.launch
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
@@ -296,23 +293,7 @@ fun MusicPlayerContent(
                                                     )
                                                 )
                                         )
-                                        // 页码指示器（封面图顶部居中）
-                                        Row(
-                                            modifier = Modifier
-                                                .align(Alignment.TopCenter)
-                                                .padding(top = 16.dp),
-                                            horizontalArrangement = Arrangement.Center
-                                        ) {
-                                            repeat(2) { idx ->
-                                                Box(
-                                                    modifier = Modifier
-                                                        .padding(horizontal = 4.dp)
-                                                        .size(if (hPagerState.currentPage == idx) 8.dp else 6.dp)
-                                                        .clip(CircleShape)
-                                                        .background(if (hPagerState.currentPage == idx) pTextColor else pTextTertiary)
-                                                )
-                                            }
-                                        }
+
                                     }
                                     // 歌词预览（平滑滚动，禁用手势滑动）
                                     SmoothLyricsDisplay(
@@ -473,7 +454,8 @@ private fun SongInfo(
 }
 
 
-// ── 封面图下方歌词预览（平滑滚动，禁用手势滑动，2行显示） ──
+// ── 封面图下方歌词预览（LazyColumn自动滚动，禁用手势滑动） ──
+// 参考网易云音乐/酷狗音乐 Compose 歌词实现
 
 @Composable
 private fun SmoothLyricsDisplay(
@@ -484,134 +466,92 @@ private fun SmoothLyricsDisplay(
     playerTextTertiary: Color = Color.White.copy(alpha = 0.4f),
     modifier: Modifier = Modifier
 ) {
-    val lineSpacing = 48.dp
-    val lineSpacingPx = with(androidx.compose.ui.platform.LocalDensity.current) { lineSpacing.toPx() }
-
     if (lrcLines != null && lrcLines.isNotEmpty()) {
-        // ── LRC 歌词：平滑滚动 + 消失动画 ──
-        val activeIndex = findActiveLyricLine(lrcLines, currentPosition)
-
-        // 计算当前行内的播放进度（0~1）
-        val progressInLine = remember(currentPosition, lrcLines, activeIndex) {
-            if (activeIndex < 0 || activeIndex >= lrcLines.size) 0f
-            else if (activeIndex == lrcLines.size - 1) 0f
-            else {
-                val lineStart = lrcLines[activeIndex].timeMs
-                val lineEnd = lrcLines[activeIndex + 1].timeMs
-                val lineDuration = lineEnd - lineStart
-                if (lineDuration <= 0) 0f
-                else ((currentPosition - lineStart).toFloat() / lineDuration).coerceIn(0f, 1f)
-            }
-        }
-
-        // 垂直偏移动画（行切换时平滑滚动）
-        val offsetY = remember { Animatable(0f) }
-        var prevIndex by remember { mutableIntStateOf(activeIndex) }
-
-        LaunchedEffect(activeIndex) {
-            if (activeIndex != prevIndex) {
-                prevIndex = activeIndex
-                offsetY.snapTo(0f)
-                offsetY.animateTo(
-                    targetValue = lineSpacingPx,
-                    animationSpec = tween(
-                        durationMillis = 280,
-                        easing = FastOutSlowInEasing
-                    )
-                )
-                offsetY.snapTo(0f)
-            }
-        }
-
-        Box(modifier = modifier, contentAlignment = Alignment.Center) {
-            Box(
-                modifier = Modifier.graphicsLayer {
-                    translationY = -offsetY.value - progressInLine * lineSpacingPx * 0.5f
-                }
+        // ── LRC 歌词：LazyColumn 自动滚动到当前行 ──
+        val rawActiveIndex = findActiveLyricLine(lrcLines, currentPosition)
+        // 防止歌曲开始前的元数据行跳动：
+        // 找到第一个真正有内容的歌词行（timeMs > 1000 或非连续相同时间戳的行）
+        val firstRealLyricIndex = remember(lrcLines) {
+            var idx = 0
+            while (idx < lrcLines.size - 1 &&
+                lrcLines[idx + 1].timeMs - lrcLines[idx].timeMs < 500L &&
+                lrcLines[idx].timeMs < 1000L
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    // 当前歌词行（大号加粗）
-                    if (activeIndex in lrcLines.indices) {
-                        Text(
-                            text = lrcLines[activeIndex].text,
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = playerTextColor,
-                            textAlign = TextAlign.Center,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp)
-                        )
-                    }
-                    // 下一行歌词（小号，带消失动画）
-                    if (activeIndex + 1 < lrcLines.size) {
-                        val lineAlpha = remember(activeIndex, progressInLine) {
-                            // 当接近切换时(>0.85)，下一行开始淡出
-                            if (progressInLine > 0.85f) {
-                                1f - ((progressInLine - 0.85f) / 0.15f).coerceIn(0f, 1f) * 0.4f
-                            } else 1f
-                        }
-                        Text(
-                            text = lrcLines[activeIndex + 1].text,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Normal,
-                            color = playerTextTertiary,
-                            textAlign = TextAlign.Center,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .alpha(lineAlpha)
-                                .padding(vertical = 8.dp)
-                        )
-                    } else {
-                        // 最后一行，显示空白占位
-                        Spacer(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(31.dp)
-                                .padding(vertical = 8.dp)
-                        )
-                    }
-                    // 已播放歌词淡出区（显示上一行，逐渐透明）
-                    if (activeIndex - 1 >= 0 && activeIndex - 1 < lrcLines.size) {
-                        val fadeAlpha = remember(progressInLine) {
-                            if (progressInLine < 0.15f) {
-                                0.4f * (1f - progressInLine / 0.15f)
-                            } else 0f
-                        }
-                        if (fadeAlpha > 0.01f) {
-                            Text(
-                                text = lrcLines[activeIndex - 1].text,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Normal,
-                                color = playerTextTertiary.copy(alpha = fadeAlpha),
-                                textAlign = TextAlign.Center,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 8.dp)
-                            )
-                        }
-                    }
+                idx++
+            }
+            idx
+        }
+        // 如果当前在元数据区域，保持显示第一个真正的歌词行
+        val activeIndex = if (rawActiveIndex <= firstRealLyricIndex && currentPosition < 1000L) {
+            firstRealLyricIndex
+        } else {
+            rawActiveIndex
+        }
+
+        val listState = rememberLazyListState()
+
+        // 自动滚动到当前歌词行，居中显示
+        LaunchedEffect(activeIndex) {
+            if (activeIndex >= 0) {
+                // 计算居中偏移：可视区域高度的一半减去半个item高度
+                val viewportHeight = listState.layoutInfo.let {
+                    it.viewportEndOffset - it.viewportStartOffset
                 }
+                val scrollOffset = (viewportHeight / 2) - 60
+                listState.animateScrollToItem(
+                    index = activeIndex,
+                    scrollOffset = -(scrollOffset.coerceAtLeast(0))
+                )
+            }
+        }
+
+        LazyColumn(
+            state = listState,
+            modifier = modifier,
+            contentPadding = PaddingValues(vertical = 40.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            // 禁用手势滑动，避免与HorizontalPager冲突
+            // animateScrollToItem 仍然可以程序化滚动
+            userScrollEnabled = false
+        ) {
+            itemsIndexed(lrcLines) { index, line ->
+                val isActive = index == activeIndex
+                val isPast = index < activeIndex
+                Text(
+                    text = line.text,
+                    fontSize = if (isActive) 22.sp else 15.sp,
+                    fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
+                    color = when {
+                        isActive -> playerTextColor
+                        isPast -> playerTextTertiary.copy(alpha = 0.3f)
+                        else -> playerTextTertiary
+                    },
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp, horizontal = 16.dp)
+                        .animateItem(
+                            fadeInSpec = tween(300),
+                            fadeOutSpec = tween(300),
+                            placementSpec = tween(300)
+                        )
+                )
             }
         }
     } else if (plainLines.isNotEmpty()) {
         // ── 纯文本歌词（无时间戳）：静态显示 ──
         Box(modifier = modifier, contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                plainLines.take(2).forEachIndexed { index, line ->
+                plainLines.take(3).forEachIndexed { index, line ->
                     Text(
                         text = line.trim(),
                         fontSize = if (index == 0) 22.sp else 15.sp,
                         fontWeight = if (index == 0) FontWeight.Bold else FontWeight.Normal,
                         color = if (index == 0) playerTextColor else playerTextTertiary,
                         textAlign = TextAlign.Center,
-                        maxLines = 1,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier
                             .fillMaxWidth()
