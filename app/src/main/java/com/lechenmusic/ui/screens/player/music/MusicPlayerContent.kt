@@ -413,27 +413,40 @@ private fun SongInfo(
 
         val artistText = if (artistParts.size > 1) artistParts.joinToString(" · ") else song.artist
 
-        // 品质图标宽度固定，歌手区域占剩余空间并可滚动
+        // 手动测量文字宽度，确保滚动生效
+        var artistTextWidthPx by remember { mutableStateOf(0) }
+        var containerWidthPx by remember { mutableStateOf(0) }
+        val isScrollable = artistTextWidthPx > containerWidthPx
+
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .onGloballyPositioned { containerWidthPx = it.size.width },
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 歌手区域：占剩余空间，内容超出时可滚动
-            // 使用 SubcomposeLayout 先给品质图标分配空间，歌手占剩余宽度
-            if (qualityText.isNotEmpty()) {
-                // 有品质图标时：用 Box(weight(1f)) 占剩余空间 + horizontalScroll
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .horizontalScroll(rememberScrollState())
-                ) {
-                    Text(
-                        text = artistText,
-                        fontSize = artistSize,
-                        color = playerTextSecondary,
-                        maxLines = 1
+            // 歌手区域
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .then(
+                        if (isScrollable) Modifier.horizontalScroll(rememberScrollState())
+                        else Modifier
                     )
-                }
+            ) {
+                Text(
+                    text = artistText,
+                    fontSize = artistSize,
+                    color = playerTextSecondary,
+                    maxLines = 1,
+                    onTextLayout = { result ->
+                        artistTextWidthPx = result.size.width
+                    },
+                    // 强制最小宽度 = 文字实际宽度，确保 Box 能撑开
+                    modifier = Modifier.defaultMinSize(minWidth = artistTextWidthPx.toDp().takeIf { it > 0.dp } ?: Dp.Unspecified)
+                )
+            }
+            // 品质图标
+            if (qualityText.isNotEmpty()) {
                 Spacer(modifier = Modifier.width(6.dp))
                 Surface(
                     shape = RoundedCornerShape(3.dp),
@@ -445,20 +458,6 @@ private fun SongInfo(
                         fontWeight = FontWeight.Bold,
                         color = qualityColor,
                         modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
-                    )
-                }
-            } else {
-                // 无品质图标：歌手占满整行
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .horizontalScroll(rememberScrollState())
-                ) {
-                    Text(
-                        text = artistText,
-                        fontSize = artistSize,
-                        color = playerTextSecondary,
-                        maxLines = 1
                     )
                 }
             }
