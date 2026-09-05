@@ -37,10 +37,12 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.runtime.DisposableEffect
 
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
@@ -413,24 +415,17 @@ private fun SongInfo(
         val qualityColor = if (showQuality) com.lechenmusic.ui.components.getQualityColor(song) else Color.Transparent
 
         val artistText = if (artistParts.size > 1) artistParts.joinToString(" · ") else song.artist
+        val density = LocalDensity.current
 
-        // Box(fillMaxWidth) 定义滚动容器边界
-        // 内部 Row(horizontalScroll) 测量子元素自然宽度
-        Box(
+        // 使用 SubcomposeLayout：先无约束测量文字自然宽度，再决定是否滚动
+        SubcomposeLayout(
             modifier = Modifier.fillMaxWidth()
-        ) {
-            Row(
-                modifier = Modifier.horizontalScroll(rememberScrollState()),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = artistText,
-                    fontSize = artistSize,
-                    color = playerTextSecondary,
-                    maxLines = 1
-                )
+        ) { constraints ->
+            val looseConstraints = constraints.copy(minWidth = 0)
+
+            // 1. 测量品质图标（固定宽度）
+            val badgePlaceable = subcompose("badge") {
                 if (qualityText.isNotEmpty()) {
-                    Spacer(modifier = Modifier.width(6.dp))
                     Surface(
                         shape = RoundedCornerShape(3.dp),
                         color = qualityColor.copy(alpha = 0.2f)
@@ -444,6 +439,55 @@ private fun SongInfo(
                         )
                     }
                 }
+            }.mapNotNull { it.measure(looseConstraints) }.firstOrNull()
+
+            val badgeWidth = (badgePlaceable?.width ?: 0) + if (badgePlaceable != null) with(density) { 6.dp.roundToPx() } else 0
+
+            // 2. 无约束测量文字自然宽度
+            val measureText = subcompose("measureText") {
+                Text(text = artistText, fontSize = artistSize, maxLines = 1)
+            }.first().measure(Constraints()) // 无约束
+            val naturalTextWidth = measureText.width
+
+            // 3. 计算歌手区域可用宽度
+            val availableForArtist = looseConstraints.maxWidth - badgeWidth
+            val needsScroll = naturalTextWidth > availableForArtist
+
+            // 4. 测量实际显示内容
+            val contentPlaceables = subcompose("content") {
+                Row(
+                    modifier = if (needsScroll) Modifier.horizontalScroll(rememberScrollState()) else Modifier,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = artistText,
+                        fontSize = artistSize,
+                        color = playerTextSecondary,
+                        maxLines = 1
+                    )
+                    if (qualityText.isNotEmpty()) {
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Surface(
+                            shape = RoundedCornerShape(3.dp),
+                            color = qualityColor.copy(alpha = 0.2f)
+                        ) {
+                            Text(
+                                qualityText,
+                                fontSize = 8.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = qualityColor,
+                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                            )
+                        }
+                    }
+                }
+            }.map { it.measure(looseConstraints) }
+
+            val width = looseConstraints.maxWidth
+            val height = contentPlaceables.maxOfOrNull { it.height } ?: 0
+
+            layout(width, height) {
+                contentPlaceables.forEach { it.place(0, 0) }
             }
         }
     }
