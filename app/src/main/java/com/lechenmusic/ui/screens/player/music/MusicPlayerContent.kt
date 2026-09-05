@@ -245,18 +245,20 @@ fun MusicPlayerContent(
                                     modifier = Modifier.fillMaxSize(),
                                     horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
-                                    // 封面图（上方，限制高度，带渐变遮罩）
+                                    // 封面图（上方，Fit模式完整显示，背景色自然填充周围空间）
                                     Box(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .weight(1f)
+                                            .background(pBgColor),
+                                        contentAlignment = Alignment.Center
                                     ) {
                                         if (pCoverUrl != null) {
                                             AsyncImage(
                                                 model = pCoverUrl,
                                                 contentDescription = null,
                                                 modifier = Modifier.fillMaxSize(),
-                                                contentScale = ContentScale.Crop
+                                                contentScale = ContentScale.Fit
                                             )
                                         } else {
                                             Box(
@@ -268,38 +270,6 @@ fun MusicPlayerContent(
                                                 Icon(Icons.Default.MusicNote, null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f), modifier = Modifier.size(64.dp))
                                             }
                                         }
-                                        // 顶部渐变遮罩
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .height(160.dp)
-                                                .align(Alignment.TopCenter)
-                                                .background(
-                                                    Brush.verticalGradient(
-                                                        colorStops = arrayOf(
-                                                            0.0f to pBgColor,
-                                                            0.3f to pBgColor.copy(alpha = 0.8f),
-                                                            0.6f to pBgColor.copy(alpha = 0.4f),
-                                                            1.0f to Color.Transparent
-                                                        )
-                                                    )
-                                                )
-                                        )
-                                        // 底部渐变遮罩
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .height(80.dp)
-                                                .align(Alignment.BottomCenter)
-                                                .background(
-                                                    Brush.verticalGradient(
-                                                        colorStops = arrayOf(
-                                                            0.0f to Color.Transparent,
-                                                            1.0f to pBgColor
-                                                        )
-                                                    )
-                                                )
-                                        )
                                     }
                                     // 歌词预览（封面下方）— 固定高度防止封面跳动
                                     Box(
