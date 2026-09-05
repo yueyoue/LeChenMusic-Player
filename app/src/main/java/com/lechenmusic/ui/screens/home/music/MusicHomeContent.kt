@@ -253,39 +253,31 @@ fun MusicHomeContent(
             )
         }
 
-        // ── 5. 每日推荐（手机只显示5首） ──
+        // ── 5. 每日推荐（横向滑动，每页3首） ──
         item {
             SectionHead(title = "每日推荐", action = "换一批 ↻", titleSize = config.sectionTitleSize, captionSize = config.captionFontSize, onClick = onRefreshDaily)
         }
-        itemsIndexed(dailySongs.take(5)) { index, song ->
-            SongListItem(
-                index = index + 1,
-                song = song,
+        item {
+            HotSongPager(
+                songs = dailySongs,
                 serverUrl = serverUrl,
                 username = username,
                 password = password,
-                titleSize = config.bodyFontSize,
-                subtitleSize = config.captionFontSize,
-                coverSize = config.songCoverSize,
-                onClick = { onSongClick(song, dailySongs) }
+                onClick = { song -> onSongClick(song, dailySongs) }
             )
         }
 
-        // ── 6. 排行榜（最多播放，显示5首歌曲） ──
+        // ── 6. 排行榜（横向滑动，每页3首） ──
         item {
             SectionHead(title = "排行榜", action = "", titleSize = config.sectionTitleSize, captionSize = config.captionFontSize)
         }
-        itemsIndexed(topPlayedSongs.take(5)) { index, song ->
-            SongListItem(
-                index = index + 1,
-                song = song,
+        item {
+            HotSongPager(
+                songs = topPlayedSongs,
                 serverUrl = serverUrl,
                 username = username,
                 password = password,
-                titleSize = config.bodyFontSize,
-                subtitleSize = config.captionFontSize,
-                coverSize = config.songCoverSize,
-                onClick = { onSongClick(song, topPlayedSongs) }
+                onClick = { song -> onSongClick(song, topPlayedSongs) }
             )
         }
 
@@ -731,7 +723,7 @@ private fun PlaylistRow(
 }
 
 
-// ── 歌单网格（手机：一排两个）──
+// ── 歌单网格（手机：一排两个，12项列表样式）──
 
 @Composable
 private fun PlaylistGrid(
@@ -741,42 +733,78 @@ private fun PlaylistGrid(
     password: String,
     onClick: (String) -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        playlists.take(2).chunked(2).forEach { row ->
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        playlists.take(12).chunked(2).forEach { row ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 row.forEach { pl ->
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clickable { onClick(pl.id) }
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .aspectRatio(1f)
-                                .clip(RoundedCornerShape(14.dp))
-                                .background(MaterialTheme.colorScheme.surfaceVariant)
-                        ) {
-                            if (!pl.coverArt.isNullOrEmpty()) {
-                                AsyncImage(
-                                    model = ApiClient.getCoverArtUrl(serverUrl, username, password, pl.coverArt),
-                                    contentDescription = null,
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Crop
-                                )
-                            } else {
-                                Icon(Icons.Default.LibraryMusic, null, modifier = Modifier.size(40.dp).align(Alignment.Center), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f))
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(pl.name, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text("${pl.songCount}首", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
+                    PlaylistGridItem(pl, serverUrl, username, password, onClick)
                 }
                 if (row.size < 2) Spacer(modifier = Modifier.weight(1f))
+            }
+        }
+    }
+}
+
+@Composable
+private fun PlaylistGridItem(
+    pl: Playlist,
+    serverUrl: String,
+    username: String,
+    password: String,
+    onClick: (String) -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .weight(1f)
+            .clickable { onClick(pl.id) },
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 2.dp
+    ) {
+        Row(
+            modifier = Modifier.padding(10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(50.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                if (!pl.coverArt.isNullOrEmpty()) {
+                    AsyncImage(
+                        model = ApiClient.getCoverArtUrl(serverUrl, username, password, pl.coverArt),
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Icon(
+                        Icons.Default.LibraryMusic,
+                        null,
+                        modifier = Modifier.size(24.dp).align(Alignment.Center),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    pl.name,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    "${pl.songCount}首",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1
+                )
             }
         }
     }
@@ -980,6 +1008,169 @@ private fun AlbumGrid(
     }
 }
 
+
+// ── 热歌横向滑动（每日推荐/排行榜） ──
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun HotSongPager(
+    songs: List<Song>,
+    serverUrl: String,
+    username: String,
+    password: String,
+    onClick: (Song) -> Unit
+) {
+    val pages = songs.take(18).chunked(3)
+    if (pages.isEmpty()) return
+
+    val pagerState = rememberPagerState(pageCount = { pages.size })
+    val coroutineScope = rememberCoroutineScope()
+
+    Column {
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(300.dp)
+        ) { page ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                pages[page].forEachIndexed { index, song ->
+                    val globalIndex = page * 3 + index
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onClick(song) },
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                        shadowElevation = 1.dp
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // 序号
+                            Text(
+                                "%02d".format(globalIndex + 1),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (globalIndex < 3) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.width(28.dp)
+                            )
+                            // 封面
+                            Box(
+                                modifier = Modifier
+                                    .size(46.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                            ) {
+                                val coverUrl = if (!song.coverArt.isNullOrEmpty()) {
+                                    ApiClient.getCoverArtUrl(serverUrl, username, password, song.coverArt)
+                                } else if (!song.albumId.isNullOrEmpty()) {
+                                    ApiClient.getCoverArtUrl(serverUrl, username, password, song.albumId)
+                                } else null
+
+                                if (coverUrl != null) {
+                                    AsyncImage(
+                                        model = coverUrl,
+                                        contentDescription = null,
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                } else {
+                                    Icon(
+                                        Icons.Default.MusicNote,
+                                        null,
+                                        modifier = Modifier.size(20.dp).align(Alignment.Center),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(14.dp))
+                            // 歌曲信息
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    song.title,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    val qualityText = com.lechenmusic.ui.components.getQualityText(song)
+                                    if (qualityText.isNotEmpty()) {
+                                        Surface(
+                                            shape = RoundedCornerShape(3.dp),
+                                            color = com.lechenmusic.ui.components.getQualityColor(song).copy(alpha = 0.15f)
+                                        ) {
+                                            Text(
+                                                qualityText,
+                                                fontSize = 7.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = com.lechenmusic.ui.components.getQualityColor(song),
+                                                modifier = Modifier.padding(horizontal = 3.dp, vertical = 0.dp)
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                    }
+                                    Text(
+                                        song.artist,
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+                            // 时长
+                            if (song.duration > 0) {
+                                val min = song.duration / 60
+                                val sec = song.duration % 60
+                                Text(
+                                    "%d:%02d".format(min, sec),
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 页面指示器
+        if (pages.size > 1) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                horizontalArrangement = Arrangement.Center
+            ) {
+                repeat(pages.size) { index ->
+                    val color = if (pagerState.currentPage == index)
+                        MaterialTheme.colorScheme.primary
+                    else
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                    Box(
+                        modifier = Modifier
+                            .padding(horizontal = 3.dp)
+                            .size(
+                                width = if (pagerState.currentPage == index) 16.dp else 6.dp,
+                                height = 6.dp
+                            )
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(color)
+                    )
+                }
+            }
+        }
+    }
+}
 
 // ── 电台网格 ─────────────────────────────────────────────
 

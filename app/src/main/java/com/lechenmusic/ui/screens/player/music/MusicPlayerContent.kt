@@ -228,7 +228,7 @@ fun MusicPlayerContent(
                         }
                         Spacer(modifier = Modifier.width(32.dp))
                         Column(modifier = Modifier.weight(1f).fillMaxHeight(), horizontalAlignment = Alignment.CenterHorizontally) {
-                            SongInfo(song = pSong, titleSize = 28.sp, artistSize = 18.sp, onArtistClick = { if (pSong.artistId.isNotBlank()) onNavigateToArtist(pSong.artistId) }, center = true, playerTextColor = pTextColor, playerTextSecondary = pTextSecondary)
+                            SongInfo(song = pSong, titleSize = 24.sp, artistSize = 18.sp, onArtistClick = { if (pSong.artistId.isNotBlank()) onNavigateToArtist(pSong.artistId) }, center = true, playerTextColor = pTextColor, playerTextSecondary = pTextSecondary)
                             Spacer(modifier = Modifier.height(8.dp))
                             LyricsPanel(lrcLines = pLrcLines, plainLines = pPlainLines, currentPosition = currentPosition, playerTextColor = pTextColor, playerTextTertiary = pTextTertiary, modifier = Modifier.weight(1f))
                         }
@@ -296,12 +296,12 @@ fun MusicPlayerContent(
                                     Column(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(start = 24.dp, end = 24.dp, top = 4.dp, bottom = 32.dp),
+                                            .padding(start = 24.dp, end = 24.dp, top = 4.dp, bottom = 12.dp),
                                         horizontalAlignment = Alignment.Start
                                     ) {
                                         SongInfo(
                                             song = pSong,
-                                            titleSize = 22.sp,
+                                            titleSize = 20.sp,
                                             artistSize = 14.sp,
                                             onArtistClick = { if (pSong.artistId.isNotBlank()) onNavigateToArtist(pSong.artistId) },
                                             onArtistNameClick = { _ -> },
@@ -453,10 +453,12 @@ private fun SongInfo(
             val availableForArtist = looseConstraints.maxWidth - badgeWidth
             val needsScroll = naturalTextWidth > availableForArtist
 
-            // 4. 测量实际显示内容
+            // 4. 用 tight 约束测量实际内容，确保 Row 不超出可用宽度
             val contentPlaceables = subcompose("content") {
                 Row(
-                    modifier = if (needsScroll) Modifier.horizontalScroll(rememberScrollState()) else Modifier,
+                    modifier = if (needsScroll) Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()) else Modifier,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
@@ -481,7 +483,16 @@ private fun SongInfo(
                         }
                     }
                 }
-            }.map { it.measure(looseConstraints) }
+            }.map {
+                it.measure(
+                    if (needsScroll) {
+                        // tight约束：Row宽度限制为可用宽度，内容会触发水平滚动
+                        Constraints.fixedWidth(availableForArtist.coerceAtLeast(0))
+                    } else {
+                        looseConstraints
+                    }
+                )
+            }
 
             val width = looseConstraints.maxWidth
             val height = contentPlaceables.maxOfOrNull { it.height } ?: 0
@@ -515,8 +526,8 @@ private fun SmoothLyricsDisplay(
 ) {
     val activeColor = playerTextColor.copy(alpha = 0.85f)
     val inactiveColor = playerTextColor.copy(alpha = 0.3f)
-    val activeFontSize = 20.sp
-    val inactiveFontSize = 15.sp
+    val activeFontSize = 18.sp
+    val inactiveFontSize = 13.sp
     val lineH = 42.dp
 
     if (lrcLines != null && lrcLines.isNotEmpty()) {
@@ -686,7 +697,7 @@ private fun SmoothLyricsDisplay(
                 plainLines.take(2).forEachIndexed { index, line ->
                     Text(
                         text = line.trim(),
-                        fontSize = if (index == 0) 20.sp else 15.sp,
+                        fontSize = if (index == 0) 18.sp else 13.sp,
                         fontWeight = if (index == 0) FontWeight.Bold else FontWeight.Normal,
                         color = if (index == 0) activeColor else inactiveColor,
                         textAlign = TextAlign.Center,
@@ -701,7 +712,7 @@ private fun SmoothLyricsDisplay(
         }
     } else {
         Box(modifier = modifier, contentAlignment = contentAlignment) {
-            Text("暂无歌词", fontSize = 15.sp, color = inactiveColor, textAlign = TextAlign.Center)
+            Text("暂无歌词", fontSize = 13.sp, color = inactiveColor, textAlign = TextAlign.Center)
         }
     }
 }
@@ -733,7 +744,7 @@ private fun LyricsPanel(
                 val isActive = index == activeIndex
                 Text(
                     text = line.text,
-                    fontSize = if (isActive) 20.sp else 16.sp,
+                    fontSize = if (isActive) 18.sp else 14.sp,
                     fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
                     color = if (isActive) playerTextColor else playerTextTertiary,
                     textAlign = TextAlign.Center,
@@ -744,12 +755,12 @@ private fun LyricsPanel(
     } else if (plainLines.isNotEmpty()) {
         LazyColumn(modifier = modifier.fillMaxWidth(), contentPadding = PaddingValues(vertical = 40.dp)) {
             itemsIndexed(plainLines) { _, line ->
-                Text(line, fontSize = 16.sp, color = playerTextTertiary, modifier = Modifier.padding(vertical = 4.dp).fillMaxWidth())
+                Text(line, fontSize = 14.sp, color = playerTextTertiary, modifier = Modifier.padding(vertical = 4.dp).fillMaxWidth())
             }
         }
     } else {
         Box(modifier = modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            Text("暂无歌词", fontSize = 16.sp, color = playerTextTertiary)
+            Text("暂无歌词", fontSize = 14.sp, color = playerTextTertiary)
         }
     }
 }
