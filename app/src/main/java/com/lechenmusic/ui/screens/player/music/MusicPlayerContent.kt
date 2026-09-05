@@ -411,49 +411,41 @@ private fun SongInfo(
         val qualityText = if (showQuality) com.lechenmusic.ui.components.getQualityText(song) else ""
         val qualityColor = if (showQuality) com.lechenmusic.ui.components.getQualityColor(song) else Color.Transparent
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+        val artistText = if (artistParts.size > 1) artistParts.joinToString(" · ") else song.artist
+
+        // 外层Box：宽度撑满，内部可横向滚动
+        Box(
+            modifier = Modifier.fillMaxWidth()
         ) {
-            // 歌手区域：可横向滚动
-            Box(
-                modifier = Modifier
-                    .weight(1f, fill = false)
-                    .horizontalScroll(rememberScrollState())
+            // 内层Row：不设宽度限制，让文字自然展开
+            // horizontalScroll 让超出容器的部分可以滚动查看
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                if (artistParts.size > 1) {
-                    // 多歌手：用Text拼接，测量自然宽度
-                    Text(
-                        text = artistParts.joinToString(" · "),
-                        fontSize = artistSize,
-                        color = playerTextSecondary,
-                        maxLines = 1,
-                        modifier = Modifier.clickable(onClick = onArtistClick)
-                    )
-                } else {
-                    Text(
-                        song.artist,
-                        fontSize = artistSize,
-                        color = playerTextSecondary,
-                        maxLines = 1,
-                        modifier = Modifier.clickable(onClick = onArtistClick)
-                    )
-                }
-            }
-            // 品质图标：固定在右侧，不被挤掉
-            if (qualityText.isNotEmpty()) {
-                Spacer(modifier = Modifier.width(6.dp))
-                Surface(
-                    shape = RoundedCornerShape(3.dp),
-                    color = qualityColor.copy(alpha = 0.2f)
-                ) {
-                    Text(
-                        qualityText,
-                        fontSize = 8.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = qualityColor,
-                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
-                    )
+                Text(
+                    text = artistText,
+                    fontSize = artistSize,
+                    color = playerTextSecondary,
+                    maxLines = 1,
+                    softWrap = false,
+                    modifier = Modifier.clickable(onClick = onArtistClick)
+                )
+                // 品质图标紧跟歌手后面，一起滚动
+                if (qualityText.isNotEmpty()) {
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Surface(
+                        shape = RoundedCornerShape(3.dp),
+                        color = qualityColor.copy(alpha = 0.2f)
+                    ) {
+                        Text(
+                            qualityText,
+                            fontSize = 8.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = qualityColor,
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                        )
+                    }
                 }
             }
         }
