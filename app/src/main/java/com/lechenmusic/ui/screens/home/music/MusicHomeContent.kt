@@ -749,7 +749,7 @@ private fun PlaylistGrid(
 }
 
 @Composable
-private fun PlaylistGridItem(
+private fun RowScope.PlaylistGridItem(
     pl: Playlist,
     serverUrl: String,
     username: String,
