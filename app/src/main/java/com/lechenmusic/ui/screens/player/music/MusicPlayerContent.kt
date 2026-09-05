@@ -39,6 +39,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -415,7 +416,6 @@ private fun SongInfo(
         val qualityColor = if (showQuality) com.lechenmusic.ui.components.getQualityColor(song) else Color.Transparent
 
         val artistText = if (artistParts.size > 1) artistParts.joinToString(" · ") else song.artist
-        val density = LocalDensity.current
 
         // 使用 SubcomposeLayout：先无约束测量文字自然宽度，再决定是否滚动
         SubcomposeLayout(
@@ -441,7 +441,7 @@ private fun SongInfo(
                 }
             }.mapNotNull { it.measure(looseConstraints) }.firstOrNull()
 
-            val badgeWidth = (badgePlaceable?.width ?: 0) + if (badgePlaceable != null) with(density) { 6.dp.roundToPx() } else 0
+            val badgeWidth = (badgePlaceable?.width ?: 0) + if (badgePlaceable != null) 6.dp.roundToPx() else 0
 
             // 2. 无约束测量文字自然宽度
             val measureText = subcompose("measureText") {
