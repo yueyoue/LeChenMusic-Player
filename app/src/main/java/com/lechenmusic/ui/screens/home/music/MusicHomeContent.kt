@@ -723,7 +723,7 @@ private fun PlaylistRow(
 }
 
 
-// ── 歌单网格（手机：一排两个，12项列表样式）──
+// ── 歌单网格（手机：12项列表样式，参考有声书最近播放）──
 
 @Composable
 private fun PlaylistGrid(
@@ -734,77 +734,65 @@ private fun PlaylistGrid(
     onClick: (String) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        playlists.take(12).chunked(2).forEach { row ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                row.forEach { pl ->
-                    PlaylistGridItem(pl, serverUrl, username, password, onClick)
-                }
-                if (row.size < 2) Spacer(modifier = Modifier.weight(1f))
-            }
-        }
-    }
-}
+        playlists.take(12).forEach { pl ->
+            val coverUrl = if (!pl.coverArt.isNullOrEmpty()) {
+                ApiClient.getCoverArtUrl(serverUrl, username, password, pl.coverArt)
+            } else null
 
-@Composable
-private fun RowScope.PlaylistGridItem(
-    pl: Playlist,
-    serverUrl: String,
-    username: String,
-    password: String,
-    onClick: (String) -> Unit
-) {
-    Surface(
-        modifier = Modifier
-            .weight(1f)
-            .clickable { onClick(pl.id) },
-        shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 2.dp
-    ) {
-        Row(
-            modifier = Modifier.padding(10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
+            Surface(
                 modifier = Modifier
-                    .size(50.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .fillMaxWidth()
+                    .clickable { onClick(pl.id) },
+                shape = RoundedCornerShape(14.dp),
+                color = MaterialTheme.colorScheme.surface,
+                shadowElevation = 2.dp
             ) {
-                if (!pl.coverArt.isNullOrEmpty()) {
-                    AsyncImage(
-                        model = ApiClient.getCoverArtUrl(serverUrl, username, password, pl.coverArt),
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
-                } else {
-                    Icon(
-                        Icons.Default.LibraryMusic,
-                        null,
-                        modifier = Modifier.size(24.dp).align(Alignment.Center),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
-                    )
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // 大封面
+                    Surface(
+                        modifier = Modifier.size(64.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant
+                    ) {
+                        if (coverUrl != null) {
+                            AsyncImage(
+                                model = coverUrl,
+                                contentDescription = null,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Icon(
+                                    Icons.Default.LibraryMusic,
+                                    null,
+                                    modifier = Modifier.size(28.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                                )
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(14.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            pl.name,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            "${pl.songCount}首",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            modifier = Modifier.padding(top = 2.dp)
+                        )
+                    }
                 }
-            }
-            Spacer(modifier = Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    pl.name,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    "${pl.songCount}首",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1
-                )
             }
         }
     }
@@ -1010,6 +998,7 @@ private fun AlbumGrid(
 
 
 // ── 热歌横向滑动（每日推荐/排行榜） ──
+// 样式：左侧小封面 + 中间标题/歌手 + 右侧收藏按钮，每页3首，可左右滑动
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -1039,8 +1028,14 @@ private fun HotSongPager(
                     .padding(horizontal = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                pages[page].forEachIndexed { index, song ->
-                    val globalIndex = page * 3 + index
+                pages[page].forEach { song ->
+                    val coverUrl = if (!song.coverArt.isNullOrEmpty()) {
+                        ApiClient.getCoverArtUrl(serverUrl, username, password, song.coverArt)
+                    } else if (!song.albumId.isNullOrEmpty()) {
+                        ApiClient.getCoverArtUrl(serverUrl, username, password, song.albumId)
+                    } else null
+                    val isStarred = song.starred != null
+
                     Surface(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1053,28 +1048,13 @@ private fun HotSongPager(
                             modifier = Modifier.padding(10.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // 序号
-                            Text(
-                                "%02d".format(globalIndex + 1),
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (globalIndex < 3) MaterialTheme.colorScheme.primary
-                                    else MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.width(28.dp)
-                            )
-                            // 封面
+                            // 左侧：小封面
                             Box(
                                 modifier = Modifier
                                     .size(46.dp)
                                     .clip(RoundedCornerShape(10.dp))
                                     .background(MaterialTheme.colorScheme.surfaceVariant)
                             ) {
-                                val coverUrl = if (!song.coverArt.isNullOrEmpty()) {
-                                    ApiClient.getCoverArtUrl(serverUrl, username, password, song.coverArt)
-                                } else if (!song.albumId.isNullOrEmpty()) {
-                                    ApiClient.getCoverArtUrl(serverUrl, username, password, song.albumId)
-                                } else null
-
                                 if (coverUrl != null) {
                                     AsyncImage(
                                         model = coverUrl,
@@ -1092,7 +1072,7 @@ private fun HotSongPager(
                                 }
                             }
                             Spacer(modifier = Modifier.width(14.dp))
-                            // 歌曲信息
+                            // 中间：标题 + 歌手
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     song.title,
@@ -1127,16 +1107,13 @@ private fun HotSongPager(
                                     )
                                 }
                             }
-                            // 时长
-                            if (song.duration > 0) {
-                                val min = song.duration / 60
-                                val sec = song.duration % 60
-                                Text(
-                                    "%d:%02d".format(min, sec),
-                                    fontSize = 12.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                            // 右侧：收藏按钮
+                            Icon(
+                                if (isStarred) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                contentDescription = "收藏",
+                                tint = if (isStarred) Color(0xFFFF4D6A) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                modifier = Modifier.size(20.dp)
+                            )
                         }
                     }
                 }
