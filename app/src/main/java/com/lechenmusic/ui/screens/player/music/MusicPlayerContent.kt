@@ -413,39 +413,18 @@ private fun SongInfo(
 
         val artistText = if (artistParts.size > 1) artistParts.joinToString(" · ") else song.artist
 
-        // 手动测量文字宽度，确保滚动生效
-        var artistTextWidthPx by remember { mutableStateOf(0) }
-        var containerWidthPx by remember { mutableStateOf(0) }
-        val isScrollable = artistTextWidthPx > containerWidthPx
-
+        // 最简方案：Row + horizontalScroll，不加 fillMaxWidth
+        // Row 测量子元素自然宽度，超过父容器时滚动
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .onGloballyPositioned { containerWidthPx = it.size.width },
+            modifier = Modifier.horizontalScroll(rememberScrollState()),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 歌手区域
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .then(
-                        if (isScrollable) Modifier.horizontalScroll(rememberScrollState())
-                        else Modifier
-                    )
-            ) {
-                Text(
-                    text = artistText,
-                    fontSize = artistSize,
-                    color = playerTextSecondary,
-                    maxLines = 1,
-                    onTextLayout = { result ->
-                        artistTextWidthPx = result.size.width
-                    },
-                    // 强制最小宽度 = 文字实际宽度，确保 Box 能撑开
-                    modifier = Modifier.defaultMinSize(minWidth = artistTextWidthPx.toDp().takeIf { it > 0.dp } ?: Dp.Unspecified)
-                )
-            }
-            // 品质图标
+            Text(
+                text = artistText,
+                fontSize = artistSize,
+                color = playerTextSecondary,
+                maxLines = 1
+            )
             if (qualityText.isNotEmpty()) {
                 Spacer(modifier = Modifier.width(6.dp))
                 Surface(
