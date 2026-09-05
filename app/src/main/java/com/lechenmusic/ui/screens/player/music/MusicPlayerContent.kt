@@ -301,22 +301,29 @@ fun MusicPlayerContent(
                                                 )
                                         )
                                     }
-                                    // 歌词预览（封面下方）
-                                    SmoothLyricsDisplay(
-                                        lrcLines = pLrcLines,
-                                        plainLines = pPlainLines,
-                                        currentPosition = currentPosition,
-                                        playerTextColor = pTextColor,
-                                        playerTextTertiary = pTextTertiary,
+                                    // 歌词预览（封面下方）— 固定高度防止封面跳动
+                                    Box(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(horizontal = 24.dp, vertical = 12.dp)
-                                    )
+                                            .height(96.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        SmoothLyricsDisplay(
+                                            lrcLines = pLrcLines,
+                                            plainLines = pPlainLines,
+                                            currentPosition = currentPosition,
+                                            playerTextColor = pTextColor,
+                                            playerTextTertiary = pTextTertiary,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 24.dp)
+                                        )
+                                    }
                                     // 歌曲信息
                                     Column(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(start = 24.dp, end = 24.dp, top = 4.dp, bottom = 20.dp),
+                                            .padding(start = 24.dp, end = 24.dp, top = 4.dp, bottom = 32.dp),
                                         horizontalAlignment = Alignment.Start
                                     ) {
                                         SongInfo(
@@ -429,39 +436,34 @@ private fun SongInfo(
             textAlign = if (center) androidx.compose.ui.text.style.TextAlign.Center else androidx.compose.ui.text.style.TextAlign.Start
         )
         Spacer(modifier = Modifier.height(6.dp))
-        // 歌手行：多歌手横向滚动 + 品质图标始终保留位置
+        // 歌手行：多歌手横向滚动，品质图标紧跟歌手后面
         val artistParts = song.artist.split("·", "、", "/").map { it.trim() }.filter { it.isNotEmpty() }
         val qualityText = if (showQuality) com.lechenmusic.ui.components.getQualityText(song) else ""
         val qualityColor = if (showQuality) com.lechenmusic.ui.components.getQualityColor(song) else Color.Transparent
 
+        // 整行可横向滚动：歌手 + 品质图标紧跟其后
         Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // 歌手名区域（可横向滚动）
             if (artistParts.size > 1) {
-                Row(
-                    modifier = Modifier
-                        .weight(1f)
-                        .horizontalScroll(rememberScrollState()),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    artistParts.forEachIndexed { index, name ->
-                        if (index > 0) {
-                            Text(" · ", fontSize = artistSize, color = playerTextSecondary)
-                        }
-                        Text(
-                            name,
-                            fontSize = artistSize,
-                            color = playerTextSecondary,
-                            maxLines = 1,
-                            modifier = if (onArtistNameClick != null) {
-                                Modifier.clickable { onArtistNameClick(name) }
-                            } else {
-                                Modifier.clickable(onClick = onArtistClick)
-                            }
-                        )
+                artistParts.forEachIndexed { index, name ->
+                    if (index > 0) {
+                        Text(" · ", fontSize = artistSize, color = playerTextSecondary)
                     }
+                    Text(
+                        name,
+                        fontSize = artistSize,
+                        color = playerTextSecondary,
+                        maxLines = 1,
+                        modifier = if (onArtistNameClick != null) {
+                            Modifier.clickable { onArtistNameClick(name) }
+                        } else {
+                            Modifier.clickable(onClick = onArtistClick)
+                        }
+                    )
                 }
             } else {
                 Text(
@@ -469,12 +471,10 @@ private fun SongInfo(
                     fontSize = artistSize,
                     color = playerTextSecondary,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    textAlign = if (center) TextAlign.Center else TextAlign.Start,
-                    modifier = Modifier.weight(1f).clickable(onClick = onArtistClick)
+                    modifier = Modifier.clickable(onClick = onArtistClick)
                 )
             }
-            // 品质图标（始终保留位置，不会被歌手信息顶没）
+            // 品质图标紧跟歌手后面
             if (qualityText.isNotEmpty()) {
                 Spacer(modifier = Modifier.width(6.dp))
                 Surface(

@@ -162,7 +162,9 @@ class MusicPlayerManager(private val context: Context) {
                     }
                     override fun onPlaybackStateChanged(playbackState: Int) {
                         if (playbackState == Player.STATE_READY) {
-                            _duration.value = duration
+                            // 电台流媒体：强制时长为0，防止ExoPlayer报告异常大数值
+                            val isRadio = _currentSong.value?.id?.startsWith("radio_") == true
+                            _duration.value = if (isRadio) 0L else duration.coerceAtLeast(0)
                             // Consume pending seek position (for audiobook resume)
                             val seekTarget = pendingSeekMs
                             if (seekTarget > 0) {
