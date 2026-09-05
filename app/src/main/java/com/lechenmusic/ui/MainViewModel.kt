@@ -54,6 +54,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _recentSongs = MutableStateFlow<List<Song>>(emptyList())
     val recentSongs: StateFlow<List<Song>> = _recentSongs.asStateFlow()
 
+    private val _topPlayedSongs = MutableStateFlow<List<Song>>(emptyList())
+    val topPlayedSongs: StateFlow<List<Song>> = _topPlayedSongs.asStateFlow()
+
     private val _playlists = MutableStateFlow<List<Playlist>>(emptyList())
     val playlists: StateFlow<List<Playlist>> = _playlists.asStateFlow()
 
@@ -408,6 +411,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _randomAlbums.value = emptyList()
             _dailySongs.value = emptyList()
             _recentSongs.value = emptyList()
+            _topPlayedSongs.value = emptyList()
             _playlists.value = emptyList()
             _artists.value = emptyList()
             _searchResults.value = null
@@ -499,6 +503,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             repository.getNewestAlbums(10).onSuccess {
                 _newestAlbums.value = it
                 try { settings.saveCachedNewestAlbumsJson(gson.toJson(it)) } catch (_: Exception) {}
+            }
+
+            // Load top played songs for ranking (from frequent albums)
+            repository.getTopPlayedSongs(100).onSuccess {
+                _topPlayedSongs.value = it
             }
 
             // Load random albums - only if not already loaded (user must click "换一批" to refresh)

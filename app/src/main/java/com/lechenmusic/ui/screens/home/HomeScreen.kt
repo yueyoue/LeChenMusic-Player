@@ -87,6 +87,7 @@ fun HomeScreen(
     val newestAlbums by viewModel.newestAlbums.collectAsState()
     val randomAlbums by viewModel.randomAlbums.collectAsState()
     val dailySongs by viewModel.dailySongs.collectAsState()
+    val topPlayedSongs by viewModel.topPlayedSongs.collectAsState()
     val playlists by viewModel.playlists.collectAsState()
     val recentPlayedSongs by viewModel.recentPlayedSongs.collectAsState()
     val radioStations by viewModel.radioStations.collectAsState()
@@ -140,6 +141,7 @@ fun HomeScreen(
                             newestAlbums = newestAlbums,
                             randomAlbums = randomAlbums,
                             dailySongs = dailySongs,
+                            topPlayedSongs = topPlayedSongs,
                             playlists = playlists,
                             recentPlayedSongs = recentPlayedSongs,
                             radioStations = radioStations,
@@ -228,7 +230,7 @@ fun HomeScreen(
                         captionFontSize = 11.sp, recentColumns = 1, heroLayout = "stack"
                     ),
                     newestAlbums = newestAlbums, randomAlbums = randomAlbums,
-                    dailySongs = dailySongs, playlists = playlists,
+                    dailySongs = dailySongs, topPlayedSongs = topPlayedSongs, playlists = playlists,
                     recentPlayedSongs = recentPlayedSongs, radioStations = radioStations,
                     musicSlides = musicSlides, serverUrl = serverUrl, username = username, password = password,
                     onAlbumClick = onAlbumClick, onSongClick = onSongClick, onPlaylistClick = onPlaylistClick,
@@ -1966,6 +1968,7 @@ private fun TabletMusicHomeContent(
     newestAlbums: List<Album>,
     randomAlbums: List<Album>,
     dailySongs: List<Song>,
+    topPlayedSongs: List<Song>,
     playlists: List<Playlist>,
     recentPlayedSongs: List<Song>,
     radioStations: List<InternetRadioStation>,
@@ -2188,18 +2191,21 @@ private fun TabletMusicHomeContent(
 
 
             // ===== Random Albums (4-per-row grid) =====
-            if (randomAlbums.isNotEmpty()) {
-                item { TabletSecHd("最新专辑", "更多 ›", config, onNavigateToAlbums) }
-                val albumRows = randomAlbums.take(8).chunked(4)
-                items(albumRows.size) { rowIdx ->
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap)) {
-                        albumRows[rowIdx].forEach { album ->
-                            Box(modifier = Modifier.weight(1f)) {
-                                TabletAlbumCard(album, serverUrl, username, password, config) { onAlbumClick(album.id) }
-                            }
-                        }
-                        repeat(4 - albumRows[rowIdx].size) { Spacer(modifier = Modifier.weight(1f)) }
-                    }
+            // ===== 排行榜（最多播放） =====
+            if (topPlayedSongs.isNotEmpty()) {
+                item { TabletSecHd("排行榜", "", config) }
+                itemsIndexed(topPlayedSongs.take(5)) { index, song ->
+                    SongListItem(
+                        index = index + 1,
+                        song = song,
+                        serverUrl = serverUrl,
+                        username = username,
+                        password = password,
+                        titleSize = config.bodyFontSize,
+                        subtitleSize = config.captionFontSize,
+                        coverSize = config.songCoverSize,
+                        onClick = { onSongClick(song, topPlayedSongs) }
+                    )
                 }
             }
 

@@ -122,6 +122,31 @@ class MusicRepository {
         }
     }
 
+    /**
+     * 获取排行榜歌曲：从最多播放的专辑中提取歌曲，最多返回100首
+     */
+    suspend fun getTopPlayedSongs(maxSongs: Int = 100): Result<List<Song>> {
+        return try {
+            // 获取最多播放的专辑（最多20个）
+            val albums = getAlbumList2(type = "frequent", size = 20).getOrNull() ?: emptyList()
+            if (albums.isEmpty()) {
+                Result.success(emptyList())
+            } else {
+                val allSongs = mutableListOf<Song>()
+                for (album in albums) {
+                    if (allSongs.size >= maxSongs) break
+                    val detail = getAlbum(album.id).getOrNull()
+                    if (detail != null) {
+                        allSongs.addAll(detail.song)
+                    }
+                }
+                Result.success(allSongs.take(maxSongs))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun getArtists(): Result<List<Artist>> {
         return try {
             val response = api!!.getArtists(username, password)

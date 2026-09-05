@@ -3,6 +3,9 @@ package com.lechenmusic.ui.screens.player.music
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -10,6 +13,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -23,6 +27,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
 import kotlinx.coroutines.launch
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
@@ -244,7 +250,6 @@ fun MusicPlayerContent(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .weight(1f)
-                                            .clipToBounds()
                                     ) {
                                         if (pCoverUrl != null) {
                                             AsyncImage(
@@ -311,7 +316,7 @@ fun MusicPlayerContent(
                                     Column(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(start = 24.dp, end = 24.dp, bottom = 16.dp),
+                                            .padding(start = 24.dp, end = 24.dp, top = 4.dp, bottom = 20.dp),
                                         horizontalAlignment = Alignment.Start
                                     ) {
                                         SongInfo(
@@ -319,9 +324,11 @@ fun MusicPlayerContent(
                                             titleSize = 22.sp,
                                             artistSize = 14.sp,
                                             onArtistClick = { if (pSong.artistId.isNotBlank()) onNavigateToArtist(pSong.artistId) },
+                                            onArtistNameClick = { _ -> },
                                             center = false,
                                             playerTextColor = pTextColor,
-                                            playerTextSecondary = pTextSecondary
+                                            playerTextSecondary = pTextSecondary,
+                                            showQuality = true
                                         )
                                     }
                                 }
@@ -406,7 +413,8 @@ private fun SongInfo(
     onArtistNameClick: ((String) -> Unit)? = null,
     center: Boolean = false,
     playerTextColor: Color = Color.White,
-    playerTextSecondary: Color = Color.White.copy(alpha = 0.7f)
+    playerTextSecondary: Color = Color.White.copy(alpha = 0.7f),
+    showQuality: Boolean = false
 ) {
     Column(
         horizontalAlignment = if (center) Alignment.CenterHorizontally else Alignment.Start
@@ -421,34 +429,67 @@ private fun SongInfo(
             textAlign = if (center) androidx.compose.ui.text.style.TextAlign.Center else androidx.compose.ui.text.style.TextAlign.Start
         )
         Spacer(modifier = Modifier.height(6.dp))
-        // 多歌手支持：用 · 分隔，每个歌手可独立点击
+        // 歌手行：多歌手横向滚动 + 品质图标始终保留位置
         val artistParts = song.artist.split("·", "、", "/").map { it.trim() }.filter { it.isNotEmpty() }
-        if (artistParts.size > 1 && onArtistNameClick != null) {
-            // 多歌手：最多显示2行，超出截断
-            Text(
-                text = buildString {
+        val qualityText = if (showQuality) com.lechenmusic.ui.components.getQualityText(song) else ""
+        val qualityColor = if (showQuality) com.lechenmusic.ui.components.getQualityColor(song) else Color.Transparent
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            // 歌手名区域（可横向滚动）
+            if (artistParts.size > 1) {
+                Row(
+                    modifier = Modifier
+                        .weight(1f)
+                        .horizontalScroll(rememberScrollState()),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     artistParts.forEachIndexed { index, name ->
-                        if (index > 0) append(" · ")
-                        append(name)
+                        if (index > 0) {
+                            Text(" · ", fontSize = artistSize, color = playerTextSecondary)
+                        }
+                        Text(
+                            name,
+                            fontSize = artistSize,
+                            color = playerTextSecondary,
+                            maxLines = 1,
+                            modifier = if (onArtistNameClick != null) {
+                                Modifier.clickable { onArtistNameClick(name) }
+                            } else {
+                                Modifier.clickable(onClick = onArtistClick)
+                            }
+                        )
                     }
-                }.toString(),
-                fontSize = artistSize,
-                color = playerTextSecondary,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                textAlign = if (center) TextAlign.Center else TextAlign.Start,
-                modifier = Modifier.fillMaxWidth()
-            )
-        } else {
-            Text(
-                song.artist,
-                fontSize = artistSize,
-                color = playerTextSecondary,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                textAlign = if (center) TextAlign.Center else TextAlign.Start,
-                modifier = Modifier.fillMaxWidth().clickable(onClick = onArtistClick)
-            )
+                }
+            } else {
+                Text(
+                    song.artist,
+                    fontSize = artistSize,
+                    color = playerTextSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = if (center) TextAlign.Center else TextAlign.Start,
+                    modifier = Modifier.weight(1f).clickable(onClick = onArtistClick)
+                )
+            }
+            // 品质图标（始终保留位置，不会被歌手信息顶没）
+            if (qualityText.isNotEmpty()) {
+                Spacer(modifier = Modifier.width(6.dp))
+                Surface(
+                    shape = RoundedCornerShape(3.dp),
+                    color = qualityColor.copy(alpha = 0.2f)
+                ) {
+                    Text(
+                        qualityText,
+                        fontSize = 8.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = qualityColor,
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                    )
+                }
+            }
         }
     }
 }
@@ -750,12 +791,13 @@ private fun PlayerControls(
 ) {
     Surface(modifier = Modifier.fillMaxWidth(), color = Color.Transparent) {
         Column(modifier = Modifier.padding(horizontal = 32.dp, vertical = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            // 进度条
-            Slider(
-                value = progress,
-                onValueChange = onSeek,
-                modifier = Modifier.fillMaxWidth(),
-                colors = SliderDefaults.colors(thumbColor = playerTextColor, activeTrackColor = sliderActiveColor, inactiveTrackColor = sliderInactiveColor)
+            // 进度条（QQ音乐/酷狗风格：细轨道 + 小圆点）
+            ThinProgressBar(
+                progress = progress,
+                onSeek = onSeek,
+                activeColor = sliderActiveColor,
+                inactiveColor = sliderInactiveColor,
+                thumbColor = playerTextColor
             )
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -1034,4 +1076,91 @@ private fun ensureDarkBackground(color: Color): Color {
 private fun formatTime(ms: Long): String {
     val totalSeconds = ms / 1000
     return "%02d:%02d".format(totalSeconds / 60, totalSeconds % 60)
+}
+
+
+// ── 细进度条（QQ音乐/酷狗风格） ─────────────────────────
+
+@Composable
+private fun ThinProgressBar(
+    progress: Float,
+    onSeek: (Float) -> Unit,
+    activeColor: Color,
+    inactiveColor: Color,
+    thumbColor: Color
+) {
+    var isDragging by remember { mutableStateOf(false) }
+    var dragProgress by remember { mutableStateOf(progress) }
+    var barWidthPx by remember { mutableStateOf(1f) }
+
+    // 同步外部进度（非拖动时）
+    LaunchedEffect(progress) {
+        if (!isDragging) dragProgress = progress
+    }
+
+    val displayProgress = if (isDragging) dragProgress else progress
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(32.dp)
+            .onGloballyPositioned { barWidthPx = it.size.width.toFloat() }
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onPress = { offset ->
+                        dragProgress = (offset.x / barWidthPx).coerceIn(0f, 1f)
+                        isDragging = true
+                        val success = tryAwaitRelease()
+                        if (success) onSeek(dragProgress)
+                        isDragging = false
+                    }
+                )
+            }
+            .pointerInput(Unit) {
+                detectDragGestures(
+                    onDragStart = { offset ->
+                        dragProgress = (offset.x / barWidthPx).coerceIn(0f, 1f)
+                        isDragging = true
+                    },
+                    onDragEnd = { onSeek(dragProgress); isDragging = false },
+                    onDragCancel = { isDragging = false },
+                    onDrag = { change, dragAmount ->
+                        change.consume()
+                        val newOffset = (dragProgress * barWidthPx) + dragAmount.x
+                        dragProgress = (newOffset / barWidthPx).coerceIn(0f, 1f)
+                    }
+                )
+            },
+        contentAlignment = Alignment.CenterStart
+    ) {
+        // 背景轨道（细：2dp）
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(2.dp)
+                .clip(RoundedCornerShape(1.dp))
+                .background(inactiveColor)
+        )
+        // 激活轨道
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(fraction = displayProgress)
+                .height(2.dp)
+                .clip(RoundedCornerShape(1.dp))
+                .background(activeColor)
+        )
+        // 小圆点（6dp，比默认小很多）
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(fraction = displayProgress)
+                .wrapContentWidth(Alignment.End)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(6.dp)
+                    .clip(CircleShape)
+                    .background(thumbColor)
+            )
+        }
+    }
 }

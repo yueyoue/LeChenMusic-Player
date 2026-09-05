@@ -63,6 +63,7 @@ fun MusicHomeContent(
     newestAlbums: List<Album>,
     randomAlbums: List<Album>,
     dailySongs: List<Song>,
+    topPlayedSongs: List<Song>,
     playlists: List<Playlist>,
     recentPlayedSongs: List<Song>,
     radioStations: List<InternetRadioStation>,
@@ -164,9 +165,21 @@ fun MusicHomeContent(
                 items(dailySongs.take(6)) { song ->
                     SongListItem(song = song, serverUrl = serverUrl, username = username, password = password, titleSize = config.bodyFontSize, subtitleSize = config.captionFontSize, coverSize = config.songCoverSize, onClick = { onSongClick(song, dailySongs) })
                 }
-                // 最新专辑
-                item { SectionHead(title = "最新专辑", action = "更多 ›", titleSize = config.sectionTitleSize, captionSize = config.captionFontSize, onClick = onNavigateToAlbums) }
-                item { AlbumRow(albums = newestAlbums, coverSize = config.albumCardSize, titleSize = config.cardTitleSize, subtitleSize = config.cardSubtitleSize, gap = gap, serverUrl = serverUrl, username = username, password = password, onClick = onAlbumClick) }
+                // 排行榜（最多播放）
+                item { SectionHead(title = "排行榜", action = "", titleSize = config.sectionTitleSize, captionSize = config.captionFontSize) }
+                itemsIndexed(topPlayedSongs.take(5)) { index, song ->
+                    SongListItem(
+                        index = index + 1,
+                        song = song,
+                        serverUrl = serverUrl,
+                        username = username,
+                        password = password,
+                        titleSize = config.bodyFontSize,
+                        subtitleSize = config.captionFontSize,
+                        coverSize = config.songCoverSize,
+                        onClick = { onSongClick(song, topPlayedSongs) }
+                    )
+                }
                 // 随机专辑
                 item { SectionHead(title = "随机专辑", action = "换一批 ↻", titleSize = config.sectionTitleSize, captionSize = config.captionFontSize) }
                 item { AlbumRow(albums = randomAlbums, coverSize = config.albumCardSize, titleSize = config.cardTitleSize, subtitleSize = config.cardSubtitleSize, gap = gap, serverUrl = serverUrl, username = username, password = password, onClick = onAlbumClick) }
@@ -258,17 +271,21 @@ fun MusicHomeContent(
             )
         }
 
-        // ── 6. 最新专辑（只显示2个） ──
+        // ── 6. 排行榜（最多播放，显示5首歌曲） ──
         item {
-            SectionHead(title = "最新专辑", action = "更多 ›", titleSize = config.sectionTitleSize, captionSize = config.captionFontSize, onClick = onNavigateToAlbums)
+            SectionHead(title = "排行榜", action = "", titleSize = config.sectionTitleSize, captionSize = config.captionFontSize)
         }
-        item {
-            AlbumGrid(
-                albums = newestAlbums.take(2),
+        itemsIndexed(topPlayedSongs.take(5)) { index, song ->
+            SongListItem(
+                index = index + 1,
+                song = song,
                 serverUrl = serverUrl,
                 username = username,
                 password = password,
-                onClick = onAlbumClick
+                titleSize = config.bodyFontSize,
+                subtitleSize = config.captionFontSize,
+                coverSize = config.songCoverSize,
+                onClick = { onSongClick(song, topPlayedSongs) }
             )
         }
 

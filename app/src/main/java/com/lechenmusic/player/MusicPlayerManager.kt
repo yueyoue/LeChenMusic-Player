@@ -434,7 +434,8 @@ class MusicPlayerManager(private val context: Context) {
 
         val isAudiobook = _audiobookCoverUrl.value != null || song.id.startsWith("audiobook_")
         val currentPositionMs = player?.currentPosition ?: _currentPosition.value
-        val currentDurationMs = (player?.duration?.takeIf { it > 0 } ?: song.duration * 1000L).coerceAtLeast(0)
+        val isRadio = song.id.startsWith("radio_")
+        val currentDurationMs = if (isRadio) 0L else (player?.duration?.takeIf { it > 0 } ?: song.duration * 1000L).coerceAtLeast(0)
 
         // Update MediaSessionCompat metadata (for lock screen display)
         val metadataBuilder = MediaMetadataCompat.Builder()
@@ -845,8 +846,11 @@ class MusicPlayerManager(private val context: Context) {
     fun updateProgress() {
         player?.let {
             _currentPosition.value = it.currentPosition
-            _duration.value = it.duration.coerceAtLeast(0)
-            _progress.value = if (it.duration > 0) it.currentPosition.toFloat() / it.duration else 0f
+            // 电台流媒体：强制时长为0，防止ExoPlayer报告异常大数值
+            val isRadio = _currentSong.value?.id?.startsWith("radio_") == true
+            val rawDuration = if (isRadio) 0L else it.duration.coerceAtLeast(0)
+            _duration.value = rawDuration
+            _progress.value = if (rawDuration > 0) it.currentPosition.toFloat() / rawDuration else 0f
         }
     }
 
@@ -860,7 +864,8 @@ class MusicPlayerManager(private val context: Context) {
         val song = _currentSong.value ?: return
         val isAudiobook = _audiobookCoverUrl.value != null || song.id.startsWith("audiobook_")
         val currentPositionMs = player?.currentPosition ?: _currentPosition.value
-        val currentDurationMs = (player?.duration?.takeIf { it > 0 } ?: song.duration * 1000L).coerceAtLeast(0)
+        val isRadio = song.id.startsWith("radio_")
+        val currentDurationMs = if (isRadio) 0L else (player?.duration?.takeIf { it > 0 } ?: song.duration * 1000L).coerceAtLeast(0)
 
         // Update metadata duration if it changed significantly
         val metadataBuilder = MediaMetadataCompat.Builder()
