@@ -137,7 +137,7 @@ class MusicRepository {
                     if (allSongs.size >= maxSongs) break
                     val detail = getAlbum(album.id).getOrNull()
                     if (detail != null) {
-                        allSongs.addAll(detail.song)
+                        allSongs.addAll(detail.song.orEmpty())
                     }
                 }
                 Result.success(allSongs.take(maxSongs))

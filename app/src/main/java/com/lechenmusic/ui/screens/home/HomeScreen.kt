@@ -2195,17 +2195,51 @@ private fun TabletMusicHomeContent(
             if (topPlayedSongs.isNotEmpty()) {
                 item { TabletSecHd("排行榜", "", config) }
                 itemsIndexed(topPlayedSongs.take(5)) { index, song ->
-                    SongListItem(
-                        index = index + 1,
-                        song = song,
-                        serverUrl = serverUrl,
-                        username = username,
-                        password = password,
-                        titleSize = config.bodyFontSize,
-                        subtitleSize = config.captionFontSize,
-                        coverSize = config.songCoverSize,
-                        onClick = { onSongClick(song, topPlayedSongs) }
-                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { onSongClick(song, topPlayedSongs) }
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "%02d".format(index + 1),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (index < 3) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.width(28.dp)
+                        )
+                        Box(
+                            modifier = Modifier
+                                .size(config.songCoverSize)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                        ) {
+                            val coverUrl = if (!song.coverArt.isNullOrEmpty()) {
+                                com.lechenmusic.data.api.ApiClient.getCoverArtUrl(serverUrl, username, password, song.coverArt)
+                            } else if (!song.albumId.isNullOrEmpty()) {
+                                com.lechenmusic.data.api.ApiClient.getCoverArtUrl(serverUrl, username, password, song.albumId)
+                            } else null
+                            if (coverUrl != null) {
+                                coil.compose.AsyncImage(model = coverUrl, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                            } else {
+                                Icon(Icons.Default.MusicNote, null, modifier = Modifier.size(20.dp).align(Alignment.Center), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f))
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(14.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(song.title, fontSize = config.bodyFontSize, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(song.artist, fontSize = config.captionFontSize, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                        if (song.duration > 0) {
+                            Text(
+                                "%d:%02d".format(song.duration / 60, song.duration % 60),
+                                fontSize = config.captionFontSize,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                 }
             }
 
