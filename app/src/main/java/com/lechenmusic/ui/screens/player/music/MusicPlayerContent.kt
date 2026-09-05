@@ -406,46 +406,60 @@ private fun SongInfo(
             textAlign = if (center) androidx.compose.ui.text.style.TextAlign.Center else androidx.compose.ui.text.style.TextAlign.Start
         )
         Spacer(modifier = Modifier.height(6.dp))
-        // 歌手行：歌手可横向滚动，品质图标固定在右侧不被挤掉
+        // 歌手行：歌手横向可滚动，品质图标始终可见
         val artistParts = song.artist.split("·", "、", "/").map { it.trim() }.filter { it.isNotEmpty() }
         val qualityText = if (showQuality) com.lechenmusic.ui.components.getQualityText(song) else ""
         val qualityColor = if (showQuality) com.lechenmusic.ui.components.getQualityColor(song) else Color.Transparent
 
         val artistText = if (artistParts.size > 1) artistParts.joinToString(" · ") else song.artist
 
-        // 外层Box：宽度撑满，内部可横向滚动
-        Box(
-            modifier = Modifier.fillMaxWidth()
+        // 品质图标宽度固定，歌手区域占剩余空间并可滚动
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // 内层Row：不设宽度限制，让文字自然展开
-            // horizontalScroll 让超出容器的部分可以滚动查看
-            Row(
-                modifier = Modifier.horizontalScroll(rememberScrollState()),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = artistText,
-                    fontSize = artistSize,
-                    color = playerTextSecondary,
-                    maxLines = 1,
-                    softWrap = false,
-                    modifier = Modifier.clickable(onClick = onArtistClick)
-                )
-                // 品质图标紧跟歌手后面，一起滚动
-                if (qualityText.isNotEmpty()) {
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Surface(
-                        shape = RoundedCornerShape(3.dp),
-                        color = qualityColor.copy(alpha = 0.2f)
-                    ) {
-                        Text(
-                            qualityText,
-                            fontSize = 8.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = qualityColor,
-                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
-                        )
-                    }
+            // 歌手区域：占剩余空间，内容超出时可滚动
+            // 使用 SubcomposeLayout 先给品质图标分配空间，歌手占剩余宽度
+            if (qualityText.isNotEmpty()) {
+                // 有品质图标时：用 Box(weight(1f)) 占剩余空间 + horizontalScroll
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .horizontalScroll(rememberScrollState())
+                ) {
+                    Text(
+                        text = artistText,
+                        fontSize = artistSize,
+                        color = playerTextSecondary,
+                        maxLines = 1
+                    )
+                }
+                Spacer(modifier = Modifier.width(6.dp))
+                Surface(
+                    shape = RoundedCornerShape(3.dp),
+                    color = qualityColor.copy(alpha = 0.2f)
+                ) {
+                    Text(
+                        qualityText,
+                        fontSize = 8.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = qualityColor,
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                    )
+                }
+            } else {
+                // 无品质图标：歌手占满整行
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .horizontalScroll(rememberScrollState())
+                ) {
+                    Text(
+                        text = artistText,
+                        fontSize = artistSize,
+                        color = playerTextSecondary,
+                        maxLines = 1
+                    )
                 }
             }
         }
