@@ -394,6 +394,7 @@ private fun SongInfo(
     showQuality: Boolean = false
 ) {
     Column(
+        modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = if (center) Alignment.CenterHorizontally else Alignment.Start
     ) {
         Text(
@@ -413,31 +414,35 @@ private fun SongInfo(
 
         val artistText = if (artistParts.size > 1) artistParts.joinToString(" · ") else song.artist
 
-        // 最简方案：Row + horizontalScroll，不加 fillMaxWidth
-        // Row 测量子元素自然宽度，超过父容器时滚动
-        Row(
-            modifier = Modifier.horizontalScroll(rememberScrollState()),
-            verticalAlignment = Alignment.CenterVertically
+        // Box(fillMaxWidth) 定义滚动容器边界
+        // 内部 Row(horizontalScroll) 测量子元素自然宽度
+        Box(
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Text(
-                text = artistText,
-                fontSize = artistSize,
-                color = playerTextSecondary,
-                maxLines = 1
-            )
-            if (qualityText.isNotEmpty()) {
-                Spacer(modifier = Modifier.width(6.dp))
-                Surface(
-                    shape = RoundedCornerShape(3.dp),
-                    color = qualityColor.copy(alpha = 0.2f)
-                ) {
-                    Text(
-                        qualityText,
-                        fontSize = 8.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = qualityColor,
-                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
-                    )
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = artistText,
+                    fontSize = artistSize,
+                    color = playerTextSecondary,
+                    maxLines = 1
+                )
+                if (qualityText.isNotEmpty()) {
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Surface(
+                        shape = RoundedCornerShape(3.dp),
+                        color = qualityColor.copy(alpha = 0.2f)
+                    ) {
+                        Text(
+                            qualityText,
+                            fontSize = 8.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = qualityColor,
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                        )
+                    }
                 }
             }
         }
