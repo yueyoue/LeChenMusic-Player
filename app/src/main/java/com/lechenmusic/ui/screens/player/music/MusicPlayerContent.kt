@@ -406,45 +406,41 @@ private fun SongInfo(
             textAlign = if (center) androidx.compose.ui.text.style.TextAlign.Center else androidx.compose.ui.text.style.TextAlign.Start
         )
         Spacer(modifier = Modifier.height(6.dp))
-        // 歌手行：多歌手横向滚动，品质图标紧跟歌手后面
+        // 歌手行：歌手可横向滚动，品质图标固定在右侧不被挤掉
         val artistParts = song.artist.split("·", "、", "/").map { it.trim() }.filter { it.isNotEmpty() }
         val qualityText = if (showQuality) com.lechenmusic.ui.components.getQualityText(song) else ""
         val qualityColor = if (showQuality) com.lechenmusic.ui.components.getQualityColor(song) else Color.Transparent
 
-        // 整行可横向滚动：歌手 + 品质图标紧跟其后
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if (artistParts.size > 1) {
-                artistParts.forEachIndexed { index, name ->
-                    if (index > 0) {
-                        Text(" · ", fontSize = artistSize, color = playerTextSecondary)
-                    }
+            // 歌手区域：可横向滚动
+            Box(
+                modifier = Modifier
+                    .weight(1f, fill = false)
+                    .horizontalScroll(rememberScrollState())
+            ) {
+                if (artistParts.size > 1) {
+                    // 多歌手：用Text拼接，测量自然宽度
                     Text(
-                        name,
+                        text = artistParts.joinToString(" · "),
                         fontSize = artistSize,
                         color = playerTextSecondary,
                         maxLines = 1,
-                        modifier = if (onArtistNameClick != null) {
-                            Modifier.clickable { onArtistNameClick(name) }
-                        } else {
-                            Modifier.clickable(onClick = onArtistClick)
-                        }
+                        modifier = Modifier.clickable(onClick = onArtistClick)
+                    )
+                } else {
+                    Text(
+                        song.artist,
+                        fontSize = artistSize,
+                        color = playerTextSecondary,
+                        maxLines = 1,
+                        modifier = Modifier.clickable(onClick = onArtistClick)
                     )
                 }
-            } else {
-                Text(
-                    song.artist,
-                    fontSize = artistSize,
-                    color = playerTextSecondary,
-                    maxLines = 1,
-                    modifier = Modifier.clickable(onClick = onArtistClick)
-                )
             }
-            // 品质图标紧跟歌手后面
+            // 品质图标：固定在右侧，不被挤掉
             if (qualityText.isNotEmpty()) {
                 Spacer(modifier = Modifier.width(6.dp))
                 Surface(
