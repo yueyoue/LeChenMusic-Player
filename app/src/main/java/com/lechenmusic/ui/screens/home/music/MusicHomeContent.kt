@@ -275,12 +275,12 @@ fun MusicHomeContent(
             }
         }
 
-        // ── 5. 每日推荐（2列网格） ──
+        // ── 5. 每日推荐（横向分页，每页3首，右侧露出下一页） ──
         item {
             SectionHead(title = "每日推荐", action = "换一批 ↻", titleSize = config.sectionTitleSize, captionSize = config.captionFontSize, onClick = onRefreshDaily)
         }
         item {
-            SongTwoColumnGrid(
+            SongHorizontalPager(
                 songs = dailySongs,
                 serverUrl = serverUrl,
                 username = username,
@@ -289,12 +289,12 @@ fun MusicHomeContent(
             )
         }
 
-        // ── 6. 排行榜（2列网格） ──
+        // ── 6. 排行榜（横向分页，每页3首，右侧露出下一页） ──
         item {
             SectionHead(title = "排行榜", action = "", titleSize = config.sectionTitleSize, captionSize = config.captionFontSize)
         }
         item {
-            SongTwoColumnGrid(
+            SongHorizontalPager(
                 songs = topPlayedSongs,
                 serverUrl = serverUrl,
                 username = username,
@@ -807,97 +807,42 @@ private fun PlaylistGridCard(
 }
 
 
-// ── 歌曲2列网格（参考酷我音乐首页样式）──
-// 每行2首歌：左侧小封面 + 中间歌名/歌手 + 右侧心形按钮
+// ── 歌曲横向分页（每页3首普通列表，右侧露出下一页）──
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun SongTwoColumnGrid(
+private fun SongHorizontalPager(
     songs: List<Song>,
     serverUrl: String,
     username: String,
     password: String,
     onClick: (Song) -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        songs.take(6).chunked(2).forEach { row ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                row.forEach { song ->
-                    val coverUrl = if (!song.coverArt.isNullOrEmpty()) {
-                        ApiClient.getCoverArtUrl(serverUrl, username, password, song.coverArt)
-                    } else if (!song.albumId.isNullOrEmpty()) {
-                        ApiClient.getCoverArtUrl(serverUrl, username, password, song.albumId)
-                    } else null
-                    val isStarred = song.starred != null
+    val pages = songs.take(18).chunked(3)
+    if (pages.isEmpty()) return
 
-                    Surface(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clickable { onClick(song) },
-                        shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.surface,
-                        shadowElevation = 1.dp
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            // 左侧小封面
-                            Box(
-                                modifier = Modifier
-                                    .size(46.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(MaterialTheme.colorScheme.surfaceVariant)
-                            ) {
-                                if (coverUrl != null) {
-                                    AsyncImage(
-                                        model = coverUrl,
-                                        contentDescription = null,
-                                        modifier = Modifier.fillMaxSize(),
-                                        contentScale = ContentScale.Crop
-                                    )
-                                } else {
-                                    Icon(
-                                        Icons.Default.MusicNote,
-                                        null,
-                                        modifier = Modifier.size(20.dp).align(Alignment.Center),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
-                                    )
-                                }
-                            }
-                            Spacer(modifier = Modifier.width(10.dp))
-                            // 中间：歌名 + 歌手
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    song.title,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Text(
-                                    song.artist,
-                                    fontSize = 11.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.padding(top = 3.dp)
-                                )
-                            }
-                            // 右侧心形按钮
-                            Icon(
-                                if (isStarred) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                contentDescription = "收藏",
-                                tint = if (isStarred) Color(0xFFFF4D6A) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                    }
-                }
-                // 奇数个时填充空白
-                if (row.size < 2) Spacer(modifier = Modifier.weight(1f))
+    val pagerState = rememberPagerState(pageCount = { pages.size })
+
+    HorizontalPager(
+        state = pagerState,
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(end = 40.dp), // 右侧露出下一页
+        pageSpacing = 0.dp
+    ) { page ->
+        Column(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            pages[page].forEach { song ->
+                SongListItem(
+                    song = song,
+                    serverUrl = serverUrl,
+                    username = username,
+                    password = password,
+                    titleSize = 13.sp,
+                    subtitleSize = 11.sp,
+                    coverSize = 46.dp,
+                    onClick = { onClick(song) }
+                )
             }
         }
     }
