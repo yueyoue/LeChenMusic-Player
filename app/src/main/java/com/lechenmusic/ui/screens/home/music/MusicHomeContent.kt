@@ -178,24 +178,30 @@ fun MusicHomeContent(
                         }
                     }
                 }
-                // 每日推荐（单列，和手机一致）
+                // 每日推荐（横向分页，和手机一致）
                 item { SectionHead(title = "每日推荐", action = "换一批 ↻", titleSize = config.sectionTitleSize, captionSize = config.captionFontSize, onClick = onRefreshDaily) }
-                items(dailySongs.take(6)) { song ->
-                    SongListItem(song = song, serverUrl = serverUrl, username = username, password = password, titleSize = config.bodyFontSize, subtitleSize = config.captionFontSize, coverSize = config.songCoverSize, onClick = { onSongClick(song, dailySongs) })
-                }
-                // 排行榜（最多播放）
-                item { SectionHead(title = "排行榜", action = "", titleSize = config.sectionTitleSize, captionSize = config.captionFontSize) }
-                itemsIndexed(topPlayedSongs.take(5)) { index, song ->
-                    SongListItem(
-                        index = index + 1,
-                        song = song,
+                item {
+                    SongHorizontalPager(
+                        songs = dailySongs,
                         serverUrl = serverUrl,
                         username = username,
                         password = password,
-                        titleSize = config.bodyFontSize,
-                        subtitleSize = config.captionFontSize,
-                        coverSize = config.songCoverSize,
-                        onClick = { onSongClick(song, topPlayedSongs) }
+                        onClick = { song -> onSongClick(song, dailySongs) },
+                        onToggleStar = onToggleStar,
+                        starredSongIds = starredSongIds
+                    )
+                }
+                // 排行榜（横向分页，和手机一致）
+                item { SectionHead(title = "排行榜", action = "", titleSize = config.sectionTitleSize, captionSize = config.captionFontSize) }
+                item {
+                    SongHorizontalPager(
+                        songs = topPlayedSongs,
+                        serverUrl = serverUrl,
+                        username = username,
+                        password = password,
+                        onClick = { song -> onSongClick(song, topPlayedSongs) },
+                        onToggleStar = onToggleStar,
+                        starredSongIds = starredSongIds
                     )
                 }
                 // 随机专辑
