@@ -834,7 +834,7 @@ private fun SongHorizontalPager(
     HorizontalPager(
         state = pagerState,
         modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(end = 0.dp),
+        contentPadding = PaddingValues(end = 40.dp),
         pageSpacing = 0.dp
     ) { page ->
         Column(
@@ -851,8 +851,8 @@ private fun SongHorizontalPager(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    shadowElevation = 1.dp
+                    color = Color.Transparent,
+                    shadowElevation = 0.dp
                 ) {
                     Row(
                         modifier = Modifier
