@@ -531,19 +531,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     if (cachedSongs.size >= 5) {
                         _dailySongs.value = cachedSongs
                     } else {
-                        repository.getRandomSongs(20).onSuccess {
+                        repository.getRandomSongs(1000).onSuccess {
                             _dailySongs.value = it
                             settings.saveCachedDailySongs(Gson().toJson(it), today)
                         }
                     }
                 } catch (_: Exception) {
-                    repository.getRandomSongs(20).onSuccess {
+                    repository.getRandomSongs(1000).onSuccess {
                         _dailySongs.value = it
                         settings.saveCachedDailySongs(Gson().toJson(it), today)
                     }
                 }
             } else {
-                repository.getRandomSongs(20).onSuccess {
+                repository.getRandomSongs(1000).onSuccess {
                     _dailySongs.value = it
                     settings.saveCachedDailySongs(Gson().toJson(it), today)
                 }
@@ -1010,7 +1010,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun refreshDailySongs() {
         viewModelScope.launch {
-            repository.getRandomSongs(20).onSuccess {
+            repository.getRandomSongs(1000).onSuccess {
                 _dailySongs.value = it
                 val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
                 settings.saveCachedDailySongs(Gson().toJson(it), today)

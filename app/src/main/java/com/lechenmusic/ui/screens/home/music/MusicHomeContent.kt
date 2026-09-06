@@ -826,7 +826,7 @@ private fun SongHorizontalPager(
     onToggleStar: (Song) -> Unit = {},
     starredSongIds: Set<String> = emptySet()
 ) {
-    val pages = songs.take(18).chunked(3)
+    val pages = songs.take(1000).chunked(3)
     if (pages.isEmpty()) return
 
     val pagerState = rememberPagerState(pageCount = { pages.size })
@@ -834,7 +834,7 @@ private fun SongHorizontalPager(
     HorizontalPager(
         state = pagerState,
         modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(end = 60.dp),
+        contentPadding = PaddingValues(end = 0.dp),
         pageSpacing = 0.dp
     ) { page ->
         Column(
@@ -920,6 +920,7 @@ private fun SongHorizontalPager(
                             }
                         }
                         // 右侧：收藏按钮（独立点击区域）
+                        Spacer(modifier = Modifier.width(8.dp))
                         Box(
                             modifier = Modifier
                                 .size(36.dp)
