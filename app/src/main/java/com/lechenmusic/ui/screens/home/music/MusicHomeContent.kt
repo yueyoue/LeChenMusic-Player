@@ -157,9 +157,9 @@ fun MusicHomeContent(
                         }
                     }
                 }
-                // 歌单广场
+                // 歌单广场（横向滚动，有声书最近播放样式，12个）
                 item { SectionHead(title = "歌单广场", action = "更多 ›", titleSize = config.sectionTitleSize, captionSize = config.captionFontSize, onClick = onNavigateToAllPlaylists) }
-                item { PlaylistRow(playlists = shuffledPlaylists, coverSize = config.playlistCardSize, titleSize = config.cardTitleSize, subtitleSize = config.cardSubtitleSize, gap = gap, serverUrl = serverUrl, username = username, password = password, onClick = onPlaylistClick) }
+                item { PlaylistHorizontalCards(playlists = shuffledPlaylists, serverUrl = serverUrl, username = username, password = password, onClick = onPlaylistClick) }
                 // 每日推荐（单列，和手机一致）
                 item { SectionHead(title = "每日推荐", action = "换一批 ↻", titleSize = config.sectionTitleSize, captionSize = config.captionFontSize, onClick = onRefreshDaily) }
                 items(dailySongs.take(6)) { song ->
@@ -239,12 +239,12 @@ fun MusicHomeContent(
                 )
             }
 
-        // ── 4. 歌单广场 ──
+        // ── 4. 歌单广场（横向滚动，有声书最近播放样式，12个） ──
         item {
             SectionHead(title = "歌单广场", action = "更多 ›", titleSize = config.sectionTitleSize, captionSize = config.captionFontSize, onClick = onNavigateToAllPlaylists)
         }
         item {
-            PlaylistGrid(
+            PlaylistHorizontalCards(
                 playlists = shuffledPlaylists,
                 serverUrl = serverUrl,
                 username = username,
@@ -253,12 +253,12 @@ fun MusicHomeContent(
             )
         }
 
-        // ── 5. 每日推荐（横向滑动，每页3首） ──
+        // ── 5. 每日推荐（酷我风格，每列3首，横向滑动） ──
         item {
             SectionHead(title = "每日推荐", action = "换一批 ↻", titleSize = config.sectionTitleSize, captionSize = config.captionFontSize, onClick = onRefreshDaily)
         }
         item {
-            HotSongPager(
+            KuwoSongGrid(
                 songs = dailySongs,
                 serverUrl = serverUrl,
                 username = username,
@@ -267,12 +267,12 @@ fun MusicHomeContent(
             )
         }
 
-        // ── 6. 排行榜（横向滑动，每页3首） ──
+        // ── 6. 排行榜（酷我风格，每列3首，横向滑动） ──
         item {
             SectionHead(title = "排行榜", action = "", titleSize = config.sectionTitleSize, captionSize = config.captionFontSize)
         }
         item {
-            HotSongPager(
+            KuwoSongGrid(
                 songs = topPlayedSongs,
                 serverUrl = serverUrl,
                 username = username,
@@ -723,25 +723,27 @@ private fun PlaylistRow(
 }
 
 
-// ── 歌单网格（手机：12项列表样式，参考有声书最近播放）──
+// ── 歌单横向滚动卡片（有声书最近播放样式，12个）──
 
 @Composable
-private fun PlaylistGrid(
+private fun PlaylistHorizontalCards(
     playlists: List<Playlist>,
     serverUrl: String,
     username: String,
     password: String,
     onClick: (String) -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        playlists.take(12).forEach { pl ->
+    LazyRow(
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        items(playlists.take(12)) { pl ->
             val coverUrl = if (!pl.coverArt.isNullOrEmpty()) {
                 ApiClient.getCoverArtUrl(serverUrl, username, password, pl.coverArt)
             } else null
 
             Surface(
                 modifier = Modifier
-                    .fillMaxWidth()
+                    .width(280.dp)
                     .clickable { onClick(pl.id) },
                 shape = RoundedCornerShape(14.dp),
                 color = MaterialTheme.colorScheme.surface,
@@ -751,10 +753,10 @@ private fun PlaylistGrid(
                     modifier = Modifier.padding(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // 大封面
+                    // 左侧封面
                     Surface(
-                        modifier = Modifier.size(64.dp),
-                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.size(56.dp),
+                        shape = RoundedCornerShape(10.dp),
                         color = MaterialTheme.colorScheme.surfaceVariant
                     ) {
                         if (coverUrl != null) {
@@ -769,17 +771,18 @@ private fun PlaylistGrid(
                                 Icon(
                                     Icons.Default.LibraryMusic,
                                     null,
-                                    modifier = Modifier.size(28.dp),
+                                    modifier = Modifier.size(24.dp),
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
                                 )
                             }
                         }
                     }
-                    Spacer(modifier = Modifier.width(14.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
+                    // 右侧信息
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             pl.name,
-                            fontSize = 15.sp,
+                            fontSize = 14.sp,
                             fontWeight = FontWeight.SemiBold,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
@@ -788,8 +791,7 @@ private fun PlaylistGrid(
                             "${pl.songCount}首",
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            modifier = Modifier.padding(top = 2.dp)
+                            modifier = Modifier.padding(top = 3.dp)
                         )
                     }
                 }
@@ -997,44 +999,35 @@ private fun AlbumGrid(
 }
 
 
-// ── 热歌横向滑动（每日推荐/排行榜） ──
-// 样式：左侧小封面 + 中间标题/歌手 + 右侧收藏按钮，每页3首，可左右滑动
+// ── 酷我风格歌曲网格（每列3首，横向滑动） ──
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun HotSongPager(
+private fun KuwoSongGrid(
     songs: List<Song>,
     serverUrl: String,
     username: String,
     password: String,
     onClick: (Song) -> Unit
 ) {
+    // 每页3首歌，横向排列多页
     val pages = songs.take(18).chunked(3)
     if (pages.isEmpty()) return
 
-    val pagerState = rememberPagerState(pageCount = { pages.size })
-    val coroutineScope = rememberCoroutineScope()
-
-    Column {
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(300.dp)
-        ) { page ->
+    LazyRow(
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        items(pages.size) { pageIndex ->
+            // 每一列：3首歌纵向排列
             Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 4.dp),
+                modifier = Modifier.width(160.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                pages[page].forEach { song ->
+                pages[pageIndex].forEach { song ->
                     val coverUrl = if (!song.coverArt.isNullOrEmpty()) {
                         ApiClient.getCoverArtUrl(serverUrl, username, password, song.coverArt)
                     } else if (!song.albumId.isNullOrEmpty()) {
                         ApiClient.getCoverArtUrl(serverUrl, username, password, song.albumId)
                     } else null
-                    val isStarred = song.starred != null
 
                     Surface(
                         modifier = Modifier
@@ -1044,14 +1037,15 @@ private fun HotSongPager(
                         color = MaterialTheme.colorScheme.surface,
                         shadowElevation = 1.dp
                     ) {
-                        Row(
-                            modifier = Modifier.padding(10.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                        Column(
+                            modifier = Modifier.padding(8.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            // 左侧：小封面
+                            // 封面（方形，圆角）
                             Box(
                                 modifier = Modifier
-                                    .size(46.dp)
+                                    .fillMaxWidth()
+                                    .aspectRatio(1f)
                                     .clip(RoundedCornerShape(10.dp))
                                     .background(MaterialTheme.colorScheme.surfaceVariant)
                             ) {
@@ -1066,83 +1060,32 @@ private fun HotSongPager(
                                     Icon(
                                         Icons.Default.MusicNote,
                                         null,
-                                        modifier = Modifier.size(20.dp).align(Alignment.Center),
+                                        modifier = Modifier.size(32.dp).align(Alignment.Center),
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
                                     )
                                 }
                             }
-                            Spacer(modifier = Modifier.width(14.dp))
-                            // 中间：标题 + 歌手
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    song.title,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    val qualityText = com.lechenmusic.ui.components.getQualityText(song)
-                                    if (qualityText.isNotEmpty()) {
-                                        Surface(
-                                            shape = RoundedCornerShape(3.dp),
-                                            color = com.lechenmusic.ui.components.getQualityColor(song).copy(alpha = 0.15f)
-                                        ) {
-                                            Text(
-                                                qualityText,
-                                                fontSize = 7.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = com.lechenmusic.ui.components.getQualityColor(song),
-                                                modifier = Modifier.padding(horizontal = 3.dp, vertical = 0.dp)
-                                            )
-                                        }
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                    }
-                                    Text(
-                                        song.artist,
-                                        fontSize = 12.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
-                            }
-                            // 右侧：收藏按钮
-                            Icon(
-                                if (isStarred) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                contentDescription = "收藏",
-                                tint = if (isStarred) Color(0xFFFF4D6A) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                                modifier = Modifier.size(20.dp)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            // 歌曲名
+                            Text(
+                                song.title,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            // 歌手
+                            Text(
+                                song.artist,
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.fillMaxWidth().padding(top = 2.dp)
                             )
                         }
                     }
-                }
-            }
-        }
-
-        // 页面指示器
-        if (pages.size > 1) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp),
-                horizontalArrangement = Arrangement.Center
-            ) {
-                repeat(pages.size) { index ->
-                    val color = if (pagerState.currentPage == index)
-                        MaterialTheme.colorScheme.primary
-                    else
-                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
-                    Box(
-                        modifier = Modifier
-                            .padding(horizontal = 3.dp)
-                            .size(
-                                width = if (pagerState.currentPage == index) 16.dp else 6.dp,
-                                height = 6.dp
-                            )
-                            .clip(RoundedCornerShape(3.dp))
-                            .background(color)
-                    )
                 }
             }
         }
