@@ -151,22 +151,8 @@ fun SongItem(
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 // Quality badge
-                val qualityText = getQualityText(song)
-                if (qualityText.isNotEmpty()) {
-                    Surface(
-                        shape = RoundedCornerShape(3.dp),
-                        color = getQualityColor(song).copy(alpha = 0.15f)
-                    ) {
-                        Text(
-                            text = qualityText,
-                            fontSize = 7.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = getQualityColor(song),
-                            modifier = Modifier.padding(horizontal = 3.dp, vertical = 0.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(4.dp))
-                }
+                QualityBadge(song = song, fontSize = 8.sp)
+                Spacer(modifier = Modifier.width(4.dp))
                 Text(
                     text = "${song.artist} · ${song.album}",
                     fontSize = 12.sp,
@@ -209,6 +195,33 @@ fun getQualityColor(song: Song): Color {
         suffix == "FLAC" || suffix == "DSD" || suffix == "WAV" || suffix == "AIFF" -> Color(0xFFFF6B81) // Red for lossless
         song.bitRate >= 320 -> Color(0xFF5352ED) // Purple for high bitrate
         else -> Color(0xFF2ED573) // Green for normal
+    }
+}
+
+/**
+ * 品质徽章 — 纯文字内联背景，高度与相邻歌手文字自然对齐
+ * 用 Text 的 background 替代 Surface 包裹，避免额外 padding 撑高
+ */
+@Composable
+fun QualityBadge(
+    song: Song,
+    fontSize: androidx.compose.ui.unit.TextUnit = 8.sp
+) {
+    val qualityText = getQualityText(song)
+    if (qualityText.isNotEmpty()) {
+        val qualityColor = getQualityColor(song)
+        Text(
+            text = qualityText,
+            fontSize = fontSize,
+            fontWeight = FontWeight.Bold,
+            color = qualityColor,
+            modifier = Modifier
+                .background(
+                    color = qualityColor.copy(alpha = 0.12f),
+                    shape = RoundedCornerShape(2.dp)
+                )
+                .padding(horizontal = 3.dp, vertical = 0.dp)
+        )
     }
 }
 
@@ -501,22 +514,8 @@ fun SongItemWithMenu(
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 // Quality badge
-                val qualityText = getQualityText(song)
-                if (qualityText.isNotEmpty()) {
-                    Surface(
-                        shape = RoundedCornerShape(3.dp),
-                        color = getQualityColor(song).copy(alpha = 0.15f)
-                    ) {
-                        Text(
-                            text = qualityText,
-                            fontSize = 7.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = getQualityColor(song),
-                            modifier = Modifier.padding(horizontal = 3.dp, vertical = 0.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(4.dp))
-                }
+                QualityBadge(song = song, fontSize = 8.sp)
+                Spacer(modifier = Modifier.width(4.dp))
                 Text(
                     text = "${song.artist} · ${song.album}",
                     fontSize = 12.sp,

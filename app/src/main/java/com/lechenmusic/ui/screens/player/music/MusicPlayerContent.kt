@@ -426,18 +426,7 @@ private fun SongInfo(
             // 1. 测量品质图标（固定宽度）
             val badgePlaceable = subcompose("badge") {
                 if (qualityText.isNotEmpty()) {
-                    Surface(
-                        shape = RoundedCornerShape(3.dp),
-                        color = qualityColor.copy(alpha = 0.2f)
-                    ) {
-                        Text(
-                            qualityText,
-                            fontSize = 8.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = qualityColor,
-                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
-                        )
-                    }
+                    com.lechenmusic.ui.components.QualityBadge(song = song, fontSize = 8.sp)
                 }
             }.mapNotNull { it.measure(looseConstraints) }.firstOrNull()
 
@@ -469,18 +458,7 @@ private fun SongInfo(
                     )
                     if (qualityText.isNotEmpty()) {
                         Spacer(modifier = Modifier.width(6.dp))
-                        Surface(
-                            shape = RoundedCornerShape(3.dp),
-                            color = qualityColor.copy(alpha = 0.2f)
-                        ) {
-                            Text(
-                                qualityText,
-                                fontSize = 8.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = qualityColor,
-                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
-                            )
-                        }
+                        com.lechenmusic.ui.components.QualityBadge(song = song, fontSize = 8.sp)
                     }
                 }
             }.map {

@@ -318,9 +318,7 @@ private fun SongListItem(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     val qualityText = com.lechenmusic.ui.components.getQualityText(song)
                     if (qualityText.isNotEmpty()) {
-                        Surface(shape = RoundedCornerShape(3.dp), color = com.lechenmusic.ui.components.getQualityColor(song).copy(alpha = 0.15f)) {
-                            Text(qualityText, fontSize = 7.sp, fontWeight = FontWeight.Bold, color = com.lechenmusic.ui.components.getQualityColor(song), modifier = Modifier.padding(horizontal = 3.dp, vertical = 0.dp))
-                        }
+                        com.lechenmusic.ui.components.QualityBadge(song = song, fontSize = 8.sp)
                         Spacer(modifier = Modifier.width(4.dp))
                     }
                     Text(
