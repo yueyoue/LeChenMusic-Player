@@ -164,7 +164,8 @@ fun HomeScreen(
                             onRefreshDaily = { viewModel.refreshDailySongs() },
                             onPlayRadio = { viewModel.playRadioStation(it, radioStations); onNavigateToPlayer() },
                             onSongMenu = { _ -> },
-                            starredRadioIds = starredRadioIds
+                            starredRadioIds = starredRadioIds,
+                            onToggleStar = { song -> if (song.isStarred) viewModel.unstar(song.id) else viewModel.star(song.id) }
                         )
                     }
                 }
@@ -243,6 +244,7 @@ fun HomeScreen(
                     onPlayRadio = { viewModel.playRadioStation(it, radioStations); onNavigateToPlayer() },
                     onSongMenu = { _ -> },
                     starredRadioIds = starredRadioIds,
+                    onToggleStar = { song -> if (song.isStarred) viewModel.unstar(song.id) else viewModel.star(song.id) },
                     headerContent = {
                         // 搜索栏
                         Surface(

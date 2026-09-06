@@ -90,6 +90,7 @@ fun MusicHomeContent(
     onPlayRadio: (InternetRadioStation) -> Unit = {},
     onSongMenu: ((Song) -> Unit)? = null,
     starredRadioIds: Set<String> = emptySet(),
+    onToggleStar: (Song) -> Unit = {},
     // 手机头部（搜索栏+模式切换，仅手机传入）
     headerContent: (@Composable () -> Unit)? = null
 ) {
@@ -285,7 +286,8 @@ fun MusicHomeContent(
                 serverUrl = serverUrl,
                 username = username,
                 password = password,
-                onClick = { song -> onSongClick(song, dailySongs) }
+                onClick = { song -> onSongClick(song, dailySongs) },
+                onToggleStar = onToggleStar
             )
         }
 
@@ -299,7 +301,8 @@ fun MusicHomeContent(
                 serverUrl = serverUrl,
                 username = username,
                 password = password,
-                onClick = { song -> onSongClick(song, topPlayedSongs) }
+                onClick = { song -> onSongClick(song, topPlayedSongs) },
+                onToggleStar = onToggleStar
             )
         }
 
@@ -816,7 +819,8 @@ private fun SongHorizontalPager(
     serverUrl: String,
     username: String,
     password: String,
-    onClick: (Song) -> Unit
+    onClick: (Song) -> Unit,
+    onToggleStar: (Song) -> Unit = {}
 ) {
     val pages = songs.take(18).chunked(3)
     if (pages.isEmpty()) return
@@ -826,7 +830,7 @@ private fun SongHorizontalPager(
     HorizontalPager(
         state = pagerState,
         modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(end = 60.dp), // 右侧露出下一页，留更多间隔
+        contentPadding = PaddingValues(end = 60.dp),
         pageSpacing = 0.dp
     ) { page ->
         Column(
@@ -834,24 +838,100 @@ private fun SongHorizontalPager(
         ) {
             pages[page].forEach { song ->
                 val isStarred = song.starred != null
-                SongListItem(
-                    song = song,
-                    serverUrl = serverUrl,
-                    username = username,
-                    password = password,
-                    titleSize = 13.sp,
-                    subtitleSize = 11.sp,
-                    coverSize = 46.dp,
-                    onClick = { onClick(song) },
-                    trailingContent = {
-                        Icon(
-                            if (isStarred) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                            contentDescription = "收藏",
-                            tint = if (isStarred) Color(0xFFFF4D6A) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                            modifier = Modifier.size(20.dp)
-                        )
+                val coverUrl = if (!song.coverArt.isNullOrEmpty()) {
+                    ApiClient.getCoverArtUrl(serverUrl, username, password, song.coverArt)
+                } else if (!song.albumId.isNullOrEmpty()) {
+                    ApiClient.getCoverArtUrl(serverUrl, username, password, song.albumId)
+                } else null
+
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    shadowElevation = 1.dp
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .clickable { onClick(song) }
+                            .padding(start = 10.dp, top = 8.dp, bottom = 8.dp, end = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // 左侧：小封面
+                        Box(
+                            modifier = Modifier
+                                .size(42.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                        ) {
+                            if (coverUrl != null) {
+                                AsyncImage(
+                                    model = coverUrl,
+                                    contentDescription = null,
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Icon(
+                                    Icons.Default.MusicNote,
+                                    null,
+                                    modifier = Modifier.size(20.dp).align(Alignment.Center),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        // 中间：标题 + 歌手
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                song.title,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                val qualityText = com.lechenmusic.ui.components.getQualityText(song)
+                                if (qualityText.isNotEmpty()) {
+                                    Surface(
+                                        shape = RoundedCornerShape(3.dp),
+                                        color = com.lechenmusic.ui.components.getQualityColor(song).copy(alpha = 0.15f)
+                                    ) {
+                                        Text(
+                                            qualityText,
+                                            fontSize = 7.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = com.lechenmusic.ui.components.getQualityColor(song),
+                                            modifier = Modifier.padding(horizontal = 3.dp, vertical = 0.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                }
+                                Text(
+                                    song.artist,
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                        // 右侧：收藏按钮（独立点击区域）
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .clickable { onToggleStar(song) },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                if (isStarred) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                contentDescription = "收藏",
+                                tint = if (isStarred) Color(0xFFFF4D6A) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                     }
-                )
+                }
             }
         }
     }
