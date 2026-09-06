@@ -166,7 +166,7 @@ fun HomeScreen(
                             onPlayRadio = { viewModel.playRadioStation(it, radioStations); onNavigateToPlayer() },
                             onSongMenu = { _ -> },
                             starredRadioIds = starredRadioIds,
-                            onToggleStar = { song -> if (song.isStarred) viewModel.unstar(song.id) else viewModel.star(song.id) },
+                            onToggleStar = { song -> if (viewModel.isSongStarred(song)) viewModel.unstar(song.id) else viewModel.star(song.id) },
                             starredSongIds = starredSongIds
                         )
                     }
@@ -246,7 +246,7 @@ fun HomeScreen(
                     onPlayRadio = { viewModel.playRadioStation(it, radioStations); onNavigateToPlayer() },
                     onSongMenu = { _ -> },
                     starredRadioIds = starredRadioIds,
-                    onToggleStar = { song -> if (song.isStarred) viewModel.unstar(song.id) else viewModel.star(song.id) },
+                    onToggleStar = { song -> if (viewModel.isSongStarred(song)) viewModel.unstar(song.id) else viewModel.star(song.id) },
                     starredSongIds = starredSongIds,
                     headerContent = {
                         // 搜索栏
@@ -850,7 +850,7 @@ private fun MusicSlidesCarousel(
                         color = Color.White.copy(alpha = 0.15f)
                     ) {
                         Text(
-                            "每日推荐",
+                            "猜你喜欢",
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
                             fontSize = 10.sp,
                             fontWeight = FontWeight.SemiBold,
@@ -2059,7 +2059,7 @@ private fun TabletMusicHomeContent(
                             }
                             Spacer(modifier = Modifier.height(10.dp))
                             Text(
-                                musicSlides.firstOrNull()?.title ?: "每日推荐",
+                                musicSlides.firstOrNull()?.title ?: "猜你喜欢",
                                 fontSize = (config.sectionTitleSize.value + 6).sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis
@@ -2176,7 +2176,7 @@ private fun TabletMusicHomeContent(
 
             // ===== Daily Recommendations - Dual Column =====
             if (dailySongs.isNotEmpty()) {
-                item { TabletSecHd("每日推荐", "换一批 ↻", config) { viewModel.refreshDailySongs() } }
+                item { TabletSecHd("猜你喜欢", "换一批 ↻", config) { viewModel.refreshDailySongs() } }
                 item {
                     val half = (dailySongs.size + 1) / 2
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap)) {
@@ -2192,58 +2192,6 @@ private fun TabletMusicHomeContent(
 
 
             // ===== Random Albums (4-per-row grid) =====
-            // ===== 排行榜（最多播放） =====
-            if (topPlayedSongs.isNotEmpty()) {
-                item { TabletSecHd("排行榜", "", config) }
-                itemsIndexed(topPlayedSongs.take(5)) { index, song ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .clickable { onSongClick(song, topPlayedSongs) }
-                            .padding(vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            "%02d".format(index + 1),
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (index < 3) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.width(28.dp)
-                        )
-                        Box(
-                            modifier = Modifier
-                                .size(config.songCoverSize)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(MaterialTheme.colorScheme.surfaceVariant)
-                        ) {
-                            val coverUrl = if (!song.coverArt.isNullOrEmpty()) {
-                                com.lechenmusic.data.api.ApiClient.getCoverArtUrl(serverUrl, username, password, song.coverArt)
-                            } else if (!song.albumId.isNullOrEmpty()) {
-                                com.lechenmusic.data.api.ApiClient.getCoverArtUrl(serverUrl, username, password, song.albumId)
-                            } else null
-                            if (coverUrl != null) {
-                                coil.compose.AsyncImage(model = coverUrl, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                            } else {
-                                Icon(Icons.Default.MusicNote, null, modifier = Modifier.size(20.dp).align(Alignment.Center), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f))
-                            }
-                        }
-                        Spacer(modifier = Modifier.width(14.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(song.title, fontSize = config.bodyFontSize, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(song.artist, fontSize = config.captionFontSize, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        }
-                        if (song.duration > 0) {
-                            Text(
-                                "%d:%02d".format(song.duration / 60, song.duration % 60),
-                                fontSize = config.captionFontSize,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-            }
-
             // ===== Recent Played - Multi Column =====
             item { TabletSecHd("最近播放", "更多 ›", config, onNavigateToRecentPlayed) }
             if (recentPlayedSongs.isNotEmpty()) {

@@ -57,6 +57,17 @@ class SettingsRepository(private val context: Context) {
             prefs.remove(SERVER_URL)
             prefs.remove(USERNAME)
             prefs.remove(PASSWORD)
+            // 清除该账号的所有缓存数据，防止切换账号后显示旧数据
+            prefs.remove(RECENT_PLAY_IDS)
+            prefs.remove(CACHED_ALL_SONGS_JSON)
+            prefs.remove(CACHED_RECENT_SONGS_JSON)
+            prefs.remove(CACHED_DAILY_SONGS_JSON)
+            prefs.remove(CACHED_DAILY_SONGS_DATE)
+            prefs.remove(CACHED_NEWEST_ALBUMS_JSON)
+            prefs.remove(CACHED_RANDOM_ALBUMS_JSON)
+            prefs.remove(CACHED_PLAYLISTS_JSON)
+            prefs.remove(CACHED_RADIO_STATIONS_JSON)
+            prefs.remove(STARRED_RADIO_IDS)
         }
     }
 

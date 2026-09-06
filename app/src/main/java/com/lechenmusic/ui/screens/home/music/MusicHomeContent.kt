@@ -179,7 +179,7 @@ fun MusicHomeContent(
                     }
                 }
                 // 每日推荐（横向分页，和手机一致）
-                item { SectionHead(title = "每日推荐", action = "换一批 ↻", titleSize = config.sectionTitleSize, captionSize = config.captionFontSize, onClick = onRefreshDaily) }
+                item { SectionHead(title = "猜你喜欢", action = "换一批 ↻", titleSize = config.sectionTitleSize, captionSize = config.captionFontSize, onClick = onRefreshDaily) }
                 item {
                     SongHorizontalPager(
                         songs = dailySongs,
@@ -187,19 +187,6 @@ fun MusicHomeContent(
                         username = username,
                         password = password,
                         onClick = { song -> onSongClick(song, dailySongs) },
-                        onToggleStar = onToggleStar,
-                        starredSongIds = starredSongIds
-                    )
-                }
-                // 排行榜（横向分页，和手机一致）
-                item { SectionHead(title = "排行榜", action = "", titleSize = config.sectionTitleSize, captionSize = config.captionFontSize) }
-                item {
-                    SongHorizontalPager(
-                        songs = topPlayedSongs,
-                        serverUrl = serverUrl,
-                        username = username,
-                        password = password,
-                        onClick = { song -> onSongClick(song, topPlayedSongs) },
                         onToggleStar = onToggleStar,
                         starredSongIds = starredSongIds
                     )
@@ -283,9 +270,9 @@ fun MusicHomeContent(
             }
         }
 
-        // ── 5. 每日推荐（横向分页，每页3首，右侧露出下一页） ──
+        // ── 5. 猜你喜欢（横向分页，每页3首，右侧露出下一页） ──
         item {
-            SectionHead(title = "每日推荐", action = "换一批 ↻", titleSize = config.sectionTitleSize, captionSize = config.captionFontSize, onClick = onRefreshDaily)
+            SectionHead(title = "猜你喜欢", action = "换一批 ↻", titleSize = config.sectionTitleSize, captionSize = config.captionFontSize, onClick = onRefreshDaily)
         }
         item {
             SongHorizontalPager(
@@ -299,23 +286,7 @@ fun MusicHomeContent(
             )
         }
 
-        // ── 6. 排行榜（横向分页，每页3首，右侧露出下一页） ──
-        item {
-            SectionHead(title = "排行榜", action = "", titleSize = config.sectionTitleSize, captionSize = config.captionFontSize)
-        }
-        item {
-            SongHorizontalPager(
-                songs = topPlayedSongs,
-                serverUrl = serverUrl,
-                username = username,
-                password = password,
-                onClick = { song -> onSongClick(song, topPlayedSongs) },
-                onToggleStar = onToggleStar,
-                starredSongIds = starredSongIds
-            )
-        }
-
-        // ── 8. 最近播放 ──
+        // ── 6. 最近播放 ──
         item {
             SectionHead(title = "最近播放", action = "更多 ›", titleSize = config.sectionTitleSize, captionSize = config.captionFontSize, onClick = onNavigateToRecentPlayed)
         }

@@ -70,7 +70,8 @@ fun VideoDetailScreen(
     responsiveConfig: ResponsiveConfig? = null,
     onBack: () -> Unit,
     onPlay: (source: String, episodeIndex: Int) -> Unit,
-    onVideoClick: (VideoInfo) -> Unit = {}
+    onVideoClick: (VideoInfo) -> Unit = {},
+    onVideoPlayStart: () -> Unit = {}
 ) {
     val config = responsiveConfig
     val isTablet = config != null && (config.isMedium || config.isExpanded)
@@ -170,6 +171,8 @@ fun VideoDetailScreen(
                 exoPlayer.setMediaItem(MediaItem.fromUri(newUrl))
                 exoPlayer.prepare()
                 exoPlayer.playWhenReady = true
+                // 视频开始播放时暂停音乐/有声书
+                onVideoPlayStart()
 
                 // 优先从 resumePosition 恢复（全屏返回）
                 if (resumePositionMs > 0) {

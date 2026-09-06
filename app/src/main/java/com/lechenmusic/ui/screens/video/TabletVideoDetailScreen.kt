@@ -46,7 +46,8 @@ fun TabletVideoDetailScreen(
     responsiveConfig: ResponsiveConfig,
     onBack: () -> Unit,
     onPlay: (String, Int) -> Unit,
-    onVideoClick: (VideoInfo) -> Unit
+    onVideoClick: (VideoInfo) -> Unit,
+    onVideoPlayStart: () -> Unit = {}
 ) {
     val detail by viewModel.videoDetail.collectAsState()
     val loading by viewModel.detailLoading.collectAsState()
@@ -134,6 +135,8 @@ fun TabletVideoDetailScreen(
             exoPlayer.setMediaItem(MediaItem.fromUri(ep.url))
             exoPlayer.prepare()
             exoPlayer.playWhenReady = true
+            // 视频开始播放时暂停音乐/有声书
+            onVideoPlayStart()
             // 从全屏播放器返回时，恢复到之前播放的位置
             if (resumeMs > 0) {
                 exoPlayer.addListener(object : Player.Listener {

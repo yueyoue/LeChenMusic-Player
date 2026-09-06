@@ -1334,7 +1334,8 @@ fun NavGraphBuilder.sharedNavRoutes(
                 },
                 onVideoClick = { video ->
                     navController.navigate(Screen.VideoDetail.createRoute(video.source, video.id))
-                }
+                },
+                onVideoPlayStart = { viewModel.playerManager.forcePause() }
             )
         } else {
             VideoDetailScreen(
@@ -1352,6 +1353,8 @@ fun NavGraphBuilder.sharedNavRoutes(
                 },
                 onVideoClick = { video ->
                     navController.navigate(Screen.VideoDetail.createRoute(video.source, video.id))
+                },
+                onVideoPlayStart = { viewModel.playerManager.forcePause() }
                 }
             )
         }

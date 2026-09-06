@@ -385,11 +385,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     repository.authenticateNavidrome()
                     settings.saveLogin(serverUrl, username, password)
                     _isLoggedIn.value = true
-                    // 首次登录自动填写影视服务器账号密码
-                    val currentVideoUrl = settings.videoServerUrl.first()
-                    if (currentVideoUrl.isBlank()) {
-                        settings.saveVideoLogin("http://j.tthsdd.top:3000", username, password)
-                    }
+                    // 登录时同步影视服务器账号密码（修复：切换账号后影视账号同步切换）
+                    // 每次登录都更新，确保 VideoViewModel 的 Flow 收到变更并重新登录
+                    settings.saveVideoLogin("http://j.tthsdd.top:3000", username, password)
                     loadHomeData()
                 } else {
                     _loginError.value = result.exceptionOrNull()?.message ?: "连接失败"
@@ -405,6 +403,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun logout() {
         viewModelScope.launch {
             settings.clearLogin()
+            // 同步清除影视服务器登录信息（修复：切换账号后影视账号没同步切换）
+            settings.clearVideoLogin()
             _isLoggedIn.value = false
             // Clear all cached data when logging out / switching servers
             _newestAlbums.value = emptyList()
@@ -443,8 +443,24 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _audiobookSlides.value = emptyList()
             _serverStats.value = com.lechenmusic.data.repository.ServerStats()
             _homeMode.value = "music"
+            _starredSongIds.value = emptySet()
             // Clear player state
             playerManager.forcePause()
+            // 清除用户级别缓存（修复：切换账号后用户级别显示还是上一个账号的）
+            try {
+                val context = getApplication<Application>()
+                context.getSharedPreferences("play_stats", android.content.Context.MODE_PRIVATE)
+                    .edit().clear().apply()
+            } catch (_: Exception) {}
+            // 清除定时器状态
+            try {
+                clearTimerTarget()
+                _timerRemainingSeconds.value = 0
+                _musicTimerMinutes.value = 0
+                _audiobookTimerMinutes.value = 0
+            } catch (_: Exception) {}
+            // 重置影视模块状态
+            _cachedAllAlbums.value = emptyList()
         }
     }
 
@@ -503,11 +519,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             repository.getNewestAlbums(10).onSuccess {
                 _newestAlbums.value = it
                 try { settings.saveCachedNewestAlbumsJson(gson.toJson(it)) } catch (_: Exception) {}
-            }
-
-            // Load top played songs for ranking (from frequent albums)
-            repository.getTopPlayedSongs(100).onSuccess {
-                _topPlayedSongs.value = it
             }
 
             // Load random albums - only if not already loaded (user must click "换一批" to refresh)
