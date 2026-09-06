@@ -454,7 +454,8 @@ private fun SongInfo(
                         text = artistText,
                         fontSize = artistSize,
                         color = playerTextSecondary,
-                        maxLines = 1
+                        maxLines = 1,
+                        textAlign = if (center && !needsScroll) androidx.compose.ui.text.style.TextAlign.Center else androidx.compose.ui.text.style.TextAlign.Start
                     )
                     if (qualityText.isNotEmpty()) {
                         Spacer(modifier = Modifier.width(6.dp))
@@ -475,8 +476,14 @@ private fun SongInfo(
             val width = looseConstraints.maxWidth
             val height = contentPlaceables.maxOfOrNull { it.height } ?: 0
 
+            // 居中放置：当center=true且不需要滚动时，内容居中
+            val contentWidth = contentPlaceables.maxOfOrNull { it.width } ?: 0
+            val offsetX = if (center && !needsScroll && contentWidth < width) {
+                (width - contentWidth) / 2
+            } else 0
+
             layout(width, height) {
-                contentPlaceables.forEach { it.place(0, 0) }
+                contentPlaceables.forEach { it.place(offsetX, 0) }
             }
         }
     }

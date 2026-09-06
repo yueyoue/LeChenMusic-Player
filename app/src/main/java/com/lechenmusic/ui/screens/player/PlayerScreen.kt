@@ -265,7 +265,7 @@ fun PlayerScreen(
 
             // Song Info
             Column(
-                modifier = Modifier.padding(horizontal = 24.dp),
+                modifier = Modifier.padding(horizontal = 24.dp).fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -274,7 +274,8 @@ fun PlayerScreen(
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
+                        textAlign = TextAlign.Center
                     )
                     // Quality badge
                     com.lechenmusic.ui.components.QualityBadge(song = song, fontSize = 10.sp)
@@ -287,6 +288,7 @@ fun PlayerScreen(
                         song.artist,
                         fontSize = 13.sp,
                         color = MaterialTheme.colorScheme.primary,
+                        textAlign = TextAlign.Center,
                         modifier = Modifier.clickable {
                             if (song.artistId.isNotBlank()) {
                                 onNavigateToArtist(song.artistId)
