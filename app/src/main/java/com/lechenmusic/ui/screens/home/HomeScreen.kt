@@ -101,6 +101,7 @@ fun HomeScreen(
     val musicSlides by viewModel.musicSlides.collectAsState()
     val audiobookSlides by viewModel.audiobookSlides.collectAsState()
     val starredRadioIds by viewModel.starredRadioIds.collectAsState()
+    val starredSongIds by viewModel.starredSongIds.collectAsState()
 
     // 影视状态
     val isVideoLoggedIn = videoViewModel?.isLoggedIn?.collectAsState()?.value ?: false
@@ -165,7 +166,8 @@ fun HomeScreen(
                             onPlayRadio = { viewModel.playRadioStation(it, radioStations); onNavigateToPlayer() },
                             onSongMenu = { _ -> },
                             starredRadioIds = starredRadioIds,
-                            onToggleStar = { song -> if (song.isStarred) viewModel.unstar(song.id) else viewModel.star(song.id) }
+                            onToggleStar = { song -> if (song.isStarred) viewModel.unstar(song.id) else viewModel.star(song.id) },
+                            starredSongIds = starredSongIds
                         )
                     }
                 }
@@ -245,6 +247,7 @@ fun HomeScreen(
                     onSongMenu = { _ -> },
                     starredRadioIds = starredRadioIds,
                     onToggleStar = { song -> if (song.isStarred) viewModel.unstar(song.id) else viewModel.star(song.id) },
+                    starredSongIds = starredSongIds,
                     headerContent = {
                         // 搜索栏
                         Surface(

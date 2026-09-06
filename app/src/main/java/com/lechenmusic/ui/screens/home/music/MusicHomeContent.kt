@@ -91,6 +91,7 @@ fun MusicHomeContent(
     onSongMenu: ((Song) -> Unit)? = null,
     starredRadioIds: Set<String> = emptySet(),
     onToggleStar: (Song) -> Unit = {},
+    starredSongIds: Set<String> = emptySet(),
     // 手机头部（搜索栏+模式切换，仅手机传入）
     headerContent: (@Composable () -> Unit)? = null
 ) {
@@ -287,7 +288,8 @@ fun MusicHomeContent(
                 username = username,
                 password = password,
                 onClick = { song -> onSongClick(song, dailySongs) },
-                onToggleStar = onToggleStar
+                onToggleStar = onToggleStar,
+                starredSongIds = starredSongIds
             )
         }
 
@@ -302,7 +304,8 @@ fun MusicHomeContent(
                 username = username,
                 password = password,
                 onClick = { song -> onSongClick(song, topPlayedSongs) },
-                onToggleStar = onToggleStar
+                onToggleStar = onToggleStar,
+                starredSongIds = starredSongIds
             )
         }
 
@@ -820,7 +823,8 @@ private fun SongHorizontalPager(
     username: String,
     password: String,
     onClick: (Song) -> Unit,
-    onToggleStar: (Song) -> Unit = {}
+    onToggleStar: (Song) -> Unit = {},
+    starredSongIds: Set<String> = emptySet()
 ) {
     val pages = songs.take(18).chunked(3)
     if (pages.isEmpty()) return
@@ -837,7 +841,7 @@ private fun SongHorizontalPager(
             modifier = Modifier.fillMaxWidth()
         ) {
             pages[page].forEach { song ->
-                val isStarred = song.starred != null
+                val isStarred = song.starred != null || starredSongIds.contains(song.id)
                 val coverUrl = if (!song.coverArt.isNullOrEmpty()) {
                     ApiClient.getCoverArtUrl(serverUrl, username, password, song.coverArt)
                 } else if (!song.albumId.isNullOrEmpty()) {
@@ -853,13 +857,13 @@ private fun SongHorizontalPager(
                     Row(
                         modifier = Modifier
                             .clickable { onClick(song) }
-                            .padding(start = 10.dp, top = 8.dp, bottom = 8.dp, end = 4.dp),
+                            .padding(start = 10.dp, top = 8.dp, bottom = 8.dp, end = 0.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         // 左侧：小封面
                         Box(
                             modifier = Modifier
-                                .size(42.dp)
+                                .size(46.dp)
                                 .clip(RoundedCornerShape(10.dp))
                                 .background(MaterialTheme.colorScheme.surfaceVariant)
                         ) {
