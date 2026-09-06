@@ -942,6 +942,7 @@ private fun SongListItem(
         // 自定义尾部内容（如收藏按钮）或时长
         if (trailingContent != null) {
             trailingContent()
+            Spacer(modifier = Modifier.width(12.dp)) // 收藏按钮右侧留间隔
         } else if (song.duration > 0) {
             val min = song.duration / 60
             val sec = song.duration % 60
