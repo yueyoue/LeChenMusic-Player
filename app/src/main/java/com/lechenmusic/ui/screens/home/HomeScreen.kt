@@ -257,7 +257,7 @@ fun HomeScreen(
                             Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.Search, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(10.dp))
-                                Text("搜索歌曲、专辑、歌手...", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
+                                Text("搜索音乐、有声读物、影视...", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
                             }
                         }
                         Spacer(modifier = Modifier.height(10.dp))
