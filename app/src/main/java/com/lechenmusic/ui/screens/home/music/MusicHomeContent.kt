@@ -799,7 +799,7 @@ private fun PlaylistGridCard(
             playlist.name,
             fontSize = 12.sp,
             fontWeight = FontWeight.SemiBold,
-            maxLines = 1,
+            maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.width(130.dp).padding(top = 7.dp)
         )
@@ -826,13 +826,14 @@ private fun SongHorizontalPager(
     HorizontalPager(
         state = pagerState,
         modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(end = 40.dp), // 右侧露出下一页
+        contentPadding = PaddingValues(end = 60.dp), // 右侧露出下一页，留更多间隔
         pageSpacing = 0.dp
     ) { page ->
         Column(
             modifier = Modifier.fillMaxWidth()
         ) {
             pages[page].forEach { song ->
+                val isStarred = song.starred != null
                 SongListItem(
                     song = song,
                     serverUrl = serverUrl,
@@ -841,7 +842,15 @@ private fun SongHorizontalPager(
                     titleSize = 13.sp,
                     subtitleSize = 11.sp,
                     coverSize = 46.dp,
-                    onClick = { onClick(song) }
+                    onClick = { onClick(song) },
+                    trailingContent = {
+                        Icon(
+                            if (isStarred) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                            contentDescription = "收藏",
+                            tint = if (isStarred) Color(0xFFFF4D6A) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 )
             }
         }
@@ -930,13 +939,10 @@ private fun SongListItem(
             }
         }
 
-        // 自定义尾部内容（如三个点菜单）
+        // 自定义尾部内容（如收藏按钮）或时长
         if (trailingContent != null) {
             trailingContent()
-        }
-
-        // 时长
-        if (song.duration > 0) {
+        } else if (song.duration > 0) {
             val min = song.duration / 60
             val sec = song.duration % 60
             Text(
