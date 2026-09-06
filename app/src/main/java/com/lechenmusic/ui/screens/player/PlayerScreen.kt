@@ -277,22 +277,7 @@ fun PlayerScreen(
                         overflow = TextOverflow.Ellipsis
                     )
                     // Quality badge
-                    val qualityText = getQualityBadge(song)
-                    if (qualityText.isNotEmpty()) {
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Surface(
-                            shape = RoundedCornerShape(4.dp),
-                            color = getQualityBadgeColor(song).copy(alpha = 0.15f)
-                        ) {
-                            Text(
-                                text = qualityText,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = getQualityBadgeColor(song),
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                            )
-                        }
-                    }
+                    com.lechenmusic.ui.components.QualityBadge(song = song, fontSize = 10.sp)
                 }
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
