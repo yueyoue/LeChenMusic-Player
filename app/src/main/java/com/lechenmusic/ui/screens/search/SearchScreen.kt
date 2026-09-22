@@ -29,6 +29,7 @@ import com.lechenmusic.ui.components.SongItem
 import com.lechenmusic.ui.responsive.ResponsiveConfig
 import com.lechenmusic.ui.screens.audiobook.getAudiobookCoverUrl
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun SearchScreen(
     viewModel: MainViewModel,
@@ -89,7 +90,7 @@ fun SearchScreen(
                     }
                 },
                 modifier = Modifier.weight(1f),
-                placeholder = { Text("搜索歌曲、歌手、专辑、有声书、影视") },
+                placeholder = { Text("搜索歌曲、有声书、影视") },
                 shape = RoundedCornerShape(12.dp),
                 singleLine = true,
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
@@ -146,9 +147,11 @@ fun SearchScreen(
                 }
                 item {
                     val hotTags = listOf("周杰伦", "林俊杰", "陈奕迅", "薛之谦", "邓紫棋", "五月天", "Taylor Swift", "周深")
+                    // 真正的流式布局：放不下的标签自动换行，避免被压缩成空白细条按钮
                     FlowRow(
-                        modifier = Modifier.padding(horizontal = 20.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         hotTags.forEach { tag ->
                             SuggestionChip(
@@ -338,13 +341,3 @@ fun SearchScreen(
     }
 }
 
-@Composable
-private fun FlowRow(
-    modifier: Modifier = Modifier,
-    horizontalArrangement: Arrangement.Horizontal = Arrangement.Start,
-    content: @Composable () -> Unit
-) {
-    Row(modifier = modifier, horizontalArrangement = horizontalArrangement) {
-        content()
-    }
-}

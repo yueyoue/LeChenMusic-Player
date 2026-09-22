@@ -902,12 +902,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     /**
      * 通过歌手名称搜索并返回歌手ID，用于多歌手点击导航
+     * 先精确匹配，其次忽略空格/大小写匹配，最后退回到最接近的搜索结果
      */
     suspend fun findArtistIdByName(artistName: String): String? {
+        val target = artistName.trim()
+        if (target.isBlank()) return null
         return try {
-            val result = repository.search(artistName)
-            result.getOrNull()?.artist?.firstOrNull { it.name == artistName }?.id
-                ?: result.getOrNull()?.artist?.firstOrNull()?.id
+            _artists.value.firstOrNull { it.name.equals(target, ignoreCase = true) }?.id
+                ?: run {
+                    val artists = repository.search(target).getOrNull()?.artist ?: emptyList()
+                    artists.firstOrNull { it.name.equals(target, ignoreCase = true) }?.id
+                        ?: artists.firstOrNull {
+                            it.name.replace(" ", "").equals(target.replace(" ", ""), ignoreCase = true)
+                        }?.id
+                        ?: artists.firstOrNull()?.id
+                }
         } catch (e: Exception) {
             null
         }

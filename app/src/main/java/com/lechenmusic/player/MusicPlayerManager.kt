@@ -712,17 +712,61 @@ class MusicPlayerManager(private val context: Context) {
     }
 
     fun skipNext() {
-        player?.let {
-            if (_shuffleMode.value) {
-                val randomIndex = (_playlist.value.indices).random()
-                it.seekTo(randomIndex, 0)
-            } else if (it.hasNextMediaItem()) {
-                it.seekToNext()
-            } else if (_repeatMode.value == RepeatMode.ALL) {
-                it.seekTo(0, 0)
-            }
+        val p = player ?: return
+        if (_shuffleMode.value) {
+            // 随机换歌（排除当前歌曲，避免随机到同一首）
+            val candidates = _playlist.value.indices.filter { idx -> idx != _currentIndex.value }
+            val randomIndex = candidates.randomOrNull() ?: _playlist.value.indices.randomOrNull() ?: return
+            playAt(randomIndex, autoPlay = false)
+            return
+        }
+        if (p.hasNextMediaItem()) {
+            p.seekToNext()
+        } else if (_repeatMode.value == RepeatMode.ALL) {
+            p.seekTo(0, 0)
         }
         updateCurrentFromPlayer()
+    }
+
+    /**
+     * 跳转到播放列表中的指定索引继续播放。
+     * 不重建媒体列表（保留随机播放顺序），只做 seek + 立即同步状态。
+     */
+    fun playAt(index: Int, autoPlay: Boolean = true) {
+        if (index !in _playlist.value.indices) return
+        val p = player
+        // 电台等媒体项与播放列表不一致的场景：重建播放列表播放
+        if (p == null || p.mediaItemCount != _playlist.value.size) {
+            playSong(_playlist.value[index], _playlist.value)
+            return
+        }
+        val song = _playlist.value[index]
+        _currentIndex.value = index
+        _currentSong.value = song
+        if (!song.id.startsWith("radio_")) {
+            checkStarred(song.id)
+        } else {
+            _isStarred.value = false
+        }
+        p.seekTo(index, 0)
+        if (autoPlay) p.play()
+        updateNotification()
+    }
+
+    /**
+     * 播放页竖向滑动切歌。
+     * - 随机模式开启时：随机换一首播放（与下一曲按钮的随机逻辑一致）
+     * - 顺序模式：播放滑动目标位置对应的歌曲
+     */
+    fun playFromSwipe(targetIndex: Int) {
+        if (_playlist.value.isEmpty()) return
+        if (_shuffleMode.value) {
+            val candidates = _playlist.value.indices.filter { it != _currentIndex.value }
+            val randomIndex = candidates.randomOrNull() ?: return
+            playAt(randomIndex)
+        } else {
+            playAt(targetIndex)
+        }
     }
 
     fun skipPrevious() {

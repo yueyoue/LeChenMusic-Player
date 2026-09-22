@@ -62,6 +62,7 @@ import com.lechenmusic.ui.screens.player.findActiveLyricLine
 import kotlinx.coroutines.Dispatchers
 import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.withContext
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
 
 // ═══════════════════════════════════════════════════════════
 // MusicPlayerContent — 音乐播放器（手机+平板自适应）
@@ -112,25 +113,47 @@ fun MusicPlayerContent(
         pageCount = { playlist.size.coerceAtLeast(1) }
     )
 
-    // 标记：是否由用户滑动触发的切歌（防止双向同步导致回弹）
-    var isUserSwiping by remember { mutableStateOf(false) }
+    // 标记：是否由用户手势滑动触发的翻页（区别于状态恢复/程序同步导致的页面变化）
+    var userSwipeDetected by remember { mutableStateOf(false) }
+    val isPagerDragged by pagerState.interactionSource.collectIsDraggedAsState()
+    LaunchedEffect(isPagerDragged) {
+        if (isPagerDragged) userSwipeDetected = true
+    }
 
-    // When the pager settles on a new page, play that song
+    // 用户滑动停留在新页面时切歌：随机模式下随机换歌，顺序模式下播放目标页歌曲。
+    // 只响应用户手势，避免页面状态恢复（如后台返回、Activity 重建）时误触发切歌。
     LaunchedEffect(pagerState.settledPage) {
         val targetIndex = pagerState.settledPage
-        if (targetIndex in playlist.indices && targetIndex != currentIndex) {
-            isUserSwiping = true
-            playerManager.playSong(playlist[targetIndex], playlist)
+        if (userSwipeDetected) {
+            userSwipeDetected = false
+            if (targetIndex in playlist.indices && targetIndex != currentIndex) {
+                playerManager.playFromSwipe(targetIndex)
+            }
+        } else if (currentIndex in playlist.indices && currentIndex != targetIndex) {
+            // 非用户手势（状态恢复/同步动画被打断）：只把翻页位置对齐到实际播放歌曲，不触发切歌
+            pagerState.animateScrollToPage(currentIndex)
         }
     }
 
-    // When the current song changes externally (e.g. from notification), sync pager
+    // When the current song changes externally (auto advance / notification / shuffle skip), sync pager
     LaunchedEffect(currentIndex) {
-        if (isUserSwiping) {
-            // 用户滑动触发的切歌，跳过同步，重置标记
-            isUserSwiping = false
-        } else if (currentIndex in playlist.indices && currentIndex != pagerState.currentPage) {
+        if (currentIndex in playlist.indices && currentIndex != pagerState.currentPage) {
             pagerState.animateScrollToPage(currentIndex)
+        }
+    }
+
+    // 点击歌手名：多歌手歌曲按名字解析对应歌手ID，进入对应歌手页
+    val artistTapScope = rememberCoroutineScope()
+    val artistNameResolver: suspend (String) -> String? = onNavigateToArtistByName ?: { name -> viewModel.findArtistIdByName(name) }
+    val onArtistNameTap: (Song, String) -> Unit = { tapSong, name ->
+        val isMultiArtist = tapSong.artist.split("·", "、", "/").map { it.trim() }.filter { it.isNotEmpty() }.size > 1
+        if (!isMultiArtist && tapSong.artistId.isNotBlank()) {
+            onNavigateToArtist(tapSong.artistId)
+        } else {
+            artistTapScope.launch {
+                val id = artistNameResolver(name)
+                if (!id.isNullOrBlank()) onNavigateToArtist(id)
+            }
         }
     }
 
@@ -228,7 +251,7 @@ fun MusicPlayerContent(
                         }
                         Spacer(modifier = Modifier.width(32.dp))
                         Column(modifier = Modifier.weight(1f).fillMaxHeight(), horizontalAlignment = Alignment.CenterHorizontally) {
-                            SongInfo(song = pSong, titleSize = 24.sp, artistSize = 18.sp, onArtistClick = { if (pSong.artistId.isNotBlank()) onNavigateToArtist(pSong.artistId) }, center = true, playerTextColor = pTextColor, playerTextSecondary = pTextSecondary)
+                            SongInfo(song = pSong, titleSize = 24.sp, artistSize = 18.sp, onArtistClick = { if (pSong.artistId.isNotBlank()) onNavigateToArtist(pSong.artistId) }, onArtistNameClick = { name -> onArtistNameTap(pSong, name) }, center = true, playerTextColor = pTextColor, playerTextSecondary = pTextSecondary)
                             Spacer(modifier = Modifier.height(8.dp))
                             LyricsPanel(lrcLines = pLrcLines, plainLines = pPlainLines, currentPosition = currentPosition, playerTextColor = pTextColor, playerTextTertiary = pTextTertiary, modifier = Modifier.weight(1f))
                         }
@@ -304,7 +327,7 @@ fun MusicPlayerContent(
                                             titleSize = 20.sp,
                                             artistSize = 14.sp,
                                             onArtistClick = { if (pSong.artistId.isNotBlank()) onNavigateToArtist(pSong.artistId) },
-                                            onArtistNameClick = { _ -> },
+                                            onArtistNameClick = { name -> onArtistNameTap(pSong, name) },
                                             center = false,
                                             playerTextColor = pTextColor,
                                             playerTextSecondary = pTextSecondary,
@@ -450,13 +473,28 @@ private fun SongInfo(
                         .horizontalScroll(rememberScrollState()) else Modifier,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = artistText,
-                        fontSize = artistSize,
-                        color = playerTextSecondary,
-                        maxLines = 1,
-                        textAlign = if (center && !needsScroll) androidx.compose.ui.text.style.TextAlign.Center else androidx.compose.ui.text.style.TextAlign.Start
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        artistParts.forEachIndexed { partIndex, partName ->
+                            if (partIndex > 0) {
+                                Text(
+                                    text = " · ",
+                                    fontSize = artistSize,
+                                    color = playerTextSecondary,
+                                    maxLines = 1
+                                )
+                            }
+                            Text(
+                                text = partName,
+                                fontSize = artistSize,
+                                color = playerTextSecondary,
+                                maxLines = 1,
+                                textAlign = if (center && !needsScroll) androidx.compose.ui.text.style.TextAlign.Center else androidx.compose.ui.text.style.TextAlign.Start,
+                                modifier = Modifier.clickable {
+                                    if (onArtistNameClick != null) onArtistNameClick(partName) else onArtistClick()
+                                }
+                            )
+                        }
+                    }
                     if (qualityText.isNotEmpty()) {
                         Spacer(modifier = Modifier.width(6.dp))
                         com.lechenmusic.ui.components.QualityBadge(song = song, fontSize = 8.sp)
