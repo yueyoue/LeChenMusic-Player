@@ -143,7 +143,7 @@ Release 版本需要签名才能安装到手机上。请看下面的签名说明
 3. 点 **Create new...** 按钮
 4. 填写以下信息：
    - **Key store path**: 点右边的文件夹图标，选一个保存位置，文件名输入 `lechen.jks`
-   - **Password**: 输入密码（记住这个密码！比如 `lechen123`）
+   - **Password**: 输入密码（记住这个密码！比如 `<已移除：请从本地 keystore.properties 读取>`）
    - **Confirm**: 再输入一次密码
    - **Alias**: 输入 `lechen`（密钥别名）
    - **Password**: 输入密码（可以和上面一样）
