@@ -28,8 +28,29 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      # 签名密钥不再入库，从 Actions Secrets 还原（只在 CI 内存留，不进版本库）
+      # 首次配置：Settings → Secrets and variables → Actions，新增
+      #   RELEASE_KEYSTORE_BASE64   : base64 -w0 app/release.keystore.p12 的输出
+      #   RELEASE_KEYSTORE_PASSWORD : keystore 口令（对应 LECHEN_STORE_PASSWORD）
+      #   RELEASE_KEY_PASSWORD      : 私钥口令（对应 LECHEN_KEY_PASSWORD）
+      #   RELEASE_KEY_ALIAS         : 别名，默认 lechenmusic，可不配
+      - name: Prepare signing keystore
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$RELEASE_KEYSTORE_BASE64" ]; then
+            echo "::error::缺少 secret RELEASE_KEYSTORE_BASE64。请先在 Settings → Secrets and variables → Actions 配置 keystore 的 base64。"
+            exit 1
+          fi
+          printf '%s' "$RELEASE_KEYSTORE_BASE64" | base64 -d > app/release.keystore.p12
+          ls -l app/release.keystore.p12
+
       - name: Build Release APK
         run: ./gradlew assembleRelease
+        env:
+          LECHEN_STORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          LECHEN_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+          LECHEN_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
 
       - name: Get version info
         id: version

@@ -18,3 +18,9 @@ release-artifact.zip
 *.apk
 # trigger build
 .openclaw/
+
+# 签名密钥与口令 —— 绝不入库（泄露即等于发布签名泄露）
+keystore.properties
+*.p12
+*.jks
+*.keystore

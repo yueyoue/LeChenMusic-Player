@@ -3,6 +3,14 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+// 签名信息不进版本库：优先 keystore.properties（已 .gitignore），其次环境变量（CI 用）。
+// 注意：签名密钥必须保持不变。换钥匙会让老用户无法覆盖安装升级——
+// minSdk = 26，而 APK 签名 v3 的密钥轮换（proof-of-rotation）只在 Android 9+ / API 28+ 生效。
+val keystoreProps = java.util.Properties().apply {
+    val f = file("keystore.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
+}
+
 android {
     namespace = "com.lechenmusic"
     compileSdk = 34
@@ -18,10 +26,21 @@ android {
 
     signingConfigs {
         create("release") {
-            storeFile = file("release.keystore.p12")
-            storePassword = "lechen123"
-            keyAlias = "lechenmusic"
-            keyPassword = "lechen123"
+            // 找不到配置时退回相对路径默认值，保证本地已有 keystore.properties 的老工作流不受影响
+            storeFile = file(
+                keystoreProps.getProperty("storeFile")
+                    ?: System.getenv("LECHEN_KEYSTORE_FILE")
+                    ?: "release.keystore.p12"
+            )
+            storePassword = keystoreProps.getProperty("storePassword")
+                ?: System.getenv("LECHEN_STORE_PASSWORD")
+                ?: ""
+            keyAlias = keystoreProps.getProperty("keyAlias")
+                ?: System.getenv("LECHEN_KEY_ALIAS")
+                ?: "lechenmusic"
+            keyPassword = keystoreProps.getProperty("keyPassword")
+                ?: System.getenv("LECHEN_KEY_PASSWORD")
+                ?: ""
         }
     }
 

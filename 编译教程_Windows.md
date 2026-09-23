@@ -179,6 +179,43 @@ keytool -genkey -v -keystore D:\lechen.jks -keyalg RSA -keysize 2048 -validity 1
 - **签名文件（.jks）一定要保管好！** 丢失后无法更新已发布的 APP
 - **密码一定要记住！** 忘记密码就无法使用这个签名文件
 - 不要把签名文件上传到公开的地方（GitHub 等）
+- **⚠️ 千万不要重新生成签名密钥！** 换了密钥，老用户就无法覆盖安装新版本（系统会提示“安装失败 / 应用未安装”），必须先卸载旧版才能装，会丢掉所有本地数据。如果你真的换了密钥，安卓 8.x 用户（minSdk = 26）**永远无法升级**——因为 APK 签名 v3 的密钥轮换只在安卓 9+ 生效。
+
+### 7.4 签名配置文件 keystore.properties（必须）
+
+签名密钥和口令**不写在代码里**，改由本地配置文件提供。
+
+1. 确认签名文件在 `app\release.keystore.p12`（就是你一直在用的那个，**不要换**）
+2. 在 `app\` 目录下新建 `keystore.properties`，内容：
+
+```properties
+storeFile=release.keystore.p12
+storePassword=你的keystore口令
+keyAlias=lechenmusic
+keyPassword=你的私钥口令
+```
+
+3. 编译 Release：
+
+```bash
+gradlew assembleRelease
+```
+
+> `keystore.properties` 和 `*.p12` 都已在 `.gitignore` 里，**不会被提交到 GitHub**。
+> 换新电脑 / 重新克隆项目时，记得手动把这两个文件放回 `app\` 目录。
+
+也可以不用配置文件，改用环境变量（CI 就是这么做的）：`LECHEN_STORE_PASSWORD`、`LECHEN_KEY_PASSWORD`、`LECHEN_KEY_ALIAS`、`LECHEN_KEYSTORE_FILE`。
+
+### 7.5 GitHub Actions（云端自动打包）需要的 Secrets
+
+仓库 → **Settings → Secrets and variables → Actions**，新增：
+
+| Name | 值 |
+|---|---|
+| `RELEASE_KEYSTORE_BASE64` | `app/release.keystore.p12` 的 base64（Windows 下用 `certutil -encode` 后去掉首尾和换行） |
+| `RELEASE_KEYSTORE_PASSWORD` | keystore 口令 |
+| `RELEASE_KEY_PASSWORD` | 私钥口令 |
+| `RELEASE_KEY_ALIAS` | `lechenmusic`（可不配，默认就是它） |
 
 ---
 
