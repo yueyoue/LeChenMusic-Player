@@ -434,8 +434,8 @@ fun PlayerScreen(
                     modifier = Modifier.clickable {
                         val currentPlaylist = playlist.toMutableList()
                         if (currentPlaylist.none { it.id == song.id }) {
-                            currentPlaylist.add(song)
-                            playerManager.playSong(song, currentPlaylist)
+                            // 只入队，不重建播放列表、不重启当前曲目
+                            playerManager.addToQueue(song)
                             Toast.makeText(context, "已添加到播放列表", Toast.LENGTH_SHORT).show()
                         } else {
                             Toast.makeText(context, "歌曲已在播放列表中", Toast.LENGTH_SHORT).show()
@@ -672,7 +672,11 @@ fun PlayerScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
-                                    playerManager.playSong(s, playlist)
+                                    // 用 playAt 在当前队列内跳转：
+                                    // playSong 会把「播放顺序」写回 _playlistBase，
+                                    // 随机模式下会把打乱后的顺序当成队列顺序，
+                                    // 导致关闭随机时恢复不出原始顺序。
+                                    playerManager.playAt(index)
                                     showPlaylistSheet = false
                                 }
                                 .padding(vertical = 10.dp),
@@ -718,8 +722,8 @@ fun PlayerScreen(
                     // Add current song to the end of the playback queue
                     val currentPlaylist = playlist.toMutableList()
                     if (currentPlaylist.none { it.id == song.id }) {
-                        currentPlaylist.add(song)
-                        playerManager.playSong(song, currentPlaylist)
+                        // 只入队，不重建播放列表、不重启当前曲目
+                        playerManager.addToQueue(song)
                         Toast.makeText(context, "已添加到播放列表", Toast.LENGTH_SHORT).show()
                     } else {
                         Toast.makeText(context, "歌曲已在播放列表中", Toast.LENGTH_SHORT).show()
