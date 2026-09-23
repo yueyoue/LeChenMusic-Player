@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
+import android.widget.Toast
 import androidx.palette.graphics.Palette
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
@@ -142,17 +143,24 @@ fun MusicPlayerContent(
         }
     }
 
-    // 点击歌手名：多歌手歌曲按名字解析对应歌手ID，进入对应歌手页
+    // 点击歌手名：优先用服务端返回的真实歌手ID（OpenSubsonic artists[]），多歌手分别进各自歌手页
     val artistTapScope = rememberCoroutineScope()
+    val artistTapContext = LocalContext.current
     val artistNameResolver: suspend (String) -> String? = onNavigateToArtistByName ?: { name -> viewModel.findArtistIdByName(name) }
-    val onArtistNameTap: (Song, String) -> Unit = { tapSong, name ->
-        val isMultiArtist = tapSong.artist.split("·", "、", "/").map { it.trim() }.filter { it.isNotEmpty() }.size > 1
-        if (!isMultiArtist && tapSong.artistId.isNotBlank()) {
-            onNavigateToArtist(tapSong.artistId)
-        } else {
-            artistTapScope.launch {
+    val onArtistNameTap: (Song, String?, String) -> Unit = { tapSong, artistId, name ->
+        val directId = artistId?.trim().orEmpty()
+        val singleArtist = tapSong.artist.split("·", "、", "/").map { it.trim() }.filter { it.isNotEmpty() }.size <= 1
+        val fallbackId = if (singleArtist) tapSong.artistId.trim() else ""
+        when {
+            directId.isNotBlank() -> onNavigateToArtist(directId)
+            fallbackId.isNotBlank() -> onNavigateToArtist(fallbackId)
+            else -> artistTapScope.launch {
                 val id = artistNameResolver(name)
-                if (!id.isNullOrBlank()) onNavigateToArtist(id)
+                if (!id.isNullOrBlank()) {
+                    onNavigateToArtist(id)
+                } else {
+                    Toast.makeText(artistTapContext, "未找到歌手「$name」", Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }
@@ -251,7 +259,7 @@ fun MusicPlayerContent(
                         }
                         Spacer(modifier = Modifier.width(32.dp))
                         Column(modifier = Modifier.weight(1f).fillMaxHeight(), horizontalAlignment = Alignment.CenterHorizontally) {
-                            SongInfo(song = pSong, titleSize = 24.sp, artistSize = 18.sp, onArtistClick = { if (pSong.artistId.isNotBlank()) onNavigateToArtist(pSong.artistId) }, onArtistNameClick = { name -> onArtistNameTap(pSong, name) }, center = true, playerTextColor = pTextColor, playerTextSecondary = pTextSecondary)
+                            SongInfo(song = pSong, titleSize = 24.sp, artistSize = 18.sp, onArtistEntryClick = { artistId, name -> onArtistNameTap(pSong, artistId, name) }, center = true, playerTextColor = pTextColor, playerTextSecondary = pTextSecondary)
                             Spacer(modifier = Modifier.height(8.dp))
                             LyricsPanel(lrcLines = pLrcLines, plainLines = pPlainLines, currentPosition = currentPosition, playerTextColor = pTextColor, playerTextTertiary = pTextTertiary, modifier = Modifier.weight(1f))
                         }
@@ -326,8 +334,7 @@ fun MusicPlayerContent(
                                             song = pSong,
                                             titleSize = 20.sp,
                                             artistSize = 14.sp,
-                                            onArtistClick = { if (pSong.artistId.isNotBlank()) onNavigateToArtist(pSong.artistId) },
-                                            onArtistNameClick = { name -> onArtistNameTap(pSong, name) },
+                                            onArtistEntryClick = { artistId, name -> onArtistNameTap(pSong, artistId, name) },
                                             center = false,
                                             playerTextColor = pTextColor,
                                             playerTextSecondary = pTextSecondary,
@@ -412,8 +419,7 @@ private fun SongInfo(
     song: Song,
     titleSize: TextUnit,
     artistSize: TextUnit,
-    onArtistClick: () -> Unit,
-    onArtistNameClick: ((String) -> Unit)? = null,
+    onArtistEntryClick: (artistId: String?, name: String) -> Unit,
     center: Boolean = false,
     playerTextColor: Color = Color.White,
     playerTextSecondary: Color = Color.White.copy(alpha = 0.7f),
@@ -433,12 +439,20 @@ private fun SongInfo(
             textAlign = if (center) androidx.compose.ui.text.style.TextAlign.Center else androidx.compose.ui.text.style.TextAlign.Start
         )
         Spacer(modifier = Modifier.height(6.dp))
-        // 歌手行：歌手横向可滚动，品质图标始终可见
-        val artistParts = song.artist.split("·", "、", "/").map { it.trim() }.filter { it.isNotEmpty() }
+        // 歌手列表：优先使用服务端返回的多歌手ID列表（OpenSubsonic artists[]，每位歌手带真实ID），
+        // 缺少该字段时退回按常见分隔符拆分歌手名（此时只能靠名字反查ID）
+        val artistEntries: List<Pair<String?, String>> = run {
+            val fromServer = song.artists?.filter { it.name.isNotBlank() } ?: emptyList()
+            if (fromServer.isNotEmpty()) {
+                fromServer.map { it.id to it.name }
+            } else {
+                song.artist.split("·", "、", "/").map { it.trim() }.filter { it.isNotEmpty() }.map { null to it }
+            }
+        }
         val qualityText = if (showQuality) com.lechenmusic.ui.components.getQualityText(song) else ""
         val qualityColor = if (showQuality) com.lechenmusic.ui.components.getQualityColor(song) else Color.Transparent
 
-        val artistText = if (artistParts.size > 1) artistParts.joinToString(" · ") else song.artist
+        val artistText = if (artistEntries.size > 1) artistEntries.joinToString(" · ") { it.second } else song.artist
 
         // 使用 SubcomposeLayout：先无约束测量文字自然宽度，再决定是否滚动
         SubcomposeLayout(
@@ -474,7 +488,7 @@ private fun SongInfo(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        artistParts.forEachIndexed { partIndex, partName ->
+                        artistEntries.forEachIndexed { partIndex, (entryId, partName) ->
                             if (partIndex > 0) {
                                 Text(
                                     text = " · ",
@@ -490,7 +504,7 @@ private fun SongInfo(
                                 maxLines = 1,
                                 textAlign = if (center && !needsScroll) androidx.compose.ui.text.style.TextAlign.Center else androidx.compose.ui.text.style.TextAlign.Start,
                                 modifier = Modifier.clickable {
-                                    if (onArtistNameClick != null) onArtistNameClick(partName) else onArtistClick()
+                                    onArtistEntryClick(entryId, partName)
                                 }
                             )
                         }

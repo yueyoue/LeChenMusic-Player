@@ -300,6 +300,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
 
+        // 定时到点（闹钟触发，APP 可能在后台）：同步清理定时UI状态，避免定时显示卡住
+        playerManager.onTimerExpired = {
+            countdownJob?.cancel()
+            clearTimerTarget()
+            _timerRemainingSeconds.value = 0
+            clearTimerMinutesState()
+        }
+
         // Register callback for auto-advance (lock screen / background playback)
         playerManager.onSongAutoAdvanced = { song ->
             // Only record music songs, not audiobooks or radio
@@ -1176,10 +1184,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 else _audiobookTimerMinutes.value = savedMinutes
                 startCountdown()
             } else {
+                // 定时已到点（含后台到点后回到前台）：清理状态并确保播放停止（自愈）
                 clearTimerTarget()
                 _timerRemainingSeconds.value = 0
+                clearTimerMinutesState()
+                playerManager.forcePause()
             }
         }
+    }
+
+    /** 清理定时分钟数显示状态（定时到点/取消后都要调用，否则UI会卡在预定时间不动） */
+    private fun clearTimerMinutesState() {
+        _musicTimerMinutes.value = 0
+        _audiobookTimerMinutes.value = 0
     }
 
     private fun startCountdown() {
@@ -1206,6 +1223,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
             clearTimerTarget()
+            _timerRemainingSeconds.value = 0
+            clearTimerMinutesState()
         }
     }
 
@@ -1231,6 +1250,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         playerManager.cancelTimer()
         clearTimerTarget()
         _timerRemainingSeconds.value = 0
+        clearTimerMinutesState()
     }
 
     fun syncData() {

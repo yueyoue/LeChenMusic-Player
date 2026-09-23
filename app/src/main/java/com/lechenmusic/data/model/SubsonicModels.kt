@@ -155,6 +155,12 @@ data class SongsWrapper(
     val song: List<Song>? = null
 )
 
+/** OpenSubsonic 扩展：参与歌曲的歌手（每位歌手的ID+名字），多歌手歌曲点击歌手名导航用 */
+data class ArtistIdName(
+    val id: String = "",
+    val name: String = ""
+)
+
 data class Song(
     val id: String = "",
     val title: String = "",
@@ -173,7 +179,10 @@ data class Song(
     val bitRate: Int = 0,
     val starred: String? = null,
     val playCount: Long = 0,
-    val discNumber: Int = 0
+    val discNumber: Int = 0,
+    // OpenSubsonic 多歌手扩展：每位歌手的真实ID+名字（多歌手歌曲点击歌手名分别进歌手页）
+    val artists: List<ArtistIdName>? = null,
+    val displayArtist: String? = null
 ) {
     val isStarred: Boolean get() = starred != null
     val durationFormatted: String get() {

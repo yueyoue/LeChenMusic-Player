@@ -110,6 +110,9 @@ class MusicPlayerManager(private val context: Context) {
 
     var onSongAutoAdvanced: ((Song) -> Unit)? = null
 
+    // 定时到点停止播放后回调（用于清理定时相关的UI状态）
+    var onTimerExpired: (() -> Unit)? = null
+
     // Called when current media item playback completes (STATE_ENDED)
     var onPlaybackCompleted: (() -> Unit)? = null
 
@@ -264,6 +267,7 @@ class MusicPlayerManager(private val context: Context) {
                     ACTION_STOP_PLAYBACK -> {
                         timerExpired = true
                         player?.pause()
+                        onTimerExpired?.invoke()
                     }
                     ACTION_TOGGLE_FAVORITE -> toggleStar()
                     ACTION_PREV -> skipPrevious()
@@ -615,32 +619,52 @@ class MusicPlayerManager(private val context: Context) {
     // 存储电台流地址，用于播放列表切换
     private val radioStreamUrls = mutableMapOf<String, String>()
 
+    // 原始播放列表顺序（关闭随机时恢复用）；_playlist 始终是实际播放顺序（随机模式下已打乱）
+    private val _playlistBase = MutableStateFlow<List<Song>>(emptyList())
+
+    /** 根据当前随机模式计算播放顺序：随机时打乱其余歌曲，当前歌曲保持原位置 */
+    private fun buildPlayOrder(base: List<Song>, currentId: String?): List<Song> {
+        if (!_shuffleMode.value || base.size <= 1) return base
+        val curIndex = base.indexOfFirst { it.id == currentId }
+        if (curIndex < 0) return base.shuffled()
+        val rest = base.filterIndexed { i, _ -> i != curIndex }.shuffled()
+        val insertAt = curIndex.coerceAtMost(rest.size)
+        return rest.take(insertAt) + base[curIndex] + rest.drop(insertAt)
+    }
+
+    /** 构建媒体项列表（电台使用存储的流地址，普通歌曲使用 repository） */
+    private fun buildMediaItems(songs: List<Song>): List<MediaItem> {
+        return songs.map { s ->
+            val url = if (s.id.startsWith("radio_")) {
+                radioStreamUrls[s.id] ?: repository!!.getStreamUrl(s.id)
+            } else {
+                repository!!.getStreamUrl(s.id)
+            }
+            MediaItem.Builder()
+                .setUri(url)
+                .setMediaId(s.id)
+                .setMediaMetadata(
+                    Media3Metadata.Builder()
+                        .setTitle(s.title)
+                        .setArtist(s.artist)
+                        .setAlbumTitle(s.album)
+                        .build()
+                )
+                .build()
+        }
+    }
+
     fun playSong(song: Song, songs: List<Song> = listOf(song)) {
-        _playlist.value = songs
-        val index = songs.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
+        _playlistBase.value = songs
+        val ordered = buildPlayOrder(songs, song.id)
+        _playlist.value = ordered
+        val index = ordered.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
         _currentIndex.value = index
 
         player?.apply {
-            val mediaItems = songs.map { s ->
-                // 电台使用存储的流地址，普通歌曲使用 repository
-                val url = if (s.id.startsWith("radio_")) {
-                    radioStreamUrls[s.id] ?: repository!!.getStreamUrl(s.id)
-                } else {
-                    repository!!.getStreamUrl(s.id)
-                }
-                MediaItem.Builder()
-                    .setUri(url)
-                    .setMediaId(s.id)
-                    .setMediaMetadata(
-                        Media3Metadata.Builder()
-                            .setTitle(s.title)
-                            .setArtist(s.artist)
-                            .setAlbumTitle(s.album)
-                            .build()
-                    )
-                    .build()
-            }
-            setMediaItems(mediaItems, index, 0)
+            // 播放顺序统一由 _playlist 维护，不再使用 ExoPlayer 内部随机
+            shuffleModeEnabled = false
+            setMediaItems(buildMediaItems(ordered), index, 0)
             prepare()
             play()
         }
@@ -694,32 +718,15 @@ class MusicPlayerManager(private val context: Context) {
         // Check if song already exists in queue
         if (_playlist.value.any { it.id == song.id }) return
         player?.apply {
-            val url = repository!!.getStreamUrl(song.id)
-            val mediaItem = MediaItem.Builder()
-                .setUri(url)
-                .setMediaId(song.id)
-                .setMediaMetadata(
-                    Media3Metadata.Builder()
-                        .setTitle(song.title)
-                        .setArtist(song.artist)
-                        .setAlbumTitle(song.album)
-                        .build()
-                )
-                .build()
-            addMediaItem(mediaItem)
+            addMediaItem(buildMediaItems(listOf(song)).first())
             _playlist.value = _playlist.value + song
+            _playlistBase.value = _playlistBase.value + song
         }
     }
 
     fun skipNext() {
         val p = player ?: return
-        if (_shuffleMode.value) {
-            // 随机换歌（排除当前歌曲，避免随机到同一首）
-            val candidates = _playlist.value.indices.filter { idx -> idx != _currentIndex.value }
-            val randomIndex = candidates.randomOrNull() ?: _playlist.value.indices.randomOrNull() ?: return
-            playAt(randomIndex, autoPlay = false)
-            return
-        }
+        // 播放列表本身就是播放顺序（随机模式下已打乱），直接切下一首
         if (p.hasNextMediaItem()) {
             p.seekToNext()
         } else if (_repeatMode.value == RepeatMode.ALL) {
@@ -755,18 +762,11 @@ class MusicPlayerManager(private val context: Context) {
 
     /**
      * 播放页竖向滑动切歌。
-     * - 随机模式开启时：随机换一首播放（与下一曲按钮的随机逻辑一致）
-     * - 顺序模式：播放滑动目标位置对应的歌曲
+     * 播放列表本身就是播放顺序（随机模式下已按随机顺序排列），
+     * 因此直接播放滑动目标页的歌曲即可：一次到位，不再二次跳转。
      */
     fun playFromSwipe(targetIndex: Int) {
-        if (_playlist.value.isEmpty()) return
-        if (_shuffleMode.value) {
-            val candidates = _playlist.value.indices.filter { it != _currentIndex.value }
-            val randomIndex = candidates.randomOrNull() ?: return
-            playAt(randomIndex)
-        } else {
-            playAt(targetIndex)
-        }
+        playAt(targetIndex)
     }
 
     fun skipPrevious() {
@@ -806,7 +806,24 @@ class MusicPlayerManager(private val context: Context) {
 
     fun toggleShuffle() {
         _shuffleMode.value = !_shuffleMode.value
-        player?.shuffleModeEnabled = _shuffleMode.value
+        player?.shuffleModeEnabled = false // 顺序统一由 _playlist 维护
+        // 重排播放队列（开启随机：其余歌曲打乱；关闭随机：恢复原始顺序），当前歌曲与播放位置不变
+        val base = _playlistBase.value.ifEmpty { _playlist.value }
+        if (base.isEmpty()) return
+        _playlistBase.value = base
+        val current = _currentSong.value
+        val ordered = buildPlayOrder(base, current?.id)
+        _playlist.value = ordered
+        val newIndex = ordered.indexOfFirst { it.id == current?.id }.coerceAtLeast(0)
+        _currentIndex.value = newIndex
+        player?.let { p ->
+            val pos = if (current?.id?.startsWith("radio_") == true) 0L else p.currentPosition.coerceAtLeast(0L)
+            val wasPlaying = p.isPlaying
+            p.setMediaItems(buildMediaItems(ordered), newIndex, pos)
+            p.prepare()
+            if (wasPlaying) p.play()
+        }
+        updateNotification()
     }
 
     fun toggleRepeat() {
@@ -857,7 +874,10 @@ class MusicPlayerManager(private val context: Context) {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         val triggerTime = System.currentTimeMillis() + minutes * 60 * 1000L
-        alarmManager.set(AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent)
+        // setAlarmClock：精确定时，不受 Doze/厂商后台限制，后台播放也能准时停止
+        // （普通 set() 是非精确闹钟，后台会被系统批量推迟）
+        val clockInfo = AlarmManager.AlarmClockInfo(triggerTime, pendingIntent)
+        alarmManager.setAlarmClock(clockInfo, pendingIntent)
     }
 
     fun cancelTimer() {
@@ -1002,54 +1022,34 @@ class MusicPlayerManager(private val context: Context) {
     fun playRadioStation(station: com.lechenmusic.data.model.InternetRadioStation, allStations: List<com.lechenmusic.data.model.InternetRadioStation> = emptyList()) {
         // 清除有声书状态，避免MiniPlayer/PlayerPage显示有声书内容
         _audiobookCoverUrl.value = null
+        // 先存储所有电台流地址（buildMediaItems 依赖）
+        radioStreamUrls.clear()
+        radioStreamUrls["radio_${station.id}"] = station.streamUrl
+        allStations.forEach { s -> radioStreamUrls["radio_${s.id}"] = s.streamUrl }
+
+        // 设置播放列表为所有电台，支持上下滑动切换（只传单个电台时列表就一首）
+        val stations = if (allStations.isNotEmpty()) allStations else listOf(station)
+        val songs = stations.map { s ->
+            com.lechenmusic.data.model.Song(
+                id = "radio_${s.id}",
+                title = s.name,
+                artist = "电台",
+                album = "电台",
+                duration = 0,
+                coverArt = s.coverArt
+            )
+        }
+        _playlistBase.value = songs
+        _playlist.value = songs
+        val index = stations.indexOfFirst { it.id == station.id }.coerceAtLeast(0)
+        _currentIndex.value = index
+        _currentSong.value = songs[index]
+
         player?.apply {
-            val mediaItem = MediaItem.Builder()
-                .setUri(station.streamUrl)
-                .setMediaId("radio_${station.id}")
-                .setMediaMetadata(
-                    Media3Metadata.Builder()
-                        .setTitle(station.name)
-                        .setArtist("电台")
-                        .setAlbumTitle("网络电台")
-                        .build()
-                )
-                .build()
-            setMediaItem(mediaItem)
+            shuffleModeEnabled = false
+            setMediaItems(buildMediaItems(songs), index, 0)
             prepare()
             play()
-        }
-        _currentSong.value = com.lechenmusic.data.model.Song(
-            id = "radio_${station.id}",
-            title = station.name,
-            artist = "电台",
-            album = "电台",
-            duration = 0,
-            coverArt = station.coverArt
-        )
-        // 设置播放列表为所有电台，支持上下滑动切换
-        if (allStations.isNotEmpty()) {
-            // 存储所有电台的流地址
-            radioStreamUrls.clear()
-            allStations.forEach { s ->
-                radioStreamUrls["radio_${s.id}"] = s.streamUrl
-            }
-            val songs = allStations.map { s ->
-                com.lechenmusic.data.model.Song(
-                    id = "radio_${s.id}",
-                    title = s.name,
-                    artist = "电台",
-                    album = "电台",
-                    duration = 0,
-                    coverArt = s.coverArt
-                )
-            }
-            _playlist.value = songs
-            _currentIndex.value = allStations.indexOfFirst { it.id == station.id }.coerceAtLeast(0)
-        } else {
-            // 单个电台也存储流地址
-            radioStreamUrls["radio_${station.id}"] = station.streamUrl
-            _playlist.value = emptyList()
-            _currentIndex.value = 0
         }
         _isStarred.value = false
         updateNotification()
@@ -1087,6 +1087,7 @@ class MusicPlayerManager(private val context: Context) {
         )
         _audiobookCoverUrl.value = coverUrl
         _playlist.value = emptyList()
+        _playlistBase.value = emptyList()
         _currentIndex.value = 0
         _isStarred.value = false
         pendingSeekMs = initialSeekMs
