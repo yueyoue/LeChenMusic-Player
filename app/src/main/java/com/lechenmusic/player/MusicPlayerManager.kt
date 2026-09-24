@@ -632,15 +632,24 @@ class MusicPlayerManager(private val context: Context) {
      * 因此结构性不可能造成 rebuffer；而 setMediaItems / replaceMediaItems / moveMediaItems
      * 都要 add+remove MediaSourceHolder，在流媒体上就是一下可听见的中断。
      *
+     * 另一条硬约束：**开关随机都不能挪动当前翻页位置**。让当前曲目"归位"到源队列下标
+     * 会逼翻页器跨几十页 animateScrollToPage 滑回去，动画期间逐页重组封面/背景色，
+     * 主线程一堵音频就卡一下（1.6.7 关随机时的卡顿+上下滑动就是这么来的）。
+     * 所以开、关随机都把当前曲目钉在 pinIndex：开随机时前后是随机歌，
+     * 关随机时前后换成列表顺序的自然衔接（往下翻 = 列表下一首）。
+     *
      * @param currentIndex 当前曲目在 _playlistBase 中的下标（-1 表示未知）
-     * @param pinIndex 开随机时把当前曲目固定在播放顺序的第几位，
-     *   这样翻页位置不动，用户只看到前后歌曲被重排。关随机时忽略，直接返回自然顺序。
+     * @param pinIndex 当前曲目固定在播放顺序的第几位（开关随机都钉住，页面零跳动）
      */
     private fun buildPlayPerm(size: Int, currentIndex: Int, pinIndex: Int): IntArray {
         if (size <= 0) return IntArray(0)
-        if (!_shuffleMode.value || size == 1 || currentIndex < 0) return IntArray(size) { it }
+        if (size == 1 || currentIndex < 0) return IntArray(size) { it }
+        val at = pinIndex.coerceIn(0, size - 1)
+        if (!_shuffleMode.value) {
+            // 顺序模式：以当前曲目为锚点的列表顺序（循环平移），相邻页 = 列表相邻曲目
+            return IntArray(size) { i -> ((currentIndex - at + i) % size + size) % size }
+        }
         val rest = (0 until size).filter { it != currentIndex }.shuffled()
-        val at = pinIndex.coerceIn(0, rest.size)
         return (rest.take(at) + currentIndex + rest.drop(at)).toIntArray()
     }
 
@@ -770,7 +779,8 @@ class MusicPlayerManager(private val context: Context) {
         if (p.hasNextMediaItem()) {
             p.seekToNext()
         } else if (_repeatMode.value == RepeatMode.ALL && _playlist.value.isNotEmpty()) {
-            playAt(0)
+            // 绕回队列开头：跟播放顺序 _playlist 首尾衔接（顺序模式下即列表第一首）
+            playAt((_currentIndex.value + 1) % _playlist.value.size)
             return
         }
         updateCurrentFromPlayer()
@@ -852,7 +862,9 @@ class MusicPlayerManager(private val context: Context) {
      * 所以结构性不可能打断正在播放的曲目。
      *
      * 开启随机：当前曲目固定在当前翻页位置，其余歌曲打乱（页面不动，只有前后歌曲换了）。
-     * 关闭随机：恢复 _playlistBase 的自然顺序，当前曲目回到它在源队列中的位置。
+     * 关闭随机：当前页同样钉住不动，前后顺序换回列表顺序 —— 往下翻就是列表里的下一首。
+     * 不做"归位"回源队列下标：那会触发跨页滑动动画，逐页重组封面/配色把主线程堵住，
+     * 音频跟着卡一下（见 buildPlayPerm 的说明）。
      */
     fun toggleShuffle() {
         _shuffleMode.value = !_shuffleMode.value
