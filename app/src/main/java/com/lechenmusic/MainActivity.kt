@@ -5,11 +5,13 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -847,54 +849,17 @@ fun NavGraphBuilder.sharedNavRoutes(
             // 播放队列弹窗
             if (showQueueDialog) {
                 val queueSongs by viewModel.playerManager.playlist.collectAsState()
-                AlertDialog(
-                    onDismissRequest = { showQueueDialog = false },
-                    title = { Text("播放队列 (${queueSongs.size}首)") },
-                    text = {
-                        Column {
-                            if (queueSongs.isEmpty()) {
-                                Text("播放队列为空")
-                            } else {
-                                val currentIndex by viewModel.playerManager.currentIndex.collectAsState()
-                                LazyColumn(modifier = Modifier.heightIn(max = 400.dp)) {
-                                    items(queueSongs.size) { index ->
-                                        val song = queueSongs[index]
-                                        val isCurrent = index == currentIndex
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth()
-                                                .clickable {
-                                                    viewModel.playerManager.playSong(song, queueSongs)
-                                                    showQueueDialog = false
-                                                }
-                                                .background(
-                                                    if (isCurrent) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else Color.Transparent,
-                                                    RoundedCornerShape(8.dp)
-                                                )
-                                                .padding(horizontal = 12.dp, vertical = 8.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            if (isCurrent) {
-                                                Icon(Icons.Default.PlayArrow, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
-                                            } else {
-                                                Text("${index + 1}", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.width(24.dp))
-                                            }
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Column(modifier = Modifier.weight(1f)) {
-                                                Text(song.title, fontSize = 14.sp, fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal, maxLines = 1)
-                                                Text(song.artist, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
-                                            }
-                                            if (song.duration > 0) {
-                                                Text("${song.duration / 60}:${"%02d".format(song.duration % 60)}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                val queueIndex by viewModel.playerManager.currentIndex.collectAsState()
+                val queuePlaying by viewModel.playerManager.isPlaying.collectAsState()
+                PlayQueueDialog(
+                    queueSongs = queueSongs,
+                    currentIndex = queueIndex,
+                    isPlaying = queuePlaying,
+                    onPlay = { song ->
+                        viewModel.playerManager.playSong(song, queueSongs)
+                        showQueueDialog = false
                     },
-                    confirmButton = {
-                        TextButton(onClick = { showQueueDialog = false }) { Text("关闭") }
-                    }
+                    onDismissRequest = { showQueueDialog = false }
                 )
             }
         } else {
@@ -923,54 +888,17 @@ fun NavGraphBuilder.sharedNavRoutes(
             // 手机端播放队列弹窗
             if (showQueueDialogPhone) {
                 val queueSongs by viewModel.playerManager.playlist.collectAsState()
-                AlertDialog(
-                    onDismissRequest = { showQueueDialogPhone = false },
-                    title = { Text("播放队列 (${queueSongs.size}首)") },
-                    text = {
-                        Column {
-                            if (queueSongs.isEmpty()) {
-                                Text("播放队列为空")
-                            } else {
-                                val currentIndex by viewModel.playerManager.currentIndex.collectAsState()
-                                LazyColumn(modifier = Modifier.heightIn(max = 400.dp)) {
-                                    items(queueSongs.size) { index ->
-                                        val song = queueSongs[index]
-                                        val isCurrent = index == currentIndex
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth()
-                                                .clickable {
-                                                    viewModel.playerManager.playSong(song, queueSongs)
-                                                    showQueueDialogPhone = false
-                                                }
-                                                .background(
-                                                    if (isCurrent) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else Color.Transparent,
-                                                    RoundedCornerShape(8.dp)
-                                                )
-                                                .padding(horizontal = 12.dp, vertical = 8.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            if (isCurrent) {
-                                                Icon(Icons.Default.PlayArrow, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
-                                            } else {
-                                                Text("${index + 1}", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.width(24.dp))
-                                            }
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Column(modifier = Modifier.weight(1f)) {
-                                                Text(song.title, fontSize = 14.sp, fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal, maxLines = 1)
-                                                Text(song.artist, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
-                                            }
-                                            if (song.duration > 0) {
-                                                Text("${song.duration / 60}:${"%02d".format(song.duration % 60)}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                val queueIndex by viewModel.playerManager.currentIndex.collectAsState()
+                val queuePlaying by viewModel.playerManager.isPlaying.collectAsState()
+                PlayQueueDialog(
+                    queueSongs = queueSongs,
+                    currentIndex = queueIndex,
+                    isPlaying = queuePlaying,
+                    onPlay = { song ->
+                        viewModel.playerManager.playSong(song, queueSongs)
+                        showQueueDialogPhone = false
                     },
-                    confirmButton = {
-                        TextButton(onClick = { showQueueDialogPhone = false }) { Text("关闭") }
-                    }
+                    onDismissRequest = { showQueueDialogPhone = false }
                 )
             }
 
@@ -1441,5 +1369,115 @@ fun NavGraphBuilder.sharedNavRoutes(
             },
             windowSizeClass = windowSizeClass
         )
+    }
+}
+
+/**
+ * 播放队列弹窗（平板/手机共用）。
+ * 打开即自动定位到当前播放曲目（免得用户上下翻页找）；
+ * 当前曲目按主流音乐 App（网易云/QQ音乐/Spotify）的惯例标识：主题色标题 + 律动柱条。
+ */
+@androidx.compose.runtime.Composable
+private fun PlayQueueDialog(
+    queueSongs: List<com.lechenmusic.data.model.Song>,
+    currentIndex: Int,
+    isPlaying: Boolean,
+    onPlay: (com.lechenmusic.data.model.Song) -> Unit,
+    onDismissRequest: () -> Unit
+) {
+    val listState = rememberLazyListState()
+    // 打开即把当前曲目滚进视野（上方留一行上下文，观感接近网易云的定位）
+    LaunchedEffect(Unit) {
+        if (currentIndex in queueSongs.indices) {
+            listState.scrollToItem((currentIndex - 1).coerceAtLeast(0))
+        }
+    }
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        title = { Text("播放队列 (${queueSongs.size}首)") },
+        text = {
+            Column {
+                if (queueSongs.isEmpty()) {
+                    Text("播放队列为空")
+                } else {
+                    LazyColumn(state = listState, modifier = Modifier.heightIn(max = 400.dp)) {
+                        items(queueSongs.size) { index ->
+                            val song = queueSongs[index]
+                            val isCurrent = index == currentIndex
+                            Row(
+                                modifier = Modifier.fillMaxWidth()
+                                    .clickable { onPlay(song) }
+                                    .background(
+                                        if (isCurrent) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f) else Color.Transparent,
+                                        RoundedCornerShape(8.dp)
+                                    )
+                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                if (isCurrent) {
+                                    if (isPlaying) {
+                                        PlayingBars(color = MaterialTheme.colorScheme.primary)
+                                    } else {
+                                        Icon(Icons.Default.PlayArrow, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                                    }
+                                } else {
+                                    Text("${index + 1}", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.width(24.dp))
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        song.title,
+                                        fontSize = 14.sp,
+                                        color = if (isCurrent) MaterialTheme.colorScheme.primary else Color.Unspecified,
+                                        fontWeight = if (isCurrent) FontWeight.SemiBold else FontWeight.Normal,
+                                        maxLines = 1
+                                    )
+                                    Text(song.artist, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                                }
+                                if (song.duration > 0) {
+                                    Text("${song.duration / 60}:${"%02d".format(song.duration % 60)}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismissRequest) { Text("关闭") }
+        }
+    )
+}
+
+/** 「正在播放」律动柱条（Spotify/网易云同款小图标，暂停时调用方改用静态 PlayArrow） */
+@androidx.compose.runtime.Composable
+private fun PlayingBars(color: Color, modifier: Modifier = Modifier) {
+    val inf = rememberInfiniteTransition(label = "eq")
+    val a = inf.animateFloat(
+        0.35f, 1f,
+        animationSpec = infiniteRepeatable(tween(380, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "eqA"
+    ).value
+    val b = inf.animateFloat(
+        0.35f, 1f,
+        animationSpec = infiniteRepeatable(tween(380, delayMillis = 130, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "eqB"
+    ).value
+    val c = inf.animateFloat(
+        0.35f, 1f,
+        animationSpec = infiniteRepeatable(tween(380, delayMillis = 260, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "eqC"
+    ).value
+    Row(
+        modifier = modifier.height(16.dp).width(18.dp),
+        verticalAlignment = Alignment.Bottom,
+        horizontalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        for (h in listOf(a, b, c)) {
+            Box(
+                Modifier.width(3.dp).height((14 * h).dp)
+                    .background(color, RoundedCornerShape(1.dp))
+            )
+        }
     }
 }
