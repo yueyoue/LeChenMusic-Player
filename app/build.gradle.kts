@@ -58,7 +58,12 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("release")
+            // 平时一律签名：签名材料缺失就报错，避免产出无法覆盖安装的包被误发布。
+            // 只有显式 LECHEN_SKIP_SIGNING=true（CI 未配置签名 Secrets）时才产出 unsigned 包，
+            // 仅供验证编译，不能安装、不会发布。
+            if (!(System.getenv("LECHEN_SKIP_SIGNING") ?: "false").toBoolean()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
         debug {
             isMinifyEnabled = false

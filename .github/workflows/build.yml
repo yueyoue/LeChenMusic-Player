@@ -28,22 +28,30 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      # 签名密钥不再入库，从 Actions Secrets 还原（只在 CI 内存留，不进版本库）
-      # 首次配置：Settings → Secrets and variables → Actions，新增
+      # 签名密钥不入库，从 Actions Secrets 还原（只在 CI 内存留）。
+      # 首次配置：Settings -> Secrets and variables -> Actions，新增
       #   RELEASE_KEYSTORE_BASE64   : base64 -w0 app/release.keystore.p12 的输出
       #   RELEASE_KEYSTORE_PASSWORD : keystore 口令（对应 LECHEN_STORE_PASSWORD）
       #   RELEASE_KEY_PASSWORD      : 私钥口令（对应 LECHEN_KEY_PASSWORD）
       #   RELEASE_KEY_ALIAS         : 别名，默认 lechenmusic，可不配
+      #
+      # 没配置 Secrets 时不会失败：只跑编译验证并上传 unsigned 包（不可安装、不发布）。
+      # 要发版就把上面三项配好，下次 push 就会签名并自动创建 Release。
       - name: Prepare signing keystore
+        id: signing
         env:
           RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
         run: |
-          if [ -z "$RELEASE_KEYSTORE_BASE64" ]; then
-            echo "::error::缺少 secret RELEASE_KEYSTORE_BASE64。请先在 Settings → Secrets and variables → Actions 配置 keystore 的 base64。"
-            exit 1
+          if [ -n "$RELEASE_KEYSTORE_BASE64" ] && [ -n "$RELEASE_KEYSTORE_PASSWORD" ] && [ -n "$RELEASE_KEY_PASSWORD" ]; then
+            printf '%s' "$RELEASE_KEYSTORE_BASE64" | base64 -d > app/release.keystore.p12
+            echo "signed=true" >> "$GITHUB_OUTPUT"
+            echo "签名材料已就绪：本次产出可发布、可覆盖升级的 Release APK"
+          else
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::未配置签名 Secrets。本次仅验证编译，产出的是 unsigned 包（不可安装），并且不会发布 Release。要发版请到 Settings -> Secrets and variables -> Actions 配置 RELEASE_KEYSTORE_BASE64 / RELEASE_KEYSTORE_PASSWORD / RELEASE_KEY_PASSWORD。"
           fi
-          printf '%s' "$RELEASE_KEYSTORE_BASE64" | base64 -d > app/release.keystore.p12
-          ls -l app/release.keystore.p12
 
       - name: Build Release APK
         run: ./gradlew assembleRelease
@@ -51,9 +59,21 @@ jobs:
           LECHEN_STORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
           LECHEN_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
           LECHEN_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          # 没有签名材料时让 Gradle 产出 unsigned 包，只用于验证编译
+          LECHEN_SKIP_SIGNING: ${{ steps.signing.outputs.signed != 'true' }}
+
+      # 未签名时把包留作构建产物方便查看，名字里写清楚不可安装
+      - name: Upload unsigned APK (compile check only, NOT installable)
+        if: steps.signing.outputs.signed != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-unsigned-NOT-INSTALLABLE
+          path: app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
 
       - name: Get version info
         id: version
+        if: steps.signing.outputs.signed == 'true'
         run: |
           VERSION_NAME=$(grep 'versionName' app/build.gradle.kts | sed 's/.*"\(.*\)".*/\1/')
           VERSION_CODE=$(grep 'versionCode' app/build.gradle.kts | sed 's/.*= //' | tr -d ' ')
@@ -61,6 +81,7 @@ jobs:
           echo "version_code=$VERSION_CODE" >> $GITHUB_OUTPUT
 
       - name: Create Release and Upload APK
+        if: steps.signing.outputs.signed == 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.version_name }}
