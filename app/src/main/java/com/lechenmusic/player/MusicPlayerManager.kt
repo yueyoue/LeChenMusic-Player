@@ -29,6 +29,7 @@ import androidx.media3.datasource.cache.SimpleCache
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.exoplayer.source.ShuffleOrder
 import okhttp3.OkHttpClient
 import com.lechenmusic.MainActivity
 import com.lechenmusic.R
@@ -623,77 +624,48 @@ class MusicPlayerManager(private val context: Context) {
     private val _playlistBase = MutableStateFlow<List<Song>>(emptyList())
 
     /**
-     * 根据当前随机模式计算播放顺序。
+     * 计算播放顺序（下标排列，指向 _playlistBase 的下标）。
      *
-     * @param pinIndex 当前曲目要固定在返回列表中的下标。固定住当前下标，
-     *   切换随机时播放器翻页位置、播放进度都不用动，用户只会看到前后歌曲被重排。
-     *   关闭随机时该参数被忽略，直接返回 [base] 的原始顺序。
+     * 核心约束：**切换随机时绝对不能增删/替换播放器里的媒体项**。
+     * media3 的 setShuffleOrder 只重建 Timeline，不碰任何 MediaSource
+     * （ExoPlayerImpl#setShuffleOrder -> MediaSourceList#setShuffleOrder -> createTimeline()），
+     * 因此结构性不可能造成 rebuffer；而 setMediaItems / replaceMediaItems / moveMediaItems
+     * 都要 add+remove MediaSourceHolder，在流媒体上就是一下可听见的中断。
+     *
+     * @param currentIndex 当前曲目在 _playlistBase 中的下标（-1 表示未知）
+     * @param pinIndex 开随机时把当前曲目固定在播放顺序的第几位，
+     *   这样翻页位置不动，用户只看到前后歌曲被重排。关随机时忽略，直接返回自然顺序。
      */
-    private fun buildPlayOrder(base: List<Song>, currentId: String?, pinIndex: Int): List<Song> {
-        if (!_shuffleMode.value || base.size <= 1) return base
-        val curIndex = base.indexOfFirst { it.id == currentId }
-        if (curIndex < 0) return base.shuffled()
-        val rest = base.filterIndexed { i, _ -> i != curIndex }.shuffled()
-        val insertAt = pinIndex.coerceIn(0, rest.size)
-        return rest.take(insertAt) + base[curIndex] + rest.drop(insertAt)
+    private fun buildPlayPerm(size: Int, currentIndex: Int, pinIndex: Int): IntArray {
+        if (size <= 0) return IntArray(0)
+        if (!_shuffleMode.value || size == 1 || currentIndex < 0) return IntArray(size) { it }
+        val rest = (0 until size).filter { it != currentIndex }.shuffled()
+        val at = pinIndex.coerceIn(0, rest.size)
+        return (rest.take(at) + currentIndex + rest.drop(at)).toIntArray()
+    }
+
+    /** 当前播放顺序 -> _playlistBase 下标排列（喂给 ShuffleOrder） */
+    private fun playOrderIndices(): IntArray {
+        val base = _playlistBase.value
+        val pos = HashMap<String, Int>(base.size * 2)
+        for (i in base.indices) pos.putIfAbsent(base[i].id, i)
+        return _playlist.value.mapNotNull { s -> pos[s.id] }.toIntArray()
     }
 
     /**
-     * 就地重排播放队列，**不打断正在播放的曲目**。
-     *
-     * 不能用 setMediaItems + prepare 来换顺序：那会把整个播放列表重建一遍，
-     * ExoPlayer 会把当前曲目重新 prepare 一次，于是出现「点一下随机，歌顿一下又继续」。
-     *
-     * media3 的 moveMediaItems / replaceMediaItems 属于纯播放列表编辑操作：
-     * - ExoPlayerImpl#moveMediaItems 提交时 positionDiscontinuity 写死 false；
-     * - ExoPlayerImpl#replaceMediaItems 只有当前媒体项被换掉（periodUid 变了）才算 discontinuity。
-     * 所以只要当前正在播放的那个媒体项不被移除，音频输出就不会有任何中断。
+     * 应用新的播放顺序。**只改导航顺序，不改播放器里的媒体项**，因此绝不会打断当前播放。
      */
-    private fun applyPlaylistInPlace(newList: List<Song>) {
+    private fun applyPlayOrder(perm: IntArray) {
+        val base = _playlistBase.value
+        _playlist.value = perm.toList().mapNotNull { b -> base.getOrNull(b) }
+        val curBase = base.indexOfFirst { it.id == _currentSong.value?.id }
+        val ui = perm.indexOf(curBase)
+        _currentIndex.value = if (ui >= 0) ui else 0
         val p = player
-        val oldList = _playlist.value
-        if (p == null || newList.isEmpty()) return
-
-        // 播放器内部列表顺序恒等于 _playlist，因此用播放器下标定位「不能动」的那首歌
-        val from = p.currentMediaItemIndex
-        val current = oldList.getOrNull(from)
-        val to = current?.let { c -> newList.indexOfFirst { it.id == c.id } } ?: -1
-        val canPatch = current != null && to >= 0 &&
-            oldList.size == newList.size && p.mediaItemCount == oldList.size
-        if (!canPatch) {
-            // 队列本身对不上（电台/有声书/异常状态）：退回整表重建兜底
-            rebuildPlaylistKeepingPlayback(newList)
-            return
+        if (p != null && perm.size == base.size && p.mediaItemCount == base.size) {
+            p.shuffleModeEnabled = _shuffleMode.value
+            p.setShuffleOrder(ShuffleOrder.DefaultShuffleOrder(perm, System.nanoTime()))
         }
-
-        val n = newList.size
-        if (from != to) {
-            // 先把当前曲目挪到目标下标；move 同样不打断播放
-            p.moveMediaItems(from, from + 1, to)
-        }
-        // 再把左右两侧换成目标顺序，当前曲目所在的那一个媒体项始终不动
-        if (to > 0) p.replaceMediaItems(0, to, buildMediaItems(newList.subList(0, to)))
-        if (to < n - 1) p.replaceMediaItems(to + 1, n, buildMediaItems(newList.subList(to + 1, n)))
-
-        _playlist.value = newList
-        _currentIndex.value = to
-        // 兜底：防止重排过程中 listener 同步回调把 _currentSong 改乱
-        if (current != null) _currentSong.value = current
-    }
-
-    /** 整表重建（队列对不上时的兜底）：会重新 prepare，因此尽量保留播放进度与播放状态 */
-    private fun rebuildPlaylistKeepingPlayback(ordered: List<Song>) {
-        val p = player ?: return
-        val current = _currentSong.value
-        val start = ordered.indexOfFirst { it.id == current?.id }.coerceAtLeast(0)
-        _playlist.value = ordered
-        _currentIndex.value = start
-        val pos = if (current?.id?.startsWith("radio_") == true) 0L else p.currentPosition.coerceAtLeast(0L)
-        val wasPlaying = p.isPlaying
-        p.shuffleModeEnabled = false
-        p.setMediaItems(buildMediaItems(ordered), start, pos)
-        p.prepare()
-        if (wasPlaying) p.play()
     }
 
     /** 构建媒体项列表（电台使用存储的流地址，普通歌曲使用 repository） */
@@ -720,16 +692,16 @@ class MusicPlayerManager(private val context: Context) {
 
     fun playSong(song: Song, songs: List<Song> = listOf(song)) {
         _playlistBase.value = songs
-        // 换队列本来就该重新起播；当前曲目固定在它在源队列中的位置
-        val ordered = buildPlayOrder(songs, song.id, songs.indexOfFirst { it.id == song.id })
-        _playlist.value = ordered
-        val index = ordered.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
-        _currentIndex.value = index
+        val baseIndex = songs.indexOfFirst { it.id == song.id }
+        // 媒体项永远按 _playlistBase 的自然顺序装载；随机只体现在导航顺序上
+        val perm = buildPlayPerm(songs.size, baseIndex, baseIndex)
+        _playlist.value = perm.toList().mapNotNull { b -> songs.getOrNull(b) }
+        _currentIndex.value = perm.indexOf(baseIndex).coerceAtLeast(0)
 
         player?.apply {
-            // 播放顺序统一由 _playlist 维护，不再使用 ExoPlayer 内部随机
-            shuffleModeEnabled = false
-            setMediaItems(buildMediaItems(ordered), index, 0)
+            shuffleModeEnabled = _shuffleMode.value
+            setMediaItems(buildMediaItems(songs), baseIndex.coerceAtLeast(0), 0)
+            setShuffleOrder(ShuffleOrder.DefaultShuffleOrder(perm, System.nanoTime()))
             prepare()
             play()
         }
@@ -784,31 +756,35 @@ class MusicPlayerManager(private val context: Context) {
         if (_playlist.value.any { it.id == song.id }) return
         player?.apply {
             addMediaItem(buildMediaItems(listOf(song)).first())
-            _playlist.value = _playlist.value + song
             _playlistBase.value = _playlistBase.value + song
+            _playlist.value = _playlist.value + song
+            // 新歌排到播放顺序末尾（不打断当前播放）
+            shuffleModeEnabled = _shuffleMode.value
+            setShuffleOrder(ShuffleOrder.DefaultShuffleOrder(playOrderIndices(), System.nanoTime()))
         }
     }
 
     fun skipNext() {
         val p = player ?: return
-        // 播放列表本身就是播放顺序（随机模式下已打乱），直接切下一首
+        // seekToNext 跟随 shuffleModeEnabled + ShuffleOrder，即我们的播放顺序 _playlist
         if (p.hasNextMediaItem()) {
             p.seekToNext()
-        } else if (_repeatMode.value == RepeatMode.ALL) {
-            p.seekTo(0, 0)
+        } else if (_repeatMode.value == RepeatMode.ALL && _playlist.value.isNotEmpty()) {
+            playAt(0)
+            return
         }
         updateCurrentFromPlayer()
     }
 
     /**
-     * 跳转到播放列表中的指定索引继续播放。
+     * 跳转到播放列表中的指定下标继续播放。
      * 不重建媒体列表（保留随机播放顺序），只做 seek + 立即同步状态。
      */
     fun playAt(index: Int, autoPlay: Boolean = true) {
         if (index !in _playlist.value.indices) return
         val p = player
         // 电台等媒体项与播放列表不一致的场景：重建播放列表播放
-        if (p == null || p.mediaItemCount != _playlist.value.size) {
+        if (p == null || p.mediaItemCount != _playlistBase.value.size) {
             // 队列与播放器内部列表对不上时整队重建后跳转。
             // 这里仍传原始队列顺序，别把「播放顺序」当成队列顺序，否则关闭随机会恢复成打乱后的顺序。
             playSong(_playlist.value[index], _playlistBase.value.ifEmpty { _playlist.value })
@@ -822,15 +798,15 @@ class MusicPlayerManager(private val context: Context) {
         } else {
             _isStarred.value = false
         }
-        p.seekTo(index, 0)
+        // 播放器内部是 _playlistBase 的自然顺序，按 mediaId 定位到真正的下标
+        val baseIndex = _playlistBase.value.indexOfFirst { it.id == song.id }
+        p.seekTo(if (baseIndex >= 0) baseIndex else index, 0)
         if (autoPlay) p.play()
         updateNotification()
     }
 
     /**
-     * 播放页竖向滑动切歌。
-     * 播放列表本身就是播放顺序（随机模式下已按随机顺序排列），
-     * 因此直接播放滑动目标页的歌曲即可：一次到位，不再二次跳转。
+     * 播放页竖向滑动切歌：播放目标页的歌曲（一次到位，不二次跳转）。
      */
     fun playFromSwipe(targetIndex: Int) {
         playAt(targetIndex)
@@ -872,21 +848,19 @@ class MusicPlayerManager(private val context: Context) {
     }
 
     /**
-     * 切换随机播放：只重排队列，**不打断正在播放的曲目**。
+     * 切换随机播放：**只重排导航顺序，一个媒体项都不碰**，
+     * 所以结构性不可能打断正在播放的曲目。
      *
      * 开启随机：当前曲目固定在当前翻页位置，其余歌曲打乱（页面不动，只有前后歌曲换了）。
-     * 关闭随机：恢复 _playlistBase 的原始顺序，当前曲目回到它在原始队列中的位置。
-     * 两种情况都走 applyPlaylistInPlace 就地编辑，不再重建播放列表。
+     * 关闭随机：恢复 _playlistBase 的自然顺序，当前曲目回到它在源队列中的位置。
      */
     fun toggleShuffle() {
         _shuffleMode.value = !_shuffleMode.value
-        player?.shuffleModeEnabled = false // 顺序统一由 _playlist 维护
         val base = _playlistBase.value.ifEmpty { _playlist.value }
         if (base.isEmpty()) return
         _playlistBase.value = base
-        val ordered = buildPlayOrder(base, _currentSong.value?.id, _currentIndex.value.coerceAtLeast(0))
-        applyPlaylistInPlace(ordered)
-        updateNotification()
+        val curBase = base.indexOfFirst { it.id == _currentSong.value?.id }
+        applyPlayOrder(buildPlayPerm(base.size, curBase, _currentIndex.value.coerceAtLeast(0)))
     }
 
     fun toggleRepeat() {
@@ -962,14 +936,14 @@ class MusicPlayerManager(private val context: Context) {
     }
 
     private fun updateCurrentFromPlayer() {
-        player?.let { p ->
-            val index = p.currentMediaItemIndex
-            _currentIndex.value = index
-            if (index in _playlist.value.indices) {
-                _currentSong.value = _playlist.value[index]
-                checkStarred(_playlist.value[index].id)
-            }
-        }
+        val p = player ?: return
+        val baseIdx = p.currentMediaItemIndex
+        val base = _playlistBase.value
+        val song = base.getOrNull(baseIdx) ?: _playlist.value.getOrNull(baseIdx) ?: return
+        _currentSong.value = song
+        val ui = _playlist.value.indexOfFirst { it.id == song.id }
+        _currentIndex.value = if (ui >= 0) ui else baseIdx
+        checkStarred(song.id)
     }
 
     fun updateProgress() {
