@@ -663,7 +663,15 @@ fun PlayerScreen(
                     )
                 }
                 Spacer(modifier = Modifier.height(16.dp))
+                val queueListState = rememberLazyListState()
+                // 打开即自动定位到当前播放曲目（与 MainActivity 的播放队列弹窗一致）
+                LaunchedEffect(Unit) {
+                    if (currentIndex in playlist.indices) {
+                        queueListState.scrollToItem((currentIndex - 1).coerceAtLeast(0))
+                    }
+                }
                 LazyColumn(
+                    state = queueListState,
                     modifier = Modifier.heightIn(max = 400.dp),
                     contentPadding = PaddingValues(bottom = 16.dp)
                 ) {

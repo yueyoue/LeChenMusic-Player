@@ -12,6 +12,7 @@ import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -729,8 +730,21 @@ fun VideoPlayerScreen(
                         Spacer(modifier = Modifier.height(16.dp))
                     }
 
-                    // 集数网格
-                    currentSource?.episodes?.chunked(6)?.forEach { row ->
+                    // 集数网格（LazyColumn 包一层：集数多也能滚动，且打开即定位到当前集）
+                    val epRows = currentSource?.episodes?.chunked(6).orEmpty()
+                    val epListState = rememberLazyListState()
+                    LaunchedEffect(Unit) {
+                        val rowIdx = selectedEpisode / 6
+                        if (rowIdx in epRows.indices) {
+                            epListState.scrollToItem((rowIdx - 1).coerceAtLeast(0))
+                        }
+                    }
+                    LazyColumn(
+                        state = epListState,
+                        modifier = Modifier.heightIn(max = 320.dp)
+                    ) {
+                    items(epRows.size) { rIdx ->
+                        val row = epRows[rIdx]
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -768,6 +782,8 @@ fun VideoPlayerScreen(
                             }
                         }
                     }
+                    }
+                    // 选集面板结尾
                     Spacer(modifier = Modifier.height(32.dp))
                 }
             }
