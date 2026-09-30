@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
+import com.lechenmusic.ui.screens.player.PlayerProgressBar
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
@@ -372,7 +373,7 @@ fun MusicPlayerContent(
                     playerTextColor = pTextColor, playerTextSecondary = pTextSecondary, playerTextTertiary = pTextTertiary,
                     playerIconTint = pIconTint, playerIconTintSecondary = pIconTintSecondary, sliderActiveColor = pSliderActive, sliderInactiveColor = pSliderInactive,
                     timerMinutes = timerMinutes, timerRemainingSeconds = timerRemainingSeconds,
-                    onSeek = { playerManager.seekToProgress(it) }, onPlayPause = { playerManager.togglePlayPause() },
+                    onSeek = { playerManager.seekTo(it) }, onPlayPause = { playerManager.togglePlayPause() },
                     onPrevious = { playerManager.skipPrevious() }, onNext = { playerManager.skipNext() },
                     onToggleStar = { playerManager.toggleStar() }, onToggleShuffle = { playerManager.toggleShuffle() }, onToggleRepeat = { playerManager.toggleRepeat() },
                     onShowAddToPlaylist = onShowAddToPlaylist, onShowQueue = onShowQueue, onAddToQueue = { playerManager.addToQueue(pSong) },
@@ -824,7 +825,7 @@ private fun PlayerControls(
     sliderInactiveColor: Color = Color.White.copy(alpha = 0.3f),
     timerMinutes: Int = 0,
     timerRemainingSeconds: Long = 0L,
-    onSeek: (Float) -> Unit,
+    onSeek: (Long) -> Unit,
     onPlayPause: () -> Unit,
     onPrevious: () -> Unit,
     onNext: () -> Unit,
@@ -838,19 +839,39 @@ private fun PlayerControls(
 ) {
     Surface(modifier = Modifier.fillMaxWidth(), color = Color.Transparent) {
         Column(modifier = Modifier.padding(horizontal = 32.dp, vertical = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            // 进度条（QQ音乐/酷狗风格：细轨道 + 小圆点）
-            ThinProgressBar(
-                progress = progress,
-                onSeek = onSeek,
+            // 进度条 —— 有声书播放页同款模式（PlayerProgressBar）：
+            // 拖动/按下只更新界面预览，松手才 seek 一次；拖动中绝不同步外部进度（防回跳）
+            var isDragging by remember { mutableStateOf(false) }
+            var sliderPosition by remember { mutableStateOf(progress) }
+            var barWidthPx by remember { mutableStateOf(1f) }
+
+            LaunchedEffect(currentPosition, duration) {
+                if (!isDragging && duration > 0) {
+                    sliderPosition = (currentPosition.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
+                }
+            }
+
+            val displayPosition = if (isDragging) (sliderPosition * duration).toLong() else currentPosition
+
+            PlayerProgressBar(
+                dragProgress = sliderPosition,
+                duration = duration,
+                barWidthPx = barWidthPx,
                 activeColor = sliderActiveColor,
                 inactiveColor = sliderInactiveColor,
-                thumbColor = playerTextColor
+                onProgressChanged = { newProgress ->
+                    isDragging = true
+                    sliderPosition = newProgress
+                },
+                onSeek = { positionMs -> onSeek(positionMs) },
+                onDragEnd = { isDragging = false },
+                onWidthMeasured = { w -> barWidthPx = w.coerceAtLeast(1f) }
             )
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(formatTime(currentPosition), fontSize = 11.sp, color = playerTextSecondary)
+                Text(formatTime(displayPosition), fontSize = 11.sp, color = playerTextSecondary)
                 Text(formatTime(duration), fontSize = 11.sp, color = playerTextSecondary)
             }
             Spacer(modifier = Modifier.height(8.dp))
