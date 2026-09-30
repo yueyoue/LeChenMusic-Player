@@ -174,13 +174,20 @@ private fun RecentListenedItem(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                Text(
-                    book.narrator.ifEmpty { book.author },
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(top = 2.dp)
-                )
+                ) {
+                    Text(
+                        book.narrator.ifEmpty { book.author },
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    com.lechenmusic.ui.components.SourceBadge(path = book.path)
+                }
                 if (progress != null) {
                     Text(
                         "第${progress.chapterNumber}章 / ${book.chapterCount}章",

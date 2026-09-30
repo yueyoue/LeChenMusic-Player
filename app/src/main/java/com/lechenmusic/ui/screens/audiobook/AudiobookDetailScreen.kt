@@ -159,11 +159,15 @@ fun AudiobookDetailScreen(
 
                     // 演播者
                     if (book.narrator.isNotBlank()) {
-                        Text(
-                            "演播: ${book.narrator}",
-                            fontSize = 14.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                "演播: ${book.narrator}",
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            com.lechenmusic.ui.components.SourceBadge(path = book.path)
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(12.dp))
@@ -389,11 +393,15 @@ fun AudiobookDetailScreen(
                             )
                         }
                         if (book.narrator.isNotBlank()) {
-                            Text(
-                                "演播: ${book.narrator}",
-                                fontSize = 13.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    "演播: ${book.narrator}",
+                                    fontSize = 13.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                com.lechenmusic.ui.components.SourceBadge(path = book.path)
+                            }
                         }
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(

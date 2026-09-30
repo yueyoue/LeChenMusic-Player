@@ -283,8 +283,13 @@ fun SearchScreen(
                                     }
                                     Column(modifier = Modifier.weight(1f).padding(start = 12.dp)) {
                                         Text(book.title, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                        Text("${book.narrator.ifEmpty { book.author }} · ${book.chapterCount}章",
-                                            fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text("${book.narrator.ifEmpty { book.author }} · ${book.chapterCount}章",
+                                                fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1,
+                                                modifier = Modifier.weight(1f))
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            com.lechenmusic.ui.components.SourceBadge(path = book.path)
+                                        }
                                     }
                                 }
                             }

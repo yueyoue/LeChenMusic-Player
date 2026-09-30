@@ -275,13 +275,18 @@ private fun TabletAudiobookGridCard(
         )
 
         // 演播者/作者
-        Text(
-            book.narrator.ifEmpty { book.author },
-            fontSize = 11.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                book.narrator.ifEmpty { book.author },
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            com.lechenmusic.ui.components.SourceBadge(path = book.path)
+        }
 
         // 章节数
         if (book.chapterCount > 0) {

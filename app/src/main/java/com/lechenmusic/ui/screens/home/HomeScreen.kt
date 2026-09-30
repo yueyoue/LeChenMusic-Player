@@ -1879,11 +1879,16 @@ private fun AbGridCard(
                 .width(140.dp)
                 .padding(top = 7.dp)
         )
-        Text(
-            "${book.narrator.ifEmpty { book.author }} · ${book.chapterCount}章",
-            fontSize = 10.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                "${book.narrator.ifEmpty { book.author }} · ${book.chapterCount}章",
+                fontSize = 10.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f)
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            com.lechenmusic.ui.components.SourceBadge(path = book.path)
+        }
     }
 }
 
@@ -1953,11 +1958,16 @@ private fun RankCard(
                 .width(140.dp)
                 .padding(top = 7.dp)
         )
-        Text(
-            "${book.narrator.ifEmpty { book.author }} · ${book.chapterCount}章",
-            fontSize = 10.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                "${book.narrator.ifEmpty { book.author }} · ${book.chapterCount}章",
+                fontSize = 10.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f)
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            com.lechenmusic.ui.components.SourceBadge(path = book.path)
+        }
     }
 }
 

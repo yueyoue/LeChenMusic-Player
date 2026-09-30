@@ -208,21 +208,50 @@ fun QualityBadge(
     fontSize: androidx.compose.ui.unit.TextUnit = 8.sp
 ) {
     val qualityText = getQualityText(song)
-    if (qualityText.isNotEmpty()) {
-        val qualityColor = getQualityColor(song)
-        Text(
-            text = qualityText,
-            fontSize = fontSize,
-            fontWeight = FontWeight.Bold,
-            color = qualityColor,
-            modifier = Modifier
-                .background(
-                    color = qualityColor.copy(alpha = 0.12f),
-                    shape = RoundedCornerShape(2.dp)
-                )
-                .padding(horizontal = 3.dp, vertical = 0.dp)
-        )
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        SourceBadge(path = song.path, fontSize = fontSize)
+        if (qualityText.isNotEmpty()) {
+            Spacer(modifier = Modifier.width(2.dp))
+            val qualityColor = getQualityColor(song)
+            Text(
+                text = qualityText,
+                fontSize = fontSize,
+                fontWeight = FontWeight.Bold,
+                color = qualityColor,
+                modifier = Modifier
+                    .background(
+                        color = qualityColor.copy(alpha = 0.12f),
+                        shape = RoundedCornerShape(2.dp)
+                    )
+                    .padding(horizontal = 3.dp, vertical = 0.dp)
+            )
+        }
     }
+}
+
+// ==================== 来源角标（W=网盘 / B=本地） ====================
+// 与服务端 Web 端来源标识同口径：路径以 openlist:// 开头即网盘。
+// 样式与品质标一致：彩色字母 + 同色淡背景 + 圆角。
+
+@Composable
+fun SourceBadge(
+    path: String,
+    fontSize: androidx.compose.ui.unit.TextUnit = 8.sp
+) {
+    val isCloud = path.startsWith("openlist://")
+    val color = if (isCloud) Color(0xFF1E90FF) else Color(0xFF2ED573)
+    Text(
+        text = if (isCloud) "W" else "B",
+        fontSize = fontSize,
+        fontWeight = FontWeight.Bold,
+        color = color,
+        modifier = Modifier
+            .background(
+                color = color.copy(alpha = 0.12f),
+                shape = RoundedCornerShape(2.dp)
+            )
+            .padding(horizontal = 3.dp, vertical = 0.dp)
+    )
 }
 
 // ==================== Skip 30s Buttons ====================

@@ -141,7 +141,11 @@ fun AudiobookScreen(
                                     Spacer(modifier = Modifier.height(12.dp))
                                     Text(featured.title, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
                                     Spacer(modifier = Modifier.height(4.dp))
-                                    Text("${featured.author} · ${featured.narrator}演播 · ${featured.chapterCount}集", fontSize = 14.sp, color = Color.White.copy(alpha = 0.8f))
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text("${featured.author} · ${featured.narrator}演播 · ${featured.chapterCount}集", fontSize = 14.sp, color = Color.White.copy(alpha = 0.8f))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        com.lechenmusic.ui.components.SourceBadge(path = featured.path)
+                                    }
                                 }
                             }
                         }
@@ -372,13 +376,20 @@ fun AudiobookGridCard(
         )
 
         // Subtitle: narrator or author
-        Text(
-            text = book.narrator.ifEmpty { book.author },
-            fontSize = 11.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(top = 2.dp)
-        )
+        ) {
+            Text(
+                text = book.narrator.ifEmpty { book.author },
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                modifier = Modifier.weight(1f)
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            com.lechenmusic.ui.components.SourceBadge(path = book.path)
+        }
     }
 }
 
@@ -434,13 +445,18 @@ private fun TabletAudiobookGridCard(
         )
 
         // 演播者/作者
-        Text(
-            book.narrator.ifEmpty { book.author },
-            fontSize = 12.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                book.narrator.ifEmpty { book.author },
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            com.lechenmusic.ui.components.SourceBadge(path = book.path)
+        }
     }
 }
 
