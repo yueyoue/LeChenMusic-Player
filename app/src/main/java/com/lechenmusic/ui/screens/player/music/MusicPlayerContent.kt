@@ -213,6 +213,9 @@ fun MusicPlayerContent(
         beyondBoundsPageCount = 0
     ) { page ->
         val pSong = playlist.getOrNull(page) ?: song
+        // 进度只属于正在播放的歌曲：非播放页（滑动切歌的过渡期）进度归零，
+        // 避免新页面残留上一曲的进度条位置（滑动切歌后滑杆卡在一半的问题）
+        val isPlayingPage = pSong.id == song.id
         val pCoverUrl = ApiClient.getCoverArtUrl(serverUrl, username, password, pSong.coverArt ?: pSong.albumId)
         val pBgColor = rememberCoverColor(pCoverUrl)
         // 始终使用白色（背景色已保证足够暗）
@@ -368,7 +371,7 @@ fun MusicPlayerContent(
                 // ── 底部控制栏 ──
                 var showSleepTimerDialog by remember { mutableStateOf(false) }
                 PlayerControls(
-                    isTablet = isTablet, progress = progress, currentPosition = currentPosition, duration = duration,
+                    isTablet = isTablet, progress = if (isPlayingPage) progress else 0f, currentPosition = if (isPlayingPage) currentPosition else 0L, duration = if (isPlayingPage) duration else 0L,
                     isPlaying = isPlaying, isStarred = isStarred, shuffleMode = shuffleMode, repeatMode = repeatMode,
                     playerTextColor = pTextColor, playerTextSecondary = pTextSecondary, playerTextTertiary = pTextTertiary,
                     playerIconTint = pIconTint, playerIconTintSecondary = pIconTintSecondary, sliderActiveColor = pSliderActive, sliderInactiveColor = pSliderInactive,
