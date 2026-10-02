@@ -177,6 +177,9 @@ data class Song(
     val contentType: String = "",
     val suffix: String = "",
     val bitRate: Int = 0,
+    // Subsonic child 的 path 字段：服务端开启 reportRealPath 时为真实路径
+    // （网盘曲目形如 openlist://...），SourceBadge 以此判定 W=网盘 / B=本地
+    val path: String = "",
     val starred: String? = null,
     val playCount: Long = 0,
     val discNumber: Int = 0,
