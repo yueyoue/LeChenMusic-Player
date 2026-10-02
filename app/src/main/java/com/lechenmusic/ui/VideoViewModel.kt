@@ -90,6 +90,28 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
     private val _searchHistory = MutableStateFlow<List<String>>(emptyList())
     val searchHistory: StateFlow<List<String>> = _searchHistory.asStateFlow()
 
+    // ===== 热门搜索（真实数据：豆瓣真实热播榜片名，非硬编码演示词条） =====
+    private val _hotSearches = MutableStateFlow<List<String>>(emptyList())
+    val hotSearches: StateFlow<List<String>> = _hotSearches.asStateFlow()
+
+    /** 热门搜索关键词：取自首页真实热播榜（热门电影/剧集/综艺/短剧）的片名 */
+    fun loadHotSearches() {
+        refreshHotSearches()
+        if (_hotSearches.value.isEmpty() && _homeData.value == null && !_homeLoading.value) {
+            loadHomeData()
+        }
+    }
+
+    private fun refreshHotSearches() {
+        val data = _homeData.value ?: return
+        val titles = mutableListOf<String>()
+        data.hotMovies.forEach { if (it.title.isNotBlank()) titles.add(it.title.trim()) }
+        data.hotTvShows.forEach { if (it.title.isNotBlank()) titles.add(it.title.trim()) }
+        data.hotVariety.forEach { if (it.title.isNotBlank()) titles.add(it.title.trim()) }
+        data.hotShortDrama.forEach { if (it.title.isNotBlank()) titles.add(it.title.trim()) }
+        _hotSearches.value = titles.filter { it.isNotBlank() }.distinct().take(10)
+    }
+
     // ===== 详情 =====
     private val _videoDetail = MutableStateFlow<VideoDetail?>(null)
     val videoDetail: StateFlow<VideoDetail?> = _videoDetail.asStateFlow()
@@ -305,6 +327,7 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
                         )
                     }
                 )
+                refreshHotSearches()
                 logDebug("loadHomeData", "首页数据: movies=${_homeData.value?.hotMovies?.size} tv=${_homeData.value?.hotTvShows?.size} variety=${_homeData.value?.hotVariety?.size} trailers=${_homeData.value?.trailers?.size}")
             } catch (e: Exception) {
                 _homeError.value = "加载失败: ${e.message}"

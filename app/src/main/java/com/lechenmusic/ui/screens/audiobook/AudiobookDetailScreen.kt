@@ -160,13 +160,13 @@ fun AudiobookDetailScreen(
                     // 演播者
                     if (book.narrator.isNotBlank()) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
+                            com.lechenmusic.ui.components.SourceBadge(path = book.libraryPath)
+                            Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 "演播: ${book.narrator}",
                                 fontSize = 14.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            com.lechenmusic.ui.components.SourceBadge(path = book.libraryPath)
                         }
                     }
 
@@ -394,13 +394,13 @@ fun AudiobookDetailScreen(
                         }
                         if (book.narrator.isNotBlank()) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
+                                com.lechenmusic.ui.components.SourceBadge(path = book.libraryPath)
+                                Spacer(modifier = Modifier.width(4.dp))
                                 Text(
                                     "演播: ${book.narrator}",
                                     fontSize = 13.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                com.lechenmusic.ui.components.SourceBadge(path = book.libraryPath)
                             }
                         }
                         Spacer(modifier = Modifier.height(8.dp))

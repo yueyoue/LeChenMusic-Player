@@ -71,6 +71,46 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
+    // ===== 热门搜索（真实数据，不是硬编码演示词条） =====
+    // 词条全部来自服务端真实数据：最常播放专辑的歌手 + 有声书热门演播者 + 曲库歌手兜底。
+    private val _hotSearches = MutableStateFlow<List<String>>(emptyList())
+    val hotSearches: StateFlow<List<String>> = _hotSearches.asStateFlow()
+    private var hotSearchesLoaded = false
+
+    /**
+     * 加载热门搜索关键词。
+     * 取自真实数据：1) 最常播放专辑的歌手（服务端真实播放次数）
+     * 2) 最近播放专辑的歌手  3) 有声书热门演播者（按作品数） 4) 兜底：曲库歌手（按专辑数）
+     */
+    fun loadHotSearches() {
+        if (hotSearchesLoaded) return
+        hotSearchesLoaded = true
+        viewModelScope.launch {
+            val keywords = mutableListOf<String>()
+            // 1. 最常播放专辑的歌手
+            repository.getFrequentAlbums(30).getOrNull()?.forEach { album ->
+                if (album.artist.isNotBlank()) keywords.add(album.artist.trim())
+            }
+            // 2. 最近播放专辑的歌手（补足）
+            if (keywords.distinct().size < 10) {
+                repository.getRecentAlbums(30).getOrNull()?.forEach { album ->
+                    if (album.artist.isNotBlank()) keywords.add(album.artist.trim())
+                }
+            }
+            // 3. 有声书热门演播者（按作品数）
+            repository.getNarrators().getOrNull()
+                ?.sortedByDescending { it.count }
+                ?.forEach { narr -> if (narr.name.isNotBlank()) keywords.add(narr.name.trim()) }
+            // 4. 兜底：曲库歌手（按专辑数）
+            if (keywords.distinct().size < 6) {
+                _artists.value.filter { it.name.isNotBlank() }
+                    .sortedByDescending { it.albumCount }
+                    .forEach { keywords.add(it.name.trim()) }
+            }
+            _hotSearches.value = keywords.filter { it.isNotBlank() }.distinct().take(10)
+        }
+    }
+
     // Starred
     private val _starredSongs = MutableStateFlow<List<Song>>(emptyList())
     val starredSongs: StateFlow<List<Song>> = _starredSongs.asStateFlow()
@@ -424,6 +464,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _artists.value = emptyList()
             _searchResults.value = null
             _searchQuery.value = ""
+            _hotSearches.value = emptyList()
+            hotSearchesLoaded = false
             _starredSongs.value = emptyList()
             _starredAlbums.value = emptyList()
             _starredAudiobooks.value = emptyList()

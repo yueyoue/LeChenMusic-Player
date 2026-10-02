@@ -276,6 +276,8 @@ private fun TabletAudiobookGridCard(
 
         // 演播者/作者
         Row(verticalAlignment = Alignment.CenterVertically) {
+            com.lechenmusic.ui.components.SourceBadge(path = book.libraryPath)
+            Spacer(modifier = Modifier.width(4.dp))
             Text(
                 book.narrator.ifEmpty { book.author },
                 fontSize = 11.sp,
@@ -284,8 +286,6 @@ private fun TabletAudiobookGridCard(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f)
             )
-            Spacer(modifier = Modifier.width(4.dp))
-            com.lechenmusic.ui.components.SourceBadge(path = book.libraryPath)
         }
 
         // 章节数

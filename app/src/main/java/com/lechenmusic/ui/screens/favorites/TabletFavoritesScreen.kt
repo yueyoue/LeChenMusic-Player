@@ -653,6 +653,8 @@ private fun AudiobooksTab(
                     overflow = TextOverflow.Ellipsis
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    com.lechenmusic.ui.components.SourceBadge(path = book.libraryPath)
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         book.narrator.ifEmpty { book.author },
                         fontSize = 12.sp,
@@ -660,8 +662,6 @@ private fun AudiobooksTab(
                         maxLines = 1,
                         modifier = Modifier.weight(1f)
                     )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    com.lechenmusic.ui.components.SourceBadge(path = book.libraryPath)
                 }
             }
         }

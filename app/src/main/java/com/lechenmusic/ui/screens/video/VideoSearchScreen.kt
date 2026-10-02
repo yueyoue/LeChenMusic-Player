@@ -45,6 +45,9 @@ fun VideoSearchScreen(
     val searchResults by viewModel.searchResults.collectAsState()
     val isLoading by viewModel.searchLoading.collectAsState()
     val searchHistory by viewModel.searchHistory.collectAsState()
+    // 热门搜索：来自豆瓣真实热播榜片名，非硬编码演示词条
+    val hotTags by viewModel.hotSearches.collectAsState()
+    LaunchedEffect(Unit) { viewModel.loadHotSearches() }
 
     if (isTablet) {
         // ═══ 平板布局 ═══
@@ -206,26 +209,27 @@ fun VideoSearchScreen(
                     }
                 }
 
-                // 热门搜索
-                Text(
-                    "🔥 热门搜索",
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)
-                )
-                val hotTags = listOf("哪吒", "三体", "庆余年", "流浪地球", "狂飙", "繁花", "漫长的季节", "封神")
-                Row(
-                    modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    hotTags.forEach { tag ->
-                        SuggestionChip(
-                            onClick = {
-                                query = tag
-                                viewModel.search(tag)
-                            },
-                            label = { Text(tag, fontSize = 13.sp) }
-                        )
+                // 热门搜索（真实数据，无数据时不展示，不再用硬编码演示词条）
+                if (hotTags.isNotEmpty()) {
+                    Text(
+                        "🔥 热门搜索",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)
+                    )
+                    Row(
+                        modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        hotTags.forEach { tag ->
+                            SuggestionChip(
+                                onClick = {
+                                    query = tag
+                                    viewModel.search(tag)
+                                },
+                                label = { Text(tag, fontSize = 13.sp) }
+                            )
+                        }
                     }
                 }
             } else if (isLoading) {

@@ -50,6 +50,9 @@ fun SearchScreen(
     val username by viewModel.username.collectAsState()
     val password by viewModel.password.collectAsState()
     val audiobooks by viewModel.audiobooks.collectAsState()
+    // 热门搜索：来自服务端真实数据（最常播放专辑的歌手 / 有声书热门演播者），非硬编码演示词条
+    val hotTags by viewModel.hotSearches.collectAsState()
+    LaunchedEffect(Unit) { viewModel.loadHotSearches() }
 
     // 影视搜索状态
     val videoSearchResults by videoViewModel?.searchResults?.collectAsState() ?: remember { mutableStateOf(emptyList()) }
@@ -136,28 +139,29 @@ fun SearchScreen(
         // Results
         LazyColumn(modifier = Modifier.weight(1f), contentPadding = PaddingValues(bottom = 160.dp)) {
             if (query.isBlank()) {
-                // Hot searches
-                item {
-                    Text(
-                        "热门搜索",
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 20.dp)
-                    )
-                }
-                item {
-                    val hotTags = listOf("周杰伦", "林俊杰", "陈奕迅", "薛之谦", "邓紫棋", "五月天", "Taylor Swift", "周深")
-                    // 真正的流式布局：放不下的标签自动换行，避免被压缩成空白细条按钮
-                    FlowRow(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        hotTags.forEach { tag ->
-                            SuggestionChip(
-                                onClick = { query = tag; viewModel.search(tag) },
-                                label = { Text(tag) }
-                            )
+                // Hot searches（真实数据，无数据时不展示，不再用硬编码演示词条）
+                if (hotTags.isNotEmpty()) {
+                    item {
+                        Text(
+                            "热门搜索",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 20.dp)
+                        )
+                    }
+                    item {
+                        // 真正的流式布局：放不下的标签自动换行，避免被压缩成空白细条按钮
+                        FlowRow(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            hotTags.forEach { tag ->
+                                SuggestionChip(
+                                    onClick = { query = tag; viewModel.search(tag) },
+                                    label = { Text(tag) }
+                                )
+                            }
                         }
                     }
                 }
@@ -284,11 +288,11 @@ fun SearchScreen(
                                     Column(modifier = Modifier.weight(1f).padding(start = 12.dp)) {
                                         Text(book.title, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                         Row(verticalAlignment = Alignment.CenterVertically) {
+                                            com.lechenmusic.ui.components.SourceBadge(path = book.libraryPath)
+                                            Spacer(modifier = Modifier.width(4.dp))
                                             Text("${book.narrator.ifEmpty { book.author }} · ${book.chapterCount}章",
                                                 fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1,
                                                 modifier = Modifier.weight(1f))
-                                            Spacer(modifier = Modifier.width(4.dp))
-                                            com.lechenmusic.ui.components.SourceBadge(path = book.libraryPath)
                                         }
                                     }
                                 }

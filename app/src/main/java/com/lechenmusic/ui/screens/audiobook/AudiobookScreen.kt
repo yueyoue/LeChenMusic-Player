@@ -142,9 +142,9 @@ fun AudiobookScreen(
                                     Text(featured.title, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text("${featured.author} · ${featured.narrator}演播 · ${featured.chapterCount}集", fontSize = 14.sp, color = Color.White.copy(alpha = 0.8f))
-                                        Spacer(modifier = Modifier.width(4.dp))
                                         com.lechenmusic.ui.components.SourceBadge(path = featured.libraryPath)
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("${featured.author} · ${featured.narrator}演播 · ${featured.chapterCount}集", fontSize = 14.sp, color = Color.White.copy(alpha = 0.8f))
                                     }
                                 }
                             }
@@ -380,6 +380,8 @@ fun AudiobookGridCard(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(top = 2.dp)
         ) {
+            com.lechenmusic.ui.components.SourceBadge(path = book.libraryPath)
+            Spacer(modifier = Modifier.width(4.dp))
             Text(
                 text = book.narrator.ifEmpty { book.author },
                 fontSize = 11.sp,
@@ -387,8 +389,6 @@ fun AudiobookGridCard(
                 maxLines = 1,
                 modifier = Modifier.weight(1f)
             )
-            Spacer(modifier = Modifier.width(4.dp))
-            com.lechenmusic.ui.components.SourceBadge(path = book.libraryPath)
         }
     }
 }
@@ -446,6 +446,8 @@ private fun TabletAudiobookGridCard(
 
         // 演播者/作者
         Row(verticalAlignment = Alignment.CenterVertically) {
+            com.lechenmusic.ui.components.SourceBadge(path = book.libraryPath)
+            Spacer(modifier = Modifier.width(4.dp))
             Text(
                 book.narrator.ifEmpty { book.author },
                 fontSize = 12.sp,
@@ -454,8 +456,6 @@ private fun TabletAudiobookGridCard(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f)
             )
-            Spacer(modifier = Modifier.width(4.dp))
-            com.lechenmusic.ui.components.SourceBadge(path = book.libraryPath)
         }
     }
 }

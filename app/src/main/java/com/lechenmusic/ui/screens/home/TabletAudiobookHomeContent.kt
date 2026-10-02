@@ -856,6 +856,8 @@ private fun PopularBookRow(
                     overflow = TextOverflow.Ellipsis
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    com.lechenmusic.ui.components.SourceBadge(path = book.libraryPath)
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         "${book.narrator.ifEmpty { book.author }} · ${book.chapterCount}章",
                         fontSize = 11.sp,
@@ -863,8 +865,6 @@ private fun PopularBookRow(
                         maxLines = 1,
                         modifier = Modifier.weight(1f)
                     )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    com.lechenmusic.ui.components.SourceBadge(path = book.libraryPath)
                 }
             }
 

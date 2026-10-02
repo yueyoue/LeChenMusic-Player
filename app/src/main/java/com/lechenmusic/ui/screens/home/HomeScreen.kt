@@ -1277,11 +1277,18 @@ private fun AudiobookCarousel(
                             if (book.chapterCount > 0) append(" · ${book.chapterCount}章")
                         }
                         if (info.isNotEmpty()) {
-                            Text(
-                                info,
-                                fontSize = 12.sp,
-                                color = Color.White.copy(alpha = 0.8f)
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                com.lechenmusic.ui.components.SourceBadge(path = book.libraryPath)
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    info,
+                                    fontSize = 12.sp,
+                                    color = Color.White.copy(alpha = 0.8f),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
                         }
                     }
                 }
@@ -1880,14 +1887,14 @@ private fun AbGridCard(
                 .padding(top = 7.dp)
         )
         Row(verticalAlignment = Alignment.CenterVertically) {
+            com.lechenmusic.ui.components.SourceBadge(path = book.libraryPath)
+            Spacer(modifier = Modifier.width(4.dp))
             Text(
                 "${book.narrator.ifEmpty { book.author }} · ${book.chapterCount}章",
                 fontSize = 10.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(1f)
             )
-            Spacer(modifier = Modifier.width(4.dp))
-            com.lechenmusic.ui.components.SourceBadge(path = book.libraryPath)
         }
     }
 }
@@ -1959,14 +1966,14 @@ private fun RankCard(
                 .padding(top = 7.dp)
         )
         Row(verticalAlignment = Alignment.CenterVertically) {
+            com.lechenmusic.ui.components.SourceBadge(path = book.libraryPath)
+            Spacer(modifier = Modifier.width(4.dp))
             Text(
                 "${book.narrator.ifEmpty { book.author }} · ${book.chapterCount}章",
                 fontSize = 10.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(1f)
             )
-            Spacer(modifier = Modifier.width(4.dp))
-            com.lechenmusic.ui.components.SourceBadge(path = book.libraryPath)
         }
     }
 }

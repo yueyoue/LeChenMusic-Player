@@ -534,12 +534,18 @@ private fun AudiobookRow(
                 if (book.chapterCount > 0) append(" · ${book.chapterCount}章")
             }
             if (info.isNotEmpty()) {
-                Text(
-                    info,
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    com.lechenmusic.ui.components.SourceBadge(path = book.libraryPath)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        info,
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
         }
     }
@@ -1065,6 +1071,8 @@ private fun TabletAudiobooksTab(
                     overflow = TextOverflow.Ellipsis
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    com.lechenmusic.ui.components.SourceBadge(path = book.libraryPath)
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         book.narrator.ifEmpty { book.author },
                         fontSize = 12.sp,
@@ -1072,8 +1080,6 @@ private fun TabletAudiobooksTab(
                         maxLines = 1,
                         modifier = Modifier.weight(1f)
                     )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    com.lechenmusic.ui.components.SourceBadge(path = book.libraryPath)
                 }
             }
         }
