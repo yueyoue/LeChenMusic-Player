@@ -230,7 +230,8 @@ fun QualityBadge(
 }
 
 // ==================== 来源角标（W=网盘 / B=本地） ====================
-// 与服务端 Web 端来源标识同口径：路径以 openlist:// 开头即网盘。
+// 与服务端 Web 端来源标识同口径：库根路径以 openlist:// 开头即网盘。
+// 宽松匹配 openlist: 前缀：路径拼接（filepath.Join 之类）可能把 // 折叠成 /。
 // 样式与品质标一致：彩色字母 + 同色淡背景 + 圆角。
 
 @Composable
@@ -238,7 +239,7 @@ fun SourceBadge(
     path: String,
     fontSize: androidx.compose.ui.unit.TextUnit = 8.sp
 ) {
-    val isCloud = path.startsWith("openlist://")
+    val isCloud = path.startsWith("openlist:")
     val color = if (isCloud) Color(0xFF1E90FF) else Color(0xFF2ED573)
     Text(
         text = if (isCloud) "W" else "B",

@@ -1565,7 +1565,7 @@ fun loadAudiobooks() {
                             narrator = book.narrator, description = book.description,
                             genre = book.genre, year = book.year, coverPath = book.coverPath,
                             totalDuration = book.totalDuration, chapterCount = book.chapterCount,
-                            libraryId = book.libraryId, path = book.path, size = book.size,
+                            libraryId = book.libraryId, path = book.path, libraryPath = book.libraryPath, size = book.size,
                             starred = book.starred, createdAt = book.createdAt, updatedAt = book.updatedAt,
                             progress = progress
                         )
@@ -1577,7 +1577,7 @@ fun loadAudiobooks() {
                             narrator = book.narrator, description = book.description,
                             genre = book.genre, year = book.year, coverPath = book.coverPath,
                             totalDuration = book.totalDuration, chapterCount = book.chapterCount,
-                            libraryId = book.libraryId, path = book.path, size = book.size,
+                            libraryId = book.libraryId, path = book.path, libraryPath = book.libraryPath, size = book.size,
                             starred = book.starred, createdAt = book.createdAt, updatedAt = book.updatedAt
                         )
                     )

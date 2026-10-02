@@ -144,7 +144,7 @@ fun AudiobookScreen(
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Text("${featured.author} · ${featured.narrator}演播 · ${featured.chapterCount}集", fontSize = 14.sp, color = Color.White.copy(alpha = 0.8f))
                                         Spacer(modifier = Modifier.width(4.dp))
-                                        com.lechenmusic.ui.components.SourceBadge(path = featured.path)
+                                        com.lechenmusic.ui.components.SourceBadge(path = featured.libraryPath)
                                     }
                                 }
                             }
@@ -388,7 +388,7 @@ fun AudiobookGridCard(
                 modifier = Modifier.weight(1f)
             )
             Spacer(modifier = Modifier.width(4.dp))
-            com.lechenmusic.ui.components.SourceBadge(path = book.path)
+            com.lechenmusic.ui.components.SourceBadge(path = book.libraryPath)
         }
     }
 }
@@ -455,7 +455,7 @@ private fun TabletAudiobookGridCard(
                 modifier = Modifier.weight(1f)
             )
             Spacer(modifier = Modifier.width(4.dp))
-            com.lechenmusic.ui.components.SourceBadge(path = book.path)
+            com.lechenmusic.ui.components.SourceBadge(path = book.libraryPath)
         }
     }
 }

@@ -661,7 +661,7 @@ private fun AudiobooksTab(
                         modifier = Modifier.weight(1f)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    com.lechenmusic.ui.components.SourceBadge(path = book.path)
+                    com.lechenmusic.ui.components.SourceBadge(path = book.libraryPath)
                 }
             }
         }

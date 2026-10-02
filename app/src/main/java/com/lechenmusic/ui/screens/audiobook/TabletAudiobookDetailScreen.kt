@@ -162,7 +162,7 @@ fun TabletAudiobookDetailScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    com.lechenmusic.ui.components.SourceBadge(path = book.path)
+                    com.lechenmusic.ui.components.SourceBadge(path = book.libraryPath)
                 }
             }
 

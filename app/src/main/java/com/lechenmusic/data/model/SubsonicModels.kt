@@ -177,8 +177,8 @@ data class Song(
     val contentType: String = "",
     val suffix: String = "",
     val bitRate: Int = 0,
-    // Subsonic child 的 path 字段：服务端开启 reportRealPath 时为真实路径
-    // （网盘曲目形如 openlist://...），SourceBadge 以此判定 W=网盘 / B=本地
+    // Subsonic child 的 path 字段：服务端开启 reportRealPath（或第一方客户端）时为真实
+    // 路径，网盘曲目形如 openlist://...；SourceBadge 以此判定 W=网盘 / B=本地
     val path: String = "",
     val starred: String? = null,
     val playCount: Long = 0,
@@ -269,6 +269,8 @@ data class Audiobook(
     val chapterCount: Int = 0,
     val libraryId: Int = 0,
     val path: String = "",
+    // 库根路径（JOIN library 带出）：网盘库是 openlist:// 前缀，SourceBadge 以此判定 W/B
+    val libraryPath: String = "",
     val size: Long = 0,
     val starred: String? = null,
     val createdAt: String = "",
@@ -290,6 +292,8 @@ data class AudiobookWithProgress(
     val chapterCount: Int = 0,
     val libraryId: Int = 0,
     val path: String = "",
+    // 库根路径（JOIN library 带出）：网盘库是 openlist:// 前缀，SourceBadge 以此判定 W/B
+    val libraryPath: String = "",
     val size: Long = 0,
     val starred: String? = null,
     val createdAt: String = "",
@@ -297,7 +301,13 @@ data class AudiobookWithProgress(
     val progress: AudiobookProgress? = null
 ) {
     val isStarred: Boolean get() = starred != null
-    fun toAudiobook() = Audiobook(id, title, author, narrator, description, genre, year, coverPath, totalDuration, chapterCount, libraryId, path, size, starred, createdAt, updatedAt)
+    fun toAudiobook() = Audiobook(
+        id = id, title = title, author = author, narrator = narrator,
+        description = description, genre = genre, year = year, coverPath = coverPath,
+        totalDuration = totalDuration, chapterCount = chapterCount, libraryId = libraryId,
+        path = path, libraryPath = libraryPath, size = size, starred = starred,
+        createdAt = createdAt, updatedAt = updatedAt
+    )
 }
 
 data class AudiobookChapter(
