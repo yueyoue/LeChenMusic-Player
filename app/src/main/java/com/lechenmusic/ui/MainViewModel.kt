@@ -361,6 +361,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
 
+        // 播放失败（资源失效/网络错误/加载超时）：复位播放状态，界面不再显示“播放中/加载中”
+        playerManager.onPlaybackError = { _ ->
+            _audiobookIsPlaying.value = false
+        }
+
         // Register callback for audiobook auto-play next chapter
         playerManager.onPlaybackCompleted = {
             if (_currentAudiobook.value != null) {
@@ -1531,7 +1536,10 @@ fun loadAudiobooks() {
                 val size = result.getOrNull()?.size ?: 0
                 android.util.Log.d("LeChenMusic", "loadAudiobooks: success=${result.isSuccess}, size=$size")
                 if (result.isSuccess) {
-                    _audiobooks.value = result.getOrNull() ?: emptyList()
+                    // 统一按最新入库（createdAt）降序：各 UI 的分类列表（有声小说/相声/评书/儿童…）
+                    // 都直接基于这个列表过滤，保证新入库的书排在最前面
+                    _audiobooks.value = (result.getOrNull() ?: emptyList())
+                        .sortedByDescending { it.createdAt }
                     if (size == 0) {
                         _audiobookError.value = "有声书数据为空，请检查服务器认证设置"
                     }
@@ -1900,13 +1908,19 @@ fun loadAudiobooks() {
     }
 
     fun playAudiobookChapter(book: com.lechenmusic.data.model.Audiobook, chapter: com.lechenmusic.data.model.AudiobookChapter, chapters: List<com.lechenmusic.data.model.AudiobookChapter>) {
-        _currentAudiobook.value = book
-        _currentAudiobookChapters.value = chapters
-        _currentChapterIndex.value = chapters.indexOfFirst { it.id == chapter.id }.coerceAtLeast(0)
-        val url = repository.getAudiobookChapterStreamUrl(book.id, chapter.id)
-        val coverUrl = repository.getAudiobookCoverUrl(book.id)
-        playerManager.playUrl(url, chapter.title, book.title, "audiobook_${book.id}_${chapter.id}", coverUrl)
-        _audiobookIsPlaying.value = true
+        try {
+            _currentAudiobook.value = book
+            _currentAudiobookChapters.value = chapters
+            _currentChapterIndex.value = chapters.indexOfFirst { it.id == chapter.id }.coerceAtLeast(0)
+            val url = repository.getAudiobookChapterStreamUrl(book.id, chapter.id)
+            val coverUrl = repository.getAudiobookCoverUrl(book.id)
+            playerManager.playUrl(url, chapter.title, book.title, "audiobook_${book.id}_${chapter.id}", coverUrl)
+            _audiobookIsPlaying.value = true
+        } catch (e: Exception) {
+            // 播放失败不能把界面卡在“播放中”，也要避免异常直接把 APP 甩出去
+            android.util.Log.e("LeChenMusic", "playAudiobookChapter failed: ${e.message}")
+            _audiobookIsPlaying.value = false
+        }
     }
 
     fun audiobookPreviousChapter() {

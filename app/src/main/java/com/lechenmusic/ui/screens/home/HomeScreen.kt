@@ -348,10 +348,16 @@ fun HomeScreen(
                     // Continue listening (like ting-reader: always show section)
                     val booksWithProgress = audiobookWithProgress.filter { it.progress != null && !it.progress.completed }
                     item {
-                        SecHd("⏱️ 继续收听", "全部 ›") { onNavigateToRecentAudiobookListened() }
+                        SecHd("⏱️ 继续收听", "查看全部 ›") { onNavigateToRecentAudiobookListened() }
                     }
                     if (booksWithProgress.isNotEmpty()) {
-                        items(booksWithProgress.take(20), key = { it.id }) { bwp ->
+                        // 首页只展示最近收听的 3 条，其余从「查看全部」进入最近收听页浏览
+                        items(
+                            booksWithProgress
+                                .sortedByDescending { it.progress?.lastPlayedAt ?: "" }
+                                .take(3),
+                            key = { it.id }
+                        ) { bwp ->
                             ContCard(
                                 bwp.toAudiobook(),
                                 serverUrl,
@@ -1893,6 +1899,8 @@ private fun AbGridCard(
                 "${book.narrator.ifEmpty { book.author }} · ${book.chapterCount}章",
                 fontSize = 10.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -1908,7 +1916,10 @@ private fun RankCard(
     p: String,
     onClick: () -> Unit
 ) {
-    Column(modifier = Modifier.clickable(onClick = onClick)) {
+    // 固定卡片宽度：这个 Column 处于横向滚动 Row 中，子项宽度无界。
+    // 若不约束宽度，下面徽标行里的 Text(weight(1f)) 会被压成 0 宽逐字换行，
+    // 把徽标行撑到上百 dp 高、B/W 徽标垂直悬浮在中间，表现为分类之间出现大间隔。
+    Column(modifier = Modifier.width(140.dp).clickable(onClick = onClick)) {
         Box {
             Surface(
                 modifier = Modifier.size(140.dp),
@@ -1972,6 +1983,8 @@ private fun RankCard(
                 "${book.narrator.ifEmpty { book.author }} · ${book.chapterCount}章",
                 fontSize = 10.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f)
             )
         }

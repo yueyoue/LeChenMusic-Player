@@ -259,7 +259,7 @@ fun TabletAudiobookHomeContent(
                 ) {
                     Text("继续收听", fontSize = responsiveConfig?.sectionTitleSize ?: 15.sp, fontWeight = FontWeight.SemiBold)
                     Text(
-                        "最近播放 ›",
+                        "查看全部 ›",
                         fontSize = responsiveConfig?.captionFontSize ?: 12.sp,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.clickable { onNavigateToRecentAudiobookListened() }
@@ -270,7 +270,12 @@ fun TabletAudiobookHomeContent(
 
             val booksWithProgress = audiobookWithProgress.filter { it.progress != null && !it.progress.completed }
             if (booksWithProgress.isNotEmpty()) {
-                items(booksWithProgress.take(8)) { bwp ->
+                // 侧边栏只展示最近收听的 3 条，其余从「查看全部」进入最近收听页浏览
+                items(
+                    booksWithProgress
+                        .sortedByDescending { it.progress?.lastPlayedAt ?: "" }
+                        .take(3)
+                ) { bwp ->
                     ContinueListeningTabletRow(
                         book = bwp.toAudiobook(),
                         progress = bwp.progress,
@@ -765,12 +770,23 @@ private fun AudiobookCompactCard(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
-        Text(
-            if (book.chapterCount > 0) "${book.chapterCount} 集" else "完结",
-            fontSize = 11.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1
-        )
+        // 与手机端 UI 保持一致：B/W 来源图标 + 演播者 + 集数
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            com.lechenmusic.ui.components.SourceBadge(path = book.libraryPath)
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                buildString {
+                    val narrator = book.narrator.ifEmpty { book.author }
+                    if (narrator.isNotEmpty()) append("$narrator · ")
+                    append(if (book.chapterCount > 0) "${book.chapterCount}集" else "完结")
+                },
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
+        }
     }
 }
 

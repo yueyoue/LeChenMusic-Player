@@ -69,8 +69,8 @@ class LeChenApp : Application() {
                 throwable.stackTrace.take(20).forEach { crashLog.appendText("  at $it\n") }
                 android.util.Log.e("LeChenMusic", "CRASH: ${throwable.message}", throwable)
 
-                // Report crash to server
-                Companion.sendErrorToServer("crash", throwable.message ?: "Unknown", throwable.stackTrace.take(20).joinToString("\n") { "at $it" }, "crash_${thread.name}")
+                // Report crash to server (同步阻塞上报：马上要 killProcess，异步会丢)
+                Companion.sendErrorToServerBlocking("crash", throwable.message ?: "Unknown", throwable.stackTrace.take(20).joinToString("\n") { "at $it" }, "crash_${thread.name}")
             } catch (_: Exception) {}
             android.os.Process.killProcess(android.os.Process.myPid())
         }
@@ -82,13 +82,25 @@ class LeChenApp : Application() {
         val appContext get() = instance.applicationContext
 
         /**
-         * Send error log to WEB admin server
+         * Send error log to WEB admin server (fire-and-forget on a background thread).
+         *
          * @param level error/warn/crash
          * @param message error message
          * @param stack stack trace
          * @param screen screen name where error occurred
+         *
+         * 绝不能在主线程同步发网络请求：旧实现用 OkHttp .execute() 在调用线程阻塞，
+         * 播放出错时 onPlayerError（主线程）→ 卡死 UI 数秒甚至触发 ANR，
+         * 用户再点几下按钮就闪退。
          */
         fun sendErrorToServer(level: String, message: String, stack: String = "", screen: String = "") {
+            Thread {
+                sendErrorToServerBlocking(level, message, stack, screen)
+            }.start()
+        }
+
+        /** 阻塞版本：仅供崩溃处理器在进程退出前调用（否则上报会丢失）。 */
+        fun sendErrorToServerBlocking(level: String, message: String, stack: String = "", screen: String = "") {
             try {
                 val context = appContext
                 val prefs = context.getSharedPreferences("settings", android.content.Context.MODE_PRIVATE)

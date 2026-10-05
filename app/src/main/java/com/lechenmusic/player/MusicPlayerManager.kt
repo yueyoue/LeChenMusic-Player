@@ -117,6 +117,14 @@ class MusicPlayerManager(private val context: Context) {
     // Called when current media item playback completes (STATE_ENDED)
     var onPlaybackCompleted: (() -> Unit)? = null
 
+    // 播放失败（资源失效/网络错误/加载超时）回调，携带面向用户的提示文案。
+    // 管理器内部同时弹 Toast，UI 层可据此复位“播放中/加载中”状态。
+    var onPlaybackError: ((String) -> Unit)? = null
+
+    // 加载看门狗：部分失效资源（尤其是网盘源）不会报错，只会在 BUFFERING 里一直挂着，
+    // 没有它播放器就会永远“加载中”假死。
+    private var loadWatchdogJob: kotlinx.coroutines.Job? = null
+
     companion object {
         const val ACTION_STOP_PLAYBACK = "com.lechenmusic.STOP_PLAYBACK"
         const val ACTION_TOGGLE_FAVORITE = "com.lechenmusic.TOGGLE_FAVORITE"
@@ -165,6 +173,9 @@ class MusicPlayerManager(private val context: Context) {
                         updateNotification()
                     }
                     override fun onPlaybackStateChanged(playbackState: Int) {
+                        if (playbackState == Player.STATE_READY || playbackState == Player.STATE_ENDED) {
+                            cancelLoadWatchdog()
+                        }
                         if (playbackState == Player.STATE_READY) {
                             // 电台流媒体：强制时长为0，防止ExoPlayer报告异常大数值
                             val isRadio = _currentSong.value?.id?.startsWith("radio_") == true
@@ -222,7 +233,8 @@ class MusicPlayerManager(private val context: Context) {
                     }
                     override fun onPlayerError(error: PlaybackException) {
                         android.util.Log.e("LeChenMusic", "onPlayerError: ${error.errorCodeName} - ${error.message}")
-                        // #19: Report playback error to server
+                        cancelLoadWatchdog()
+                        // #19: Report playback error to server (async — 绝不能阻塞主线程)
                         try {
                             LeChenApp.sendErrorToServer(
                                 "error",
@@ -231,7 +243,17 @@ class MusicPlayerManager(private val context: Context) {
                                 "player"
                             )
                         } catch (_: Exception) {}
-                        skipNext()
+                        // 资源失效/网络错误：明确提示用户并复位播放状态，
+                        // 避免界面一直“加载中”假死、用户反复点击后崩退
+                        handlePlaybackFailure("播放失败：资源已失效或无法连接，请检查音源")
+                        // 只有真正的多曲播放列表才自动跳下一首；单曲（有声书章节/电台）不跳，
+                        // 避免在坏资源上反复触发错误
+                        try {
+                            val p = player
+                            if (p != null && p.mediaItemCount > 1 && p.hasNextMediaItem()) {
+                                skipNext()
+                            }
+                        } catch (_: Exception) {}
                     }
                 })
             }
@@ -715,6 +737,7 @@ class MusicPlayerManager(private val context: Context) {
             play()
         }
         _currentSong.value = song
+        startLoadWatchdog()
         // 电台不检查收藏状态（走单独的逻辑）
         if (!song.id.startsWith("radio_")) {
             checkStarred(song.id)
@@ -1058,6 +1081,7 @@ class MusicPlayerManager(private val context: Context) {
             it.release()
         }
         mediaSessionCompat = null
+        cancelLoadWatchdog()
         player?.release()
         player = null
         musicCache?.release()
@@ -1102,6 +1126,7 @@ class MusicPlayerManager(private val context: Context) {
         }
         _isStarred.value = false
         updateNotification()
+        startLoadWatchdog()
         // 异步检查收藏状态
         scope.launch(Dispatchers.IO) {
             try {
@@ -1161,10 +1186,53 @@ class MusicPlayerManager(private val context: Context) {
             play()
         }
         updateNotification()
+        startLoadWatchdog()
     }
 
     fun clearAudiobookCoverUrl() {
         _audiobookCoverUrl.value = null
+    }
+
+    // ===== 播放失败/加载超时的统一处理（用户提示 + 状态复位，防止假死） =====
+
+    /**
+     * 播放失败统一入口：弹 Toast 提示用户，并把播放状态复位，
+     * 避免界面一直停在“加载中/播放中”造成假死。
+     */
+    private fun handlePlaybackFailure(message: String) {
+        try { player?.pause() } catch (_: Exception) {}
+        _isPlaying.value = false
+        try { onPlaybackError?.invoke(message) } catch (_: Exception) {}
+        // Toast 必须在主线程弹（onPlayerError / watchdog 都在主线程，这里再兑底一次）
+        try {
+            android.widget.Toast.makeText(
+                context.applicationContext,
+                message,
+                android.widget.Toast.LENGTH_LONG
+            ).show()
+        } catch (_: Exception) {}
+    }
+
+    /**
+     * 加载看门狗：指定时间内仍未进入 STATE_READY 就判定资源失效，
+     * 给出用户提示并停止加载，而不是永远卡住。
+     */
+    private fun startLoadWatchdog(timeoutMs: Long = 30_000L) {
+        loadWatchdogJob?.cancel()
+        loadWatchdogJob = scope.launch {
+            delay(timeoutMs)
+            val p = player
+            if (p != null && p.playbackState != Player.STATE_READY && p.playbackState != Player.STATE_ENDED) {
+                android.util.Log.w("LeChenMusic", "Load watchdog fired, playbackState=${p.playbackState}")
+                handlePlaybackFailure("播放失败：资源加载超时，可能已失效")
+                try { p.stop() } catch (_: Exception) {}
+            }
+        }
+    }
+
+    private fun cancelLoadWatchdog() {
+        loadWatchdogJob?.cancel()
+        loadWatchdogJob = null
     }
 
 }
