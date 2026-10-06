@@ -157,6 +157,10 @@ object ApiClient {
                 level = HttpLoggingInterceptor.Level.BASIC
             }
             val client = OkHttpClient.Builder()
+                // HTTP 缓存：服务端对有声书只读接口返回 Cache-Control/ETag，
+                // 配上 Cache 后短时间内重复进入首页/详情直接命中本地缓存（Loading 秒过），
+                // 过期后带 If-None-Match 走 304，不再重复传整包 JSON。
+                .cache(okhttp3.Cache(java.io.File(com.lechenmusic.LeChenApp.appContext.cacheDir, "http_cache"), 32L * 1024 * 1024))
                 .addInterceptor(logging)
                 .addInterceptor { chain ->
                     val original = chain.request()
