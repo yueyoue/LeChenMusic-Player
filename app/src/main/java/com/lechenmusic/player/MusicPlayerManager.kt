@@ -287,11 +287,7 @@ class MusicPlayerManager(private val context: Context) {
         alarmReceiver = object : BroadcastReceiver() {
             override fun onReceive(ctx: Context?, intent: Intent?) {
                 when (intent?.action) {
-                    ACTION_STOP_PLAYBACK -> {
-                        timerExpired = true
-                        player?.pause()
-                        onTimerExpired?.invoke()
-                    }
+                    ACTION_STOP_PLAYBACK -> handleTimerExpired()
                     ACTION_TOGGLE_FAVORITE -> toggleStar()
                     ACTION_PREV -> skipPrevious()
                     ACTION_NEXT -> skipNext()
@@ -803,6 +799,24 @@ class MusicPlayerManager(private val context: Context) {
                 it.play()
             }
         }
+    }
+
+    /**
+     * 定时到点：停止播放并同步清理定时状态。
+     * 静态接收器（TimerStopReceiver）和动态接收器共用入口，幂等：重复送达只是重复暂停。
+     *
+     * 场景保证：APP 后台播放、切到微信听语音/看视频（音频焦点被抢→暂停→焦点回来自动续播）
+     * 都不会取消或提前触发定时；到点后即使播放器因焦点恢复被自动续播，
+     * onIsPlayingChanged 里的 timerExpired 守卫也会立刻再暂停。
+     */
+    fun handleTimerExpired() {
+        timerExpired = true
+        try {
+            player?.pause()
+        } catch (_: Exception) { }
+        try {
+            onTimerExpired?.invoke()
+        } catch (_: Exception) { }
     }
 
     fun forcePause() {

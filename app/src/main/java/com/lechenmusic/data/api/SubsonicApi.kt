@@ -347,6 +347,18 @@ interface SubsonicApi {
         @retrofit2.http.Header("X-ND-Authorization") authHeader: String
     ): retrofit2.Response<com.google.gson.JsonElement>
 
+    // ===== Native song API（全曲库批量拉取：替代逐专辑 getAlbum 爬取）=====
+
+    /** Navidrome 原生 /api/song 分页（_start/_end 半开区间，500 条/页），返回 MediaFile JSON 数组 */
+    @GET("api/song")
+    suspend fun getNativeSongs(
+        @Query("_start") start: Int,
+        @Query("_end") end: Int,
+        @Query("_sort") sort: String,
+        @Query("_order") order: String,
+        @retrofit2.http.Header("X-ND-Authorization") authHeader: String
+    ): retrofit2.Response<com.google.gson.JsonElement>
+
     // ===== Stats API =====
 
     @retrofit2.http.POST("api/stats/play-log")

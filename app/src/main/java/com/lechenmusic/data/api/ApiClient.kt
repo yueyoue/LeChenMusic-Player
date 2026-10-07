@@ -134,10 +134,11 @@ object ApiClient {
     }
 
     /**
-     * @param size >0 时附带 &size= 参数，由服务端直接缩放后返回（几百 KB 的原图会变成几十 KB），
-     *             小缩略图/通知栏封面务必传；0 保持原图（全屏大图用）。
+     * @param size >0 时附带 &size= 参数，由服务端直接缩放后返回（原图几百 KB~几 MB 会变成几十 KB）。
+     *             默认 640（列表/卡片/详情头图够用）；全屏播放器传 1024；小图标可传 320。
+     *             传 0 = 原图，除特殊场景不建议。
      */
-    fun getCoverArtUrl(baseUrl: String, username: String, password: String, coverArtId: String?, size: Int = 0): String? {
+    fun getCoverArtUrl(baseUrl: String, username: String, password: String, coverArtId: String?, size: Int = 640): String? {
         if (coverArtId.isNullOrBlank()) return null
         val normalizedUrl = normalizeUrl(baseUrl)
         val encodedPass = if (password.startsWith("enc:")) password else "enc:${password.toByteArray().joinToString("") { "%02x".format(it) }}"

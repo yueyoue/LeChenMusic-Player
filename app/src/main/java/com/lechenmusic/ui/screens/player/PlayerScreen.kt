@@ -762,7 +762,7 @@ fun PlayerScreen(
 private fun CoverView(song: Song, serverUrl: String, username: String, password: String) {
     val coverArtId = song.coverArt ?: song.albumId
     val coverUrl = if (coverArtId.isNotBlank()) {
-        com.lechenmusic.data.api.ApiClient.getCoverArtUrl(serverUrl, username, password, coverArtId)
+        com.lechenmusic.data.api.ApiClient.getCoverArtUrl(serverUrl, username, password, coverArtId, size = 1024)
     } else null
     val coverBgColor = com.lechenmusic.ui.screens.player.music.rememberCoverColor(coverUrl)
 

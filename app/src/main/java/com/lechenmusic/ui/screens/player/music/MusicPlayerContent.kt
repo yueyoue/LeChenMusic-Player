@@ -170,7 +170,7 @@ fun MusicPlayerContent(
     val pageSong = playlist.getOrNull(pagerState.currentPage) ?: song
     LaunchedEffect(pageSong.id) { viewModel.loadLyrics(pageSong) }
 
-    val coverUrl = ApiClient.getCoverArtUrl(serverUrl, username, password, pageSong.coverArt ?: pageSong.albumId)
+    val coverUrl = ApiClient.getCoverArtUrl(serverUrl, username, password, pageSong.coverArt ?: pageSong.albumId, size = 1024)
     val coverBgColor = rememberCoverColor(coverUrl)
 
     // 始终使用白色文字和按钮（背景色已保证足够暗）
@@ -216,7 +216,7 @@ fun MusicPlayerContent(
         // 进度只属于正在播放的歌曲：非播放页（滑动切歌的过渡期）进度归零，
         // 避免新页面残留上一曲的进度条位置（滑动切歌后滑杆卡在一半的问题）
         val isPlayingPage = pSong.id == song.id
-        val pCoverUrl = ApiClient.getCoverArtUrl(serverUrl, username, password, pSong.coverArt ?: pSong.albumId)
+        val pCoverUrl = ApiClient.getCoverArtUrl(serverUrl, username, password, pSong.coverArt ?: pSong.albumId, size = 1024)
         val pBgColor = rememberCoverColor(pCoverUrl)
         // 始终使用白色（背景色已保证足够暗）
         val pTextColor = Color.White

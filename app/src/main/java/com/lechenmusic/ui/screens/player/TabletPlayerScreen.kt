@@ -147,7 +147,7 @@ fun TabletPlayerScreen(
     val song = currentSong ?: return
     LaunchedEffect(song.id) { viewModel.loadLyrics(song) }
 
-    val coverUrl = com.lechenmusic.data.api.ApiClient.getCoverArtUrl(serverUrl, username, password, song.coverArt ?: song.albumId)
+    val coverUrl = com.lechenmusic.data.api.ApiClient.getCoverArtUrl(serverUrl, username, password, song.coverArt ?: song.albumId, size = 1024)
 
     // 从封面提取高饱和度颜色
     val coverBgColor = rememberCoverColor(coverUrl)

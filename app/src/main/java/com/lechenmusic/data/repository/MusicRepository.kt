@@ -36,7 +36,7 @@ class MusicRepository {
         return token != null
     }
 
-    fun getCoverArtUrl(coverArtId: String?, size: Int = 0): String? {
+    fun getCoverArtUrl(coverArtId: String?, size: Int = 640): String? {
         return ApiClient.getCoverArtUrl(serverUrl, username, password, coverArtId, size)
     }
 
@@ -374,7 +374,130 @@ class MusicRepository {
         }
     }
 
+    /**
+     * 全曲库歌曲：优先 Navidrome 原生 /api/song 分页批量拉取（几十次请求以内），
+     * 失败或为空时自动回落到旧的逐专辑爬取实现 getAllSongsLegacy()。
+     * 返回顺序：最近添加在前（recently_added DESC）。
+     */
     suspend fun getAllSongs(): Result<List<Song>> {
+        getAllSongsNative().onSuccess { if (it.isNotEmpty()) return Result.success(it) }
+        return getAllSongsLegacy()
+    }
+
+    /**
+     * Navidrome 原生 /api/song 分页拉全曲库（500 条/页）。
+     *
+     * 旧实现逐专辑调 getAlbum：几千张专辑 = 几千次请求，后台同步跑几分钟、耗电耗流量；
+     * 原生接口按页批量返回，任何曲库规模都只要几十次请求以内。
+     */
+    private suspend fun getAllSongsNative(): Result<List<Song>> {
+        return try {
+            val allSongs = mutableListOf<Song>()
+            val seenIds = mutableSetOf<String>()
+            val pageSize = 500
+            var start = 0
+            while (start < 100000) { // 安全上限 10 万首
+                val page = withAudiobookAuthRetry { token ->
+                    audiobookApi!!.getNativeSongs(
+                        start = start,
+                        end = start + pageSize,
+                        sort = "recently_added",
+                        order = "DESC",
+                        authHeader = "Bearer $token"
+                    )
+                }
+                if (!page.isSuccessful) {
+                    return Result.failure(Exception("native /api/song HTTP ${page.code()}"))
+                }
+                val arr = page.body()?.takeIf { it.isJsonArray }?.asJsonArray ?: break
+                if (arr.size() == 0) break
+                for (el in arr) {
+                    try {
+                        val song = parseNativeSong(el.asJsonObject)
+                        if (seenIds.add(song.id)) allSongs.add(song)
+                    } catch (_: Exception) { }
+                }
+                if (arr.size() < pageSize) break
+                start += pageSize
+            }
+            if (allSongs.isNotEmpty()) Result.success(allSongs)
+            else Result.failure(Exception("native /api/song empty"))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /** Navidrome 原生 MediaFile JSON → APP 的 Subsonic 风格 Song */
+    private fun parseNativeSong(o: com.google.gson.JsonObject): Song {
+        fun str(name: String): String =
+            o.get(name)?.takeIf { !it.isJsonNull }?.asString ?: ""
+        fun optStr(name: String): String? =
+            o.get(name)?.takeIf { !it.isJsonNull }?.asString?.takeIf { it.isNotBlank() }
+        fun int(name: String): Int =
+            try { o.get(name)?.takeIf { !it.isJsonNull }?.asInt ?: 0 } catch (_: Exception) { 0 }
+        fun long(name: String): Long =
+            try { o.get(name)?.takeIf { !it.isJsonNull }?.asLong ?: 0L } catch (_: Exception) { 0L }
+
+        val id = str("id")
+        val albumId = str("albumId")
+        val hasCover = try {
+            o.get("hasCoverArt")?.takeIf { !it.isJsonNull }?.asBoolean ?: false
+        } catch (_: Exception) { false }
+        // 原生 starred 是 time.Time 序列化，未收藏时为 "0001-01-01T00:00:00Z"（零值）
+        val starred = optStr("starred")?.takeIf { !it.startsWith("0001") }
+        // 多歌手（OpenSubsonic 扩展）：原生 participants 解析失败就退回单歌手
+        val artists = parseNativeParticipants(o).ifEmpty {
+            val aid = str("artistId")
+            val aname = str("artist")
+            if (aid.isNotBlank() || aname.isNotBlank()) listOf(ArtistIdName(id = aid, name = aname))
+            else emptyList()
+        }
+        return Song(
+            id = id,
+            title = str("title"),
+            artist = str("artist"),
+            artistId = str("artistId"),
+            album = str("album"),
+            albumId = albumId,
+            // Subsonic child 的 coverArt 就是"去 getCoverArt 取封面用的 ID"：自己有封面用自己，否则用专辑
+            coverArt = if (hasCover) id else albumId.ifBlank { null },
+            duration = try {
+                (o.get("duration")?.takeIf { !it.isJsonNull }?.asFloat ?: 0f).toInt()
+            } catch (_: Exception) { 0 },
+            track = int("trackNumber"),
+            year = int("year").takeIf { it > 0 },
+            genre = optStr("genre"),
+            size = long("size"),
+            contentType = "",
+            suffix = str("suffix"),
+            bitRate = int("bitRate"),
+            path = str("path"),
+            starred = starred,
+            playCount = long("playCount"),
+            discNumber = int("discNumber"),
+            artists = artists.ifEmpty { null },
+            displayArtist = str("artist")
+        )
+    }
+
+    /** participants: {"artist":[{"id":"..","name":".."}], ...}，形状不合法时返回空列表 */
+    private fun parseNativeParticipants(o: com.google.gson.JsonObject): List<ArtistIdName> {
+        return try {
+            val p = o.get("participants")?.takeIf { it.isJsonObject }?.asJsonObject ?: return emptyList()
+            val arr = p.get("artist")?.takeIf { it.isJsonArray }?.asJsonArray ?: return emptyList()
+            arr.mapNotNull { el ->
+                val e = el.asJsonObject
+                val id = e.get("id")?.takeIf { !it.isJsonNull }?.asString ?: ""
+                val name = e.get("name")?.takeIf { !it.isJsonNull }?.asString ?: ""
+                if (id.isBlank() && name.isBlank()) null else ArtistIdName(id = id, name = name)
+            }.distinctBy { it.id to it.name }
+        } catch (_: Exception) {
+            emptyList()
+        }
+    }
+
+    /** 旧版全曲库爬取（原生接口不可用时的兜底）：逐专辑 getAlbum + search 补齐 */
+    private suspend fun getAllSongsLegacy(): Result<List<Song>> {
         return try {
             val allSongs = mutableListOf<Song>()
             val seenIds = mutableSetOf<String>()
