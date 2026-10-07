@@ -346,7 +346,7 @@ fun HomeScreen(
                         )
                     }
                     // Continue listening (like ting-reader: always show section)
-                    val booksWithProgress = audiobookWithProgress.filter { it.progress != null && !it.progress.completed }
+                    val booksWithProgress = audiobookWithProgress.filter { it.isUnfinished }
                     item {
                         SecHd("⏱️ 继续收听", "查看全部 ›") { onNavigateToRecentAudiobookListened() }
                     }

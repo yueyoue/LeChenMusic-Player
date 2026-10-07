@@ -268,7 +268,7 @@ fun TabletAudiobookHomeContent(
                 Spacer(modifier = Modifier.height(8.dp))
             }
 
-            val booksWithProgress = audiobookWithProgress.filter { it.progress != null && !it.progress.completed }
+            val booksWithProgress = audiobookWithProgress.filter { it.isUnfinished }
             if (booksWithProgress.isNotEmpty()) {
                 // 侧边栏只展示最近收听的 3 条，其余从「查看全部」进入最近收听页浏览
                 items(

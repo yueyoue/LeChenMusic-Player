@@ -1938,6 +1938,12 @@ fun loadAudiobooks() {
         if (idx < chapters.size - 1) {
             val book = _currentAudiobook.value ?: return
             playAudiobookChapter(book, chapters[idx + 1], chapters)
+        } else if (chapters.isNotEmpty()) {
+            // 整本书播完（最后一章结束，没有下一章）：标记 completed，
+            // 让它从所有「继续收听」列表里消失。旧实现这里什么都不做，
+            // 听完的书永远挂在「继续收听」里。
+            android.util.Log.d("LeChenMusic", "Audiobook finished, marking completed")
+            saveAudiobookProgress(finished = true)
         }
     }
 
@@ -1964,18 +1970,30 @@ fun loadAudiobooks() {
         }
     }
 
-    fun saveAudiobookProgress() {
+    /**
+     * @param finished null = 不表态（周期性保存/退出播放页时用，服务端保持原值或按位置推断）；
+     *   true = 整本书已听完；false = 又开始听（从「已听完」回到「继续收听」）。
+     */
+    fun saveAudiobookProgress(finished: Boolean? = null) {
         val book = _currentAudiobook.value ?: return
         val chapters = _currentAudiobookChapters.value
         val idx = _currentChapterIndex.value
         val chapter = chapters.getOrNull(idx) ?: return
         val positionMs = playerManager.currentPosition.value
         val positionSeconds = (positionMs / 1000).toInt()
-        android.util.Log.d("LeChenMusic", "saveAudiobookProgress: book=${book.id}, chapter=${chapter.id}, pos=${positionSeconds}s")
+        android.util.Log.d("LeChenMusic", "saveAudiobookProgress: book=${book.id}, chapter=${chapter.id}, pos=${positionSeconds}s, finished=$finished")
+
+        // 听完/重听时就地改本地状态，「继续收听」列表立刻生效，不用等下次刷新。
+        if (finished != null) {
+            _audiobookWithProgress.value = _audiobookWithProgress.value.map {
+                if (it.id != book.id) it
+                else it.copy(progress = (it.progress ?: com.lechenmusic.data.model.AudiobookProgress(audiobookId = book.id)).copy(completed = finished))
+            }
+        }
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val result = repository.saveAudiobookProgress(book.id, chapter.id, chapter.chapterNumber, positionSeconds)
+                val result = repository.saveAudiobookProgress(book.id, chapter.id, chapter.chapterNumber, positionSeconds, finished)
                 if (result.isSuccess) {
                     android.util.Log.d("LeChenMusic", "saveAudiobookProgress: OK")
                 } else {

@@ -1075,7 +1075,9 @@ fun rememberCoverColor(coverUrl: String?): Color {
                     .size(128) // 小图即可，只要提取颜色
                     .allowHardware(false) // Palette 需要 software bitmap
                     .build()
-                val result = coil.ImageLoader(context).execute(request)
+                // 走全局单例 ImageLoader（内存+磁盘缓存都在里面），不能再 new 一个——
+                // 新建的 loader 内存缓存是空的，取色这种小图也会每次重新下载。
+                val result = coil.Coil.imageLoader(context).execute(request)
                 (result.drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap
             }
             if (bitmap != null) {

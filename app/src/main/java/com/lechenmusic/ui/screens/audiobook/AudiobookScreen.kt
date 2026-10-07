@@ -151,8 +151,8 @@ fun AudiobookScreen(
                         }
                     }
 
-                    // ── 继续收听（只显示有进度的） ──
-                    val booksWithProgress = audiobooksWithProgress.filter { it.progress != null }
+                    // ── 继续收听（只显示有进度且还没听完的） ──
+                    val booksWithProgress = audiobooksWithProgress.filter { it.isUnfinished }
                     if (booksWithProgress.isNotEmpty()) {
                         item {
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {

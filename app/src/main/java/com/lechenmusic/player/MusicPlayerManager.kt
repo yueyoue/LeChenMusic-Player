@@ -621,8 +621,15 @@ class MusicPlayerManager(private val context: Context) {
         }
     }
 
+    // 通知栏封面缓存：通知每次播放/暂停/切歌都会重建，旧实现每次都重新走一趟网络下载小图。
+    // 按 coverArtId 缓存缩放后的 Bitmap，LRU 上限 8MB。
+    private val albumArtCache = object : android.util.LruCache<String, Bitmap>(8 * 1024 * 1024) {
+        override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount
+    }
+
     private fun loadAlbumArt(coverArtId: String?): Bitmap? {
         if (coverArtId.isNullOrBlank()) return null
+        albumArtCache.get(coverArtId)?.let { return it }
         return try {
             val repo = repository ?: return null
             val url = repo.getCoverArtUrl(coverArtId) ?: return null
@@ -633,7 +640,9 @@ class MusicPlayerManager(private val context: Context) {
             val bitmap = BitmapFactory.decodeStream(inputStream)
             inputStream.close()
             val size = (128 * context.resources.displayMetrics.density).toInt()
-            Bitmap.createScaledBitmap(bitmap, size, size, true)
+            val scaled = Bitmap.createScaledBitmap(bitmap, size, size, true)
+            albumArtCache.put(coverArtId, scaled)
+            scaled
         } catch (e: Exception) {
             null
         }

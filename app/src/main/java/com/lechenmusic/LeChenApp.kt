@@ -3,6 +3,8 @@ package com.lechenmusic
 import android.app.Application
 import coil.Coil
 import coil.ImageLoader
+import coil.disk.DiskCache
+import coil.memory.MemoryCache
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -28,7 +30,13 @@ class LeChenApp : Application() {
         playerManager = MusicPlayerManager(this)
         playerManager.init(repository)
 
-        // 配置 Coil 图片加载器，为豆瓣图片添加 Referer
+        // 配置 Coil 图片加载器：豆瓣图片加 Referer，封面/头像两级缓存落手机。
+        //
+        // 缓存是「打开 APP 秒出图」的关键：内存层（LRU Bitmap）让同一屏图片第二次出现零耗时，
+        // 磁盘层（LRU 文件）让杀掉进程重开也能直接读本地，不再重新下载。
+        // 行业通行做法（Glide/Coil/Picasso 同一套路）：URL 作 key的两级 LRU，配合服务端
+        // 长期 Cache-Control——所以本仓服务端封面是 max-age=315360000（与 Subsonic getCoverArt
+        // 一致），APP 侧才能一直命中本地副本。
         Coil.setImageLoader(
             ImageLoader.Builder(this)
                 .okHttpClient {
@@ -44,6 +52,19 @@ class LeChenApp : Application() {
                             } else request
                             chain.proceed(newRequest)
                         }
+                        .build()
+                }
+                .memoryCache {
+                    // 25% 可用内存：首页/列表一滑几十张封面，太小会反复解码
+                    MemoryCache.Builder(applicationContext).maxSizePercent(0.25).build()
+                }
+                // 磁盘缓存显式给到 256MB（封面缩略图约 15–50KB 一张，能放下几千张）。
+                // 不设的话 Coil 也会用默认的 SingletonDiskCache（10–250MB），
+                // 这里显式声明是为了把配额和目录写死，也避免以后有人再 new ImageLoader绕开它。
+                .diskCache {
+                    DiskCache.Builder()
+                        .directory(cacheDir.resolve("lechen_image_cache"))
+                        .maxSizeBytes(256L * 1024 * 1024)
                         .build()
                 }
                 .build()

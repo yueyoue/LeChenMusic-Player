@@ -301,6 +301,15 @@ data class AudiobookWithProgress(
     val progress: AudiobookProgress? = null
 ) {
     val isStarred: Boolean get() = starred != null
+
+    /**
+     * 「继续收听」判定：有进度且还没听完。
+     *
+     * 听完的书要从所有「继续收听」列表里踢出去。规则集中在这里，手机首页/平板首页/
+     * 有声书页/「查看全部」四个地方共用一条判定，不会漏改一处。
+     */
+    val isUnfinished: Boolean get() = progress != null && progress?.completed == false
+
     fun toAudiobook() = Audiobook(
         id = id, title = title, author = author, narrator = narrator,
         description = description, genre = genre, year = year, coverPath = coverPath,

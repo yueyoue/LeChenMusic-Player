@@ -46,7 +46,7 @@ fun rememberCoverColor(coverUrl: String?): Color {
         if (coverUrl == null) return@LaunchedEffect
         try {
             val request = ImageRequest.Builder(context).data(coverUrl).allowHardware(false).build()
-            val drawable = coil.ImageLoader(context).execute(request).drawable
+            val drawable = coil.Coil.imageLoader(context).execute(request).drawable
             val bitmap = drawable?.toBitmap(128, 128)
             if (bitmap != null) {
                 val palette = withContext(Dispatchers.Default) {

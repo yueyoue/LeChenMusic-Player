@@ -750,16 +750,22 @@ class MusicRepository {
     }
 
 
-    suspend fun saveAudiobookProgress(bookId: String, chapterId: String, chapterNumber: Int, positionSeconds: Int): Result<Unit> {
+    /**
+     * @param completed null = 客户端没表态（服务端保持原值或按位置推断）；
+     *   true/false = 明确听完 / 明确重新开始听。只在两种时刻传，周期性保存不要传。
+     */
+    suspend fun saveAudiobookProgress(bookId: String, chapterId: String, chapterNumber: Int, positionSeconds: Int, completed: Boolean? = null): Result<Unit> {
         return try {
             val response = withAudiobookAuthRetry { token ->
+                val payload = mutableMapOf<String, Any?>(
+                    "chapterId" to chapterId,
+                    "chapterNumber" to chapterNumber,
+                    "position" to positionSeconds
+                )
+                if (completed != null) payload["completed"] = completed
                 val body = okhttp3.RequestBody.create(
                     "application/json".toMediaType(),
-                    com.google.gson.Gson().toJson(mapOf(
-                        "chapterId" to chapterId,
-                        "chapterNumber" to chapterNumber,
-                        "position" to positionSeconds
-                    ))
+                    com.google.gson.Gson().toJson(payload)
                 )
                 audiobookApi!!.saveAudiobookProgress(bookId, body, "Bearer $token")
             }

@@ -41,10 +41,11 @@ fun RecentAudiobookListenedScreen(
     val username by viewModel.username.collectAsState()
     val password by viewModel.password.collectAsState()
 
-    // 按最近播放时间排序，只显示有进度的
+    // 按最近播放时间排序，只显示有进度且还没听完的。
+    // 这里是首页「继续收听 → 查看全部」的落点，所以同样把已听完的书踢出去。
     val listenedBooks = remember(audiobookWithProgress) {
         audiobookWithProgress
-            .filter { it.progress != null }
+            .filter { it.isUnfinished }
             .sortedByDescending { it.progress?.lastPlayedAt ?: "" }
     }
 
