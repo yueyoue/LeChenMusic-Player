@@ -626,7 +626,7 @@ private fun AudiobooksTab(
                         .fillMaxWidth()
                         .aspectRatio(1f)
                 ) {
-                    val coverUrl = getAudiobookCoverUrl(serverUrl, username, password, book.id)
+                    val coverUrl = getAudiobookCoverUrl(serverUrl, username, password, book.id, book.updatedAt)
                     if (coverUrl != null) {
                         AsyncImage(
                             model = coverUrl,

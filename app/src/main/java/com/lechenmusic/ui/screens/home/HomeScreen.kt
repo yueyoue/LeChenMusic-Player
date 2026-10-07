@@ -1233,7 +1233,7 @@ private fun AudiobookCarousel(
                         .background(Brush.linearGradient(gradient))
                 ) {
                     // 封面图作为背景（和�kindle板一致）
-                    val coverUrl = getAudiobookCoverUrl(serverUrl, username, password, book.id)
+                    val coverUrl = getAudiobookCoverUrl(serverUrl, username, password, book.id, book.updatedAt)
                     if (coverUrl != null) {
                         AsyncImage(
                             model = coverUrl,
@@ -1644,7 +1644,7 @@ private fun ContCard(
                 shape = RoundedCornerShape(10.dp),
                 color = MaterialTheme.colorScheme.surfaceVariant
             ) {
-                val url = getAudiobookCoverUrl(s, u, p, book.id)
+                val url = getAudiobookCoverUrl(s, u, p, book.id, book.updatedAt)
                 if (url != null) AsyncImage(
                     model = url,
                     contentDescription = null,
@@ -1857,7 +1857,7 @@ private fun AbGridCard(
                 .clip(RoundedCornerShape(18.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant)
         ) {
-            val url = getAudiobookCoverUrl(s, u, p, book.id)
+            val url = getAudiobookCoverUrl(s, u, p, book.id, book.updatedAt)
             if (url != null) AsyncImage(
                 model = url,
                 contentDescription = null,
@@ -1927,7 +1927,7 @@ private fun RankCard(
                 color = MaterialTheme.colorScheme.surfaceVariant,
                 shadowElevation = 2.dp
             ) {
-                val url = getAudiobookCoverUrl(s, u, p, book.id)
+                val url = getAudiobookCoverUrl(s, u, p, book.id, book.updatedAt)
                 if (url != null) AsyncImage(
                     model = url,
                     contentDescription = null,

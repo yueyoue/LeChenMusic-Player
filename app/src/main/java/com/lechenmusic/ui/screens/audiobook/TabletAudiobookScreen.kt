@@ -242,7 +242,7 @@ private fun TabletAudiobookGridCard(
             shape = RoundedCornerShape(14.dp),
             color = MaterialTheme.colorScheme.surfaceVariant
         ) {
-            val coverUrl = getAudiobookCoverUrl(serverUrl, username, password, book.id)
+            val coverUrl = getAudiobookCoverUrl(serverUrl, username, password, book.id, book.updatedAt)
             if (coverUrl != null) {
                 AsyncImage(
                     model = coverUrl,

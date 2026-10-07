@@ -268,7 +268,7 @@ fun SearchScreen(
                                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp))
                             }
                             items(matchedBooks) { book ->
-                                val coverUrl = getAudiobookCoverUrl(serverUrl, username, password, book.id)
+                                val coverUrl = getAudiobookCoverUrl(serverUrl, username, password, book.id, book.updatedAt)
                                 Row(
                                     modifier = Modifier.fillMaxWidth().clickable { onAudiobookClick(book.id) }
                                         .padding(horizontal = 20.dp, vertical = 10.dp),

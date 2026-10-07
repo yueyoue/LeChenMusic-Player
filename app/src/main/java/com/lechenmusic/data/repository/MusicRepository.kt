@@ -849,15 +849,17 @@ class MusicRepository {
         }
     }
 
-    fun getAudiobookCoverUrl(bookId: String): String? {
+    fun getAudiobookCoverUrl(bookId: String, version: String = ""): String? {
         val normalizedUrl = serverUrl.trimEnd('/')
         val token = com.lechenmusic.data.api.NavidromeAuth.token
+        // 版本号（book.updatedAt）拼进 URL 作缓存戳：换封面后 URL 变，缓存自动失效重下
+        val v = if (version.isNotBlank()) "&v=" + java.net.URLEncoder.encode(version, "UTF-8") else ""
         return if (token != null) {
-            "$normalizedUrl/api/audiobook/$bookId/cover?token=$token"
+            "$normalizedUrl/api/audiobook/$bookId/cover?token=$token$v"
         } else {
             val passBytes = password.toByteArray()
             val encodedPass = if (password.startsWith("enc:")) password else "enc:" + passBytes.joinToString("") { "%02x".format(it) }
-            "$normalizedUrl/api/audiobook/$bookId/cover?u=$username&p=$encodedPass"
+            "$normalizedUrl/api/audiobook/$bookId/cover?u=$username&p=$encodedPass$v"
         }
     }
 

@@ -124,7 +124,7 @@ fun AudiobookScreen(
                     val featured = audiobooks.maxByOrNull { it.chapterCount }
                     if (featured != null) {
                         item {
-                            val coverUrl = getAudiobookCoverUrl(serverUrl, username, password, featured.id)
+                            val coverUrl = getAudiobookCoverUrl(serverUrl, username, password, featured.id, featured.updatedAt)
                             Box(
                                 modifier = Modifier.fillMaxWidth().height(config.heroHeight).clip(RoundedCornerShape(16.dp)).background(
                                     Brush.linearGradient(listOf(Color(0xFFFF416C), Color(0xFFFF4B2B)))
@@ -331,7 +331,7 @@ fun AudiobookGridCard(
                 .clip(RoundedCornerShape(18.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant)
         ) {
-            val coverUrl = getAudiobookCoverUrl(serverUrl, username, password, book.id)
+            val coverUrl = getAudiobookCoverUrl(serverUrl, username, password, book.id, book.updatedAt)
             if (coverUrl != null) {
                 AsyncImage(
                     model = coverUrl,
@@ -414,7 +414,7 @@ private fun TabletAudiobookGridCard(
             shape = RoundedCornerShape(12.dp),
             color = MaterialTheme.colorScheme.surfaceVariant
         ) {
-            val coverUrl = getAudiobookCoverUrl(serverUrl, username, password, book.id)
+            val coverUrl = getAudiobookCoverUrl(serverUrl, username, password, book.id, book.updatedAt)
             if (coverUrl != null) {
                 AsyncImage(
                     model = coverUrl,
@@ -460,11 +460,14 @@ private fun TabletAudiobookGridCard(
     }
 }
 
-fun getAudiobookCoverUrl(serverUrl: String, username: String, password: String, bookId: String): String? {
+fun getAudiobookCoverUrl(serverUrl: String, username: String, password: String, bookId: String, version: String = ""): String? {
     val normalizedUrl = serverUrl.trimEnd('/')
     val encodedPass = if (password.startsWith("enc:")) password
                       else "enc:${password.toByteArray().joinToString("") { "%02x".format(it) }}"
-    return "$normalizedUrl/api/audiobook/$bookId/cover?u=$username&p=$encodedPass"
+    // 版本号（book.updatedAt）拼进 URL 作缓存戳：网页端换封面 → updatedAt 变 → URL 变 →
+    // Coil 磁盘缓存/HTTP 缓存按 URL 作 key 自动失效重下，不用手动清缓存才能看到新图
+    val v = if (version.isNotBlank()) "&v=" + java.net.URLEncoder.encode(version, "UTF-8") else ""
+    return "$normalizedUrl/api/audiobook/$bookId/cover?u=$username&p=$encodedPass$v"
 }
 
 fun formatDuration(seconds: Int): String {
@@ -525,7 +528,7 @@ private fun ContinueListeningCard(
         Brush.linearGradient(listOf(Color(0xFF00E68A), Color(0xFF00B8D4)))
     )
     val gradient = gradients[bwp.id.hashCode().and(0x7FFFFFFF) % gradients.size]
-    val coverUrl = getAudiobookCoverUrl(serverUrl, username, password, bwp.id)
+    val coverUrl = getAudiobookCoverUrl(serverUrl, username, password, bwp.id, bwp.updatedAt)
     val progressFraction = if (bwp.totalDuration > 0) bwp.progress?.position?.toFloat()?.div(bwp.totalDuration) ?: 0f else 0f
     val currentChapter = bwp.progress?.chapterNumber ?: 0
 
@@ -640,7 +643,7 @@ private fun AudiobookCard(
     coverSize: Dp,
     onClick: () -> Unit
 ) {
-    val coverUrl = getAudiobookCoverUrl(serverUrl, username, password, book.id)
+    val coverUrl = getAudiobookCoverUrl(serverUrl, username, password, book.id, book.updatedAt)
     Column(modifier = Modifier.clickable(onClick = onClick).width(coverSize)) {
         Box(
             modifier = Modifier.size(coverSize).clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.surfaceVariant)

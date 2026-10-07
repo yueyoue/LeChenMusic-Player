@@ -1962,7 +1962,7 @@ fun loadAudiobooks() {
             _currentAudiobookChapters.value = chapters
             _currentChapterIndex.value = chapters.indexOfFirst { it.id == chapter.id }.coerceAtLeast(0)
             val url = repository.getAudiobookChapterStreamUrl(book.id, chapter.id)
-            val coverUrl = repository.getAudiobookCoverUrl(book.id)
+            val coverUrl = repository.getAudiobookCoverUrl(book.id, book.updatedAt)
             playerManager.playUrl(url, chapter.title, book.title, "audiobook_${book.id}_${chapter.id}", coverUrl)
             _audiobookIsPlaying.value = true
         } catch (e: Exception) {
@@ -2087,7 +2087,7 @@ fun loadAudiobooks() {
                 if (resumeChapter != null) {
                     val chapterIndex = chapters.indexOfFirst { it.id == resumeChapter.id }.coerceAtLeast(0)
                     val url = repository.getAudiobookChapterStreamUrl(book.id, resumeChapter.id)
-                    val coverUrl = repository.getAudiobookCoverUrl(book.id)
+                    val coverUrl = repository.getAudiobookCoverUrl(book.id, book.updatedAt)
                     val seekToMs = progress!!.position * 1000L
 
                     android.util.Log.d("LeChenMusic", "resumeAudiobook: chapter=${resumeChapter.title}, seekTo=${seekToMs}ms")
@@ -2107,7 +2107,7 @@ fun loadAudiobooks() {
                     android.util.Log.d("LeChenMusic", "resumeAudiobook: no progress, playing from start")
                     val firstChapter = chapters[0]
                     val url = repository.getAudiobookChapterStreamUrl(book.id, firstChapter.id)
-                    val coverUrl = repository.getAudiobookCoverUrl(book.id)
+                    val coverUrl = repository.getAudiobookCoverUrl(book.id, book.updatedAt)
 
                     kotlinx.coroutines.withContext(Dispatchers.Main) {
                         _currentAudiobook.value = book

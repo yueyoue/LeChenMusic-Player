@@ -133,7 +133,7 @@ private fun RecentListenedItem(
 ) {
     val book = bwp.toAudiobook()
     val progress = bwp.progress
-    val coverUrl = getAudiobookCoverUrl(serverUrl, username, password, book.id)
+    val coverUrl = getAudiobookCoverUrl(serverUrl, username, password, book.id, book.updatedAt)
 
     Surface(
         modifier = Modifier

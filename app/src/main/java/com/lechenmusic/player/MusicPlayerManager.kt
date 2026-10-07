@@ -542,7 +542,12 @@ class MusicPlayerManager(private val context: Context) {
 
         val seq = notifSeq.incrementAndGet()
         scope.launch(Dispatchers.IO) {
-            val albumArt = loadAlbumArt(song.coverArt)
+            // 有声书封面来自 audiobookCoverUrl（带 updatedAt 版本号的完整 URL）；音乐走 coverArtId
+            val albumArt = if (isAudiobook) {
+                loadAudiobookCoverBitmap(_audiobookCoverUrl.value)
+            } else {
+                loadAlbumArt(song.coverArt)
+            }
             if (seq != notifSeq.get()) return@launch // 已有更新的通知任务在跑，丢弃过期的这一个
 
             if (albumArt != null) {
@@ -637,32 +642,63 @@ class MusicPlayerManager(private val context: Context) {
             val repo = repository ?: return null
             // 请求服务端缩放到 320px（Subsonic getCoverArt 标准 size 参数），不要原图
             val url = repo.getCoverArtUrl(coverArtId, size = 320) ?: return null
-            val connection = URL(url).openConnection()
-            connection.connectTimeout = 5000
-            connection.readTimeout = 5000
-            val bytes = connection.getInputStream().use { it.readBytes() }
-            // 两趟解码：先探边界算 inSampleSize，再降采样解码，最后缩放到通知栏尺寸。
-            // 绝不能对原图直接 decodeStream——大封面 ARGB_8888 一张几十 MB，直接 OOM（crash_log1）。
-            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
-            val size = (128 * context.resources.displayMetrics.density).toInt().coerceAtLeast(128)
-            var sample = 1
-            while (bounds.outWidth / (sample * 2) >= size && bounds.outHeight / (sample * 2) >= size) {
-                sample *= 2
-            }
-            val opts = BitmapFactory.Options().apply { inSampleSize = sample }
-            val decoded = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, opts) ?: return null
-            val scaled = if (decoded.width == size && decoded.height == size) {
-                decoded
-            } else {
-                val s = Bitmap.createScaledBitmap(decoded, size, size, true)
-                if (s !== decoded) decoded.recycle()
-                s
-            }
+            val bytes = downloadCoverBytes(url) ?: return null
+            val scaled = decodeScaledCover(bytes) ?: return null
             albumArtCache.put(coverArtId, scaled)
             scaled
         } catch (e: Exception) {
             null
+        }
+    }
+
+    /**
+     * 有声书封面：直接下载完整 URL（带 updatedAt 版本号，换封面后 URL 变自动失效重下）。
+     * 与 loadAlbumArt 共用同一 LRU 缓存（key 为 URL，不会与 coverArtId 撞）。
+     */
+    private fun loadAudiobookCoverBitmap(url: String?): Bitmap? {
+        if (url.isNullOrBlank()) return null
+        albumArtCache.get(url)?.let { return it }
+        return try {
+            val bytes = downloadCoverBytes(url) ?: return null
+            val scaled = decodeScaledCover(bytes) ?: return null
+            albumArtCache.put(url, scaled)
+            scaled
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun downloadCoverBytes(url: String): ByteArray? {
+        return try {
+            val connection = URL(url).openConnection()
+            connection.connectTimeout = 5000
+            connection.readTimeout = 5000
+            connection.getInputStream().use { it.readBytes() }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    /**
+     * 两趟解码：先探边界算 inSampleSize，再降采样解码，最后缩放到通知栏尺寸。
+     * 绝不能对原图直接 decodeStream——大封面 ARGB_8888 一张几十 MB，直接 OOM（crash_log1）。
+     */
+    private fun decodeScaledCover(bytes: ByteArray): Bitmap? {
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+        val size = (128 * context.resources.displayMetrics.density).toInt().coerceAtLeast(128)
+        var sample = 1
+        while (bounds.outWidth / (sample * 2) >= size && bounds.outHeight / (sample * 2) >= size) {
+            sample *= 2
+        }
+        val opts = BitmapFactory.Options().apply { inSampleSize = sample }
+        val decoded = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, opts) ?: return null
+        return if (decoded.width == size && decoded.height == size) {
+            decoded
+        } else {
+            val s = Bitmap.createScaledBitmap(decoded, size, size, true)
+            if (s !== decoded) decoded.recycle()
+            s
         }
     }
 

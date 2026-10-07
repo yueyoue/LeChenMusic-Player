@@ -501,7 +501,7 @@ private fun AudiobookRow(
             shape = RoundedCornerShape(8.dp),
             color = MaterialTheme.colorScheme.surfaceVariant
         ) {
-            val url = getAudiobookCoverUrl(serverUrl, username, password, book.id)
+            val url = getAudiobookCoverUrl(serverUrl, username, password, book.id, book.updatedAt)
             if (url != null) {
                 AsyncImage(
                     model = url,
@@ -1044,7 +1044,7 @@ private fun TabletAudiobooksTab(
                         .fillMaxWidth()
                         .aspectRatio(1f)
                 ) {
-                    val coverUrl = getAudiobookCoverUrl(serverUrl, username, password, book.id)
+                    val coverUrl = getAudiobookCoverUrl(serverUrl, username, password, book.id, book.updatedAt)
                     if (coverUrl != null) {
                         AsyncImage(
                             model = coverUrl,

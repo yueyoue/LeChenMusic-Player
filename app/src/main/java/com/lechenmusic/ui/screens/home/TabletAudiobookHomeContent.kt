@@ -375,7 +375,7 @@ private fun AudiobookHero(
                 AudiobookCarouselItem(
                     title = book.title,
                     imageUrl = null,
-                    coverUrl = getAudiobookCoverUrl(serverUrl, username, password, book.id),
+                    coverUrl = getAudiobookCoverUrl(serverUrl, username, password, book.id, book.updatedAt),
                     link = "",
                     audiobookId = book.id
                 )
@@ -574,7 +574,7 @@ private fun ContinueListeningTabletRow(
     password: String,
     onClick: () -> Unit
 ) {
-    val coverUrl = getAudiobookCoverUrl(serverUrl, username, password, book.id)
+    val coverUrl = getAudiobookCoverUrl(serverUrl, username, password, book.id, book.updatedAt)
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -743,7 +743,7 @@ private fun AudiobookCompactCard(
                 .fillMaxWidth()
                 .aspectRatio(1f)
         ) {
-            val coverUrl = getAudiobookCoverUrl(serverUrl, username, password, book.id)
+            val coverUrl = getAudiobookCoverUrl(serverUrl, username, password, book.id, book.updatedAt)
             if (coverUrl != null) {
                 AsyncImage(
                     model = coverUrl,
@@ -836,7 +836,7 @@ private fun PopularBookRow(
             Spacer(modifier = Modifier.width(12.dp))
 
             // 封面
-            val coverUrl = getAudiobookCoverUrl(serverUrl, username, password, book.id)
+            val coverUrl = getAudiobookCoverUrl(serverUrl, username, password, book.id, book.updatedAt)
             Surface(
                 shape = RoundedCornerShape(10.dp),
                 modifier = Modifier.size(48.dp),
