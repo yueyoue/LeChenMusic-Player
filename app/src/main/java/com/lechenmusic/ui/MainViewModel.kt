@@ -1098,17 +1098,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _allSongsLoading.value = true
             _allSongsLoadError.value = null
 
-            // Step 1: Load cached songs first for instant display
-            val cachedJson = settings.cachedAllSongsJson.first()
-            if (cachedJson.isNotBlank()) {
-                try {
-                    val type = object : TypeToken<List<Song>>() {}.type
-                    val cachedSongs: List<Song> = Gson().fromJson(cachedJson, type)
-                    if (cachedSongs.isNotEmpty()) {
-                        _allSongs.value = cachedSongs
-                        _allSongsLoading.value = false
-                    }
-                } catch (_: Exception) { }
+            // Step 1: Load cached songs first for instant display（流式读文件缓存，见 readAllSongsCache）
+            val cachedSongs = readAllSongsCache()
+            if (cachedSongs.isNotEmpty()) {
+                _allSongs.value = cachedSongs
+                _allSongsLoading.value = false
             }
 
             // Step 2: Fetch fresh data from server
@@ -1145,11 +1139,61 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // 全曲库缓存改存文件（流式读写），不再用 Gson().toJson() 把整库拼成一个巨型 String
+    // 再塞进 Preferences DataStore：大曲库下一次同步就产生几十上百 MB 的字符串副本
+    // （toJson 的 String + DataStore 序列化副本），直接把 256MB 堆打爆（crash_log1 的 OOM）。
+    private val allSongsCacheFile: java.io.File
+        get() = java.io.File(getApplication<LeChenApp>().filesDir, "all_songs_cache.json")
+
     private suspend fun saveSongsToCache(songs: List<Song>) {
-        try {
-            val json = Gson().toJson(songs)
-            settings.saveCachedAllSongsJson(json)
-        } catch (_: Exception) { }
+        withContext(Dispatchers.IO) {
+            try {
+                java.io.FileWriter(allSongsCacheFile).use { writer ->
+                    val jsonWriter = com.google.gson.stream.JsonWriter(java.io.BufferedWriter(writer))
+                    val gson = Gson()
+                    jsonWriter.beginArray()
+                    for (song in songs) gson.toJson(song, Song::class.java, jsonWriter)
+                    jsonWriter.endArray()
+                }
+                // 迁移：清掉旧版 DataStore 里的大字符串
+                settings.saveCachedAllSongsJson("")
+            } catch (_: Exception) { }
+        }
+    }
+
+    /** 读全曲库缓存：优先文件（流式解析），兼容旧版 DataStore 大字符串并迁移 */
+    private suspend fun readAllSongsCache(): List<Song> {
+        return withContext(Dispatchers.IO) {
+            val file = allSongsCacheFile
+            if (file.exists()) {
+                try {
+                    java.io.FileReader(file).use { reader ->
+                        val jsonReader = com.google.gson.stream.JsonReader(java.io.BufferedReader(reader))
+                        val gson = Gson()
+                        val songs = mutableListOf<Song>()
+                        jsonReader.beginArray()
+                        while (jsonReader.hasNext()) {
+                            songs.add(gson.fromJson(jsonReader, Song::class.java))
+                        }
+                        jsonReader.endArray()
+                        return@withContext songs
+                    }
+                } catch (_: Exception) { }
+            }
+            // 旧版缓存（DataStore 大字符串）：读出来后迁移到文件
+            try {
+                val legacy = settings.cachedAllSongsJson.first()
+                if (legacy.isNotBlank()) {
+                    val type = object : TypeToken<List<Song>>() {}.type
+                    val songs: List<Song> = Gson().fromJson(legacy, type)
+                    if (songs.isNotEmpty()) {
+                        saveSongsToCache(songs)
+                        return@withContext songs
+                    }
+                }
+            } catch (_: Exception) { }
+            emptyList()
+        }
     }
 
     fun addToPlaylist(playlistId: String, songId: String, playlistOwner: String = "") {
@@ -1279,6 +1323,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         cancelTimerWithCountdown()
         playerManager.clearTimerExpired()
         playerManager.setTimer(minutes)
+        // Android 13+ 默认无精确闹钟权限：定时已用非精确闹钟兜底（不会崩），
+        // 但后台到点可能有分钟级误差，提示用户可去系统设置开启以获得精确停止。
+        if (!playerManager.canScheduleExactAlarms()) {
+            _toastMessage.value = "定时已设置；如需后台精确停止，请在系统设置中允许「闹钟和提醒」权限"
+        }
         _timerRemainingSeconds.value = minutes * 60L
         timerTargetTime = System.currentTimeMillis() + minutes * 60 * 1000L
         timerType = type

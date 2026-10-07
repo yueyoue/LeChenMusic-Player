@@ -133,11 +133,16 @@ object ApiClient {
         return normalized
     }
 
-    fun getCoverArtUrl(baseUrl: String, username: String, password: String, coverArtId: String?): String? {
+    /**
+     * @param size >0 时附带 &size= 参数，由服务端直接缩放后返回（几百 KB 的原图会变成几十 KB），
+     *             小缩略图/通知栏封面务必传；0 保持原图（全屏大图用）。
+     */
+    fun getCoverArtUrl(baseUrl: String, username: String, password: String, coverArtId: String?, size: Int = 0): String? {
         if (coverArtId.isNullOrBlank()) return null
         val normalizedUrl = normalizeUrl(baseUrl)
         val encodedPass = if (password.startsWith("enc:")) password else "enc:${password.toByteArray().joinToString("") { "%02x".format(it) }}"
-        return "${normalizedUrl}rest/getCoverArt?u=$username&p=$encodedPass&id=$coverArtId&v=1.16.1&c=lechenmusic"
+        val sizeParam = if (size > 0) "&size=$size" else ""
+        return "${normalizedUrl}rest/getCoverArt?u=$username&p=$encodedPass&id=$coverArtId&v=1.16.1&c=lechenmusic" + sizeParam
     }
 
     fun getStreamUrl(baseUrl: String, username: String, password: String, songId: String): String {

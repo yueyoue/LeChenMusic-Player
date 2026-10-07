@@ -544,8 +544,10 @@ class MusicPlayerManager(private val context: Context) {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val seq = notifSeq.incrementAndGet()
         scope.launch(Dispatchers.IO) {
             val albumArt = loadAlbumArt(song.coverArt)
+            if (seq != notifSeq.get()) return@launch // 已有更新的通知任务在跑，丢弃过期的这一个
 
             if (albumArt != null) {
                 val metaWithArt = MediaMetadataCompat.Builder()
@@ -615,11 +617,16 @@ class MusicPlayerManager(private val context: Context) {
                 )
             }
 
+            if (seq != notifSeq.get()) return@launch // 期间又有新更新，让最新的那个去 notify
             val notification = builder.build()
 
             nm.notify(NOTIFICATION_ID, notification)
         }
     }
+
+    // 通知更新代号：同一时刻只保留最新一次更新，避免连续切歌/状态变化时多个
+    // updateNotification 协程并发跑（每个都可能解码封面），旧的直接丢弃。
+    private val notifSeq = java.util.concurrent.atomic.AtomicInteger(0)
 
     // 通知栏封面缓存：通知每次播放/暂停/切歌都会重建，旧实现每次都重新走一趟网络下载小图。
     // 按 coverArtId 缓存缩放后的 Bitmap，LRU 上限 8MB。
@@ -632,15 +639,30 @@ class MusicPlayerManager(private val context: Context) {
         albumArtCache.get(coverArtId)?.let { return it }
         return try {
             val repo = repository ?: return null
-            val url = repo.getCoverArtUrl(coverArtId) ?: return null
+            // 请求服务端缩放到 320px（Subsonic getCoverArt 标准 size 参数），不要原图
+            val url = repo.getCoverArtUrl(coverArtId, size = 320) ?: return null
             val connection = URL(url).openConnection()
             connection.connectTimeout = 5000
             connection.readTimeout = 5000
-            val inputStream = connection.getInputStream()
-            val bitmap = BitmapFactory.decodeStream(inputStream)
-            inputStream.close()
-            val size = (128 * context.resources.displayMetrics.density).toInt()
-            val scaled = Bitmap.createScaledBitmap(bitmap, size, size, true)
+            val bytes = connection.getInputStream().use { it.readBytes() }
+            // 两趟解码：先探边界算 inSampleSize，再降采样解码，最后缩放到通知栏尺寸。
+            // 绝不能对原图直接 decodeStream——大封面 ARGB_8888 一张几十 MB，直接 OOM（crash_log1）。
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+            val size = (128 * context.resources.displayMetrics.density).toInt().coerceAtLeast(128)
+            var sample = 1
+            while (bounds.outWidth / (sample * 2) >= size && bounds.outHeight / (sample * 2) >= size) {
+                sample *= 2
+            }
+            val opts = BitmapFactory.Options().apply { inSampleSize = sample }
+            val decoded = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, opts) ?: return null
+            val scaled = if (decoded.width == size && decoded.height == size) {
+                decoded
+            } else {
+                val s = Bitmap.createScaledBitmap(decoded, size, size, true)
+                if (s !== decoded) decoded.recycle()
+                s
+            }
             albumArtCache.put(coverArtId, scaled)
             scaled
         } catch (e: Exception) {
@@ -945,6 +967,16 @@ class MusicPlayerManager(private val context: Context) {
         _isStarred.value = song?.isStarred == true
     }
 
+    /**
+     * 设置定时停止。
+     *
+     * Android 12（API 31）起 setAlarmClock 必须持有 SCHEDULE_EXACT_ALARM / USE_EXACT_ALARM，
+     * Android 13+（targetSdk 33+）SCHEDULE_EXACT_ALARM 默认不授予，直接调用会抛
+     * SecurityException 闪退（crash_log2 就是这么崩的）。策略：
+     * 1. 有精确闹钟权限 → setAlarmClock（不受 Doze/厂商后台限制，准时）
+     * 2. 无权限 → setWindow 兜底（无需任何权限，误差最多一个窗口），绝不抛异常；
+     *    前台另有 ViewModel 的 countdown 协程精确到点暂停，所以用户体验上依然准时。
+     */
     fun setTimer(minutes: Int) {
         cancelTimer()
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
@@ -955,10 +987,36 @@ class MusicPlayerManager(private val context: Context) {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         val triggerTime = System.currentTimeMillis() + minutes * 60 * 1000L
-        // setAlarmClock：精确定时，不受 Doze/厂商后台限制，后台播放也能准时停止
-        // （普通 set() 是非精确闹钟，后台会被系统批量推迟）
-        val clockInfo = AlarmManager.AlarmClockInfo(triggerTime, pendingIntent)
-        alarmManager.setAlarmClock(clockInfo, pendingIntent)
+        try {
+            if (canScheduleExactAlarms()) {
+                // setAlarmClock：精确定时，不受 Doze/厂商后台限制，后台播放也能准时停止
+                // （普通 set() 是非精确闹钟，后台会被系统批量推迟）
+                val clockInfo = AlarmManager.AlarmClockInfo(triggerTime, pendingIntent)
+                alarmManager.setAlarmClock(clockInfo, pendingIntent)
+            } else {
+                // 无精确闹钟权限：setWindow 兜底，窗口 60 秒，无需权限也不会崩
+                alarmManager.setWindow(AlarmManager.RTC_WAKEUP, triggerTime, 60_000L, pendingIntent)
+            }
+        } catch (e: SecurityException) {
+            // 厂商/系统差异兜底：任何精确闹钟异常都退回非精确闹钟，定时功能绝不闪退
+            try {
+                alarmManager.setWindow(AlarmManager.RTC_WAKEUP, triggerTime, 60_000L, pendingIntent)
+            } catch (_: Exception) { }
+        } catch (_: Exception) { }
+    }
+
+    /** 是否能设置精确闹钟（Android 12+ 需用户在系统设置「闹钟和提醒」中授予） */
+    fun canScheduleExactAlarms(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            try {
+                am.canScheduleExactAlarms()
+            } catch (_: Exception) {
+                false
+            }
+        } else {
+            true
+        }
     }
 
     fun cancelTimer() {

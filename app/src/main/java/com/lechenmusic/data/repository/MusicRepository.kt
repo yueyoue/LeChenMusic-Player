@@ -36,8 +36,8 @@ class MusicRepository {
         return token != null
     }
 
-    fun getCoverArtUrl(coverArtId: String?): String? {
-        return ApiClient.getCoverArtUrl(serverUrl, username, password, coverArtId)
+    fun getCoverArtUrl(coverArtId: String?, size: Int = 0): String? {
+        return ApiClient.getCoverArtUrl(serverUrl, username, password, coverArtId, size)
     }
 
     fun getStreamUrl(songId: String): String {

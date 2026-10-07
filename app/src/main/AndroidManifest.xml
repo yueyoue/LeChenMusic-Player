@@ -11,6 +11,10 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.MEDIA_CONTENT_CONTROL" />
+    <!-- 定时停止（睡眠定时）：Android 12+ AlarmManager.setAlarmClock 必须持有该权限，
+         否则抛 SecurityException 闪退（crash_log2）。Android 13+（targetSdk 33+）默认不授予，
+         需在系统设置「闹钟和提醒」中由用户开启；APP 侧已做无权限降级兜底（setWindow）。 -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <!-- 自动更新：允许安装 APK -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
