@@ -86,6 +86,7 @@ fun PlayerScreen(
     var showMoreSheet by remember { mutableStateOf(false) }
     var showPlaylistSelectionDialog by remember { mutableStateOf(false) }
     val timerMinutes by viewModel.audiobookTimerMinutes.collectAsState()
+    val timerRemainingSeconds by viewModel.timerRemainingSeconds.collectAsState()
     val toastMessage by viewModel.toastMessage.collectAsState()
     val context = LocalContext.current
 
@@ -462,7 +463,11 @@ fun PlayerScreen(
                         modifier = Modifier.size(24.dp)
                     )
                     Text(
-                        if (timerMinutes > 0) "${timerMinutes}分" else "定时",
+                        if (timerMinutes > 0 && timerRemainingSeconds > 0) {
+                            val rm = (timerRemainingSeconds / 60).toInt()
+                            val rs = (timerRemainingSeconds % 60).toInt()
+                            "%02d:%02d".format(rm, rs)
+                        } else if (timerMinutes > 0) "${timerMinutes}分" else "定时",
                         fontSize = 10.sp,
                         color = if (timerMinutes > 0) MaterialTheme.colorScheme.primary
                         else MaterialTheme.colorScheme.onSurfaceVariant
@@ -479,6 +484,7 @@ fun PlayerScreen(
             // 定时器倒计时显示条
             com.lechenmusic.ui.components.SleepTimerCountdownBar(
                 timerMinutes = timerMinutes,
+                timerRemainingSeconds = timerRemainingSeconds,
                 onCancelTimer = { viewModel.audiobookSetTimer(0) }
             )
         }

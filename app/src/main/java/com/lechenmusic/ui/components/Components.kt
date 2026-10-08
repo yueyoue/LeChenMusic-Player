@@ -715,22 +715,16 @@ fun SleepTimerDialog(
 @Composable
 fun SleepTimerCountdownBar(
     timerMinutes: Int,
+    timerRemainingSeconds: Long,
     onCancelTimer: () -> Unit
 ) {
     if (timerMinutes <= 0) return
 
-    // 倒计时状态
-    var remainingSeconds by remember(timerMinutes) { mutableStateOf(timerMinutes * 60L) }
-    val targetTime = remember(timerMinutes) { System.currentTimeMillis() + timerMinutes * 60 * 1000L }
-
-    LaunchedEffect(timerMinutes) {
-        while (true) {
-            kotlinx.coroutines.delay(1000)
-            remainingSeconds = ((targetTime - System.currentTimeMillis()) / 1000).coerceAtLeast(0)
-            if (remainingSeconds <= 0) break
-        }
-    }
-
+    // Use the authoritative remaining time from the view model (the real sleep-timer countdown).
+    // A local countdown here would restart to the full duration on every recomposition / when
+    // re-entering the player, so it never actually ticked down as a clock. The global value stays
+    // in sync with the alarm-driven timer and renders as a real countdown clock.
+    val remainingSeconds = if (timerRemainingSeconds > 0) timerRemainingSeconds else (timerMinutes * 60L)
     val hours = remainingSeconds / 3600
     val mins = (remainingSeconds % 3600) / 60
     val secs = remainingSeconds % 60

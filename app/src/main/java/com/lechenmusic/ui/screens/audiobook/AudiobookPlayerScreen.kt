@@ -341,6 +341,13 @@ fun AudiobookPlayerScreen(
                 }
             }
 
+            // 定时关闭倒计时时钟（全屏播放器）
+            com.lechenmusic.ui.components.SleepTimerCountdownBar(
+                timerMinutes = timerMinutes,
+                timerRemainingSeconds = timerRemainingSeconds,
+                onCancelTimer = { onSetTimer(0) }
+            )
+
             // Timer dialog（共享组件）
             if (showTimerSheet) {
                 com.lechenmusic.ui.components.SleepTimerDialog(
