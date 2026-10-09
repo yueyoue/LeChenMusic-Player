@@ -708,6 +708,18 @@ fun SleepTimerDialog(
 }
 
 /**
+ * 定时倒计时文本：<1 小时 MM:SS，≥1 小时 H:MM:SS。
+ * 音乐 / 有声书（手机 + 平板）所有「定时停止播放」图标下方的倒计时共用此格式。
+ */
+fun formatTimerCountdown(remainingSeconds: Long): String {
+    val hours = remainingSeconds / 3600
+    val mins = (remainingSeconds % 3600) / 60
+    val secs = remainingSeconds % 60
+    return if (hours > 0) "%d:%02d:%02d".format(hours, mins, secs)
+           else "%02d:%02d".format(mins, secs)
+}
+
+/**
  * 定时器倒计时显示条 — 底部悬浮显示
  * @param timerMinutes 当前设定的定时分钟数
  * @param onCancelTimer 取消定时回调
@@ -725,11 +737,7 @@ fun SleepTimerCountdownBar(
     // re-entering the player, so it never actually ticked down as a clock. The global value stays
     // in sync with the alarm-driven timer and renders as a real countdown clock.
     val remainingSeconds = if (timerRemainingSeconds > 0) timerRemainingSeconds else (timerMinutes * 60L)
-    val hours = remainingSeconds / 3600
-    val mins = (remainingSeconds % 3600) / 60
-    val secs = remainingSeconds % 60
-    val timeStr = if (hours > 0) "%d:%02d:%02d".format(hours, mins, secs)
-                  else "%02d:%02d".format(mins, secs)
+    val timeStr = formatTimerCountdown(remainingSeconds)
 
     Surface(
         modifier = Modifier.fillMaxWidth(),

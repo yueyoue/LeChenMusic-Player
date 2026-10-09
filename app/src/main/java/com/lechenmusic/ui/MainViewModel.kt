@@ -168,6 +168,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _timerRemainingSeconds = MutableStateFlow(0L)
     val timerRemainingSeconds: StateFlow<Long> = _timerRemainingSeconds.asStateFlow()
 
+    /**
+     * 当前生效的定时分钟数，0 = 未设置。
+     * 全局只有一个睡眠定时器（音乐 / 有声书共用同一个闹钟），所以音乐和有声书 UI 读同一份状态：
+     * 无论在哪种播放器里设置，所有「定时停止播放」图标下方都显示同一个倒计时；未设置时不显示。
+     */
+    private val _timerMinutes = MutableStateFlow(0)
+    val timerMinutes: StateFlow<Int> = _timerMinutes.asStateFlow()
+    // 兼容旧命名（音乐 / 有声书 UI 各自引用）：指向同一份全局定时状态
+    val musicTimerMinutes: StateFlow<Int> = _timerMinutes.asStateFlow()
+    val audiobookTimerMinutes: StateFlow<Int> = _timerMinutes.asStateFlow()
+
     // Sync status
     private val _syncStatus = MutableStateFlow("")
     val syncStatus: StateFlow<String> = _syncStatus.asStateFlow()
@@ -511,8 +522,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 clearTimerTarget()
                 _timerRemainingSeconds.value = 0
-                _musicTimerMinutes.value = 0
-                _audiobookTimerMinutes.value = 0
+                _timerMinutes.value = 0
             } catch (_: Exception) {}
             // 重置影视模块状态
             _cachedAllAlbums.value = emptyList()
@@ -1271,8 +1281,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 timerTargetTime = savedTarget
                 timerType = savedType
                 _timerRemainingSeconds.value = remaining
-                if (savedType == "music") _musicTimerMinutes.value = savedMinutes
-                else _audiobookTimerMinutes.value = savedMinutes
+                _timerMinutes.value = savedMinutes
                 startCountdown()
             } else {
                 // 定时已到点（含后台到点后回到前台）：清理状态并确保播放停止（自愈）
@@ -1286,8 +1295,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     /** 清理定时分钟数显示状态（定时到点/取消后都要调用，否则UI会卡在预定时间不动） */
     private fun clearTimerMinutesState() {
-        _musicTimerMinutes.value = 0
-        _audiobookTimerMinutes.value = 0
+        _timerMinutes.value = 0
     }
 
     private fun startCountdown() {
@@ -1329,6 +1337,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _toastMessage.value = "定时已设置；如需后台精确停止，请在系统设置中允许「闹钟和提醒」权限"
         }
         _timerRemainingSeconds.value = minutes * 60L
+        // 必须在上面 cancelTimerWithCountdown() 清零之后再赋值，
+        // 否则 UI 判定「未设置」，定时图标下方的倒计时不会显示
+        _timerMinutes.value = minutes
         timerTargetTime = System.currentTimeMillis() + minutes * 60 * 1000L
         timerType = type
         saveTimerTarget(timerTargetTime, minutes, type)
@@ -1515,28 +1526,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _audiobookPlaybackSpeed = MutableStateFlow(1f)
     val audiobookPlaybackSpeed: StateFlow<Float> = _audiobookPlaybackSpeed.asStateFlow()
 
-    private val _audiobookTimerMinutes = MutableStateFlow(0)
-    val audiobookTimerMinutes: StateFlow<Int> = _audiobookTimerMinutes.asStateFlow()
-
     fun audiobookSetTimer(minutes: Int) {
-        _audiobookTimerMinutes.value = minutes
-        if (minutes > 0) {
-            setTimerWithCountdown(minutes, "audiobook")
-        } else {
-            cancelTimerWithCountdown()
-        }
+        if (minutes > 0) setTimerWithCountdown(minutes, "audiobook") else cancelTimerWithCountdown()
     }
 
-    private val _musicTimerMinutes = MutableStateFlow(0)
-    val musicTimerMinutes: StateFlow<Int> = _musicTimerMinutes.asStateFlow()
-
     fun musicSetTimer(minutes: Int) {
-        _musicTimerMinutes.value = minutes
-        if (minutes > 0) {
-            setTimerWithCountdown(minutes)
-        } else {
-            cancelTimerWithCountdown()
-        }
+        if (minutes > 0) setTimerWithCountdown(minutes, "music") else cancelTimerWithCountdown()
     }
 
     fun audiobookChangeSpeed(speed: Float) {

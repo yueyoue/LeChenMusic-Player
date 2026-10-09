@@ -265,8 +265,9 @@ fun TabletPlayerScreen(
                         IconButton(onClick = { showSleepTimer = true }) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Icon(Icons.Default.Timer, "定时", tint = if (timerMin > 0) Color(0xFF4CAF50) else Color.White.copy(alpha = 0.7f), modifier = Modifier.size(24.dp))
-                                if (timerMin > 0 && timerRem > 0) {
-                                    Text("%02d:%02d".format((timerRem / 60).toInt(), (timerRem % 60).toInt()), fontSize = 9.sp, color = Color(0xFF4CAF50))
+                                // 图标下方倒计时：已设置才显示，未设置不显示
+                                if (timerRem > 0) {
+                                    Text(com.lechenmusic.ui.components.formatTimerCountdown(timerRem), fontSize = 9.sp, color = Color(0xFF4CAF50))
                                 } else if (timerMin > 0) {
                                     Text("${timerMin}分", fontSize = 9.sp, color = Color(0xFF4CAF50))
                                 }

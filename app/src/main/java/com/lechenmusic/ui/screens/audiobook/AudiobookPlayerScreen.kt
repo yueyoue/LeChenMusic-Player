@@ -300,10 +300,9 @@ fun AudiobookPlayerScreen(
                             tint = if (timerMinutes > 0) MaterialTheme.colorScheme.primary
                                    else MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        if (timerMinutes > 0 && timerRemainingSeconds > 0) {
-                            val remMin = (timerRemainingSeconds / 60).toInt()
-                            val remSec = (timerRemainingSeconds % 60).toInt()
-                            Text("%02d:%02d".format(remMin, remSec), fontSize = 9.sp, color = MaterialTheme.colorScheme.primary)
+                        // 图标下方倒计时：已设置才显示，未设置不显示
+                        if (timerRemainingSeconds > 0) {
+                            Text(com.lechenmusic.ui.components.formatTimerCountdown(timerRemainingSeconds), fontSize = 9.sp, color = MaterialTheme.colorScheme.primary)
                         } else if (timerMinutes > 0) {
                             Text("${timerMinutes}分", fontSize = 9.sp, color = MaterialTheme.colorScheme.primary)
                         }

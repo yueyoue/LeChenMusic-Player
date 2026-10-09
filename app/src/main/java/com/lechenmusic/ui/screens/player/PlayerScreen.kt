@@ -463,10 +463,9 @@ fun PlayerScreen(
                         modifier = Modifier.size(24.dp)
                     )
                     Text(
-                        if (timerMinutes > 0 && timerRemainingSeconds > 0) {
-                            val rm = (timerRemainingSeconds / 60).toInt()
-                            val rs = (timerRemainingSeconds % 60).toInt()
-                            "%02d:%02d".format(rm, rs)
+                        // 图标下方倒计时：已设置才显示，未设置只显示「定时」
+                        if (timerRemainingSeconds > 0) {
+                            com.lechenmusic.ui.components.formatTimerCountdown(timerRemainingSeconds)
                         } else if (timerMinutes > 0) "${timerMinutes}分" else "定时",
                         fontSize = 10.sp,
                         color = if (timerMinutes > 0) MaterialTheme.colorScheme.primary
