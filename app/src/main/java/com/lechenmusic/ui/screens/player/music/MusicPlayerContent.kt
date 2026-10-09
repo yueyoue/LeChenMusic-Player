@@ -894,11 +894,11 @@ private fun PlayerControls(
                                 tint = if (timerMinutes > 0) playerIconTint else playerIconTintSecondary,
                                 modifier = Modifier.size(20.dp))
                         }
-                        // 图标下方倒计时：已设置才显示，未设置不显示
+                        // 图标下方倒计时：已设置才显示，未设置不显示（12sp，9sp 看不清）
                         if (timerRemainingSeconds > 0) {
-                            Text(com.lechenmusic.ui.components.formatTimerCountdown(timerRemainingSeconds), fontSize = 9.sp, color = playerIconTint)
+                            Text(com.lechenmusic.ui.components.formatTimerCountdown(timerRemainingSeconds), fontSize = 12.sp, color = playerIconTint)
                         } else if (timerMinutes > 0) {
-                            Text("${timerMinutes}分", fontSize = 9.sp, color = playerIconTint)
+                            Text("${timerMinutes}分", fontSize = 12.sp, color = playerIconTint)
                         }
                     }
                     IconButton(onClick = onToggleStar, modifier = Modifier.size(40.dp)) {
@@ -1003,11 +1003,11 @@ private fun PlayerControls(
                                 tint = if (timerMinutes > 0) playerIconTint else playerIconTintSecondary,
                                 modifier = Modifier.size(20.dp))
                         }
-                        // 图标下方倒计时：已设置才显示，未设置不显示
+                        // 图标下方倒计时：已设置才显示，未设置不显示（12sp，9sp 看不清）
                         if (timerRemainingSeconds > 0) {
-                            Text(com.lechenmusic.ui.components.formatTimerCountdown(timerRemainingSeconds), fontSize = 9.sp, color = playerIconTint)
+                            Text(com.lechenmusic.ui.components.formatTimerCountdown(timerRemainingSeconds), fontSize = 12.sp, color = playerIconTint)
                         } else if (timerMinutes > 0) {
-                            Text("${timerMinutes}分", fontSize = 9.sp, color = playerIconTint)
+                            Text("${timerMinutes}分", fontSize = 12.sp, color = playerIconTint)
                         }
                     }
                     var showAddMenu by remember { mutableStateOf(false) }

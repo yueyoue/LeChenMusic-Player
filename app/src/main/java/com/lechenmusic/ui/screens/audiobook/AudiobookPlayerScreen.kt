@@ -300,11 +300,11 @@ fun AudiobookPlayerScreen(
                             tint = if (timerMinutes > 0) MaterialTheme.colorScheme.primary
                                    else MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        // 图标下方倒计时：已设置才显示，未设置不显示
+                        // 图标下方倒计时：已设置才显示，未设置不显示（12sp，9sp 看不清）
                         if (timerRemainingSeconds > 0) {
-                            Text(com.lechenmusic.ui.components.formatTimerCountdown(timerRemainingSeconds), fontSize = 9.sp, color = MaterialTheme.colorScheme.primary)
+                            Text(com.lechenmusic.ui.components.formatTimerCountdown(timerRemainingSeconds), fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
                         } else if (timerMinutes > 0) {
-                            Text("${timerMinutes}分", fontSize = 9.sp, color = MaterialTheme.colorScheme.primary)
+                            Text("${timerMinutes}分", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
                         }
                     }
                 }

@@ -467,7 +467,7 @@ fun PlayerScreen(
                         if (timerRemainingSeconds > 0) {
                             com.lechenmusic.ui.components.formatTimerCountdown(timerRemainingSeconds)
                         } else if (timerMinutes > 0) "${timerMinutes}分" else "定时",
-                        fontSize = 10.sp,
+                        fontSize = 12.sp,
                         color = if (timerMinutes > 0) MaterialTheme.colorScheme.primary
                         else MaterialTheme.colorScheme.onSurfaceVariant
                     )

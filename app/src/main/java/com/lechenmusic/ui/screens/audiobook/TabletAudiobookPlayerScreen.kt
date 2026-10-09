@@ -289,11 +289,11 @@ fun TabletAudiobookPlayerScreen(
                                 Icon(Icons.Default.Timer, "定时",
                                     tint = if (timerMinutes > 0) Color(0xFFFBBF24) else Color.White.copy(alpha = 0.7f),
                                     modifier = Modifier.size(24.dp))
-                                // 图标下方倒计时：已设置才显示，未设置不显示
+                                // 图标下方倒计时：已设置才显示，未设置不显示（12sp，9sp 看不清）
                                 if (timerRemainingSeconds > 0) {
-                                    Text(com.lechenmusic.ui.components.formatTimerCountdown(timerRemainingSeconds), fontSize = 9.sp, color = Color(0xFFFBBF24))
+                                    Text(com.lechenmusic.ui.components.formatTimerCountdown(timerRemainingSeconds), fontSize = 12.sp, color = Color(0xFFFBBF24))
                                 } else if (timerMinutes > 0) {
-                                    Text("${timerMinutes}分", fontSize = 9.sp, color = Color(0xFFFBBF24))
+                                    Text("${timerMinutes}分", fontSize = 12.sp, color = Color(0xFFFBBF24))
                                 }
                             }
                         }
