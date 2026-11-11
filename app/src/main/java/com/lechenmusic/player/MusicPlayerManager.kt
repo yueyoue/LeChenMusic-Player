@@ -1404,7 +1404,7 @@ class MusicPlayerManager(private val context: Context) {
         val list = _playlist.value
         if (list.isEmpty()) return null
         val idx = _currentIndex.value
-        val next: Song? = when {
+        val next: Song = when {
             // 单曲循环：下一项就是当前曲，无需预载
             _repeatMode.value == RepeatMode.ONE -> return null
             idx in list.indices && idx + 1 < list.size -> list[idx + 1]
