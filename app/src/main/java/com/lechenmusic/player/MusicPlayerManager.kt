@@ -335,6 +335,8 @@ class MusicPlayerManager(private val context: Context) {
             .setCache(musicCache!!)
             .setUpstreamDataSourceFactory(upstreamFactory)
             .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+            // 稳定缓存 key（song:/ab: 前缀），与登录 token 解耦
+            .setCacheKeyFactory(StableCacheKeyFactory)
     }
 
     /** Update cache max size (called when user changes cache setting) */
@@ -353,6 +355,8 @@ class MusicPlayerManager(private val context: Context) {
             .setCache(musicCache!!)
             .setUpstreamDataSourceFactory(upstreamFactory)
             .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+            // 稳定缓存 key（song:/ab: 前缀），与登录 token 解耦
+            .setCacheKeyFactory(StableCacheKeyFactory)
     }
 
     /** Get current cache size in bytes */
@@ -366,9 +370,13 @@ class MusicPlayerManager(private val context: Context) {
             val cache = musicCache ?: return emptySet()
             val cachedIds = mutableSetOf<String>()
             for (key in cache.keys) {
-                val match = Regex("[?&]id=([^&]+)").find(key)
-                if (match != null) {
-                    val songId = match.groupValues[1]
+                // 双格式兼容：新 key 认 song: 前缀，旧 key（完整 URL）认 ?id=/&id= 参数。
+                // ab: 开头的有声书 key 天然不会被当成歌曲，无需特殊处理。
+                val songId = when {
+                    key.startsWith("song:") -> key.removePrefix("song:")
+                    else -> Regex("[?&]id=([^&]+)").find(key)?.groupValues?.get(1)
+                }
+                if (songId != null) {
                     // #18: Verify the song is fully cached (not partial)
                     try {
                         val cachedBytes = cache.getCachedBytes(key, 0, Long.MAX_VALUE)
