@@ -3,6 +3,7 @@ package com.lechenmusic.data.repository
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -31,6 +32,8 @@ class SettingsRepository(private val context: Context) {
         val CACHED_PLAYLISTS_JSON = stringPreferencesKey("cached_playlists_json")
         val CACHED_RADIO_STATIONS_JSON = stringPreferencesKey("cached_radio_stations_json")
         val STARRED_RADIO_IDS = stringPreferencesKey("starred_radio_ids")
+        val PRELOAD_ENABLED = booleanPreferencesKey("preload_enabled")
+        val PRELOAD_NETWORK_MODE = stringPreferencesKey("preload_network_mode") // "wifi"=仅WiFi / "all"=WiFi+移动网络
         // 影视服务器
         val VIDEO_SERVER_URL = stringPreferencesKey("video_server_url")
         val VIDEO_USERNAME = stringPreferencesKey("video_username")
@@ -43,6 +46,8 @@ class SettingsRepository(private val context: Context) {
     val themeMode: Flow<String> = context.dataStore.data.map { it[THEME_MODE] ?: "dark" }
     val cacheSize: Flow<Int> = context.dataStore.data.map { it[CACHE_SIZE] ?: 4 }
     val recentPlayIds: Flow<String> = context.dataStore.data.map { it[RECENT_PLAY_IDS] ?: "" }
+    val preloadEnabled: Flow<Boolean> = context.dataStore.data.map { it[PRELOAD_ENABLED] ?: true }
+    val preloadNetworkMode: Flow<String> = context.dataStore.data.map { it[PRELOAD_NETWORK_MODE] ?: "wifi" }
 
     suspend fun saveLogin(serverUrl: String, username: String, password: String) {
         context.dataStore.edit { prefs ->
@@ -77,6 +82,14 @@ class SettingsRepository(private val context: Context) {
 
     suspend fun setCacheSize(sizeGb: Int) {
         context.dataStore.edit { it[CACHE_SIZE] = sizeGb }
+    }
+
+    suspend fun setPreloadEnabled(enabled: Boolean) {
+        context.dataStore.edit { it[PRELOAD_ENABLED] = enabled }
+    }
+
+    suspend fun setPreloadNetworkMode(mode: String) {
+        context.dataStore.edit { it[PRELOAD_NETWORK_MODE] = mode }
     }
 
     suspend fun addRecentPlay(songId: String) {

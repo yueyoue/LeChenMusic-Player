@@ -59,6 +59,13 @@ class MusicPlayerManager(private val context: Context) {
     private var cacheDataSourceFactory: CacheDataSource.Factory? = null
     private var currentCacheSizeBytes: Long = 4L * 1024 * 1024 * 1024 // default 4GB
 
+    // 下一曲/下一章预加载（方案 A）：把下一个网盘目标的开头预写进缓存，切歌/切章秒开。
+    // 旁路组件，不参与现有播放链路。
+    val nextItemPreloader by lazy {
+        NextItemPreloader(context, { musicCache }, { cacheDataSourceFactory })
+    }
+    private var preloadScheduleJob: kotlinx.coroutines.Job? = null
+
     // 播放时长统计
     private val playTimePrefs = context.getSharedPreferences("play_stats", Context.MODE_PRIVATE)
     private var playStartTimeMs: Long = 0L
@@ -173,10 +180,19 @@ class MusicPlayerManager(private val context: Context) {
                         updateNotification()
                     }
                     override fun onPlaybackStateChanged(playbackState: Int) {
+                        // 预加载联动：BUFFERING 时暂停预载，恢复后继续（旁路，不影响播放）
+                        nextItemPreloader.onPlaybackBufferingChanged(playbackState == Player.STATE_BUFFERING)
                         if (playbackState == Player.STATE_READY || playbackState == Player.STATE_ENDED) {
                             cancelLoadWatchdog()
                         }
                         if (playbackState == Player.STATE_READY) {
+                            // 预加载触发点1：当前项可播后延迟 3s 预载「下一目标」
+                            if (preloadScheduleJob?.isActive != true) {
+                                preloadScheduleJob = scope.launch {
+                                    delay(3000L)
+                                    enqueueNextMusicPreload()
+                                }
+                            }
                             // 电台流媒体：强制时长为0，防止ExoPlayer报告异常大数值
                             val isRadio = _currentSong.value?.id?.startsWith("radio_") == true
                             _duration.value = if (isRadio) 0L else duration.coerceAtLeast(0)
@@ -230,6 +246,8 @@ class MusicPlayerManager(private val context: Context) {
                             }
                             onSongAutoAdvanced?.invoke(song)
                         }
+                        // 预加载触发点3：切项后立刻为新的「下一目标」排队（旁路，不影响切歌链路）
+                        enqueueNextMusicPreload()
                     }
                     override fun onPlayerError(error: PlaybackException) {
                         android.util.Log.e("LeChenMusic", "onPlayerError: ${error.errorCodeName} - ${error.message}")
@@ -1114,6 +1132,10 @@ class MusicPlayerManager(private val context: Context) {
             val rawDuration = if (isRadio) 0L else it.duration.coerceAtLeast(0)
             _duration.value = rawDuration
             _progress.value = if (rawDuration > 0) it.currentPosition.toFloat() / rawDuration else 0f
+            // 预加载触发点2：进度 ≥50% 兜底补一次（同目标去重，反复调用无副作用）
+            if (rawDuration > 0 && it.currentPosition >= rawDuration / 2) {
+                enqueueNextMusicPreload()
+            }
         }
     }
 
@@ -1358,6 +1380,63 @@ class MusicPlayerManager(private val context: Context) {
     private fun cancelLoadWatchdog() {
         loadWatchdogJob?.cancel()
         loadWatchdogJob = null
+    }
+
+    // ===== 下一曲/下一章预加载（方案 A）=====
+
+    /**
+     * 解析「下一目标」并交给预加载器（音乐链路）。
+     * 决策闸门（开发文档 §3.1）：下一项存在 → 跳过电台 → 跳过 B 本地资源 →
+     * 跳过已完整播放过的 → 入队；资源侧闸门（开关/网络/已缓存）在 Preloader 内。
+     */
+    private fun enqueueNextMusicPreload() {
+        try {
+            val target = resolveNextMusicTarget() ?: return
+            val repo = repository ?: return
+            val url = repo.getStreamUrl(target.id)
+            nextItemPreloader.enqueue(url, NextItemPreloader.Kind.MUSIC)
+        } catch (_: Exception) {
+        }
+    }
+
+    /** 下一目标解析：播放顺序 _playlist 的下一项（随机播放下也与 skipNext 口径一致）。 */
+    private fun resolveNextMusicTarget(): Song? {
+        val list = _playlist.value
+        if (list.isEmpty()) return null
+        val idx = _currentIndex.value
+        val next: Song? = when {
+            // 单曲循环：下一项就是当前曲，无需预载
+            _repeatMode.value == RepeatMode.ONE -> return null
+            idx in list.indices && idx + 1 < list.size -> list[idx + 1]
+            // 队尾且循环播放：绕回队首（与 ExoPlayer REPEAT_MODE_ALL 自动衔接一致）
+            _repeatMode.value == RepeatMode.ALL && idx >= list.size - 1 -> list[0]
+            else -> null
+        } ?: return null
+        // 电台(live)不预载
+        if (next.id.startsWith("radio_")) return null
+        // B 本地资源不预载（与 SourceBadge 的 W/B 判定同口径：path 以 openlist: 开头即网盘）
+        if (!next.path.startsWith("openlist:")) return null
+        // 已完整播放过的歌曲视为已缓存，跳过预载（开发文档 §3.1 决策闸门）
+        if (fullyPlayedSongIds.contains(next.id)) return null
+        return next
+    }
+
+    /** 有声书「下一章」预载入口（MainViewModel 解析好 URL 后调用）。 */
+    fun preloadAudiobookNext(url: String) {
+        try {
+            nextItemPreloader.enqueue(url, NextItemPreloader.Kind.AUDIOBOOK)
+        } catch (_: Exception) {
+        }
+    }
+
+    /** 设置项：预加载总开关（即时生效）。 */
+    fun setPreloadEnabled(enabled: Boolean) {
+        nextItemPreloader.enabled = enabled
+    }
+
+    /** 设置项：是否允许移动网络预载（"仅 WiFi"=false / "WiFi + 移动网络"=true）。 */
+    fun setPreloadAllowCellular(allow: Boolean) {
+        nextItemPreloader.allowCellular = allow
     }
 
 }

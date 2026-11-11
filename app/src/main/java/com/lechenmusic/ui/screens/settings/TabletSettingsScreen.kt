@@ -40,11 +40,14 @@ fun TabletSettingsScreen(
     val username by viewModel.username.collectAsState()
     val themeMode by viewModel.themeMode.collectAsState()
     val cacheSize by viewModel.cacheSize.collectAsState()
+    val preloadEnabled by viewModel.preloadEnabled.collectAsState()
+    val preloadNetworkMode by viewModel.preloadNetworkMode.collectAsState()
     val serverStats by viewModel.serverStats.collectAsState()
     val context = LocalContext.current
 
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showCacheDialog by remember { mutableStateOf(false) }
+    var showPreloadNetworkDialog by remember { mutableStateOf(false) }
     var showAboutDialog by remember { mutableStateOf(false) }
     var showUpdateDialog by remember { mutableStateOf(false) }
     val updateInfo by viewModel.updateInfo.collectAsState()
@@ -135,6 +138,20 @@ fun TabletSettingsScreen(
                 label = "音乐缓存大小",
                 value = "${cacheSize} GB",
                 onClick = { showCacheDialog = true }
+            )
+            SettingsToggleItem(
+                icon = Icons.Default.PlayArrow,
+                iconBg = Color(0xFF2ED573).copy(alpha = 0.15f),
+                label = "预加载下一首/章",
+                checked = preloadEnabled,
+                onCheckedChange = { viewModel.setPreloadEnabled(it) }
+            )
+            SettingsClickItem(
+                icon = Icons.Default.Wifi,
+                iconBg = Color(0xFF1E90FF).copy(alpha = 0.15f),
+                label = "预加载网络",
+                value = if (preloadNetworkMode == "all") "WiFi + 移动网络" else "仅 WiFi",
+                onClick = { showPreloadNetworkDialog = true }
             )
         }
 
@@ -364,6 +381,31 @@ fun TabletSettingsScreen(
                 }
             },
             confirmButton = { TextButton(onClick = { showCacheDialog = false }) { Text("取消") } }
+        )
+    }
+
+    // 预加载网络策略选择弹窗
+    if (showPreloadNetworkDialog) {
+        AlertDialog(
+            onDismissRequest = { showPreloadNetworkDialog = false },
+            title = { Text("预加载网络") },
+            text = {
+                Column {
+                    listOf("wifi" to "仅 WiFi", "all" to "WiFi + 移动网络").forEach { (mode, label) ->
+                        Text(
+                            label,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { viewModel.setPreloadNetworkMode(mode); showPreloadNetworkDialog = false }
+                                .padding(vertical = 14.dp),
+                            fontSize = 15.sp,
+                            fontWeight = if (mode == preloadNetworkMode) FontWeight.Bold else FontWeight.Normal,
+                            color = if (mode == preloadNetworkMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { showPreloadNetworkDialog = false }) { Text("取消") } }
         )
     }
 

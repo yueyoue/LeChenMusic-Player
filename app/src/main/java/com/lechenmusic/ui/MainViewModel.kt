@@ -352,6 +352,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val cacheSize: StateFlow<Int> = settings.cacheSize
         .stateIn(viewModelScope, SharingStarted.Eagerly, 4)
 
+    // 预加载设置（方案 A）：开关 + 网络策略（"wifi"=仅WiFi / "all"=WiFi+移动网络）
+    val preloadEnabled: StateFlow<Boolean> = settings.preloadEnabled
+        .stateIn(viewModelScope, SharingStarted.Eagerly, true)
+    val preloadNetworkMode: StateFlow<String> = settings.preloadNetworkMode
+        .stateIn(viewModelScope, SharingStarted.Eagerly, "wifi")
+
     // Server info
     val serverUrl: StateFlow<String> = settings.serverUrl
         .stateIn(viewModelScope, SharingStarted.Eagerly, "")
@@ -437,6 +443,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
 
+        // 预加载设置即时生效（开关/网络策略推给播放管理器）
+        viewModelScope.launch {
+            settings.preloadEnabled.collect { playerManager.setPreloadEnabled(it) }
+        }
+        viewModelScope.launch {
+            settings.preloadNetworkMode.collect { playerManager.setPreloadAllowCellular(it == "all") }
+        }
+
         // Update progress periodically (faster interval for accurate lyrics sync)
         viewModelScope.launch {
             var audiobookProgressSaveCounter = 0
@@ -455,6 +469,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     _audiobookPosition.value = playerManager.currentPosition.value
                     _audiobookDuration.value = playerManager.duration.value
                     _audiobookIsPlaying.value = playerManager.isPlaying.value
+                    // 预加载触发点2（有声书）：进度 ≥50% 兜底补一次（Preloader 内部去重）
+                    val preloadDur = _audiobookDuration.value
+                    if (preloadDur > 0 && _audiobookPosition.value >= preloadDur / 2) {
+                        preloadNextAudiobookChapter()
+                    }
                     // Auto-save audiobook progress every 15 seconds during playback
                     if (_audiobookIsPlaying.value) {
                         audiobookProgressSaveCounter++
@@ -2117,6 +2136,7 @@ fun loadAudiobooks() {
             val url = repository.getAudiobookChapterStreamUrl(book.id, chapter.id)
             val coverUrl = repository.getAudiobookCoverUrl(book.id, book.updatedAt)
             playerManager.playUrl(url, chapter.title, book.title, "audiobook_${book.id}_${chapter.id}", coverUrl)
+            preloadNextAudiobookChapter()
             _audiobookIsPlaying.value = true
         } catch (e: Exception) {
             // 播放失败不能把界面卡在“播放中”，也要避免异常直接把 APP 甩出去
@@ -2252,6 +2272,7 @@ fun loadAudiobooks() {
                         _currentAudiobookChapters.value = chapters
                         _currentChapterIndex.value = chapterIndex
                         playerManager.playUrl(url, resumeChapter.title, book.title, "audiobook_${book.id}_${resumeChapter.id}", coverUrl, initialSeekMs = seekToMs)
+                        preloadNextAudiobookChapter()
                         _audiobookIsPlaying.value = true
                         if (navigateOnReady) _pendingResumeNavigation.value = true
                     }
@@ -2267,6 +2288,7 @@ fun loadAudiobooks() {
                         _currentAudiobookChapters.value = chapters
                         _currentChapterIndex.value = 0
                         playerManager.playUrl(url, firstChapter.title, book.title, "audiobook_${book.id}_${firstChapter.id}", coverUrl)
+                        preloadNextAudiobookChapter()
                         _audiobookIsPlaying.value = true
                         if (navigateOnReady) _pendingResumeNavigation.value = true
                     }
@@ -2274,6 +2296,41 @@ fun loadAudiobooks() {
             } catch (e: Exception) {
                 android.util.Log.e("LeChenMusic", "resumeAudiobook exception: ${e.message}")
             }
+        }
+    }
+
+    // ===== 下一章预加载（方案 A）=====
+
+    /**
+     * 预载「下一章」的开头（触发点3：选章/续听/自动下一章后立即排队）。
+     * 旁路预缓存，不改动播放/切章链路；B 本地章节与末章直接跳过。
+     */
+    private fun preloadNextAudiobookChapter() {
+        try {
+            val book = _currentAudiobook.value ?: return
+            val chapters = _currentAudiobookChapters.value
+            val next = chapters.getOrNull(_currentChapterIndex.value + 1) ?: return
+            // B 本地资源不预载（与 SourceBadge 的 W/B 判定同口径：path 以 openlist: 开头即网盘）
+            if (!next.path.startsWith("openlist:")) return
+            val url = repository.getAudiobookChapterStreamUrl(book.id, next.id)
+            playerManager.preloadAudiobookNext(url)
+        } catch (_: Exception) {
+        }
+    }
+
+    /** 设置项：预加载总开关。 */
+    fun setPreloadEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settings.setPreloadEnabled(enabled)
+            playerManager.setPreloadEnabled(enabled)
+        }
+    }
+
+    /** 设置项：预加载网络策略（"wifi"=仅WiFi / "all"=WiFi+移动网络）。 */
+    fun setPreloadNetworkMode(mode: String) {
+        viewModelScope.launch {
+            settings.setPreloadNetworkMode(mode)
+            playerManager.setPreloadAllowCellular(mode == "all")
         }
     }
 
