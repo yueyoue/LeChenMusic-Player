@@ -39,8 +39,8 @@ class NextItemPreloader(
         /** 单次预载字节上限（WiFi / 有线网络） */
         val preloadBytes: Long
             get() = when (this) {
-                MUSIC -> MUSIC_PRELOAD_BYTES
-                AUDIOBOOK -> AUDIOBOOK_PRELOAD_BYTES
+                MUSIC -> NextItemPreloader.MUSIC_PRELOAD_BYTES
+                AUDIOBOOK -> NextItemPreloader.AUDIOBOOK_PRELOAD_BYTES
             }
     }
 
