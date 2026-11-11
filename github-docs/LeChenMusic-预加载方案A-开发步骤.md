@@ -170,3 +170,18 @@ for (key in cache.keys) {
 | 观测日志（可选） | 0.5 天 |
 
 合计 1~2 天出测试包，与设计文档 §6 预估一致。
+
+---
+
+## 6. 开发评审补充（2026-11-11，落地时逐行核对后修正/澄清）
+
+以下为实现时发现的小问题与处理，不改变总体方案：
+
+1. **移动网络默认值两处表述矛盾**（设计文档 §2.2 vs §2.5/§3.3）：以设置项为准——**默认“仅 WiFi”**；用户开启“WiFi + 移动网络”后，移动网络预载上限 **512KB**。
+2. **触发点 3 的有声书入口覆盖不全**：只 hook `audiobookNextChapter()` 会漏掉「手动选章」「续听/首次播放」入口（后两者直接调 `playUrl`）。实际落地：在 `playAudiobookChapter()` 与 `resumeAudiobook()` 的两个 `playUrl` 调用点后统一触发 `preloadNextAudiobookChapter()`，全覆盖。
+3. **专辑边界自动续播不在预载范围**：`MainViewModel.playNextAlbum()`（专辑末曲播完自动播下专辑首曲）不是 `playlist[currentIndex+1]`，**明确列为范围外**（否则需预取专辑歌曲列表，改动面超出“不影响其他功能”约束）。
+4. **CacheKeyFactory 音乐匹配加路径限定**：key 从 URL 的 `id` 参数取时，要求路径含 `rest/stream`，避免电台等其它流 URL 恰好带 `id=` 参数时被误打成 `song:` key 造成撞 key。
+5. **有声书 W/B 判定字段**：`AudiobookChapter` 也有 `path` 字段（开发文档未提），与 Song 同口径判 `openlist:` 前缀即可。
+6. **`fullyPlayedSongIds` 跳过预载的已知边界**：「清除缓存」只删缓存资源、不清该名单，清缓存后名单里的歌会被跳过预载（只是失去预载收益，不影响正确性）。保留文档行为。
+7. **设置页 UI 实际是三处布局**：`SettingsScreen` 手机分支 + 平板分支、`TabletSettingsScreen`，三处都要加设置项。
+8. **CacheWriter 第三个参数是 temporaryBuffer**（设计文档 §2.1 伪代码注释“上次已缓存”是笔误，传 null 即可）；`CacheWriter.cache()` 天然跳过已缓存字节、支持断点续跑，“BUFFERING 暂停”用进度回调协作式阻塞实现。

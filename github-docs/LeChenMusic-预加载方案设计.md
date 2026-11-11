@@ -57,7 +57,7 @@
   CacheWriter(
       cacheDataSourceFactory.createDataSource(),
       DataSpec(uri, offset=0, length=PRELOAD_BYTES),
-      /* 上次已缓存 */ ..., progressListener
+      /* temporaryBuffer */ null, progressListener
   ).cache()
   → 失败只打日志（播放时 ExoPlayer 自己还会请求，不阻塞任何流程）
 ```
@@ -66,7 +66,7 @@
 | 参数 | 建议值 | 说明 |
 |---|---|---|
 | 预载大小 PRELOAD_BYTES | 音乐 1.5MB / 有声书 3MB | 音乐≈前 60s，有声书≈前 2 分钟，够消除切章/切歌的等待 |
-| 移动网络 | 默认只预载 512KB（可设置里关掉） | 控流量 |
+| 移动网络 | 默认不预载（见 §2.5“仅 WiFi”）；用户开启“WiFi + 移动网络”后上限 512KB | 控流量 |
 | 并发 | 1 个预载任务（串行队列，新任务顶掉旧任务） | 避免抢播放带宽 |
 | 暂停条件 | 播放器进入 BUFFERING 时暂停预载，READY 后恢复 | 保证当前播放优先 |
 | 命中判定阈值 | 已缓存 ≥ 256KB 即视为不需要预载 | |
