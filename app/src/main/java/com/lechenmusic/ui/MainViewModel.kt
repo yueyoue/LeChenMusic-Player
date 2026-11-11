@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.lechenmusic.LeChenApp
 import com.lechenmusic.data.model.*
+import com.lechenmusic.data.repository.ListJsonCache
 import com.lechenmusic.data.repository.LyricsCache
 import com.lechenmusic.data.repository.MusicRepository
 import com.lechenmusic.data.repository.SettingsRepository
@@ -17,6 +18,8 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -86,6 +89,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (hotSearchesLoaded) return
         hotSearchesLoaded = true
         viewModelScope.launch {
+            // 先上屏本地缓存热词，服务端真实数据算完后静默替换（并回写缓存）
+            if (_hotSearches.value.isEmpty()) {
+                val disk = withContext(Dispatchers.IO) {
+                    ListJsonCache.readStrings(listCacheDir, HOT_SEARCHES_CACHE_FILE)
+                }
+                if (disk.isNotEmpty()) _hotSearches.value = disk
+            }
             val keywords = mutableListOf<String>()
             // 1. 最常播放专辑的歌手
             repository.getFrequentAlbums(30).getOrNull()?.forEach { album ->
@@ -107,7 +117,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     .sortedByDescending { it.albumCount }
                     .forEach { keywords.add(it.name.trim()) }
             }
-            _hotSearches.value = keywords.filter { it.isNotBlank() }.distinct().take(10)
+            val hot = keywords.filter { it.isNotBlank() }.distinct().take(10)
+            if (hot.isNotEmpty()) {
+                _hotSearches.value = hot
+                withContext(Dispatchers.IO) {
+                    ListJsonCache.writeStrings(listCacheDir, HOT_SEARCHES_CACHE_FILE, hot)
+                }
+            }
         }
     }
 
@@ -309,6 +325,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _allAlbumsLoading = MutableStateFlow(false)
     val allAlbumsLoading: StateFlow<Boolean> = _allAlbumsLoading.asStateFlow()
 
+    // ===== 列表本地缓存：乐库/缓存/专辑/搜索先上屏本地副本，后台静默同步服务端 =====
+    // 全曲库缓存解析任务：只解析一次，warmUpListCaches 与 loadAllSongs 共用结果，避免重复读盘。
+    // 注意：必须声明在 init 之前——init 里的 warmUpListCaches 可能立即写入它，
+    // 而属性初始化器按声明顺序执行，声明在 init 之后会被构造函数覆盖回 null。
+    private var allSongsCacheJob: Deferred<List<Song>>? = null
+
+    private companion object CacheFiles {
+        const val ALL_ALBUMS_CACHE_FILE = "all_albums_cache.json"
+        const val CACHED_SONGS_CACHE_FILE = "cached_songs_cache.json"
+        const val HOT_SEARCHES_CACHE_FILE = "hot_searches_cache.json"
+        const val ARTISTS_CACHE_FILE = "artists_cache.json"
+    }
+
     // Artist detail
     private val _currentArtist = MutableStateFlow<ArtistDetail?>(null)
     val currentArtist: StateFlow<ArtistDetail?> = _currentArtist.asStateFlow()
@@ -332,6 +361,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         .stateIn(viewModelScope, SharingStarted.Eagerly, "")
 
     init {
+        // 列表缓存预热：启动即把乐库/缓存/专辑/搜索热词/歌手的本地缓存载入内存，
+        // 不等网络鉴权，用户点开这些界面时无需等待任何读盘或网络请求（详见 warmUpListCaches）
+        warmUpListCaches()
+
         // Check if already logged in
         viewModelScope.launch {
             combine(settings.serverUrl, settings.username, settings.password) { url, user, pass ->
@@ -681,12 +714,30 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun loadCachedSongs() {
         viewModelScope.launch {
-            val cachedIds = playerManager.getCachedSongIds()
-            // Recently played songs that are also in the ExoPlayer cache
+            // 1) 先上屏本地缓存的列表（冷启动即显示，不等曲库元数据加载）
+            if (_cachedSongs.value.isEmpty()) {
+                val disk = withContext(Dispatchers.IO) {
+                    ListJsonCache.read(listCacheDir, CACHED_SONGS_CACHE_FILE, Song::class.java)
+                }
+                if (disk.isNotEmpty()) _cachedSongs.value = disk
+            }
+
+            // 2) 扫描 ExoPlayer 音频缓存（IO 线程，避免缓存目录大时卡主线程）
+            val cachedIds = withContext(Dispatchers.IO) { playerManager.getCachedSongIds() }
+            if (cachedIds.isEmpty()) {
+                // 本地音频缓存已全部清除 → 列表也应清空
+                if (_cachedSongs.value.isNotEmpty()) {
+                    _cachedSongs.value = emptyList()
+                    withContext(Dispatchers.IO) {
+                        ListJsonCache.write(listCacheDir, CACHED_SONGS_CACHE_FILE, emptyList(), Song::class.java)
+                    }
+                }
+                return@launch
+            }
+
+            // 3) 用内存里的歌曲元数据匹配缓存 ID：最近播放在前，全曲库兜底
             val recentCached = _recentPlayedSongs.value.filter { it.id in cachedIds }
-            // Also include all cached IDs matched from allSongs
             val allCached = _allSongs.value.filter { it.id in cachedIds }
-            // Merge, deduplicate, recently played first
             val merged = mutableListOf<Song>()
             val seenIds = mutableSetOf<String>()
             for (song in recentCached) {
@@ -695,7 +746,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             for (song in allCached) {
                 if (seenIds.add(song.id)) merged.add(song)
             }
+
+            if (_allSongs.value.isEmpty()) {
+                // 曲库元数据还没就绪：只在比当前展示更多时兜底更新，不写盘
+                // （防止「最近播放」的不完整子集盖掉全量缓存），等 loadAllSongs 完成后会再刷新
+                if (merged.size > _cachedSongs.value.size) _cachedSongs.value = merged
+                return@launch
+            }
             _cachedSongs.value = merged
+            withContext(Dispatchers.IO) {
+                ListJsonCache.write(listCacheDir, CACHED_SONGS_CACHE_FILE, merged, Song::class.java)
+            }
         }
     }
 
@@ -851,7 +912,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun loadArtists() {
         viewModelScope.launch {
-            repository.getArtists().onSuccess { _artists.value = it }
+            // 先上屏本地缓存，服务端结果随后静默刷新（并回写缓存）
+            if (_artists.value.isEmpty()) {
+                val disk = withContext(Dispatchers.IO) {
+                    ListJsonCache.read(listCacheDir, ARTISTS_CACHE_FILE, Artist::class.java)
+                }
+                if (disk.isNotEmpty()) _artists.value = disk
+            }
+            repository.getArtists().onSuccess {
+                _artists.value = it
+                if (it.isNotEmpty()) {
+                    withContext(Dispatchers.IO) {
+                        ListJsonCache.write(listCacheDir, ARTISTS_CACHE_FILE, it, Artist::class.java)
+                    }
+                }
+            }
         }
     }
 
@@ -867,69 +942,73 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun loadAllAlbums(callback: (List<Album>) -> Unit) {
-        // If already loaded, return cached data immediately and refresh in background
+        // 1) 内存已有 → 立即回调上屏，后台静默刷新
         val cached = _cachedAllAlbums.value
         if (cached.isNotEmpty()) {
             callback(cached)
-            // Also refresh in background silently
-            viewModelScope.launch {
-                _allAlbumsLoading.value = true
-                val allAlbums = mutableListOf<Album>()
-                val seenIds = mutableSetOf<String>()
-                val types = listOf("newest", "recent", "frequent", "random", "starred", "alphabeticalByName")
-                for (type in types) {
-                    var offset = 0
-                    val pageSize = 500
-                    while (true) {
-                        try {
-                            val albums = repository.getAlbumList2(type, pageSize, offset).getOrNull() ?: break
-                            for (album in albums) {
-                                if (seenIds.add(album.id)) {
-                                    allAlbums.add(album)
-                                }
-                            }
-                            if (albums.size < pageSize) break
-                            offset += pageSize
-                        } catch (_: Exception) { break }
-                    }
-                }
-                // Sort by created date descending (newest first)
-                val sorted = allAlbums.sortedByDescending { it.created }
-                _cachedAllAlbums.value = sorted
-                _allAlbumsLoading.value = false
-                callback(sorted)
-            }
+            refreshAllAlbumsInBackground(callback, showLoading = false)
             return
         }
-
-        // First load - fetch from server
-        _allAlbumsLoading.value = true
+        // 2) 读磁盘缓存 → 立即回调上屏，后台静默刷新
         viewModelScope.launch {
-            val allAlbums = mutableListOf<Album>()
-            val seenIds = mutableSetOf<String>()
-            val types = listOf("newest", "recent", "frequent", "random", "starred", "alphabeticalByName")
-            for (type in types) {
-                var offset = 0
-                val pageSize = 500
-                while (true) {
-                    try {
-                        val albums = repository.getAlbumList2(type, pageSize, offset).getOrNull() ?: break
-                        for (album in albums) {
-                            if (seenIds.add(album.id)) {
-                                allAlbums.add(album)
-                            }
-                        }
-                        if (albums.size < pageSize) break
-                        offset += pageSize
-                    } catch (_: Exception) { break }
-                }
+            val disk = withContext(Dispatchers.IO) {
+                ListJsonCache.read(listCacheDir, ALL_ALBUMS_CACHE_FILE, Album::class.java)
             }
-            // Sort by created date descending (newest first)
-            val sorted = allAlbums.sortedByDescending { it.created }
-            _cachedAllAlbums.value = sorted
-            _allAlbumsLoading.value = false
-            callback(sorted)
+            if (disk.isNotEmpty()) {
+                _cachedAllAlbums.value = disk
+                callback(disk)
+                refreshAllAlbumsInBackground(callback, showLoading = false)
+            } else {
+                // 3) 首次使用（无任何缓存）：显示加载态，拉取全量
+                refreshAllAlbumsInBackground(callback, showLoading = true)
+            }
         }
+    }
+
+    /** 专辑全集后台刷新任务（单飞行：同时只跑一个，避免重复翻页拉取） */
+    private var allAlbumsRefreshJob: kotlinx.coroutines.Job? = null
+
+    /** 后台静默同步专辑全集：成功后更新内存 + 回写磁盘缓存，并回调最新列表 */
+    private fun refreshAllAlbumsInBackground(callback: (List<Album>) -> Unit, showLoading: Boolean) {
+        val running = allAlbumsRefreshJob
+        if (running != null && running.isActive) return
+        allAlbumsRefreshJob = viewModelScope.launch {
+            if (showLoading) _allAlbumsLoading.value = true
+            val sorted = fetchAllAlbumsFromServer()
+            if (sorted.isNotEmpty()) {
+                _cachedAllAlbums.value = sorted
+                withContext(Dispatchers.IO) {
+                    ListJsonCache.write(listCacheDir, ALL_ALBUMS_CACHE_FILE, sorted, Album::class.java)
+                }
+                callback(sorted)
+            }
+            _allAlbumsLoading.value = false
+        }
+    }
+
+    /** 拉取全部专辑（多种排序翻页合并去重，按添加时间倒序） */
+    private suspend fun fetchAllAlbumsFromServer(): List<Album> {
+        val allAlbums = mutableListOf<Album>()
+        val seenIds = mutableSetOf<String>()
+        val types = listOf("newest", "recent", "frequent", "random", "starred", "alphabeticalByName")
+        for (type in types) {
+            var offset = 0
+            val pageSize = 500
+            while (true) {
+                try {
+                    val albums = repository.getAlbumList2(type, pageSize, offset).getOrNull() ?: break
+                    for (album in albums) {
+                        if (seenIds.add(album.id)) {
+                            allAlbums.add(album)
+                        }
+                    }
+                    if (albums.size < pageSize) break
+                    offset += pageSize
+                } catch (_: Exception) { break }
+            }
+        }
+        // Sort by created date descending (newest first)
+        return allAlbums.sortedByDescending { it.created }
     }
 
     fun search(query: String) {
@@ -939,8 +1018,31 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
         viewModelScope.launch {
-            repository.search(query).onSuccess { _searchResults.value = it }
+            // 1) 本地缓存即时出结果：用已缓存的曲库/专辑/歌手列表过滤，不等网络
+            val local = withContext(Dispatchers.Default) { buildLocalSearchResult(query) }
+            if (local != null && _searchQuery.value == query) {
+                _searchResults.value = local
+            }
+            // 2) 服务端结果随后静默替换（只接受当前查询的结果，防止乱序覆盖）
+            repository.search(query).onSuccess {
+                if (_searchQuery.value == query) _searchResults.value = it
+            }
         }
+    }
+
+    /** 用本地缓存的曲库/专辑/歌手列表做即时搜索（先上屏，服务端结果随后静默覆盖） */
+    private fun buildLocalSearchResult(query: String): SearchResult? {
+        val q = query.trim().lowercase()
+        if (q.isEmpty()) return null
+        val songs = _allSongs.value.filter {
+            it.title.lowercase().contains(q) || it.artist.lowercase().contains(q) || it.album.lowercase().contains(q)
+        }.take(50)
+        val albums = _cachedAllAlbums.value.filter {
+            it.name.lowercase().contains(q) || it.artist.lowercase().contains(q)
+        }.take(30)
+        val artists = _artists.value.filter { it.name.lowercase().contains(q) }.take(20)
+        if (songs.isEmpty() && albums.isEmpty() && artists.isEmpty()) return null
+        return SearchResult(song = songs, album = albums, artist = artists)
     }
 
     fun loadAlbumDetail(albumId: String) {
@@ -1105,13 +1207,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun loadAllSongs(showToast: Boolean = false) {
         viewModelScope.launch {
-            _allSongsLoading.value = true
+            // 只有完全没有可展示数据时才显示加载态；
+            // 已有缓存/内存数据时全程静默同步，用户点开乐库即刻看到列表、无感刷新
+            if (_allSongs.value.isEmpty()) _allSongsLoading.value = true
             _allSongsLoadError.value = null
 
             // Step 1: Load cached songs first for instant display（流式读文件缓存，见 readAllSongsCache）
-            val cachedSongs = readAllSongsCache()
-            if (cachedSongs.isNotEmpty()) {
-                _allSongs.value = cachedSongs
+            // 内存已有数据（warmUpListCaches 预热过）则不重复读盘，避免大曲库重复解析
+            if (_allSongs.value.isEmpty()) {
+                val cachedSongs = try { allSongsCacheAsync().await() } catch (_: Exception) { emptyList() }
+                if (cachedSongs.isNotEmpty()) {
+                    _allSongs.value = cachedSongs
+                    _allSongsLoading.value = false
+                }
+            } else {
                 _allSongsLoading.value = false
             }
 
@@ -1146,6 +1255,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
                 _allSongsLoading.value = false
             }
+            // 乐库元数据（内存）就绪后，静默刷新「缓存」列表的歌曲信息匹配
+            loadCachedSongs()
         }
     }
 
@@ -1203,6 +1314,53 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
             } catch (_: Exception) { }
             emptyList()
+        }
+    }
+
+    /** 全曲库磁盘缓存只解析一次；warmUpListCaches 与 loadAllSongs 共用同一份解析结果 */
+    private fun allSongsCacheAsync(): Deferred<List<Song>> {
+        allSongsCacheJob?.let { return it }
+        val job = viewModelScope.async(Dispatchers.IO) { readAllSongsCache() }
+        allSongsCacheJob = job
+        return job
+    }
+
+    // 列表缓存统一放在 filesDir（与 all_songs_cache.json 同目录）
+    private val listCacheDir: java.io.File get() = getApplication<LeChenApp>().filesDir
+
+    /**
+     * 列表缓存预热（init 即执行，纯本地读盘，不发网络请求）：
+     * 把乐库全曲、专辑全集、缓存音乐、热门搜索词、歌手列表的磁盘缓存载入内存，
+     * 用户点开 乐库/缓存/专辑/搜索 时立即显示，之后由各 load* 函数在后台静默同步服务端数据。
+     */
+    private fun warmUpListCaches() {
+        viewModelScope.launch {
+            // 乐库全曲（与 loadAllSongs 共用同一次解析，避免重复读盘）
+            val songs = try { allSongsCacheAsync().await() } catch (_: Exception) { emptyList() }
+            if (songs.isNotEmpty() && _allSongs.value.isEmpty()) {
+                _allSongs.value = songs
+                _allSongsLoading.value = false
+            }
+            // 专辑全集
+            val albums = withContext(Dispatchers.IO) {
+                ListJsonCache.read(listCacheDir, ALL_ALBUMS_CACHE_FILE, Album::class.java)
+            }
+            if (albums.isNotEmpty() && _cachedAllAlbums.value.isEmpty()) _cachedAllAlbums.value = albums
+            // 缓存音乐列表
+            val cached = withContext(Dispatchers.IO) {
+                ListJsonCache.read(listCacheDir, CACHED_SONGS_CACHE_FILE, Song::class.java)
+            }
+            if (cached.isNotEmpty() && _cachedSongs.value.isEmpty()) _cachedSongs.value = cached
+            // 热门搜索词
+            val hot = withContext(Dispatchers.IO) {
+                ListJsonCache.readStrings(listCacheDir, HOT_SEARCHES_CACHE_FILE)
+            }
+            if (hot.isNotEmpty() && _hotSearches.value.isEmpty()) _hotSearches.value = hot
+            // 歌手列表（本地搜索兜底 + 热门搜索词兜底）
+            val artists = withContext(Dispatchers.IO) {
+                ListJsonCache.read(listCacheDir, ARTISTS_CACHE_FILE, Artist::class.java)
+            }
+            if (artists.isNotEmpty() && _artists.value.isEmpty()) _artists.value = artists
         }
     }
 
