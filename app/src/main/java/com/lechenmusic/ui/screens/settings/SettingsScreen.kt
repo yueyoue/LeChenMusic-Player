@@ -25,8 +25,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.style.TextOverflow
+import com.lechenmusic.LeChenApp
+import com.lechenmusic.data.diagnostics.AppDiagnostics
 import com.lechenmusic.ui.MainViewModel
 import com.lechenmusic.ui.responsive.ResponsiveConfig
+import androidx.compose.ui.text.font.FontFamily
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun SettingsScreen(
@@ -56,6 +62,41 @@ fun SettingsScreen(
     val isCheckingUpdate by viewModel.isCheckingUpdate.collectAsState()
     val toastMessage by viewModel.toastMessage.collectAsState()
     var userTriggeredCheck by remember { mutableStateOf(false) }
+
+    // ===== 内存与加载诊断（第 3 档取证入口）=====
+    var showDiagDialog by remember { mutableStateOf(false) }
+    var diagText by remember { mutableStateOf("") }
+    var diagStatus by remember { mutableStateOf("") }
+    var diagBusy by remember { mutableStateOf(false) }
+    val diagScope = rememberCoroutineScope()
+
+    // 采集一次内存/缓存/加载耗时快照并格式化成文本：全部在 IO 线程做，主线程只赋值
+    val collectDiagnostics: suspend () -> String = {
+        withContext(Dispatchers.IO) {
+            try {
+                val app = context.applicationContext as LeChenApp
+                val snapshot = AppDiagnostics.capture(
+                    context = context,
+                    songCount = viewModel.allSongs.value.size,
+                    albumCount = viewModel.cachedAllAlbums.value.size,
+                    cachedSongCount = viewModel.cachedSongs.value.size,
+                    lyricsCount = app.lyricsCache.size()
+                )
+                AppDiagnostics.format(context, snapshot)
+            } catch (e: Exception) {
+                "采集失败：${e.message}"
+            }
+        }
+    }
+
+    LaunchedEffect(showDiagDialog) {
+        if (showDiagDialog) {
+            diagBusy = true
+            diagStatus = ""
+            diagText = collectDiagnostics()
+            diagBusy = false
+        }
+    }
 
     // Show toast messages (including "already latest")
     LaunchedEffect(toastMessage) {
@@ -309,6 +350,14 @@ fun SettingsScreen(
                     label = "关于悦音",
                     value = "",
                     onClick = { showAboutDialog = true }
+                )
+                // 内存/加载诊断：排查 OOM 闪退与「登录后等很久」时不用连电脑看 adb
+                SettingsClickItem(
+                    icon = Icons.Default.Info,
+                    iconBg = Color(0xFF7B68EE).copy(alpha = 0.15f),
+                    label = "内存与加载诊断",
+                    value = if (diagBusy) "采集中..." else "",
+                    onClick = { showDiagDialog = true }
                 )
             }
 
@@ -572,6 +621,8 @@ fun SettingsScreen(
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp), shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
                     Column {
                         SettingsClickItem(icon = Icons.Default.Info, iconBg = Color(0xFF2ED573).copy(alpha = 0.15f), label = "关于悦音", value = "", onClick = { showAboutDialog = true })
+                        // 内存/加载诊断：排查 OOM 闪退与「登录后等很久」时不用连电脑看 adb
+                        SettingsClickItem(icon = Icons.Default.Info, iconBg = Color(0xFF7B68EE).copy(alpha = 0.15f), label = "内存与加载诊断", value = if (diagBusy) "采集中..." else "", onClick = { showDiagDialog = true })
                     }
                 }
             }
@@ -606,6 +657,70 @@ fun SettingsScreen(
                 }
             },
             confirmButton = { TextButton(onClick = { showAboutDialog = false }) { Text("确定") } }
+        )
+    }
+
+    // 内存与加载诊断：快照 + 堆转储 + 报告导出
+    if (showDiagDialog) {
+        AlertDialog(
+            onDismissRequest = { showDiagDialog = false },
+            title = { Text("内存与加载诊断", fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    Box(modifier = Modifier.height(300.dp).verticalScroll(rememberScrollState())) {
+                        Text(
+                            text = if (diagText.isBlank()) "采集中..." else diagText,
+                            fontSize = 11.sp,
+                            fontFamily = FontFamily.Monospace,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    if (diagStatus.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(diagStatus, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        TextButton(
+                            enabled = !diagBusy,
+                            onClick = {
+                                diagScope.launch {
+                                    diagBusy = true
+                                    diagStatus = "正在转储堆，大曲库可能需要十几秒，请勿退出…"
+                                    try {
+                                        val file = withContext(Dispatchers.IO) { AppDiagnostics.dumpHeap(context) }
+                                        diagStatus = "堆已转储：${file.name}（${file.length() / 1048576} MB）"
+                                        AppDiagnostics.shareFile(context, file)
+                                    } catch (e: Exception) {
+                                        diagStatus = "转储失败：${e.message}"
+                                    }
+                                    diagBusy = false
+                                }
+                            }
+                        ) { Text("转储堆", fontSize = 13.sp) }
+                        TextButton(
+                            enabled = !diagBusy,
+                            onClick = {
+                                diagScope.launch {
+                                    diagBusy = true
+                                    diagStatus = "正在导出报告…"
+                                    try {
+                                        val text = collectDiagnostics()
+                                        diagText = text
+                                        val file = withContext(Dispatchers.IO) { AppDiagnostics.saveReport(context, text) }
+                                        diagStatus = "报告已保存：${file.name}"
+                                        AppDiagnostics.shareFile(context, file)
+                                    } catch (e: Exception) {
+                                        diagStatus = "导出失败：${e.message}"
+                                    }
+                                    diagBusy = false
+                                }
+                            }
+                        ) { Text("导出报告", fontSize = 13.sp) }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { showDiagDialog = false }) { Text("关闭") } }
         )
     }
 

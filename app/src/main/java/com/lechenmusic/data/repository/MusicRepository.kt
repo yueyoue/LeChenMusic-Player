@@ -1106,10 +1106,14 @@ class MusicRepository {
         }
     }
 
-    /** 创建下载任务：POST /api/online/download */
+    /**
+     * 创建下载任务：POST /api/online/download
+     *
+     * 音质不由客户端选择，payload 里固定传空串：服务端收到空值即回落到它自己的
+     * 默认策略（conf.Server.OnlineDownload.Quality，无损优先）。
+     */
     suspend fun onlineDownload(
         song: com.lechenmusic.data.model.OnlineSong,
-        quality: String = "",
         fuzzy: Boolean = false
     ): Result<com.lechenmusic.data.model.OnlineDownloadTask> {
         return try {
@@ -1122,7 +1126,7 @@ class MusicRepository {
                 "album" to song.albumName,
                 "albumId" to song.albumId,
                 "coverUrl" to song.coverUrl,
-                "quality" to quality,
+                "quality" to "", // 空串 = 用服务端默认音质策略
                 "fuzzy" to fuzzy,
                 "time" to song.time,
                 "sign" to song.sign

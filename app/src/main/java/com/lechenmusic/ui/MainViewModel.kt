@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.lechenmusic.LeChenApp
+import com.lechenmusic.data.diagnostics.AppDiagnostics
 import com.lechenmusic.data.model.*
 import com.lechenmusic.data.repository.ListJsonCache
 import com.lechenmusic.data.repository.LyricsCache
@@ -1233,6 +1234,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun loadAllSongs(showToast: Boolean = false) {
         viewModelScope.launch {
+            val loadStartedAt = System.currentTimeMillis()
             // 只有完全没有可展示数据时才显示加载态；
             // 已有缓存/内存数据时全程静默同步，用户点开乐库即刻看到列表、无感刷新
             if (_allSongs.value.isEmpty()) _allSongsLoading.value = true
@@ -1254,6 +1256,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val cachedList = _allSongs.value
             try {
                 repository.getAllSongs().onSuccess { serverSongs ->
+                    // 诊断打点：从发起加载到「全曲库可用」的总耗时（含 Step 1 等本地缓存解析）
+                    AppDiagnostics.recordLibraryLoad(System.currentTimeMillis() - loadStartedAt, serverSongs.size)
                     if (serverSongs.isNotEmpty()) {
                         // Use server results directly (already sorted newest-first by repository)
                         _allSongs.value = serverSongs
@@ -1346,7 +1350,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     /** 全曲库磁盘缓存只解析一次；warmUpListCaches 与 loadAllSongs 共用同一份解析结果 */
     private fun allSongsCacheAsync(): Deferred<List<Song>> {
         allSongsCacheJob?.let { return it }
-        val job = viewModelScope.async(Dispatchers.IO) { readAllSongsCache() }
+        val job = viewModelScope.async(Dispatchers.IO) {
+            // 诊断打点：解析本地曲库缓存花多久——登录后首屏等待时长主要由这里决定
+            // （warmUpListCaches 在 init 就 await 它，列表要等它解析完才有内容）
+            val startedAt = System.currentTimeMillis()
+            val songs = readAllSongsCache()
+            AppDiagnostics.recordCacheParse(System.currentTimeMillis() - startedAt, songs.size)
+            songs
+        }
         allSongsCacheJob = job
         return job
     }
@@ -2423,12 +2434,16 @@ fun loadAudiobooks() {
         }
     }
 
-    /** 创建下载任务并刷新列表 */
-    fun downloadOnline(song: OnlineSong, quality: String, fuzzy: Boolean, onResult: (String?) -> Unit = {}) {
+    /**
+     * 创建下载任务并刷新列表。
+     *
+     * 音质不再由 APP 选择：始终留空，由服务端按其默认策略（无损优先）决定。
+     */
+    fun downloadOnline(song: OnlineSong, fuzzy: Boolean, onResult: (String?) -> Unit = {}) {
         viewModelScope.launch {
             // 本地先标「下载中」，避免连点重复提交（服务端同样会拦截）
             patchOnlineSong(song, downloading = true)
-            repository.onlineDownload(song, quality, fuzzy).fold(
+            repository.onlineDownload(song, fuzzy = fuzzy).fold(
                 onSuccess = { task ->
                     onlineTaskSeen[task.id] = task.status
                     loadOnlineTasks()

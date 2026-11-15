@@ -18,11 +18,16 @@
     <!-- 自动更新：允许安装 APK -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
+    <!-- largeHeap：曲库全量列表 + 图片内存缓存（Coil 10% 堆）+ 歌词缓存共享 256MB 堆时，
+         OkHttp 线程在解析一页 500 首（约 3.4MB JSON）时会被打满并抛 OOM 闪退
+         （crash_log1：5224B 分配失败、剩余 1.87MB；crash_log2：32B 分配失败、剩余 1.86MB）。
+         这里把堆上限抬到系统允许的 large heap（通常 512MB 级），再叠加 Coil 配额从 25% 降到 10%。 -->
     <application
         android:name=".LeChenApp"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
+        android:largeHeap="true"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.LeChenMusic"

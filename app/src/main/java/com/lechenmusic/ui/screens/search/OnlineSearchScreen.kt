@@ -3,11 +3,9 @@ package com.lechenmusic.ui.screens.search
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -33,7 +31,8 @@ import com.lechenmusic.ui.MainViewModel
 import com.lechenmusic.ui.responsive.ResponsiveConfig
 
 /**
- * 在线搜歌（M6）：全网搜索 → 选音质/模糊匹配 → 下载入库（自动刮削）→ 任务进度 → 完成直接播放。
+ * 在线搜歌（M6）：全网搜索 → 模糊匹配 → 下载入库（自动刮削）→ 任务进度 → 完成直接播放。
+ * 音质不再由 APP 选择，统一交给服务端默认策略（无损优先）。
  * 复用服务端 online 系列接口（搜索/下载/任务），与 Web 管理后台同一套任务系统。
  */
 @Composable
@@ -54,7 +53,6 @@ fun OnlineSearchScreen(
 
     var keyword by remember { mutableStateOf(pendingKeyword) }
     var selectedTab by remember { mutableStateOf(0) }
-    var quality by remember { mutableStateOf("") }
     var fuzzy by remember { mutableStateOf(false) }
     // 待确认删除的任务：删除会连 NAS 上的音频文件一起删掉，必须先弹窗确认
     var pendingDelete by remember { mutableStateOf<OnlineDownloadTask?>(null) }
@@ -130,8 +128,6 @@ fun OnlineSearchScreen(
             0 -> OnlineSearchTab(
                 keyword = keyword,
                 onKeywordChange = { keyword = it },
-                quality = quality,
-                onQualityChange = { quality = it },
                 fuzzy = fuzzy,
                 onFuzzyChange = { fuzzy = it },
                 songs = searchResult?.songs ?: emptyList(),
@@ -139,7 +135,7 @@ fun OnlineSearchScreen(
                 error = searchError,
                 onSearch = { viewModel.searchOnline(keyword) },
                 onDownload = { song ->
-                    viewModel.downloadOnline(song, quality, fuzzy) { err ->
+                    viewModel.downloadOnline(song, fuzzy) { err ->
                         android.widget.Toast.makeText(
                             context,
                             err ?: "已加入下载队列",
@@ -228,19 +224,10 @@ fun OnlineSearchScreen(
 
 // ===== 搜歌下载 tab =====
 
-private val QUALITY_OPTIONS = listOf(
-    "" to "默认（无损优先）",
-    "flac/2000" to "FLAC 2000k",
-    "mp3/320" to "MP3 320k",
-    "mp3/128" to "MP3 128k"
-)
-
 @Composable
 private fun OnlineSearchTab(
     keyword: String,
     onKeywordChange: (String) -> Unit,
-    quality: String,
-    onQualityChange: (String) -> Unit,
     fuzzy: Boolean,
     onFuzzyChange: (Boolean) -> Unit,
     songs: List<OnlineSong>,
@@ -270,22 +257,6 @@ private fun OnlineSearchTab(
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             keyboardActions = KeyboardActions(onSearch = { onSearch() })
         )
-
-        // 音质选择（横向滚动，窄屏不溢出）
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            QUALITY_OPTIONS.forEach { (value, label) ->
-                FilterChip(
-                    selected = quality == value,
-                    onClick = { onQualityChange(value) },
-                    label = { Text(label, fontSize = 11.sp, maxLines = 1) }
-                )
-            }
-        }
 
         // 模糊匹配 + 搜索按钮
         Row(

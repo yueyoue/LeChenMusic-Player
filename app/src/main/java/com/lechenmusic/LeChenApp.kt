@@ -55,8 +55,12 @@ class LeChenApp : Application() {
                         .build()
                 }
                 .memoryCache {
-                    // 25% 可用内存：首页/列表一滑几十张封面，太小会反复解码
-                    MemoryCache.Builder(applicationContext).maxSizePercent(0.25).build()
+                    // 10% 堆：原先的 25% 在 256MB 堆（未开 largeHeap）时最多吃掉 64MB，
+                    // 与全曲库列表、歌词缓存叠加后把堆长期压在 85% 以上，OkHttp 解析
+                    // 响应时直接 OOM（crash_log1/2）。开 largeHeap 后按 10% 算，
+                    // 即使堆到 512MB 也只用约 51MB，比原来更省；翻列表偶尔重新解码，
+                    // 但磁盘缓存 256MB 兜底，重解码是本地读文件，不重新下载。
+                    MemoryCache.Builder(applicationContext).maxSizePercent(0.10).build()
                 }
                 // 磁盘缓存显式给到 256MB（封面缩略图约 15–50KB 一张，能放下几千张）。
                 // 不设的话 Coil 也会用默认的 SingletonDiskCache（10–250MB），
