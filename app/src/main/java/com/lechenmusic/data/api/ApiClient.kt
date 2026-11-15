@@ -57,8 +57,12 @@ class SafeJsonConverterFactory(
             if (json.isEmpty()) {
                 throw Exception("服务器返回了空响应，请检查服务器地址是否正确")
             }
+            // 这里必须显式给 fromJson 类型实参 <Any?>：泛型 <T> T fromJson(String, Type)
+            // 的 T 在 try 表达式内无法从期望类型推断，Kotlin 1.9 会把它推断成 Nothing，
+            // 编译出 checkcast java/lang/Void —— 解析成功反而抛 ClassCastException，
+            // 被下面的 catch 包装成"非JSON响应"，登录/所有接口全军覆没（1.7.1/1.7.2 的登录报错根因）。
             try {
-                gson.fromJson(json, type)
+                gson.fromJson<Any?>(json, type)
             } catch (e: Exception) {
                 // Genuinely not JSON (HTML error page, proxy notice, …).
                 throw Exception("服务器返回了非JSON响应: ${json.take(200)}")
