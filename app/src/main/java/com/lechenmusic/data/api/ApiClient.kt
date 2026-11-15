@@ -12,12 +12,22 @@ import java.lang.reflect.Type
 import java.util.concurrent.TimeUnit
 
 /**
- * A safe JSON converter that handles non-JSON responses gracefully.
- * When the server returns HTML or plain text instead of JSON,
- * it throws a meaningful exception instead of crashing.
+ * A tolerant JSON converter.
+ *
+ * Some server endpoints commit the status code before setting Content-Type, and
+ * proxies may rewrite the header as well, so a perfectly valid JSON body can
+ * arrive labelled "text/plain; charset=utf-8". The previous implementation
+ * rejected any text/plain or text/html body outright, which surfaced as
+ * "服务器返回了非JSON响应" even though the request had actually succeeded — for
+ * example an online-download task was created while the app reported an error.
+ *
+ * The body is now always read as text and parsed as JSON regardless of the
+ * declared media type; only a body that is genuinely not JSON raises an error,
+ * and its snippet is kept for diagnostics.
  */
 class SafeJsonConverterFactory(
-    private val delegate: GsonConverterFactory
+    private val delegate: GsonConverterFactory,
+    private val gson: com.google.gson.Gson = com.google.gson.GsonBuilder().setLenient().create()
 ) : Converter.Factory() {
 
     override fun responseBodyConverter(
@@ -25,49 +35,27 @@ class SafeJsonConverterFactory(
         annotations: Array<out Annotation>,
         retrofit: Retrofit
     ): Converter<ResponseBody, *> {
-        // In release builds, ProGuard may strip generic type info causing
-        // ClassCastException when GsonConverterFactory tries to use the type.
-        // Wrap in try-catch to handle gracefully.
-        val delegateConverter = try {
-            delegate.responseBodyConverter(type, annotations, retrofit)
-        } catch (e: ClassCastException) {
-            // If the delegate fails due to type erasure issues, create a fallback
-            // that parses the response as a raw JsonElement and then converts
-            null
-        }
 
         return Converter<ResponseBody, Any?> { body ->
-            val contentType = body.contentType()
-            val mediaType = contentType?.toString() ?: ""
-
-            // If response is not JSON, throw a meaningful error
-            if (mediaType.contains("text/html") || mediaType.contains("text/plain")) {
-                val text = body.string().take(200)
-                throw Exception("服务器返回了非JSON响应: $text")
+            // The media type is only a hint: it cannot be trusted to decide
+            // whether the payload is JSON, because a server that commits the
+            // status code before setting Content-Type (or a proxy rewriting it)
+            // delivers valid JSON labelled text/plain.
+            val text = try {
+                body.string()
+            } catch (e: Exception) {
+                throw Exception("读取服务器响应失败，请检查网络或服务器状态")
             }
-
+            // Gson rejects a leading BOM; trim it together with stray whitespace.
+            val json = text.trim().removePrefix("\uFEFF")
+            if (json.isEmpty()) {
+                throw Exception("服务器返回了空响应，请检查服务器地址是否正确")
+            }
             try {
-                if (delegateConverter != null) {
-                    delegateConverter.convert(body)
-                } else {
-                    // Fallback: parse as generic JsonObject
-                    val jsonString = body.string()
-                    val gson = com.google.gson.GsonBuilder().setLenient().create()
-                    gson.fromJson(jsonString, com.google.gson.JsonElement::class.java)
-                }
-            } catch (e: ClassCastException) {
-                // Type casting error in release build - try raw JSON parsing
-                try {
-                    val jsonString = body.string()
-                    val gson = com.google.gson.GsonBuilder().setLenient().create()
-                    gson.fromJson(jsonString, com.google.gson.JsonElement::class.java)
-                } catch (e2: Exception) {
-                    throw Exception("服务器响应格式错误，请检查服务器地址是否正确")
-                }
-            } catch (e: com.google.gson.JsonSyntaxException) {
-                throw Exception("服务器响应格式错误，请检查服务器地址是否正确")
-            } catch (e: IllegalStateException) {
-                throw Exception("服务器响应格式错误，请检查服务器地址是否正确")
+                gson.fromJson(json, type)
+            } catch (e: Exception) {
+                // Genuinely not JSON (HTML error page, proxy notice, …).
+                throw Exception("服务器返回了非JSON响应: ${json.take(200)}")
             }
         }
     }
