@@ -53,12 +53,15 @@ data class OnlineSong(
     val name: String = "",
     val artist: String = "",
     val albumName: String = "",
+    val albumId: String = "",
     val coverUrl: String = "",
     val duration: Int = 0,
     val qualities: List<OnlineQualityOption> = emptyList(),
     val time: Long = 0,
     val sign: String = "",
-    val inLibrary: Boolean = false
+    val inLibrary: Boolean = false,
+    /** 服务端标记：已有未完成的下载任务（排队/下载中/刮削中） */
+    val downloading: Boolean = false
 ) {
     val durationFormatted: String
         get() = if (duration <= 0) "" else "%d:%02d".format(duration / 60, duration % 60)
@@ -76,12 +79,14 @@ data class OnlineSong(
                 name = obj.str("name"),
                 artist = obj.str("artist"),
                 albumName = obj.str("albumName"),
+                albumId = obj.str("albumId"),
                 coverUrl = obj.str("coverUrl"),
                 duration = obj.int("duration"),
                 qualities = qualities,
                 time = obj.long("time"),
                 sign = obj.str("sign"),
-                inLibrary = obj.bool("inLibrary")
+                inLibrary = obj.bool("inLibrary"),
+                downloading = obj.bool("downloading")
             )
         }
 

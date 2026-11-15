@@ -2426,13 +2426,26 @@ fun loadAudiobooks() {
     /** 创建下载任务并刷新列表 */
     fun downloadOnline(song: OnlineSong, quality: String, fuzzy: Boolean, onResult: (String?) -> Unit = {}) {
         viewModelScope.launch {
+            // 本地先标「下载中」，避免连点重复提交（服务端同样会拦截）
+            patchOnlineSong(song, downloading = true)
             repository.onlineDownload(song, quality, fuzzy).fold(
                 onSuccess = { task ->
                     onlineTaskSeen[task.id] = task.status
                     loadOnlineTasks()
                     onResult(null)
                 },
-                onFailure = { onResult(it.message ?: "加入下载队列失败") }
+                onFailure = { err ->
+                    // 409：已在曲库或已在下载队列 —— 保持不可再点的状态
+                    if (err.message?.contains("已在曲库") == true ||
+                        err.message?.contains("正在下载") == true ||
+                        err.message?.contains("已下载") == true
+                    ) {
+                        patchOnlineSong(song, downloading = true, inLibrary = true)
+                    } else {
+                        patchOnlineSong(song, downloading = false)
+                    }
+                    onResult(err.message ?: "加入下载队列失败")
+                }
             )
         }
     }
@@ -2451,18 +2464,56 @@ fun loadAudiobooks() {
         }
     }
 
-    /** 删除任务记录（仅 queued/failed/done） */
-    fun deleteOnlineTask(task: OnlineDownloadTask, onResult: (String?) -> Unit = {}) {
+    /** 删除下载记录（仅 queued/failed/done）；服务端会同时删除 NAS 文件与曲库记录 */
+    fun deleteOnlineTask(task: OnlineDownloadTask, onResult: (String) -> Unit = {}) {
         viewModelScope.launch {
             repository.onlineDeleteTask(task.id).fold(
-                onSuccess = {
+                onSuccess = { message ->
                     onlineTaskSeen.remove(task.id)
                     _onlineTasks.value = _onlineTasks.value.filterNot { it.id == task.id }
-                    onResult(null)
+                    // 歌曲已不在库：把搜索结果里的「已在曲库/下载中」标记清掉，允许再次下载
+                    clearOnlineSongFlags(task.songName, task.artist)
+                    onResult(message)
                 },
-                onFailure = { onResult(it.message ?: "删除失败") }
+                onFailure = { onResult("删除失败：" + (it.message ?: "")) }
             )
         }
+    }
+
+    /** 局部更新搜索结果里某一首的下载/入库标记 */
+    private fun patchOnlineSong(song: OnlineSong, downloading: Boolean? = null, inLibrary: Boolean? = null) {
+        val cur = _onlineSearchResult.value ?: return
+        var changed = false
+        val songs = cur.songs.map { s ->
+            if (s.source == song.source && s.id == song.id) {
+                changed = true
+                s.copy(
+                    downloading = downloading ?: s.downloading,
+                    inLibrary = inLibrary ?: s.inLibrary
+                )
+            } else s
+        }
+        if (changed) _onlineSearchResult.value = cur.copy(songs = songs)
+    }
+
+    /** 删除后按歌名+歌手清掉搜索结果里的入库/下载中标记 */
+    private fun clearOnlineSongFlags(songName: String, artist: String) {
+        val cur = _onlineSearchResult.value ?: return
+        fun sameArtist(a: String): Boolean {
+            if (a.isBlank() || artist.isBlank()) return true
+            val norm = { s: String -> s.replace("•", "/").replace("、", "/").replace("&", "/").split("/") }
+            val left = norm(a).map { it.trim().lowercase() }.filter { it.isNotEmpty() }.toSet()
+            val right = norm(artist).map { it.trim().lowercase() }.filter { it.isNotEmpty() }.toSet()
+            return left.intersect(right).isNotEmpty()
+        }
+        var changed = false
+        val songs = cur.songs.map { s ->
+            if (s.name.equals(songName, ignoreCase = true) && sameArtist(s.artist)) {
+                changed = true
+                s.copy(inLibrary = false, downloading = false)
+            } else s
+        }
+        if (changed) _onlineSearchResult.value = cur.copy(songs = songs)
     }
 
     /** 下载完成后直接播放：按歌名搜曲库（带少量重试等扫描入库）并开始播放 */

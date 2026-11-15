@@ -1080,7 +1080,9 @@ class MusicRepository {
         val body = try { response.errorBody()?.string()?.trim() } catch (_: Exception) { null }
         val raw = if (!body.isNullOrBlank()) body else fallback
         return when {
-            response.code() == 409 -> "曲库已有这首歌（开启模糊匹配可下载其他版本）"
+            // 409 可能是「已在曲库」「已在下载队列」「已下载过」，服务端会给出具体原因，优先用它
+            response.code() == 409 -> body?.takeIf { it.isNotBlank() && !it.startsWith("<") }
+                ?: "已在曲库或正在下载，无需重复下载"
             response.code() == 429 -> "今日下载次数已达上限"
             response.code() == 403 && raw.contains("admin") -> "当前权限模式仅管理员可下载"
             response.code() == 404 -> "任务不存在或已删除"
@@ -1118,6 +1120,7 @@ class MusicRepository {
                 "name" to song.name,
                 "artist" to song.artist,
                 "album" to song.albumName,
+                "albumId" to song.albumId,
                 "coverUrl" to song.coverUrl,
                 "quality" to quality,
                 "fuzzy" to fuzzy,
@@ -1170,18 +1173,39 @@ class MusicRepository {
         }
     }
 
-    /** 删除任务记录：DELETE /api/online/tasks/{id} */
-    suspend fun onlineDeleteTask(id: String): Result<Unit> {
+    /**
+     * 删除下载记录：DELETE /api/online/tasks/{id}
+     * 服务端会同时删除 NAS 上的音频文件与曲库记录，成功时返回一句给用户看的结果说明。
+     */
+    suspend fun onlineDeleteTask(id: String): Result<String> {
         return try {
             val response = withAudiobookAuthRetry { token ->
                 audiobookApi!!.onlineDeleteTask(id, "Bearer $token")
             }
             if (!response.isSuccessful) {
                 Result.failure(Exception(onlineErrorMessage(response, "删除失败(${response.code()})")))
-            } else Result.success(Unit)
+            } else Result.success(describeDeleteResult(response.body()))
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+
+    /** 把 {deletedFile, deletedDb, warnings} 转成提示文案，明确告诉用户 NAS 文件是否真的删掉了 */
+    private fun describeDeleteResult(json: com.google.gson.JsonElement?): String {
+        val obj = json?.takeIf { it.isJsonObject }?.asJsonObject ?: return "已删除"
+        val deletedFile = obj.get("deletedFile")?.takeIf { it.isJsonPrimitive }?.asBoolean ?: false
+        val deletedDb = obj.get("deletedDb")?.takeIf { it.isJsonPrimitive }?.asInt ?: 0
+        val warnings = mutableListOf<String>()
+        obj.get("warnings")?.takeIf { it.isJsonArray }?.asJsonArray?.forEach { e ->
+            if (e.isJsonPrimitive) warnings.add(e.asString)
+        }
+        val parts = mutableListOf(
+            if (deletedFile) "已删除，NAS 文件已移除" else "记录已删除，NAS 上无对应文件"
+        )
+        if (deletedDb > 0) parts.add("曲库记录 $deletedDb 条")
+        var text = parts.joinToString(" · ")
+        if (warnings.isNotEmpty()) text += "（${warnings.joinToString("；")}）"
+        return text
     }
 
 }

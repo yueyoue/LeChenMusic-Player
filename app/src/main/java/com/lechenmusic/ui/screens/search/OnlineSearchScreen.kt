@@ -56,6 +56,8 @@ fun OnlineSearchScreen(
     var selectedTab by remember { mutableStateOf(0) }
     var quality by remember { mutableStateOf("") }
     var fuzzy by remember { mutableStateOf(false) }
+    // 待确认删除的任务：删除会连 NAS 上的音频文件一起删掉，必须先弹窗确认
+    var pendingDelete by remember { mutableStateOf<OnlineDownloadTask?>(null) }
 
     // 通知权限：下载完成的「推送→直接播放」依赖系统通知，Android 13+ 需运行时授权（仅请求一次）
     var notifPermissionRequested by rememberSaveable { mutableStateOf(false) }
@@ -158,11 +160,8 @@ fun OnlineSearchScreen(
                     }
                 },
                 onDelete = { task ->
-                    viewModel.deleteOnlineTask(task) { err ->
-                        if (err != null) {
-                            android.widget.Toast.makeText(context, err, android.widget.Toast.LENGTH_SHORT).show()
-                        }
-                    }
+                    // 先弹确认框，确认后才真正删除（删除会连 NAS 文件一起删掉）
+                    pendingDelete = task
                 },
                 onPlay = { task ->
                     android.widget.Toast.makeText(context, "正在查找并播放…", android.widget.Toast.LENGTH_SHORT).show()
@@ -181,6 +180,49 @@ fun OnlineSearchScreen(
                 pad = pad
             )
         }
+    }
+
+    // 删除确认弹窗：明确告知会同时删除 NAS 上的音频文件，避免误删
+    val deleting = pendingDelete
+    if (deleting != null) {
+        AlertDialog(
+            onDismissRequest = { pendingDelete = null },
+            title = { Text("删除下载歌曲") },
+            text = {
+                Text(
+                    buildString {
+                        append("确定删除《")
+                        append(deleting.songName)
+                        if (deleting.artist.isNotBlank()) append(" - ${deleting.artist}")
+                        append("》？\n\n")
+                        if (deleting.isDone) {
+                            append("会同时删除：\n")
+                            append("· NAS 上的音频文件\n")
+                            append("· 曲库中的歌曲记录\n")
+                            append("· 下载记录\n\n")
+                            append("删除后该歌曲不在曲库，可以重新下载。此操作不可撤销。")
+                        } else {
+                            append("该任务尚未完成入库，删除只会移除任务记录（如已产生临时文件也会一并清理）。\n")
+                            append("之后可以重新搜索下载。")
+                        }
+                    },
+                    fontSize = 14.sp
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    pendingDelete = null
+                    viewModel.deleteOnlineTask(deleting) { msg ->
+                        android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_LONG).show()
+                    }
+                }) {
+                    Text("删除", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingDelete = null }) { Text("取消") }
+            }
+        )
     }
 }
 
@@ -350,17 +392,21 @@ private fun OnlineSongItem(song: OnlineSong, fuzzy: Boolean, onDownload: () -> U
                 )
             }
         }
-        if (song.inLibrary) {
+        // 已入库 / 已在下载队列 一律不可再点：避免重复下载（服务端同样会拒绝）
+        if (song.downloading || song.inLibrary) {
             Column(horizontalAlignment = Alignment.End) {
                 AssistChip(
                     onClick = {},
                     enabled = false,
-                    label = { Text("已在曲库", fontSize = 11.sp) }
+                    label = {
+                        Text(if (song.downloading) "下载中" else "已在曲库", fontSize = 11.sp)
+                    }
                 )
-                if (!fuzzy) {
-                    Text("开模糊匹配可下载", fontSize = 10.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+                Text(
+                    if (song.downloading) "去「下载任务」看进度" else if (!fuzzy) "开模糊匹配可下载" else "",
+                    fontSize = 10.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         } else {
             FilledTonalIconButton(onClick = onDownload) {
