@@ -131,7 +131,9 @@ object AppDiagnostics {
         var pssMb = 0L
         try {
             val memInfo = Debug.MemoryInfo()
-            if (Debug.getMemoryInfo(memInfo)) pssMb = memInfo.totalPss.toLong() / 1024L
+            // android.os.Debug.getMemoryInfo(MemoryInfo) 返回 Unit（结果写回入参），不是 Boolean
+            Debug.getMemoryInfo(memInfo)
+            pssMb = memInfo.totalPss.toLong() / 1024L
         } catch (_: Exception) {
         }
 
