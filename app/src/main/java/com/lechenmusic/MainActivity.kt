@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.sp
@@ -35,6 +36,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.lechenmusic.ui.MainViewModel
+import com.lechenmusic.ui.EXTRA_ONLINE_PLAY_ARTIST
+import com.lechenmusic.ui.EXTRA_ONLINE_PLAY_SONG
 import com.lechenmusic.ui.VideoViewModel
 import com.lechenmusic.ui.components.MiniPlayer
 import com.lechenmusic.ui.navi.Screen
@@ -52,6 +55,7 @@ import com.lechenmusic.ui.screens.player.TabletPlayerScreen
 import com.lechenmusic.ui.screens.player.music.MusicPlayerContent
 import com.lechenmusic.ui.screens.recent.RecentPlayedScreen
 import com.lechenmusic.ui.screens.search.SearchScreen
+import com.lechenmusic.ui.screens.search.OnlineSearchScreen
 import com.lechenmusic.ui.screens.settings.SettingsScreen
 import com.lechenmusic.ui.screens.songs.AllSongsScreen
 import com.lechenmusic.ui.screens.home.AllPlaylistsScreen
@@ -112,8 +116,18 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // 在线下载通知点击「播放」：取出一次性 extra（消费后移除，避免旋转屏幕重复触发）
+        val onlinePlaySong = intent.getStringExtra(EXTRA_ONLINE_PLAY_SONG)
+            ?.also { intent.removeExtra(EXTRA_ONLINE_PLAY_SONG) }
+        val onlinePlayArtist = intent.getStringExtra(EXTRA_ONLINE_PLAY_ARTIST)
+            ?.also { intent.removeExtra(EXTRA_ONLINE_PLAY_ARTIST) }
         setContent {
             val viewModel: MainViewModel = viewModel()
+            LaunchedEffect(Unit) {
+                if (onlinePlaySong != null) {
+                    viewModel.requestPlayOnlineSong(onlinePlaySong, onlinePlayArtist ?: "")
+                }
+            }
             val videoViewModel: VideoViewModel = viewModel()
             val themeMode by viewModel.themeMode.collectAsState()
             // 平板UI默认使用深色模式
@@ -239,6 +253,26 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
     LaunchedEffect(currentRoute) {
         if (currentRoute == Screen.Home.route || currentRoute == Screen.Video.route) {
             videoViewModel.loadPlayRecords()
+        }
+    }
+
+    // 在线下载（M6）：通知点击/全局横幅「播放」——搜库并直接播放
+    val pendingOnlinePlay by viewModel.pendingOnlinePlay.collectAsState()
+    LaunchedEffect(pendingOnlinePlay, isLoggedIn) {
+        val playTask = pendingOnlinePlay
+        if (playTask != null && isLoggedIn) {
+            viewModel.clearPendingOnlinePlay()
+            viewModel.playDownloadedTask(playTask) { ok ->
+                if (ok) navController.navigate(Screen.Player.route)
+            }
+        }
+    }
+    // 下载完成横幅：15s 自动消失（新完成事件重新计时）
+    val onlineCompletion by viewModel.onlineCompletion.collectAsState()
+    LaunchedEffect(onlineCompletion?.id) {
+        if (onlineCompletion != null) {
+            kotlinx.coroutines.delay(15000)
+            viewModel.dismissOnlineCompletion()
         }
     }
 
@@ -552,6 +586,42 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                         .align(Alignment.BottomCenter)
                         .padding(bottom = if (showBottomBar) 96.dp else 16.dp)
                 )
+
+                // 在线下载完成横幅（M6）：提示可直接播放
+                onlineCompletion?.let { task ->
+                    Card(
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .statusBarsPadding()
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                            .fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                        ) {
+                            Icon(Icons.Default.CheckCircle, null, tint = MaterialTheme.colorScheme.primary)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("已入库，可直接播放", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                                Text("${task.songName} - ${task.artist}", fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                            TextButton(onClick = {
+                                viewModel.dismissOnlineCompletion()
+                                viewModel.playDownloadedTask(task) { ok ->
+                                    if (ok) navController.navigate(Screen.Player.route)
+                                }
+                            }) { Text("播放") }
+                            IconButton(onClick = { viewModel.dismissOnlineCompletion() }) {
+                                Icon(Icons.Default.Close, "关闭")
+                            }
+                        }
+                    }
+                }
                 } // Box
             }
         }
@@ -601,7 +671,21 @@ fun NavGraphBuilder.sharedNavRoutes(
             onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) },
             onArtistClick = { navController.navigate(Screen.ArtistDetail.createRoute(it)) },
             onAudiobookClick = { navController.navigate(Screen.AudiobookDetail.createRoute(it)) },
-            onVideoClick = { source, videoId -> navController.navigate(Screen.VideoDetail.createRoute(source, videoId)) }
+            onVideoClick = { source, videoId -> navController.navigate(Screen.VideoDetail.createRoute(source, videoId)) },
+            onOnlineSearch = { q ->
+                viewModel.setPendingOnlineKeyword(q)
+                navController.navigate(Screen.OnlineSearch.route)
+            }
+        )
+    }
+
+    composable(Screen.OnlineSearch.route) {
+        val responsiveCfg = com.lechenmusic.ui.responsive.rememberResponsiveConfig(windowSizeClass)
+        OnlineSearchScreen(
+            viewModel = viewModel,
+            responsiveConfig = responsiveCfg,
+            onBack = onBack,
+            onPlayStarted = { navController.navigate(Screen.Player.route) }
         )
     }
 

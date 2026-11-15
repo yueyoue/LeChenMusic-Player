@@ -19,10 +19,17 @@ import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+
+/** 在线下载「通知点击→直接播放」透传的 Intent extra key */
+const val EXTRA_ONLINE_PLAY_SONG = "online_play_song_name"
+const val EXTRA_ONLINE_PLAY_ARTIST = "online_play_artist"
+private const val ONLINE_CHANNEL_ID = "online_download"
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val app = application as LeChenApp
@@ -2331,6 +2338,213 @@ fun loadAudiobooks() {
         viewModelScope.launch {
             settings.setPreloadNetworkMode(mode)
             playerManager.setPreloadAllowCellular(mode == "all")
+        }
+    }
+
+    // ===== 在线搜歌（M6：搜全网下载）=====
+
+    /** 搜全网入口传递的关键词（SearchScreen → OnlineSearchScreen，避免路由编码问题） */
+    private val _pendingOnlineKeyword = MutableStateFlow("")
+    val pendingOnlineKeyword: StateFlow<String> = _pendingOnlineKeyword.asStateFlow()
+    fun setPendingOnlineKeyword(kw: String) { _pendingOnlineKeyword.value = kw }
+    fun consumePendingOnlineKeyword(): String {
+        val v = _pendingOnlineKeyword.value
+        _pendingOnlineKeyword.value = ""
+        return v
+    }
+
+    private val _onlineSearchResult = MutableStateFlow<OnlineSearchResult?>(null)
+    val onlineSearchResult: StateFlow<OnlineSearchResult?> = _onlineSearchResult.asStateFlow()
+    private val _onlineSearching = MutableStateFlow(false)
+    val onlineSearching: StateFlow<Boolean> = _onlineSearching.asStateFlow()
+    private val _onlineSearchError = MutableStateFlow<String?>(null)
+    val onlineSearchError: StateFlow<String?> = _onlineSearchError.asStateFlow()
+    private val _onlineSearchQuery = MutableStateFlow("")
+    val onlineSearchQuery: StateFlow<String> = _onlineSearchQuery.asStateFlow()
+    private var onlineSearchKeyword = ""
+
+    /** 在线搜索（服务端 /api/online/search，带限速与防封） */
+    fun searchOnline(keyword: String) {
+        val kw = keyword.trim()
+        onlineSearchKeyword = kw
+        _onlineSearchQuery.value = kw
+        if (kw.isEmpty()) {
+            _onlineSearchResult.value = null
+            _onlineSearchError.value = null
+            return
+        }
+        viewModelScope.launch {
+            _onlineSearching.value = true
+            _onlineSearchError.value = null
+            repository.onlineSearch(kw).fold(
+                onSuccess = {
+                    if (onlineSearchKeyword == kw) {
+                        _onlineSearchResult.value = it
+                        _onlineSearching.value = false
+                    }
+                },
+                onFailure = {
+                    if (onlineSearchKeyword == kw) {
+                        _onlineSearchError.value = it.message ?: "搜索失败"
+                        _onlineSearching.value = false
+                    }
+                }
+            )
+        }
+    }
+
+    private val _onlineTasks = MutableStateFlow<List<OnlineDownloadTask>>(emptyList())
+    val onlineTasks: StateFlow<List<OnlineDownloadTask>> = _onlineTasks.asStateFlow()
+    // taskId -> 上次状态：首次出现（含历史已完成）不提醒，仅状态跃变到 done 才提示
+    private val onlineTaskSeen = mutableMapOf<String, String>()
+    private var onlinePollJob: Job? = null
+
+    /** 下载完成的全局提示（横幅 + 系统通知），点「播放」直接播放 */
+    private val _onlineCompletion = MutableStateFlow<OnlineDownloadTask?>(null)
+    val onlineCompletion: StateFlow<OnlineDownloadTask?> = _onlineCompletion.asStateFlow()
+
+    /** 通知栏点击触发的直接播放请求（MainActivity 透传） */
+    private val _pendingOnlinePlay = MutableStateFlow<OnlineDownloadTask?>(null)
+    val pendingOnlinePlay: StateFlow<OnlineDownloadTask?> = _pendingOnlinePlay.asStateFlow()
+
+    fun dismissOnlineCompletion() { _onlineCompletion.value = null }
+    fun clearPendingOnlinePlay() { _pendingOnlinePlay.value = null }
+
+    /** 通知栏点击「播放」：带歌名/歌手回来直接搜库播放 */
+    fun requestPlayOnlineSong(songName: String, artist: String) {
+        if (songName.isBlank()) return
+        _pendingOnlinePlay.value = OnlineDownloadTask(songName = songName, artist = artist, status = "done")
+    }
+
+    /** 刷新我的下载任务（打开任务页时调用；有进行中任务则开启轮询） */
+    fun loadOnlineTasks() {
+        viewModelScope.launch {
+            repository.onlineTasks().onSuccess { applyOnlineTasks(it) }
+        }
+    }
+
+    /** 创建下载任务并刷新列表 */
+    fun downloadOnline(song: OnlineSong, quality: String, fuzzy: Boolean, onResult: (String?) -> Unit = {}) {
+        viewModelScope.launch {
+            repository.onlineDownload(song, quality, fuzzy).fold(
+                onSuccess = { task ->
+                    onlineTaskSeen[task.id] = task.status
+                    loadOnlineTasks()
+                    onResult(null)
+                },
+                onFailure = { onResult(it.message ?: "加入下载队列失败") }
+            )
+        }
+    }
+
+    /** 重试失败任务 */
+    fun retryOnlineTask(task: OnlineDownloadTask, onResult: (String?) -> Unit = {}) {
+        viewModelScope.launch {
+            repository.onlineRetryTask(task.id).fold(
+                onSuccess = {
+                    onlineTaskSeen[task.id] = "queued"
+                    loadOnlineTasks()
+                    onResult(null)
+                },
+                onFailure = { onResult(it.message ?: "重试失败") }
+            )
+        }
+    }
+
+    /** 删除任务记录（仅 queued/failed/done） */
+    fun deleteOnlineTask(task: OnlineDownloadTask, onResult: (String?) -> Unit = {}) {
+        viewModelScope.launch {
+            repository.onlineDeleteTask(task.id).fold(
+                onSuccess = {
+                    onlineTaskSeen.remove(task.id)
+                    _onlineTasks.value = _onlineTasks.value.filterNot { it.id == task.id }
+                    onResult(null)
+                },
+                onFailure = { onResult(it.message ?: "删除失败") }
+            )
+        }
+    }
+
+    /** 下载完成后直接播放：按歌名搜曲库（带少量重试等扫描入库）并开始播放 */
+    fun playDownloadedTask(task: OnlineDownloadTask, onResult: (Boolean) -> Unit = {}) {
+        viewModelScope.launch {
+            val artists = task.artist.split(" / ", "/", "&", "、", ",", ";")
+                .map { it.trim() }.filter { it.isNotEmpty() }
+            repeat(4) { attempt ->
+                val songs = repository.search(task.songName).getOrNull()?.song ?: emptyList()
+                val match = songs.firstOrNull { s ->
+                    s.title.equals(task.songName, ignoreCase = true) &&
+                        artists.any { a -> s.artist.contains(a, ignoreCase = true) }
+                } ?: songs.firstOrNull { it.title.equals(task.songName, ignoreCase = true) }
+                if (match != null) {
+                    playSong(match, songs)
+                    onResult(true)
+                    return@launch
+                }
+                if (attempt < 3) delay(2500)
+            }
+            onResult(false)
+        }
+    }
+
+    private fun applyOnlineTasks(tasks: List<OnlineDownloadTask>) {
+        for (t in tasks) {
+            val prev = onlineTaskSeen.put(t.id, t.status)
+            if (prev != null && prev != t.status && prev in OnlineDownloadTask.ACTIVE_STATUSES && t.isDone) {
+                _onlineCompletion.value = t
+                notifyOnlineTaskDone(t)
+            }
+        }
+        _onlineTasks.value = tasks
+        if (tasks.any { it.isActive }) startOnlineTaskPolling()
+    }
+
+    private fun startOnlineTaskPolling() {
+        if (onlinePollJob?.isActive == true) return
+        onlinePollJob = viewModelScope.launch {
+            while (true) {
+                delay(3000)
+                repository.onlineTasks().onSuccess { applyOnlineTasks(it) }
+                if (_onlineTasks.value.none { it.isActive }) break
+            }
+        }
+    }
+
+    /** 系统通知（best-effort）：无通知权限/OEM 限制时静默跳过，横幅仍可用 */
+    private fun notifyOnlineTaskDone(task: OnlineDownloadTask) {
+        val context = getApplication<Application>()
+        try {
+            val nm = context.getSystemService(android.content.Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+            nm.createNotificationChannel(
+                android.app.NotificationChannel(
+                    ONLINE_CHANNEL_ID,
+                    "下载完成",
+                    android.app.NotificationManager.IMPORTANCE_DEFAULT
+                )
+            )
+            if (!androidx.core.app.NotificationManagerCompat.from(context).areNotificationsEnabled()) return
+            val intent = android.content.Intent(context, com.lechenmusic.MainActivity::class.java).apply {
+                putExtra(EXTRA_ONLINE_PLAY_SONG, task.songName)
+                putExtra(EXTRA_ONLINE_PLAY_ARTIST, task.artist)
+                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            }
+            val pi = android.app.PendingIntent.getActivity(
+                context,
+                task.id.hashCode(),
+                intent,
+                android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+            )
+            val notification = androidx.core.app.NotificationCompat.Builder(context, ONLINE_CHANNEL_ID)
+                .setSmallIcon(android.R.drawable.ic_media_play)
+                .setContentTitle("已下载入库，可直接播放")
+                .setContentText("${task.songName} - ${task.artist}")
+                .setContentIntent(pi)
+                .setAutoCancel(true)
+                .setPriority(androidx.core.app.NotificationCompat.PRIORITY_DEFAULT)
+                .build()
+            androidx.core.app.NotificationManagerCompat.from(context).notify(task.id.hashCode(), notification)
+        } catch (_: Exception) {
+            // 通知能力完全 best-effort，失败不影响主流程
         }
     }
 

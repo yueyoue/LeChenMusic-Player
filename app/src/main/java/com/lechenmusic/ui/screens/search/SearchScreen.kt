@@ -39,7 +39,8 @@ fun SearchScreen(
     onAlbumClick: (String) -> Unit,
     onArtistClick: (String) -> Unit,
     onAudiobookClick: (String) -> Unit = {},
-    onVideoClick: (String, String) -> Unit = { _, _ -> }
+    onVideoClick: (String, String) -> Unit = { _, _ -> },
+    onOnlineSearch: (String) -> Unit = {}
 ) {
     val config = responsiveConfig
     val isTablet = config != null && (config.isMedium || config.isExpanded)
@@ -139,6 +140,31 @@ fun SearchScreen(
         // Results
         LazyColumn(modifier = Modifier.weight(1f), contentPadding = PaddingValues(bottom = 160.dp)) {
             if (query.isBlank()) {
+                // 搜全网入口：曲库缺歌时一键全网搜索下载入库（M6）
+                item {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)
+                            .clickable { onOnlineSearch("") }
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)
+                        ) {
+                            Icon(Icons.Default.CloudDownload, null,
+                                tint = MaterialTheme.colorScheme.primary)
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("搜全网下载", fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                                Text("曲库没有的歌，全网搜索自动下载入库", fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            Icon(Icons.Default.ChevronRight, null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
                 // Hot searches（真实数据，无数据时不展示，不再用硬编码演示词条）
                 if (hotTags.isNotEmpty()) {
                     item {
@@ -249,8 +275,22 @@ fun SearchScreen(
 
                         if (songs.isEmpty() && artists.isEmpty() && albums.isEmpty()) {
                             item {
-                                Text("未找到匹配的音乐", modifier = Modifier.padding(horizontal = 20.dp, vertical = 40.dp),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Column(
+                                    modifier = Modifier.fillMaxWidth()
+                                        .padding(horizontal = 20.dp, vertical = 40.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text("未找到匹配的音乐", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    FilledTonalButton(onClick = { onOnlineSearch(query) }) {
+                                        Icon(Icons.Default.CloudDownload, null, modifier = Modifier.size(18.dp))
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text("曲库没有？去全网搜")
+                                    }
+                                    Text("全网搜索 · 一键下载 · 自动刮削入库", fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(top = 8.dp))
+                                }
                             }
                         }
                     }

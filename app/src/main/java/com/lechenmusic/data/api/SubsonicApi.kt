@@ -378,6 +378,45 @@ interface SubsonicApi {
         @retrofit2.http.Header("X-ND-Authorization") authHeader: String
     ): retrofit2.Response<com.google.gson.JsonElement>
 
+    // ===== Online download API（M6：搜全网下载，native JWT 鉴权）=====
+
+    /** 在线搜索：GET /api/online/search?keyword=&page=&size= */
+    @GET("api/online/search")
+    suspend fun onlineSearch(
+        @Query("keyword") keyword: String,
+        @Query("page") page: Int,
+        @Query("size") size: Int,
+        @retrofit2.http.Header("X-ND-Authorization") authHeader: String
+    ): retrofit2.Response<com.google.gson.JsonElement>
+
+    /** 创建下载任务：POST /api/online/download */
+    @retrofit2.http.POST("api/online/download")
+    suspend fun onlineDownload(
+        @retrofit2.http.Body body: okhttp3.RequestBody,
+        @retrofit2.http.Header("X-ND-Authorization") authHeader: String
+    ): retrofit2.Response<com.google.gson.JsonElement>
+
+    /** 我的下载任务：GET /api/online/tasks?mine=1 */
+    @GET("api/online/tasks")
+    suspend fun onlineTasks(
+        @Query("mine") mine: String = "1",
+        @retrofit2.http.Header("X-ND-Authorization") authHeader: String
+    ): retrofit2.Response<com.google.gson.JsonElement>
+
+    /** 重试失败任务：POST /api/online/tasks/{id}/retry */
+    @retrofit2.http.POST("api/online/tasks/{id}/retry")
+    suspend fun onlineRetryTask(
+        @retrofit2.http.Path("id") id: String,
+        @retrofit2.http.Header("X-ND-Authorization") authHeader: String
+    ): retrofit2.Response<com.google.gson.JsonElement>
+
+    /** 删除任务记录：DELETE /api/online/tasks/{id} */
+    @retrofit2.http.HTTP(method = "DELETE", path = "api/online/tasks/{id}", hasBody = false)
+    suspend fun onlineDeleteTask(
+        @retrofit2.http.Path("id") id: String,
+        @retrofit2.http.Header("X-ND-Authorization") authHeader: String
+    ): retrofit2.Response<com.google.gson.JsonElement>
+
     companion object {
         /** Build narrator avatar URL for loading with Coil/AsyncImage */
         fun getNarratorAvatarUrl(serverUrl: String, narratorName: String, token: String? = null): String {

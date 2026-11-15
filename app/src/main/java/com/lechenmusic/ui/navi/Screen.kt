@@ -5,6 +5,7 @@ sealed class Screen(val route: String) {
     object Home : Screen("home")
     object Favorites : Screen("favorites")
     object Search : Screen("search")
+    object OnlineSearch : Screen("online_search")
     object Artists : Screen("artists")
     object Albums : Screen("albums")
     object AllSongs : Screen("all_songs")

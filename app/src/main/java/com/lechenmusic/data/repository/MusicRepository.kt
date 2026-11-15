@@ -1073,6 +1073,117 @@ class MusicRepository {
         } catch (_: Exception) { null }
     }
 
+    // ===== Online download（M6：搜全网下载）=====
+
+    /** online 系列接口非 2xx 时提取可展示的错误文案 */
+    private fun onlineErrorMessage(response: retrofit2.Response<com.google.gson.JsonElement>, fallback: String): String {
+        val body = try { response.errorBody()?.string()?.trim() } catch (_: Exception) { null }
+        val raw = if (!body.isNullOrBlank()) body else fallback
+        return when {
+            response.code() == 409 -> "曲库已有这首歌（开启模糊匹配可下载其他版本）"
+            response.code() == 429 -> "今日下载次数已达上限"
+            response.code() == 403 && raw.contains("admin") -> "当前权限模式仅管理员可下载"
+            response.code() == 404 -> "任务不存在或已删除"
+            else -> raw
+        }
+    }
+
+    /** 在线搜索：GET /api/online/search */
+    suspend fun onlineSearch(keyword: String, page: Int = 1, size: Int = 20): Result<com.lechenmusic.data.model.OnlineSearchResult> {
+        return try {
+            val response = withAudiobookAuthRetry { token ->
+                audiobookApi!!.onlineSearch(keyword, page, size, "Bearer $token")
+            }
+            if (!response.isSuccessful) {
+                Result.failure(Exception(onlineErrorMessage(response, "搜索失败(${response.code()})")))
+            } else {
+                Result.success(com.lechenmusic.data.model.OnlineSong.parseSearchResult(response.body()))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /** 创建下载任务：POST /api/online/download */
+    suspend fun onlineDownload(
+        song: com.lechenmusic.data.model.OnlineSong,
+        quality: String = "",
+        fuzzy: Boolean = false
+    ): Result<com.lechenmusic.data.model.OnlineDownloadTask> {
+        return try {
+            val payload = com.google.gson.Gson().toJson(mapOf(
+                "source" to song.source,
+                "platform" to song.platform,
+                "songId" to song.id,
+                "name" to song.name,
+                "artist" to song.artist,
+                "album" to song.albumName,
+                "coverUrl" to song.coverUrl,
+                "quality" to quality,
+                "fuzzy" to fuzzy,
+                "time" to song.time,
+                "sign" to song.sign
+            ))
+            val body = payload.toRequestBody("application/json; charset=utf-8".toMediaType())
+            val response = withAudiobookAuthRetry { token ->
+                audiobookApi!!.onlineDownload(body, "Bearer $token")
+            }
+            if (!response.isSuccessful) {
+                Result.failure(Exception(onlineErrorMessage(response, "加入下载队列失败(${response.code()})")))
+            } else {
+                val task = com.lechenmusic.data.model.OnlineDownloadTask.parseOne(response.body())
+                if (task != null) Result.success(task)
+                else Result.failure(Exception("下载任务创建成功但响应解析失败"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /** 我的下载任务：GET /api/online/tasks?mine=1 */
+    suspend fun onlineTasks(): Result<List<com.lechenmusic.data.model.OnlineDownloadTask>> {
+        return try {
+            val response = withAudiobookAuthRetry { token ->
+                audiobookApi!!.onlineTasks("1", "Bearer $token")
+            }
+            if (!response.isSuccessful) {
+                Result.failure(Exception(onlineErrorMessage(response, "获取下载任务失败(${response.code()})")))
+            } else {
+                Result.success(com.lechenmusic.data.model.OnlineDownloadTask.parseList(response.body()))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /** 重试失败任务：POST /api/online/tasks/{id}/retry */
+    suspend fun onlineRetryTask(id: String): Result<Unit> {
+        return try {
+            val response = withAudiobookAuthRetry { token ->
+                audiobookApi!!.onlineRetryTask(id, "Bearer $token")
+            }
+            if (!response.isSuccessful) {
+                Result.failure(Exception(onlineErrorMessage(response, "重试失败(${response.code()})")))
+            } else Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /** 删除任务记录：DELETE /api/online/tasks/{id} */
+    suspend fun onlineDeleteTask(id: String): Result<Unit> {
+        return try {
+            val response = withAudiobookAuthRetry { token ->
+                audiobookApi!!.onlineDeleteTask(id, "Bearer $token")
+            }
+            if (!response.isSuccessful) {
+                Result.failure(Exception(onlineErrorMessage(response, "删除失败(${response.code()})")))
+            } else Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
 }
 
 data class StarredData(val songs: List<com.lechenmusic.data.model.Song> = emptyList(), val albums: List<com.lechenmusic.data.model.Album> = emptyList(), val artists: List<com.lechenmusic.data.model.Artist> = emptyList(), val playlists: List<com.lechenmusic.data.model.Playlist> = emptyList(), val radios: List<com.lechenmusic.data.model.StarredRadio> = emptyList())
