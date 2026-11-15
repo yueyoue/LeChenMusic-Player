@@ -36,6 +36,12 @@ class SafeJsonConverterFactory(
         retrofit: Retrofit
     ): Converter<ResponseBody, *> {
 
+        // ResponseBody 必须原样透传：/api/song 一页 2~3MB，要按流逐条解析（见
+        // MusicRepository.parseNativeSongPage）。若交给本工厂，会先 body.string() 读成
+        // 整页大字符串再建 JsonElement 树，正是内存峰值与 OOM 的来源。
+        // 返回 null 表示本工厂不处理，由 Retrofit 内置的 BuiltInConverters 接管。
+        if (type === ResponseBody::class.java) return null
+
         return Converter<ResponseBody, Any?> { body ->
             // The media type is only a hint: it cannot be trusted to decide
             // whether the payload is JSON, because a server that commits the

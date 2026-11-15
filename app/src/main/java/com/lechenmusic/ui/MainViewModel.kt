@@ -383,7 +383,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             combine(settings.serverUrl, settings.username, settings.password) { url, user, pass ->
                 Triple(url, user, pass)
-            }.collect { (url, user, pass) ->
+            }
+                // 去重：settings 的三个 Flow 都来自 dataStore.data.map{}，DataStore 里任何一次写入
+                // （播放后存「最近播放」、刷新各板块缓存 JSON、切主题、改音质……）都会让它们各自
+                // 重新发射同一个值，combine 随之再发射一次。没有这一行，每一次无关写入都会被当成
+                // 「登录信息变了」，重复执行下面的 configure + loadHomeData + loadAllSongs
+                // （一次全量同步 = 10 页约 21.8MB JSON），用户感受就是「怎么又要等」。
+                .distinctUntilChanged()
+                .collect { (url, user, pass) ->
                 if (url.isNotBlank() && user.isNotBlank() && pass.isNotBlank()) {
                     repository.configure(url, user, pass)
                     // Authenticate with Navidrome native API for audiobook endpoints
@@ -1232,8 +1239,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // 全曲库同步的在途任务：一次同步 = 10 页 × 500 条 ≈ 21.8MB JSON。
+    // 没有这道守门时，登录 combine 每发射一次（DataStore 任何写入都会发射）就再起一份同步，
+    // 旧的那份不会被取消，于是多份全量同步并发跑：既让用户多等好几轮，也让多页 JSON
+    // 同时进入内存，是 crash_log1/crash_log2 那种「堆被打满」的直接推手。
+    private var allSongsSyncJob: Job? = null
+
     fun loadAllSongs(showToast: Boolean = false) {
-        viewModelScope.launch {
+        // 在途守卫：已有同步在跑就不再叠加，直接复用它的结果（数据会通过 _allSongs 反映出来）
+        if (allSongsSyncJob?.isActive == true) return
+        allSongsSyncJob = viewModelScope.launch {
             val loadStartedAt = System.currentTimeMillis()
             // 只有完全没有可展示数据时才显示加载态；
             // 已有缓存/内存数据时全程静默同步，用户点开乐库即刻看到列表、无感刷新

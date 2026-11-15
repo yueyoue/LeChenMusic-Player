@@ -349,7 +349,14 @@ interface SubsonicApi {
 
     // ===== Native song API（全曲库批量拉取：替代逐专辑 getAlbum 爬取）=====
 
-    /** Navidrome 原生 /api/song 分页（_start/_end 半开区间，500 条/页），返回 MediaFile JSON 数组 */
+    /**
+     * Navidrome 原生 /api/song 分页（_start/_end 半开区间，500 条/页），返回 MediaFile JSON 数组。
+     *
+     * 返回 ResponseBody 而不是 JsonElement：500 条一页约 2~3MB，交给 Gson 会先读成整页字符串、
+     * 再建成 JsonElement 树（树通常是正文的 3~5 倍），单页峰值十几 MB；改为按流读取后由
+     * MusicRepository.parseNativeSongPage 用 JsonReader 逐条解析，峰值与页大小无关。
+     */
+    @retrofit2.http.Streaming
     @GET("api/song")
     suspend fun getNativeSongs(
         @Query("_start") start: Int,
@@ -357,7 +364,7 @@ interface SubsonicApi {
         @Query("_sort") sort: String,
         @Query("_order") order: String,
         @retrofit2.http.Header("X-ND-Authorization") authHeader: String
-    ): retrofit2.Response<com.google.gson.JsonElement>
+    ): retrofit2.Response<okhttp3.ResponseBody>
 
     // ===== Stats API =====
 

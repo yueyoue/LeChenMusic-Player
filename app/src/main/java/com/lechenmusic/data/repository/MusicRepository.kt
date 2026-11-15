@@ -407,17 +407,23 @@ class MusicRepository {
                     )
                 }
                 if (!page.isSuccessful) {
+                    // 非 2xx 时正文在 errorBody 里，必须显式关掉，否则连接不会回收
+                    page.errorBody()?.close()
                     return Result.failure(Exception("native /api/song HTTP ${page.code()}"))
                 }
-                val arr = page.body()?.takeIf { it.isJsonArray }?.asJsonArray ?: break
-                if (arr.size() == 0) break
-                for (el in arr) {
-                    try {
-                        val song = parseNativeSong(el.asJsonObject)
-                        if (seenIds.add(song.id)) allSongs.add(song)
-                    } catch (_: Exception) { }
+                val body = page.body() ?: break
+                // 流式逐条解析：内存里同时只存在「当前这一条」，不再整页建树
+                val parsed = try {
+                    parseNativeSongPage(body)
+                } finally {
+                    try { body.close() } catch (_: Exception) { }
                 }
-                if (arr.size() < pageSize) break
+                if (parsed.recordCount == 0) break
+                for (song in parsed.songs) {
+                    if (seenIds.add(song.id)) allSongs.add(song)
+                }
+                // 用「原始记录数」判断是否是最后一页（旧逻辑同口径），避免个别条目解析失败导致提前收尾
+                if (parsed.recordCount < pageSize) break
                 start += pageSize
             }
             if (allSongs.isNotEmpty()) Result.success(allSongs)
@@ -425,6 +431,51 @@ class MusicRepository {
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+
+    /** 一页 /api/song 的解析结果：recordCount 是原始记录条数（含解析失败的），songs 是成功映射的。 */
+    private class NativeSongPage(val recordCount: Int, val songs: List<Song>)
+
+    /**
+     * 流式解析一页 /api/song。
+     *
+     * 为什么不用 Gson 直接反序列化成 JsonElement：500 条一页的正文字节约 2~3MB，
+     * 先 body.string() 得到整页字符串，再建成 JsonElement 树（树通常放大到正文的 3~5 倍），
+     * 单页峰值十几 MB；多页叠加、再加上全量列表与图片缓存，就是 crash_log 里的 Java 堆 OOM。
+     *
+     * 这里用 JsonReader 顺着字节流往下走：每读到一个对象就立刻映射成 Song 再丢掉 JSON 节点，
+     * 峰值只与「单条记录 + 已收集的 Song 列表」有关，与页大小、曲库规模无关。
+     */
+    private fun parseNativeSongPage(body: okhttp3.ResponseBody): NativeSongPage {
+        val songs = ArrayList<Song>(512)
+        var recordCount = 0
+        val reader = com.google.gson.stream.JsonReader(
+            java.io.InputStreamReader(body.byteStream(), Charsets.UTF_8)
+        )
+        reader.isLenient = true
+        try {
+            // 接口正常返回顶层数组；不是数组（错误页/包装对象等）按空页处理，与旧逻辑一致
+            if (reader.peek() != com.google.gson.stream.JsonToken.BEGIN_ARRAY) {
+                return NativeSongPage(0, emptyList())
+            }
+            val adapter = com.google.gson.Gson().getAdapter(com.google.gson.JsonObject::class.java)
+            reader.beginArray()
+            while (reader.hasNext()) {
+                if (reader.peek() != com.google.gson.stream.JsonToken.BEGIN_OBJECT) {
+                    reader.skipValue()
+                    continue
+                }
+                val element = adapter.read(reader)
+                recordCount++
+                try {
+                    songs.add(parseNativeSong(element))
+                } catch (_: Exception) { }
+            }
+            reader.endArray()
+        } finally {
+            try { reader.close() } catch (_: Exception) { }
+        }
+        return NativeSongPage(recordCount, songs)
     }
 
     /** Navidrome 原生 MediaFile JSON → APP 的 Subsonic 风格 Song */
@@ -688,6 +739,8 @@ class MusicRepository {
         if (result is retrofit2.Response<*>) {
             android.util.Log.e("LeChenDebug", "withAudiobookAuthRetry: HTTP ${result.code()} ok=${result.isSuccessful}")
             if (result.code() == 401) {
+                // 旧响应正文（errorBody）要显式关闭：流式响应体不关会占住连接，重试后泄漏
+                try { result.errorBody()?.close() } catch (_: Exception) { }
                 android.util.Log.w("LeChenMusic", "withAudiobookAuthRetry: Got 401, re-authenticating...")
                 com.lechenmusic.data.api.NavidromeAuth.clear()
                 val authSuccess = authenticateNavidrome()
