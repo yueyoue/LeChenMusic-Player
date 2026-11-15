@@ -34,7 +34,7 @@ class SafeJsonConverterFactory(
         type: Type,
         annotations: Array<out Annotation>,
         retrofit: Retrofit
-    ): Converter<ResponseBody, *> {
+    ): Converter<ResponseBody, *>? {
 
         // ResponseBody 必须原样透传：/api/song 一页 2~3MB，要按流逐条解析（见
         // MusicRepository.parseNativeSongPage）。若交给本工厂，会先 body.string() 读成
