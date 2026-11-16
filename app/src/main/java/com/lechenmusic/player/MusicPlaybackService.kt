@@ -72,10 +72,14 @@ class MusicPlaybackService : android.app.Service() {
 
         val token = sharedSessionToken
         if (token != null) {
+            // 注意：占位通知没有任何 addAction，绝不能调用
+            // setShowActionsInCompactView(N)——部分 ROM 在通知展开时会校验
+            // 按钮下标，下标越界（如 action 0 out of bounds, max -1）会直接
+            // 抛 IllegalArgumentException 导致应用闪退（开机即崩循环）。
+            // 完整带按钮的通知由 MusicPlayerManager.updateNotification() 接管。
             builder.setStyle(
                 MediaStyle()
                     .setMediaSession(token)
-                    .setShowActionsInCompactView(0, 1, 2)
             )
         }
 
