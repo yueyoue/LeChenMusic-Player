@@ -49,10 +49,15 @@ fun OnlineSearchScreen(
     val searching by viewModel.onlineSearching.collectAsState()
     val searchError by viewModel.onlineSearchError.collectAsState()
     val tasks by viewModel.onlineTasks.collectAsState()
-    val pendingKeyword by viewModel.pendingOnlineKeyword.collectAsState()
+    val previewingSongId by viewModel.previewingSongId.collectAsState()
 
-    var keyword by remember { mutableStateOf(pendingKeyword) }
-    var selectedTab by remember { mutableStateOf(0) }
+    // 离开页面时停止试听，释放播放器
+    DisposableEffect(Unit) {
+        onDispose { viewModel.stopPreview() }
+    }
+
+    var keyword by rememberSaveable { mutableStateOf("") }
+    var selectedTab by rememberSaveable { mutableStateOf(0) }
     var fuzzy by remember { mutableStateOf(false) }
     // 待确认删除的任务：删除会连 NAS 上的音频文件一起删掉，必须先弹窗确认
     var pendingDelete by remember { mutableStateOf<OnlineDownloadTask?>(null) }
@@ -61,12 +66,17 @@ fun OnlineSearchScreen(
     var notifPermissionRequested by rememberSaveable { mutableStateOf(false) }
     val notifPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
-    // 进入页面：消费入口关键词（或恢复上次搜索词）并刷新任务列表（有进行中任务会自动开启轮询）
+    // 进入页面：只有「从音乐搜索带词跳入」（pendingOnlineKeyword）才自动搜索；
+    // 不再回填/重搜上次的搜索词——再次打开搜索页时搜索框是空的。
     LaunchedEffect(Unit) {
-        if (keyword.isBlank()) {
-            keyword = viewModel.consumePendingOnlineKeyword().ifBlank { viewModel.onlineSearchQuery.value }
+        val pending = viewModel.consumePendingOnlineKeyword()
+        if (pending.isNotBlank() && keyword.isBlank()) {
+            keyword = pending
+            viewModel.searchOnline(pending)
+        } else if (keyword.isBlank()) {
+            // 新打开搜索页：清掉上次的结果残留，搜索框与结果都是空的
+            viewModel.searchOnline("")
         }
-        if (keyword.isNotBlank()) viewModel.searchOnline(keyword)
         viewModel.loadOnlineTasks()
         if (!notifPermissionRequested && android.os.Build.VERSION.SDK_INT >= 33 &&
             !androidx.core.app.NotificationManagerCompat.from(context).areNotificationsEnabled()
@@ -133,6 +143,8 @@ fun OnlineSearchScreen(
                 songs = searchResult?.songs ?: emptyList(),
                 searching = searching,
                 error = searchError,
+                previewingSongId = previewingSongId,
+                onPreview = { viewModel.togglePreview(it) },
                 onSearch = { viewModel.searchOnline(keyword) },
                 onDownload = { song ->
                     viewModel.downloadOnline(song, fuzzy) { err ->
@@ -233,6 +245,8 @@ private fun OnlineSearchTab(
     songs: List<OnlineSong>,
     searching: Boolean,
     error: String?,
+    previewingSongId: String,
+    onPreview: (OnlineSong) -> Unit,
     onSearch: () -> Unit,
     onDownload: (OnlineSong) -> Unit,
     pad: androidx.compose.ui.unit.Dp
@@ -296,7 +310,13 @@ private fun OnlineSearchTab(
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp))
                 }
                 items(songs) { song ->
-                    OnlineSongItem(song = song, fuzzy = fuzzy, onDownload = { onDownload(song) })
+                    OnlineSongItem(
+                        song = song,
+                        fuzzy = fuzzy,
+                        isPreviewing = previewingSongId == song.id,
+                        onPreview = { onPreview(song) },
+                        onDownload = { onDownload(song) }
+                    )
                 }
             } else if (!searching && error == null) {
                 item {
@@ -320,7 +340,7 @@ private fun OnlineSearchTab(
 }
 
 @Composable
-private fun OnlineSongItem(song: OnlineSong, fuzzy: Boolean, onDownload: () -> Unit) {
+private fun OnlineSongItem(song: OnlineSong, fuzzy: Boolean, isPreviewing: Boolean, onPreview: () -> Unit, onDownload: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -364,24 +384,33 @@ private fun OnlineSongItem(song: OnlineSong, fuzzy: Boolean, onDownload: () -> U
             }
         }
         // 已入库 / 已在下载队列 一律不可再点：避免重复下载（服务端同样会拒绝）
-        if (song.downloading || song.inLibrary) {
-            Column(horizontalAlignment = Alignment.End) {
-                AssistChip(
-                    onClick = {},
-                    enabled = false,
-                    label = {
-                        Text(if (song.downloading) "下载中" else "已在曲库", fontSize = 11.sp)
-                    }
-                )
-                Text(
-                    if (song.downloading) "去「下载任务」看进度" else if (!fuzzy) "开模糊匹配可下载" else "",
-                    fontSize = 10.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            FilledTonalIconButton(onClick = onPreview) {
+                Icon(
+                    if (isPreviewing) Icons.Default.Stop else Icons.Default.PlayArrow,
+                    contentDescription = if (isPreviewing) "停止试听" else "试听"
                 )
             }
-        } else {
-            FilledTonalIconButton(onClick = onDownload) {
-                Icon(Icons.Default.Download, contentDescription = "下载")
+            Spacer(modifier = Modifier.width(8.dp))
+            if (song.downloading || song.inLibrary) {
+                Column(horizontalAlignment = Alignment.End) {
+                    AssistChip(
+                        onClick = {},
+                        enabled = false,
+                        label = {
+                            Text(if (song.downloading) "下载中" else "已在曲库", fontSize = 11.sp)
+                        }
+                    )
+                    Text(
+                        if (song.downloading) "去「下载任务」看进度" else if (!fuzzy) "开模糊匹配可下载" else "",
+                        fontSize = 10.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                FilledTonalIconButton(onClick = onDownload) {
+                    Icon(Icons.Default.Download, contentDescription = "下载")
+                }
             }
         }
     }

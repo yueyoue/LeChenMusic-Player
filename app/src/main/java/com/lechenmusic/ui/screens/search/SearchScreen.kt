@@ -12,6 +12,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,6 +36,7 @@ fun SearchScreen(
     viewModel: MainViewModel,
     videoViewModel: VideoViewModel? = null,
     responsiveConfig: ResponsiveConfig? = null,
+    onBack: () -> Unit = {},
     onSongClick: (Song, List<Song>) -> Unit,
     onAlbumClick: (String) -> Unit,
     onArtistClick: (String) -> Unit,
@@ -46,7 +48,6 @@ fun SearchScreen(
     val isTablet = config != null && (config.isMedium || config.isExpanded)
     val pad = config?.contentPadding ?: 20.dp
     val searchResults by viewModel.searchResults.collectAsState()
-    val searchQuery by viewModel.searchQuery.collectAsState()
     val serverUrl by viewModel.serverUrl.collectAsState()
     val username by viewModel.username.collectAsState()
     val password by viewModel.password.collectAsState()
@@ -58,9 +59,13 @@ fun SearchScreen(
     // 影视搜索状态
     val videoSearchResults by videoViewModel?.searchResults?.collectAsState() ?: remember { mutableStateOf(emptyList()) }
 
-    // Restore previous search state
-    var query by remember { mutableStateOf(searchQuery) }
-    var selectedTab by remember { mutableStateOf(0) }
+    // 搜索框状态：rememberSaveable 跨“进详情页后返回”保留，但重新进入搜索页是新条目、从空开始
+    var query by rememberSaveable { mutableStateOf("") }
+    var selectedTab by rememberSaveable { mutableStateOf(0) }
+    // 新进入搜索页时清掉上次的结果残留，避免“看起来又搜了一次”
+    LaunchedEffect(Unit) {
+        if (query.isBlank()) viewModel.search("")
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         // Header with back button
@@ -68,7 +73,11 @@ fun SearchScreen(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = { viewModel.search(""); query = "" }) {
+            IconButton(onClick = {
+                viewModel.search("")
+                query = ""
+                onBack()
+            }) {
                 Icon(Icons.Default.ArrowBack, "返回")
             }
             Spacer(modifier = Modifier.width(4.dp))

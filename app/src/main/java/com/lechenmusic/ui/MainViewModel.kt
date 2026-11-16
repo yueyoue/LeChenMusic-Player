@@ -1146,6 +1146,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun playSong(song: Song, playlist: List<Song> = listOf(song), albumId: String? = null) {
+        // 主播放器开播时停掉试听，避免两路音频叠播
+        stopPreview()
         // Save audiobook progress before switching to music
         saveAudiobookProgress()
 
@@ -2447,6 +2449,50 @@ fun loadAudiobooks() {
         viewModelScope.launch {
             repository.onlineTasks().onSuccess { applyOnlineTasks(it) }
         }
+    }
+
+    // ===== 在线试听（M6.1）：播放搜歌结果的临时直链，与主播放器互不干扰 =====
+    private val _previewingSongId = MutableStateFlow("")
+    val previewingSongId: StateFlow<String> = _previewingSongId.asStateFlow()
+    private var previewPlayer: android.media.MediaPlayer? = null
+
+    /** 切换试听：同一首再点 = 停止；不同首 = 停旧播新 */
+    fun togglePreview(song: OnlineSong) {
+        if (_previewingSongId.value == song.id) {
+            stopPreview()
+            return
+        }
+        stopPreview()
+        viewModelScope.launch {
+            repository.onlinePreview(song).fold(
+                onSuccess = { url ->
+                    try {
+                        val mp = android.media.MediaPlayer()
+                        mp.setDataSource(url)
+                        mp.setOnPreparedListener { it.start() }
+                        mp.setOnCompletionListener { stopPreview() }
+                        mp.setOnErrorListener { _, _, _ -> stopPreview(); true }
+                        mp.prepareAsync()
+                        previewPlayer = mp
+                        _previewingSongId.value = song.id
+                    } catch (_: Exception) {
+                        stopPreview()
+                    }
+                },
+                onFailure = { stopPreview() }
+            )
+        }
+    }
+
+    /** 停止并释放试听播放器 */
+    fun stopPreview() {
+        try {
+            previewPlayer?.stop()
+        } catch (_: Exception) {
+        }
+        previewPlayer?.release()
+        previewPlayer = null
+        _previewingSongId.value = ""
     }
 
     /**

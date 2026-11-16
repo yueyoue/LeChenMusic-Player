@@ -403,6 +403,13 @@ interface SubsonicApi {
         @retrofit2.http.Header("X-ND-Authorization") authHeader: String
     ): retrofit2.Response<com.google.gson.JsonElement>
 
+    /** 试听解析：POST /api/online/preview — 返回可直接播放的临时直链 */
+    @retrofit2.http.POST("api/online/preview")
+    suspend fun onlinePreview(
+        @retrofit2.http.Body body: okhttp3.RequestBody,
+        @retrofit2.http.Header("X-ND-Authorization") authHeader: String
+    ): retrofit2.Response<com.google.gson.JsonElement>
+
     /** 我的下载任务：GET /api/online/tasks?mine=1 */
     @GET("api/online/tasks")
     suspend fun onlineTasks(

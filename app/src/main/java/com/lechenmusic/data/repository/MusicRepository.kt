@@ -1200,6 +1200,38 @@ class MusicRepository {
         }
     }
 
+    /**
+     * 试听解析：POST /api/online/preview — 返回可直接播放的临时直链（试听用）。
+     * 服务端固定用 320k（上游 128k 是占位片段），客户端直接流式播放。
+     */
+    suspend fun onlinePreview(
+        song: com.lechenmusic.data.model.OnlineSong
+    ): Result<String> {
+        return try {
+            val payload = com.google.gson.Gson().toJson(mapOf(
+                "source" to song.source,
+                "platform" to song.platform,
+                "songId" to song.id,
+                "time" to song.time,
+                "sign" to song.sign
+            ))
+            val body = payload.toRequestBody("application/json; charset=utf-8".toMediaType())
+            val response = withAudiobookAuthRetry { token ->
+                audiobookApi!!.onlinePreview(body, "Bearer $token")
+            }
+            if (!response.isSuccessful) {
+                Result.failure(Exception(onlineErrorMessage(response, "试听失败(${response.code()})")))
+            } else {
+                val obj = response.body()?.takeIf { it.isJsonObject }?.asJsonObject
+                val url = obj?.get("url")?.takeIf { it.isJsonPrimitive }?.asString
+                if (url.isNullOrBlank()) Result.failure(Exception("未获取到试听地址"))
+                else Result.success(url)
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     /** 我的下载任务：GET /api/online/tasks?mine=1 */
     suspend fun onlineTasks(): Result<List<com.lechenmusic.data.model.OnlineDownloadTask>> {
         return try {

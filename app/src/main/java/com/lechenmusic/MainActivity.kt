@@ -667,6 +667,7 @@ fun NavGraphBuilder.sharedNavRoutes(
             viewModel = viewModel,
             videoViewModel = videoViewModel,
             responsiveConfig = responsiveCfg,
+            onBack = onBack,
             onSongClick = { s, p -> viewModel.playSong(s, p); navController.navigate(Screen.Player.route) },
             onAlbumClick = { navController.navigate(Screen.AlbumDetail.createRoute(it)) },
             onArtistClick = { navController.navigate(Screen.ArtistDetail.createRoute(it)) },
