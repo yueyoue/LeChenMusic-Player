@@ -1179,6 +1179,7 @@ class MusicRepository {
                 "album" to song.albumName,
                 "albumId" to song.albumId,
                 "coverUrl" to song.coverUrl,
+                "duration" to song.duration, // 期望时长：服务端据此拦截上游广告占位音频
                 "quality" to "", // 空串 = 用服务端默认音质策略
                 "fuzzy" to fuzzy,
                 "time" to song.time,
@@ -1213,7 +1214,8 @@ class MusicRepository {
                 "platform" to song.platform,
                 "songId" to song.id,
                 "time" to song.time,
-                "sign" to song.sign
+                "sign" to song.sign,
+                "duration" to song.duration // 期望时长：服务端据此拦截上游广告占位音频
             ))
             val body = payload.toRequestBody("application/json; charset=utf-8".toMediaType())
             val response = withAudiobookAuthRetry { token ->
