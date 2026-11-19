@@ -1112,6 +1112,22 @@ class MusicRepository {
         } catch (_: Exception) {}
     }
 
+    // 上报设备与 APP 版本到服务端（启动登录后调用一次，管理端"用户-用户"页展示手机端当前版本）
+    suspend fun reportDeviceVersion(deviceId: String, deviceInfo: String, appVersion: String) {
+        try {
+            val api = api ?: return
+            val token = com.lechenmusic.data.api.NavidromeAuth.token ?: return
+            val body = com.google.gson.Gson().toJson(
+                com.lechenmusic.data.model.DeviceRequest(
+                    deviceId = deviceId,
+                    deviceInfo = deviceInfo,
+                    appVersion = appVersion
+                )
+            ).toRequestBody("application/json".toMediaType())
+            api.reportDevice(body, "Bearer $token")
+        } catch (_: Exception) {}
+    }
+
     // 从服务端获取用户播放统计（用于跨设备同步和重装恢复）
     suspend fun fetchUserPlayStats(): com.lechenmusic.data.model.UserPlayStats? {
         return try {

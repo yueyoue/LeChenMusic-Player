@@ -395,6 +395,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     repository.configure(url, user, pass)
                     // Authenticate with Navidrome native API for audiobook endpoints
                     repository.authenticateNavidrome()
+                    // 上报设备与 APP 版本（管理端"用户-用户"页展示手机端当前版本）
+                    reportDeviceVersion()
                     _isLoggedIn.value = true
                     loadHomeData()
                     // Auto-sync all songs in background
@@ -937,6 +939,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
             _aiRecommendLoading.value = false
         }
+    }
+
+    // 启动登录后上报设备与 APP 版本（管理端"用户-用户"页展示手机端当前版本），失败不影响正常使用
+    private suspend fun reportDeviceVersion() {
+        try {
+            val app = getApplication<Application>()
+            val deviceId = android.provider.Settings.Secure.getString(
+                app.contentResolver,
+                android.provider.Settings.Secure.ANDROID_ID
+            ) ?: "unknown"
+            val deviceInfo =
+                "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}, Android ${android.os.Build.VERSION.RELEASE}"
+            val appVersion = try {
+                app.packageManager.getPackageInfo(app.packageName, 0).versionName ?: "unknown"
+            } catch (_: Exception) {
+                "unknown"
+            }
+            repository.reportDeviceVersion(deviceId, deviceInfo, appVersion)
+        } catch (_: Exception) {}
     }
 
     /** 从服务端获取用户播放统计（用于等级计算和重装恢复） */
