@@ -344,6 +344,27 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         const val CACHED_SONGS_CACHE_FILE = "cached_songs_cache.json"
         const val HOT_SEARCHES_CACHE_FILE = "hot_searches_cache.json"
         const val ARTISTS_CACHE_FILE = "artists_cache.json"
+
+        /** 曲库增量同步的最小间隔：2 分钟内重复进入乐库不再打网络 */
+        const val SONG_SYNC_MIN_INTERVAL_MS = 2 * 60 * 1000L
+
+        /** 完整曲库校正间隔：24h（校正服务端删除、元数据变更） */
+        const val SONG_FULL_SYNC_INTERVAL_MS = 24 * 60 * 60 * 1000L
+
+        /** 专辑全集刷新间隔：进入专辑页 30 秒内重复刷新不再重复拉 */
+        const val ALBUMS_REFRESH_MIN_INTERVAL_MS = 30 * 1000L
+
+        /** 首页「最新专辑」刷新间隔 */
+        const val NEWEST_ALBUMS_REFRESH_MIN_INTERVAL_MS = 60 * 1000L
+
+        /** 本地曲库缓存分片上屏的批大小：300 首 ≈ 百余毫秒，先让用户看到列表 */
+        const val SONG_CACHE_EMIT_CHUNK = 300
+
+        /** 专辑全集分页大小（服务端单页上限 500，约 300KB） */
+        const val ALBUM_PAGE_SIZE = 500
+
+        /** 专辑翻页安全上限：60 页 = 3 万张，防止异常服务端陷入死循环 */
+        const val MAX_ALBUM_PAGES = 60
     }
 
     // Artist detail
@@ -514,14 +535,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 repository.configure(serverUrl, username, password)
                 val result = repository.ping()
                 if (result.isSuccess) {
-                    // Authenticate with Navidrome native API for audiobook endpoints
-                    repository.authenticateNavidrome()
+                    // 登录成败只由 ping 决定。JWT 认证、影视账号同步、首页预取都属于附加动作，
+                    // 任何一项失败都不应把已经成功的登录改判为失败——旧写法把这些调用放在
+                    // 同一个 try 块里，一旦抛异常就会在登录页弹出一条误导性的错误提示。
+                    try {
+                        repository.authenticateNavidrome()
+                    } catch (_: Exception) {}
+
                     settings.saveLogin(serverUrl, username, password)
                     _isLoggedIn.value = true
+
                     // 登录时同步影视服务器账号密码（修复：切换账号后影视账号同步切换）
                     // 每次登录都更新，确保 VideoViewModel 的 Flow 收到变更并重新登录
-                    settings.saveVideoLogin("http://j.tthsdd.top:3000", username, password)
-                    loadHomeData()
+                    try {
+                        settings.saveVideoLogin("http://j.tthsdd.top:3000", username, password)
+                    } catch (_: Exception) {}
+
+                    try {
+                        loadHomeData()
+                    } catch (_: Exception) {}
                 } else {
                     _loginError.value = result.exceptionOrNull()?.message ?: "连接失败"
                 }
@@ -676,19 +708,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     if (cachedSongs.size >= 5) {
                         _dailySongs.value = cachedSongs
                     } else {
-                        repository.getRandomSongs(1000).onSuccess {
+                        repository.getRandomSongs(300).onSuccess {
                             _dailySongs.value = it
                             settings.saveCachedDailySongs(Gson().toJson(it), today)
                         }
                     }
                 } catch (_: Exception) {
-                    repository.getRandomSongs(1000).onSuccess {
+                    repository.getRandomSongs(300).onSuccess {
                         _dailySongs.value = it
                         settings.saveCachedDailySongs(Gson().toJson(it), today)
                     }
                 }
             } else {
-                repository.getRandomSongs(1000).onSuccess {
+                repository.getRandomSongs(300).onSuccess {
                     _dailySongs.value = it
                     settings.saveCachedDailySongs(Gson().toJson(it), today)
                 }
@@ -985,37 +1017,47 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /** 按类型取少量专辑（用于首页「换一批」随机专辑等轻量场景） */
     fun loadAlbums(type: String = "newest", callback: (List<Album>) -> Unit) {
         viewModelScope.launch {
             when (type) {
                 "newest" -> repository.getNewestAlbums(50)
                 "recent" -> repository.getRecentAlbums(50)
+                "frequent" -> repository.getFrequentAlbums(50)
                 "random" -> repository.getRandomAlbums(50)
+                "starred" -> repository.getAlbumList2("starred", 50, 0)
                 else -> repository.getNewestAlbums(50)
             }.onSuccess { callback(it) }
         }
     }
 
-    fun loadAllAlbums(callback: (List<Album>) -> Unit) {
-        // 1) 内存已有 → 立即回调上屏，后台静默刷新
+    /**
+     * 专辑全集（界面直接收集 [cachedAllAlbums]，不再用回调复制一份到页面内部，
+     * 避免「本地副本一旦有值就再也不刷新」的旧 bug）。
+     *
+     * 行为：
+     *  - 内存/磁盘缓存立刻可用（UI 先显示）；
+     *  - 无论有没有缓存都触发一次后台刷新（30 秒节流），保证能看到服务端最新专辑。
+     */
+    fun loadAllAlbums(force: Boolean = false) {
         val cached = _cachedAllAlbums.value
         if (cached.isNotEmpty()) {
-            callback(cached)
-            refreshAllAlbumsInBackground(callback, showLoading = false)
+            refreshAllAlbumsInBackground(force = force, showLoading = false)
             return
         }
-        // 2) 读磁盘缓存 → 立即回调上屏，后台静默刷新
+        // 无内存缓存：先亮加载态，避免首帧闪一下「暂无专辑」
+        _allAlbumsLoading.value = true
         viewModelScope.launch {
             val disk = withContext(Dispatchers.IO) {
                 ListJsonCache.read(listCacheDir, ALL_ALBUMS_CACHE_FILE, Album::class.java)
             }
             if (disk.isNotEmpty()) {
                 _cachedAllAlbums.value = disk
-                callback(disk)
-                refreshAllAlbumsInBackground(callback, showLoading = false)
+                // 有磁盘缓存：先上屏，后台静默刷新（30 秒节流；force 时强制）
+                refreshAllAlbumsInBackground(force = force, showLoading = false)
             } else {
-                // 3) 首次使用（无任何缓存）：显示加载态，拉取全量
-                refreshAllAlbumsInBackground(callback, showLoading = true)
+                // 首次使用（无任何缓存）：拉取全集
+                refreshAllAlbumsInBackground(force = true, showLoading = true)
             }
         }
     }
@@ -1023,47 +1065,91 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     /** 专辑全集后台刷新任务（单飞行：同时只跑一个，避免重复翻页拉取） */
     private var allAlbumsRefreshJob: kotlinx.coroutines.Job? = null
 
-    /** 后台静默同步专辑全集：成功后更新内存 + 回写磁盘缓存，并回调最新列表 */
-    private fun refreshAllAlbumsInBackground(callback: (List<Album>) -> Unit, showLoading: Boolean) {
-        val running = allAlbumsRefreshJob
-        if (running != null && running.isActive) return
+    /** 最近一次专辑全集刷新完成时间（30 秒节流） */
+    private var lastAlbumsRefreshAt = 0L
+
+    /** 最近一次首页「最新专辑」刷新时间（60 秒节流） */
+    private var lastNewestAlbumsRefreshAt = 0L
+
+    /**
+     * 后台同步专辑全集：成功后更新内存 + 回写磁盘缓存，同时刷新首页「最新专辑」。
+     * @param force true=跳过节流（进入专辑页/点刷新时使用）
+     */
+    private fun refreshAllAlbumsInBackground(force: Boolean, showLoading: Boolean) {
+        val now = System.currentTimeMillis()
+        if (!force && now - lastAlbumsRefreshAt < ALBUMS_REFRESH_MIN_INTERVAL_MS) return
+        if (allAlbumsRefreshJob?.isActive == true) return
         allAlbumsRefreshJob = viewModelScope.launch {
             if (showLoading) _allAlbumsLoading.value = true
-            val sorted = fetchAllAlbumsFromServer()
-            if (sorted.isNotEmpty()) {
-                _cachedAllAlbums.value = sorted
-                withContext(Dispatchers.IO) {
-                    ListJsonCache.write(listCacheDir, ALL_ALBUMS_CACHE_FILE, sorted, Album::class.java)
+            try {
+                val sorted = fetchAllAlbumsFromServer()
+                if (sorted.isNotEmpty()) {
+                    _cachedAllAlbums.value = sorted
+                    // 最新专辑 = 按创建时间倒序的前 20 张，顺手更新首页缓存，避免首页停留在登录时的快照
+                    val newest = sorted.take(20)
+                    if (newest.isNotEmpty()) {
+                        _newestAlbums.value = newest
+                        try { settings.saveCachedNewestAlbumsJson(Gson().toJson(newest)) } catch (_: Exception) {}
+                    }
+                    withContext(Dispatchers.IO) {
+                        ListJsonCache.write(listCacheDir, ALL_ALBUMS_CACHE_FILE, sorted, Album::class.java)
+                    }
+                    lastAlbumsRefreshAt = System.currentTimeMillis()
                 }
-                callback(sorted)
+            } catch (_: Exception) {
+                // 刷新失败保留旧列表，界面不跳空
+            } finally {
+                _allAlbumsLoading.value = false
             }
-            _allAlbumsLoading.value = false
         }
     }
 
-    /** 拉取全部专辑（多种排序翻页合并去重，按添加时间倒序） */
+    /**
+     * 拉取全部专辑。
+     *
+     * 只需 `newest` 一种排序一直翻页即可覆盖整库（服务端按 created 倒序，offset 分页完整）；
+     * 旧实现用 6 种排序各翻一遍（newest/recent/frequent/random/starred/alphabeticalByName），
+     * 同样的专辑被重复拉 6 次，2000 张专辑就要 24 次请求，是大曲库下专辑页迟迟不更新的另一推手。
+     */
     private suspend fun fetchAllAlbumsFromServer(): List<Album> {
-        val allAlbums = mutableListOf<Album>()
-        val seenIds = mutableSetOf<String>()
-        val types = listOf("newest", "recent", "frequent", "random", "starred", "alphabeticalByName")
-        for (type in types) {
-            var offset = 0
-            val pageSize = 500
-            while (true) {
-                try {
-                    val albums = repository.getAlbumList2(type, pageSize, offset).getOrNull() ?: break
-                    for (album in albums) {
-                        if (seenIds.add(album.id)) {
-                            allAlbums.add(album)
-                        }
-                    }
-                    if (albums.size < pageSize) break
-                    offset += pageSize
-                } catch (_: Exception) { break }
+        val allAlbums = ArrayList<Album>(1024)
+        val seenIds = HashSet<String>(2048)
+        var offset = 0
+        var pages = 0
+        while (pages < MAX_ALBUM_PAGES) {
+            val albums = try {
+                repository.getAlbumList2("newest", ALBUM_PAGE_SIZE, offset).getOrNull() ?: break
+            } catch (_: Exception) {
+                break
+            }
+            for (album in albums) {
+                if (seenIds.add(album.id)) allAlbums.add(album)
+            }
+            pages++
+            if (albums.size < ALBUM_PAGE_SIZE) break
+            offset += ALBUM_PAGE_SIZE
+        }
+        // 按添加时间倒序（created 是 ISO-8601 字符串，字典序即时间序）
+        allAlbums.sortByDescending { it.created }
+        return allAlbums
+    }
+
+    /**
+     * 轻量刷新首页「最新专辑」：只拉 20 张（约 12KB），60 秒节流。
+     * 首页每次进入都会调用，保证新加的专辑不用重登也能出现在首页/专辑页。
+     */
+    fun refreshNewestAlbums(force: Boolean = false) {
+        val now = System.currentTimeMillis()
+        if (!force && now - lastNewestAlbumsRefreshAt < NEWEST_ALBUMS_REFRESH_MIN_INTERVAL_MS) return
+        lastNewestAlbumsRefreshAt = now
+        viewModelScope.launch {
+            repository.getNewestAlbums(20).onSuccess { newest ->
+                if (newest.isNotEmpty()) {
+                    _newestAlbums.value = newest
+                    try { settings.saveCachedNewestAlbumsJson(Gson().toJson(newest)) } catch (_: Exception) {}
+                }
             }
         }
-        // Sort by created date descending (newest first)
-        return allAlbums.sortedByDescending { it.created }
     }
 
     fun search(query: String) {
@@ -1254,7 +1340,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun refreshDailySongs() {
         viewModelScope.launch {
-            repository.getRandomSongs(1000).onSuccess {
+            repository.getRandomSongs(300).onSuccess {
                 _dailySongs.value = it
                 val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
                 settings.saveCachedDailySongs(Gson().toJson(it), today)
@@ -1262,13 +1348,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // 全曲库同步的在途任务：一次同步 = 10 页 × 500 条 ≈ 21.8MB JSON。
+    // 全曲库同步的在途任务：一次完整同步 = 10 页 × 500 条 ≈ 22MB JSON（4917 首实测）。
     // 没有这道守门时，登录 combine 每发射一次（DataStore 任何写入都会发射）就再起一份同步，
     // 旧的那份不会被取消，于是多份全量同步并发跑：既让用户多等好几轮，也让多页 JSON
     // 同时进入内存，是 crash_log1/crash_log2 那种「堆被打满」的直接推手。
     private var allSongsSyncJob: Job? = null
 
-    fun loadAllSongs(showToast: Boolean = false) {
+    /** 本地曲库缓存是否已经完整解析过（预热与 loadAllSongs 共用） */
+    private var songsCacheLoaded = false
+
+    /**
+     * 加载乐库。
+     *
+     * 冷启动路径（刻意分成两段，避免用户对着空白等）：
+     *  1) 本地缓存分片解析、分片上屏 —— 前 300 首通常百余毫秒内就能看到；
+     *  2) 服务端走增量同步 —— 只拉「新歌覆盖到的部分」，没有新歌时 1 页就停。
+     *
+     * 旧实现每次启动都整库同步 22MB、并且要等整份缓存解析完才上屏，是「非常非常慢」的根因。
+     */
+    fun loadAllSongs(showToast: Boolean = false, force: Boolean = false) {
         // 在途守卫：已有同步在跑就不再叠加，直接复用它的结果（数据会通过 _allSongs 反映出来）
         if (allSongsSyncJob?.isActive == true) return
         allSongsSyncJob = viewModelScope.launch {
@@ -1278,54 +1376,88 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             if (_allSongs.value.isEmpty()) _allSongsLoading.value = true
             _allSongsLoadError.value = null
 
-            // Step 1: Load cached songs first for instant display（流式读文件缓存，见 readAllSongsCache）
-            // 内存已有数据（warmUpListCaches 预热过）则不重复读盘，避免大曲库重复解析
-            if (_allSongs.value.isEmpty()) {
-                val cachedSongs = try { allSongsCacheAsync().await() } catch (_: Exception) { emptyList() }
-                if (cachedSongs.isNotEmpty()) {
-                    _allSongs.value = cachedSongs
-                    _allSongsLoading.value = false
+            // Step 1: 本地缓存 —— 内部按 300 条一批实时写入 _allSongs，先上屏再继续解析
+            if (!songsCacheLoaded) {
+                try {
+                    allSongsCacheAsync().await()
+                } catch (_: Exception) {
+                } finally {
+                    songsCacheLoaded = true
                 }
-            } else {
+            }
+            // 有缓存/首批已上屏就关掉整屏加载态（剩余的同步是静默的）
+            if (_allSongs.value.isNotEmpty()) _allSongsLoading.value = false
+
+            // Step 2: 服务端同步（默认增量）
+            val cachedList = _allSongs.value
+            val now = System.currentTimeMillis()
+            // 用缓存文件的最后写入时间做「跨进程」节流/全量判定：
+            // 进程内的时间戳每次冷启动都会归零，只看它会导致每次重开 APP 都再拉一次 22MB 全库。
+            val cacheModified = try { allSongsCacheFile.lastModified() } catch (_: Exception) { 0L }
+            val cacheAgeMs = if (cacheModified > 0L) now - cacheModified else Long.MAX_VALUE
+            if (!force && cachedList.isNotEmpty() && cacheAgeMs < SONG_SYNC_MIN_INTERVAL_MS) {
                 _allSongsLoading.value = false
+                loadCachedSongs()
+                return@launch
             }
 
-            // Step 2: Fetch fresh data from server
-            val cachedList = _allSongs.value
+            // 缓存为空 → 必须全量；缓存超过 24h 未更新 → 本次全量校正（删除/元数据变更）
+            val fullSync = cachedList.isEmpty() || cacheAgeMs > SONG_FULL_SYNC_INTERVAL_MS
+            val knownIds: Set<String> = if (cachedList.isEmpty()) {
+                emptySet()
+            } else {
+                HashSet<String>(cachedList.size * 2).apply { for (song in cachedList) add(song.id) }
+            }
+
             try {
-                repository.getAllSongs().onSuccess { serverSongs ->
-                    // 诊断打点：从发起加载到「全曲库可用」的总耗时（含 Step 1 等本地缓存解析）
-                    AppDiagnostics.recordLibraryLoad(System.currentTimeMillis() - loadStartedAt, serverSongs.size)
-                    if (serverSongs.isNotEmpty()) {
-                        // Use server results directly (already sorted newest-first by repository)
-                        _allSongs.value = serverSongs
-                        saveSongsToCache(serverSongs)
-                        if (showToast && cachedList.isNotEmpty() && serverSongs.size > cachedList.size) {
-                            _toastMessage.value = "发现 ${serverSongs.size - cachedList.size} 首新歌曲"
-                        }
+                repository.syncSongs(knownIds = knownIds, fullSync = fullSync).onSuccess { result ->
+                    // 增量结果只含「新歌 + 覆盖到的旧歌」，必须与缓存合并，不能直接替换
+                    val merged = mergeSongs(result.songs, cachedList)
+                    if (merged.isNotEmpty()) {
+                        _allSongs.value = merged
+                        saveSongsToCache(merged)
                     }
-                    _allSongsLoading.value = false
-                }.onFailure {
+                    // 诊断打点按合并后的可见曲库条数记录，避免增量时只显示 500 条
+                    AppDiagnostics.recordLibraryLoad(
+                        System.currentTimeMillis() - loadStartedAt,
+                        merged.size
+                    )
+                    if (showToast && cachedList.isNotEmpty() && merged.size > cachedList.size) {
+                        _toastMessage.value = "发现 ${merged.size - cachedList.size} 首新歌曲"
+                    }
+                }.onFailure { e ->
                     if (_allSongs.value.isEmpty()) {
-                        // No cache and server failed
-                        repository.getRandomSongs(500).onSuccess { songs ->
+                        // 无缓存且服务端失败：用随机歌曲兜底，至少让界面可用
+                        repository.getRandomSongs(300).onSuccess { songs ->
                             _allSongs.value = songs
                             saveSongsToCache(songs)
-                        }.onFailure { e ->
+                        }.onFailure {
                             _allSongsLoadError.value = e.message
                         }
                     }
-                    _allSongsLoading.value = false
                 }
             } catch (e: Exception) {
                 if (_allSongs.value.isEmpty()) {
                     _allSongsLoadError.value = e.message
                 }
-                _allSongsLoading.value = false
             }
+            _allSongsLoading.value = false
             // 乐库元数据（内存）就绪后，静默刷新「缓存」列表的歌曲信息匹配
             loadCachedSongs()
         }
+    }
+
+    /**
+     * 合并服务端结果与本地缓存：服务端在前（最新添加），缓存里未被覆盖的旧歌按原顺序续在后面。
+     * 用 ArrayList 预分配 + HashSet 去重，避免多次复制整表造成额外内存峰值。
+     */
+    private fun mergeSongs(fresh: List<Song>, cached: List<Song>): List<Song> {
+        if (cached.isEmpty()) return fresh
+        val out = ArrayList<Song>(fresh.size + cached.size)
+        val seen = HashSet<String>((fresh.size + cached.size) * 2)
+        for (song in fresh) if (seen.add(song.id)) out.add(song)
+        for (song in cached) if (seen.add(song.id)) out.add(song)
+        return out
     }
 
     // 全曲库缓存改存文件（流式读写），不再用 Gson().toJson() 把整库拼成一个巨型 String
@@ -1350,8 +1482,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /** 读全曲库缓存：优先文件（流式解析），兼容旧版 DataStore 大字符串并迁移 */
-    private suspend fun readAllSongsCache(): List<Song> {
+    /**
+     * 读全曲库缓存：优先文件（流式解析），兼容旧版 DataStore 大字符串并迁移。
+     *
+     * [onChunk] 每解析 [SONG_CACHE_EMIT_CHUNK] 首回调一次（含当前累计列表），
+     * 调用方据此分片上屏——不必等整份 5000 首解析完才显示第一屏。
+     */
+    private suspend fun readAllSongsCache(onChunk: ((List<Song>) -> Unit)? = null): List<Song> {
         return withContext(Dispatchers.IO) {
             val file = allSongsCacheFile
             if (file.exists()) {
@@ -1359,12 +1496,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     java.io.FileReader(file).use { reader ->
                         val jsonReader = com.google.gson.stream.JsonReader(java.io.BufferedReader(reader))
                         val gson = Gson()
-                        val songs = mutableListOf<Song>()
+                        val songs = ArrayList<Song>(1024)
                         jsonReader.beginArray()
                         while (jsonReader.hasNext()) {
                             songs.add(gson.fromJson(jsonReader, Song::class.java))
+                            if (onChunk != null && songs.size % SONG_CACHE_EMIT_CHUNK == 0) {
+                                onChunk(ArrayList(songs))
+                            }
                         }
                         jsonReader.endArray()
+                        if (onChunk != null && songs.isNotEmpty()) onChunk(ArrayList(songs))
                         return@withContext songs
                     }
                 } catch (_: Exception) { }
@@ -1377,6 +1518,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     val songs: List<Song> = Gson().fromJson(legacy, type)
                     if (songs.isNotEmpty()) {
                         saveSongsToCache(songs)
+                        onChunk?.invoke(songs)
                         return@withContext songs
                     }
                 }
@@ -1385,14 +1527,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /** 全曲库磁盘缓存只解析一次；warmUpListCaches 与 loadAllSongs 共用同一份解析结果 */
+    /**
+     * 全曲库磁盘缓存只解析一次；warmUpListCaches 与 loadAllSongs 共用同一份解析结果。
+     * 解析过程中分片写入 [_allSongs]，首发 300 首即可上屏，剩下的继续在后台解析。
+     */
     private fun allSongsCacheAsync(): Deferred<List<Song>> {
         allSongsCacheJob?.let { return it }
         val job = viewModelScope.async(Dispatchers.IO) {
             // 诊断打点：解析本地曲库缓存花多久——登录后首屏等待时长主要由这里决定
-            // （warmUpListCaches 在 init 就 await 它，列表要等它解析完才有内容）
             val startedAt = System.currentTimeMillis()
-            val songs = readAllSongsCache()
+            val songs = readAllSongsCache { partial ->
+                // 只增不减：避免分片回写把已经同步到的更长列表覆盖短
+                if (partial.size > _allSongs.value.size) {
+                    _allSongs.value = partial
+                    if (partial.isNotEmpty()) _allSongsLoading.value = false
+                }
+            }
             AppDiagnostics.recordCacheParse(System.currentTimeMillis() - startedAt, songs.size)
             songs
         }
@@ -1410,13 +1560,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      */
     private fun warmUpListCaches() {
         viewModelScope.launch {
-            // 乐库全曲（与 loadAllSongs 共用同一次解析，避免重复读盘）
-            val songs = try { allSongsCacheAsync().await() } catch (_: Exception) { emptyList() }
-            if (songs.isNotEmpty() && _allSongs.value.isEmpty()) {
-                _allSongs.value = songs
-                _allSongsLoading.value = false
-            }
-            // 专辑全集
+            // 顺序很关键：先载入体积小、界面首屏更依赖的列表（专辑/缓存/热词/歌手），
+            // 不要被 5000 首的大曲库解析卡住——旧实现先 await 曲库，专辑页要等它解析完才有缓存。
             val albums = withContext(Dispatchers.IO) {
                 ListJsonCache.read(listCacheDir, ALL_ALBUMS_CACHE_FILE, Album::class.java)
             }
@@ -1436,6 +1581,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 ListJsonCache.read(listCacheDir, ARTISTS_CACHE_FILE, Artist::class.java)
             }
             if (artists.isNotEmpty() && _artists.value.isEmpty()) _artists.value = artists
+
+            // 乐库全曲最后处理：内部按 300 条一批实时上屏（见 allSongsCacheAsync），
+            // 与 loadAllSongs 共用同一次解析，避免重复读盘。
+            try {
+                val songs = allSongsCacheAsync().await()
+                songsCacheLoaded = true
+                if (songs.isNotEmpty() && _allSongs.value.isEmpty()) _allSongs.value = songs
+            } catch (_: Exception) {
+                songsCacheLoaded = true
+            }
         }
     }
 

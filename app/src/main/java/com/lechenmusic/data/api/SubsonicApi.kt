@@ -16,6 +16,24 @@ interface SubsonicApi {
         @Query("f") format: String = "json"
     ): SubsonicResponse
 
+    /**
+     * 与 [ping] 完全相同的请求，但把响应体按原始文本返回，不经过 JSON 反序列化。
+     *
+     * 登录只关心服务端 status 是不是 ok，不应该依赖「响应必须是 JSON」这个假设：
+     * Navidrome 在请求没有带上 `f=json` 时按 XML 返回，路径写错时返回
+     * `404 page not found` 纯文本。这两种合法响应一旦经过 JSON 解析就会抛异常，
+     * 并最终被 MusicRepository.ping 统一报告成「服务器地址错误或服务器未运行」，
+     * 真实原因（XML / 404 / HTML）全部丢失。改为读原始正文后，JSON 与 XML 都能登录。
+     */
+    @GET("rest/ping")
+    suspend fun pingRaw(
+        @Query("u") username: String,
+        @Query("p") password: String,
+        @Query("v") version: String = "1.16.1",
+        @Query("c") client: String = "lechenmusic",
+        @Query("f") format: String = "json"
+    ): retrofit2.Response<okhttp3.ResponseBody>
+
     // Albums
     @GET("rest/getAlbumList2")
     suspend fun getAlbumList2(

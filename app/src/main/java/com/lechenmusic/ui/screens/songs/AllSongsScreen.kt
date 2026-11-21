@@ -58,15 +58,18 @@ fun AllSongsScreen(
         }
     }
 
-    // Search state for tablet
+// Search state for tablet
     var searchQuery by remember { mutableStateOf("") }
-    val displayedSongs = if (isTablet && searchQuery.isNotBlank()) {
-        allSongs.filter {
-            it.title.contains(searchQuery, ignoreCase = true) ||
-            it.artist.contains(searchQuery, ignoreCase = true) ||
-            it.album.contains(searchQuery, ignoreCase = true)
-        }
-    } else allSongs
+    // 过滤结果随「曲库 / 关键字」变化重算，避免每次重组都遍历整库
+    val displayedSongs = remember(allSongs, searchQuery, isTablet) {
+        if (isTablet && searchQuery.isNotBlank()) {
+            allSongs.filter {
+                it.title.contains(searchQuery, ignoreCase = true) ||
+                    it.artist.contains(searchQuery, ignoreCase = true) ||
+                    it.album.contains(searchQuery, ignoreCase = true)
+            }
+        } else allSongs
+    }
 
     LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 160.dp)) {
         item {
@@ -85,7 +88,21 @@ fun AllSongsScreen(
                         }
                         Spacer(modifier = Modifier.width(8.dp))
                     }
-                    Text("乐库", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+Text("乐库", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+
+                    Spacer(modifier = Modifier.width(4.dp))
+
+                    // 手动刷新：强制与服务端全量校正（日常启动走增量同步，不需要点）
+                    IconButton(
+                        onClick = { viewModel.loadAllSongs(showToast = true, force = true) },
+                        enabled = !isLoading
+                    ) {
+                        if (isLoading) {
+                            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                        } else {
+                            Icon(Icons.Default.Refresh, "刷新乐库", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
 
                     Spacer(modifier = Modifier.weight(1f))
 
@@ -123,14 +140,27 @@ fun AllSongsScreen(
                         }
                     }
                 }
-            } else {
-                // 手机标题
-                Text(
-                    "歌曲",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
-                )
+} else {
+                // 手机标题 + 手动刷新
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("歌曲", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.weight(1f))
+                    IconButton(
+                        onClick = { viewModel.loadAllSongs(showToast = true, force = true) },
+                        enabled = !isLoading
+                    ) {
+                        if (isLoading) {
+                            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                        } else {
+                            Icon(Icons.Default.Refresh, "刷新乐库", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
             }
         }
 
@@ -197,7 +227,7 @@ fun AllSongsScreen(
                     }
                 }
             }
-            items(displayedSongs) { song ->
+items(displayedSongs, key = { it.id }) { song ->
                 SongItemWithMenu(
                     song = song,
                     serverUrl = serverUrl,

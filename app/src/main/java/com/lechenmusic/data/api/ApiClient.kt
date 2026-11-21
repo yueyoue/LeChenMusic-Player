@@ -61,7 +61,9 @@ class SafeJsonConverterFactory(
             // 的 T 在 try 表达式内无法从期望类型推断，Kotlin 1.9 会把它推断成 Nothing，
             // 编译出 checkcast java/lang/Void —— 解析成功反而抛 ClassCastException，
             // 被下面的 catch 包装成"非JSON响应"，登录/所有接口全军覆没（1.7.1/1.7.2 的登录报错根因）。
-            try {
+try {
+                // 远端 1.7.3 已用显式类型实参 <Any?> 修复同一问题（CI 已验证可用），
+                // 这里保留该写法，避免两条修复叠加后又出现泛型推断分支。
                 gson.fromJson<Any?>(json, type)
             } catch (e: Exception) {
                 // Genuinely not JSON (HTML error page, proxy notice, …).

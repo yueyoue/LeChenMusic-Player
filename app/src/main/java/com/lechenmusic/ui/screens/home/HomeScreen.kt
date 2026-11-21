@@ -113,11 +113,17 @@ fun HomeScreen(
     androidx.compose.runtime.SideEffect {
         com.lechenmusic.ErrorReporter.setCurrentScreen("HomeScreen_$homeMode")
         com.lechenmusic.ErrorReporter.setExtraContext("playRecords=${videoPlayRecords.size}")
-    }
+}
 
     // 判断是否使用平板布局
     val config = responsiveConfig
     val isTablet = config != null && (config.isMedium || config.isExpanded)
+
+    // 首页「最新专辑」轻量刷新：进入音乐首页就拉一次 20 张（60 秒节流）。
+    // 旧实现只在登录时 loadHomeData() 里取一次，之后新增专辑要重新登录才看得到。
+    androidx.compose.runtime.LaunchedEffect(homeMode) {
+        if (homeMode == "music") viewModel.refreshNewestAlbums()
+    }
 
     // 有声书继续播放后，状态就绪时导航到播放器
     val pendingResumeNav by viewModel.pendingResumeNavigation.collectAsState()

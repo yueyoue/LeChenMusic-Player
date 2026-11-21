@@ -44,22 +44,57 @@ class MusicRepository {
         return ApiClient.getStreamUrl(serverUrl, username, password, songId)
     }
 
+    /**
+     * 登录探活。
+     *
+     * 这里刻意不走 JSON 反序列化（[com.lechenmusic.data.api.SubsonicApi.pingRaw] 返回原始正文）：
+     * Navidrome 只有在请求带上 `f=json` 时才会返回 JSON，其他情况是合法的 200 + XML，
+     * 路径写错则是 `404 page not found` 纯文本。旧实现把这些响应统统当成「非JSON响应」，
+     * 再映射成「服务器地址错误或服务器未运行」，1.7.1/1.7.2 登录失败时用户只看到这一条
+     * 无从排查的提示。现在按正文内容判断，JSON / XML 两种格式都能正常登录，且失败时
+     * 给出真实原因（HTTP 状态、XML/HTML、404、明文错误信息）。
+     */
     suspend fun ping(): Result<Unit> {
         return try {
-            val response = api!!.ping(username, password)
-            if (response.subsonicResponse.status == "ok") {
-                Result.success(Unit)
-            } else {
-                Result.failure(Exception(response.subsonicResponse.error?.message ?: "连接失败"))
+            val response = api!!.pingRaw(username, password)
+            val bodyText = try {
+                response.body()?.use { it.string() }.orEmpty()
+            } catch (e: Exception) {
+                return Result.failure(Exception("读取服务器响应失败，请检查网络或服务器状态"))
             }
+            val text = bodyText.trim().removePrefix("\uFEFF")
+            // JSON 的空白可有可无（"status": "ok"）、XML 的引号可单可双，
+            // 所以去掉空白后统一按片段判断，不做任何反序列化。
+            val compact = text.filterNot { it == ' ' || it == '\n' || it == '\r' || it == '\t' }
+            val isOk = compact.contains("\"status\":\"ok\"") ||
+                compact.contains("status=\"ok\"") ||
+                compact.contains("status='ok'")
+            if (isOk) return Result.success(Unit)
+
+            val code = response.code()
+            // 服务端拒绝时会在 Subsonic 的错误体里带上原因（JSON 的 "message" / XML 的 message）
+            val serverError = Regex("\"message\"\\s*:\\s*\"([^\"]{1,200})\"").find(text)?.groupValues?.get(1)
+                ?: Regex("message=\"([^\"]{1,200})\"").find(text)?.groupValues?.get(1)
+
+            val message = when {
+                text.isEmpty() && code >= 400 -> "服务器返回 HTTP $code 且内容为空，请检查服务器地址与端口"
+                text.isEmpty() -> "服务器返回了空响应，请检查服务器地址是否正确"
+                serverError != null && serverError.contains("Wrong username or password", ignoreCase = true) ->
+                    "用户名或密码错误"
+                serverError != null -> "登录失败：$serverError"
+                text.contains("404 page not found") -> "服务器地址错误或服务器未运行（接口路径不存在）"
+                text.startsWith("<") -> "服务器返回了 XML/HTML 页面而不是 Subsonic 响应，请检查服务器地址"
+                else -> "服务器响应异常（HTTP $code）：${text.take(200)}"
+            }
+            Result.failure(Exception(message))
         } catch (e: Exception) {
             val msg = when {
-                e.message?.contains("非JSON响应") == true -> "服务器地址错误或服务器未运行"
                 e.message?.contains("格式错误") == true -> "服务器响应格式错误，请检查地址"
-                e.message?.contains("timeout") == true -> "连接超时，请检查服务器地址"
-                e.message?.contains("Unable to resolve host") == true -> "无法解析服务器地址，请检查是否正确"
-                e.message?.contains("Connection refused") == true -> "连接被拒绝，请检查服务器端口"
-                e.message?.contains("SSL") == true -> "SSL证书错误，请检查HTTPS配置"
+                e.message?.contains("timeout", ignoreCase = true) == true -> "连接超时，请检查服务器地址"
+                e.message?.contains("Unable to resolve host", ignoreCase = true) == true -> "无法解析服务器地址，请检查是否正确"
+                e.message?.contains("Connection refused", ignoreCase = true) == true -> "连接被拒绝，请检查服务器端口"
+                e.message?.contains("SSL", ignoreCase = true) == true -> "SSL证书错误，请检查HTTPS配置"
+                e.message?.contains("CLEARTEXT", ignoreCase = true) == true -> "系统禁止明文HTTP访问，请改用HTTPS地址"
                 else -> e.message ?: "连接失败"
             }
             Result.failure(Exception(msg))
@@ -374,33 +409,81 @@ class MusicRepository {
         }
     }
 
+    /** 一次曲库同步的结果。 */
+    data class SongSyncResult(
+        /** 本次从服务端读到的歌曲（按 recently_added 倒序，只含本次翻页覆盖到的部分）。 */
+        val songs: List<Song>,
+        /** true 表示已确认读到最后一页（或服务端总量已覆盖），可直接视为完整的服务端视图。 */
+        val complete: Boolean,
+        /** 服务端 X-Total-Count；取不到时为 -1。 */
+        val totalCount: Int,
+        /** 本次实际发起的页数（诊断用）。 */
+        val pagesFetched: Int
+    )
+
     /**
-     * 全曲库歌曲：优先 Navidrome 原生 /api/song 分页批量拉取（几十次请求以内），
+     * 全曲库歌曲（完整同步）：优先 Navidrome 原生 /api/song 分页批量拉取，
      * 失败或为空时自动回落到旧的逐专辑爬取实现 getAllSongsLegacy()。
      * 返回顺序：最近添加在前（recently_added DESC）。
+     *
+     * 注意：完整同步一次约 10 页 / 22MB（4917 首实测），只应在首次安装、
+     * 缓存缺失或手动刷新时使用；日常启动请走 [syncSongs] 的增量模式。
      */
-    suspend fun getAllSongs(): Result<List<Song>> {
-        getAllSongsNative().onSuccess { if (it.isNotEmpty()) return Result.success(it) }
-        return getAllSongsLegacy()
+    suspend fun getAllSongs(): Result<List<Song>> =
+        syncSongs(knownIds = emptySet(), fullSync = true).map { it.songs }
+
+    /**
+     * 曲库同步（支持增量）。
+     *
+     * 服务端按 recently_added DESC 排序，缓存里的歌必然是一段连续的「旧歌」区间：
+     * 只要一直翻页到「整页都是已知歌曲」或「已知歌曲已全部出现」，就已经覆盖到缓存区间，
+     * 后面不必再拉。日常启动通常只需 1 页（500 首 / 约 2MB），而不是每次整库 22MB。
+     *
+     * @param knownIds 本地缓存中已有的歌曲 id
+     * @param fullSync true=强制整库翻页（首次安装 / 手动刷新 / 定期校正删除）
+     */
+    suspend fun syncSongs(
+        knownIds: Set<String>,
+        fullSync: Boolean = false,
+        maxPages: Int = MAX_SYNC_PAGES
+    ): Result<SongSyncResult> {
+        val native = syncSongsNative(knownIds, fullSync, maxPages)
+        if (native.isSuccess && native.getOrNull()?.songs?.isNotEmpty() == true) return native
+        // 原生接口不可用（旧服务端 / 未开 native API）→ 回落到逐专辑爬取
+        return getAllSongsLegacy().map { songs ->
+            SongSyncResult(songs = songs, complete = true, totalCount = songs.size, pagesFetched = 1)
+        }
     }
 
     /**
-     * Navidrome 原生 /api/song 分页拉全曲库（500 条/页）。
+     * Navidrome 原生 /api/song 分页（_start/_end，500 条/页，约 2MB/页）。
      *
      * 旧实现逐专辑调 getAlbum：几千张专辑 = 几千次请求，后台同步跑几分钟、耗电耗流量；
-     * 原生接口按页批量返回，任何曲库规模都只要几十次请求以内。
+     * 原生接口按页批量返回，整库只需十几次请求。
+     *
+     * 防呆（来自线上实测）：若服务端忽略 _start/_end 一次性返回整库（22MB），
+     * 绝不能继续按 offset 翻页——那会把整库重复拉 200 次（4.4GB）并打爆内存。
+     * 一旦发现单页返回条数大于请求页大小，立即按「整库已到手」收尾。
      */
-    private suspend fun getAllSongsNative(): Result<List<Song>> {
+    private suspend fun syncSongsNative(
+        knownIds: Set<String>,
+        fullSync: Boolean,
+        maxPages: Int
+    ): Result<SongSyncResult> {
         return try {
-            val allSongs = mutableListOf<Song>()
-            val seenIds = mutableSetOf<String>()
-            val pageSize = 500
+            val fetched = ArrayList<Song>(if (knownIds.isEmpty()) 1024 else 512)
+            val seenIds = HashSet<String>(if (knownIds.isEmpty()) 1024 else 512)
+            var hitKnown = 0
+            var pages = 0
+            var totalCount = -1
+            var complete = false
             var start = 0
-            while (start < 100000) { // 安全上限 10 万首
+
+            while (pages < maxPages) {
                 val page = withAudiobookAuthRetry { token ->
                     audiobookApi!!.getNativeSongs(
                         start = start,
-                        end = start + pageSize,
+                        end = start + PAGE_SIZE,
                         sort = "recently_added",
                         order = "DESC",
                         authHeader = "Bearer $token"
@@ -411,6 +494,7 @@ class MusicRepository {
                     page.errorBody()?.close()
                     return Result.failure(Exception("native /api/song HTTP ${page.code()}"))
                 }
+                page.headers()["X-Total-Count"]?.toIntOrNull()?.let { totalCount = it }
                 val body = page.body() ?: break
                 // 流式逐条解析：内存里同时只存在「当前这一条」，不再整页建树
                 val parsed = try {
@@ -418,19 +502,62 @@ class MusicRepository {
                 } finally {
                     try { body.close() } catch (_: Exception) { }
                 }
-                if (parsed.recordCount == 0) break
-                for (song in parsed.songs) {
-                    if (seenIds.add(song.id)) allSongs.add(song)
+                pages++
+                if (parsed.recordCount == 0) {
+                    complete = true
+                    break
                 }
-                // 用「原始记录数」判断是否是最后一页（旧逻辑同口径），避免个别条目解析失败导致提前收尾
-                if (parsed.recordCount < pageSize) break
-                start += pageSize
+
+                var newInPage = 0
+                for (song in parsed.songs) {
+                    if (!seenIds.add(song.id)) continue
+                    fetched.add(song)
+                    if (song.id in knownIds) hitKnown++ else newInPage++
+                }
+
+                // 服务端忽略分页：一页就返回了超过请求量的记录，说明整库已经到手
+                if (parsed.recordCount > PAGE_SIZE) {
+                    complete = true
+                    break
+                }
+                // 服务端明确给出了总量，且已经全部覆盖
+                if (totalCount >= 0 && seenIds.size >= totalCount) {
+                    complete = true
+                    break
+                }
+                // 最后一页
+                if (parsed.recordCount < PAGE_SIZE) {
+                    complete = true
+                    break
+                }
+                if (!fullSync && knownIds.isNotEmpty()) {
+                    // 整页都是已知歌曲：已经进入缓存区间，再往后只会更旧，无需继续
+                    if (newInPage == 0) break
+                    // 缓存里的歌已经全部出现过：覆盖完整
+                    if (hitKnown >= knownIds.size) break
+                }
+                start += PAGE_SIZE
             }
-            if (allSongs.isNotEmpty()) Result.success(allSongs)
-            else Result.failure(Exception("native /api/song empty"))
+
+            if (fetched.isEmpty()) Result.failure(Exception("native /api/song empty"))
+            else Result.success(
+                SongSyncResult(
+                    songs = fetched,
+                    complete = complete,
+                    totalCount = totalCount,
+                    pagesFetched = pages
+                )
+            )
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+
+    private companion object {
+        const val PAGE_SIZE = 500
+
+        /** 安全上限：40 页 = 2 万首，避免异常服务端把翻页拖成无限循环。 */
+        const val MAX_SYNC_PAGES = 40
     }
 
     /** 一页 /api/song 的解析结果：recordCount 是原始记录条数（含解析失败的），songs 是成功映射的。 */
