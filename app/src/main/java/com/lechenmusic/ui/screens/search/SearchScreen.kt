@@ -93,13 +93,18 @@ fun SearchScreen(
         ) {
             OutlinedTextField(
                 value = query,
-                onValueChange = {
-                    query = it
-                    if (it.length >= 2) {
-                        viewModel.search(it)
+                onValueChange = { newQuery ->
+                    query = newQuery
+                    if (canStartSearch(newQuery)) {
+                        viewModel.search(newQuery)
                         // 有声书搜索 (本地过滤)
                         // 影视搜索
-                        videoViewModel?.search(it)
+                        videoViewModel?.search(newQuery)
+                    } else {
+                        // 空输入或未达到搜索门槛（如单个英文字母）：清掉上一次的结果，
+                        // 避免输入框与列表内容不一致
+                        viewModel.search("")
+                        videoViewModel?.search("")
                     }
                 },
                 modifier = Modifier.weight(1f),
@@ -241,14 +246,11 @@ fun SearchScreen(
                             }
                         }
 
-                        // 音乐搜索结果
-                        val rawSongs = searchResults?.song ?: emptyList()
-                        val q = query.lowercase()
-                        val songs = rawSongs.filter { song ->
-                            song.title.lowercase().contains(q) ||
-                            song.artist.lowercase().contains(q) ||
-                            song.album.lowercase().contains(q)
-                        }
+                        // 音乐搜索结果：直接采用服务端 search3 的匹配结果。
+                        // 服务端会先做大小写/标点归一化，再按词匹配标题/专辑/歌手/专辑歌手；
+                        // 客户端若再按字面 contains(query) 过滤，会把服务端已匹配的歌误删，
+                        // 例如库里「谁 (live)」搜「谁 live」、「谁(Live)」搜「谁 live」都会命中服务端却被丢掉。
+                        val songs = searchResults?.song ?: emptyList()
 
                         // 歌曲
                         if (songs.isNotEmpty()) {
@@ -289,16 +291,21 @@ fun SearchScreen(
                                         .padding(horizontal = 20.dp, vertical = 40.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
-                                    Text("未找到匹配的音乐", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Spacer(modifier = Modifier.height(16.dp))
-                                    FilledTonalButton(onClick = { onOnlineSearch(query) }) {
-                                        Icon(Icons.Default.CloudDownload, null, modifier = Modifier.size(18.dp))
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text("曲库没有？去全网搜")
+                                    if (!canStartSearch(query)) {
+                                        // 单个英文字母等过短输入：提示继续输入，而不是误报「未找到」
+                                        Text("继续输入以开始搜索", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    } else {
+                                        Text("未找到匹配的音乐", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        Spacer(modifier = Modifier.height(16.dp))
+                                        FilledTonalButton(onClick = { onOnlineSearch(query) }) {
+                                            Icon(Icons.Default.CloudDownload, null, modifier = Modifier.size(18.dp))
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text("曲库没有？去全网搜")
+                                        }
+                                        Text("全网搜索 · 一键下载 · 自动刮削入库", fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.padding(top = 8.dp))
                                     }
-                                    Text("全网搜索 · 一键下载 · 自动刮削入库", fontSize = 11.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.padding(top = 8.dp))
                                 }
                             }
                         }
@@ -399,3 +406,27 @@ fun SearchScreen(
     }
 }
 
+
+/**
+ * 是否已达到发起音乐/影视搜索的输入门槛。
+ *
+ * 单个汉字（含日文假名、韩文）本身就可能是完整歌名，必须允许 1 个字就搜索，
+ * 否则「谁」「爱」这类一字歌名永远发不出请求；其他文字仍要求至少 2 个字符，
+ * 与服务端 search3 对单字符查询的保护一致，避免整库级的过宽查询。
+ */
+private fun canStartSearch(text: String): Boolean {
+    val trimmed = text.trim()
+    if (trimmed.isEmpty()) return false
+    if (trimmed.length >= 2) return true
+    return isCjkChar(trimmed[0])
+}
+
+/** 判断是否为 CJK 字符（汉字、日文假名、韩文音节），按码位区间判断，不依赖额外依赖库 */
+private fun isCjkChar(c: Char): Boolean {
+    val code = c.code
+    return code in 0x4E00..0x9FFF ||   // CJK 统一表意文字
+        code in 0x3400..0x4DBF ||      // CJK 扩展 A
+        code in 0xF900..0xFAFF ||      // CJK 兼容表意文字
+        code in 0x3040..0x30FF ||      // 日文平假名 / 片假名
+        code in 0xAC00..0xD7AF         // 韩文音节
+}
