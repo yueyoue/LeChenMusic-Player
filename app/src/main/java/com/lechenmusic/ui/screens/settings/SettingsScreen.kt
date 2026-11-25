@@ -28,6 +28,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import com.lechenmusic.LeChenApp
 import com.lechenmusic.data.diagnostics.AppDiagnostics
 import com.lechenmusic.ui.MainViewModel
+import com.lechenmusic.ui.theme.AppThemes
 import com.lechenmusic.ui.responsive.ResponsiveConfig
 import androidx.compose.ui.text.font.FontFamily
 import kotlinx.coroutines.Dispatchers
@@ -47,12 +48,14 @@ fun SettingsScreen(
     val serverUrl by viewModel.serverUrl.collectAsState()
     val username by viewModel.username.collectAsState()
     val themeMode by viewModel.themeMode.collectAsState()
+    val themePalette by viewModel.themePalette.collectAsState()
     val cacheSize by viewModel.cacheSize.collectAsState()
     val preloadEnabled by viewModel.preloadEnabled.collectAsState()
     val preloadNetworkMode by viewModel.preloadNetworkMode.collectAsState()
     val serverStats by viewModel.serverStats.collectAsState()
     val context = LocalContext.current
     var showCacheDialog by remember { mutableStateOf(false) }
+    var showThemeDialog by remember { mutableStateOf(false) }
     var showPreloadNetworkDialog by remember { mutableStateOf(false) }
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showAboutDialog by remember { mutableStateOf(false) }
@@ -529,6 +532,8 @@ fun SettingsScreen(
                 SectionTitle("外观设置")
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp), shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
                     Column {
+                        SettingsClickItem(icon = Icons.Default.Palette, iconBg = Color(0xFF6C5CE7).copy(alpha = 0.15f), label = "主题配色", value = AppThemes.find(themePalette).name, onClick = { showThemeDialog = true })
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
                         SettingsToggleItem(icon = Icons.Default.Settings, iconBg = Color(0xFFA55EEA).copy(alpha = 0.15f), label = "深色模式", checked = themeMode == "dark", onCheckedChange = { viewModel.setThemeMode(if (it) "dark" else "light") })
                     }
                 }
@@ -630,6 +635,15 @@ fun SettingsScreen(
     }
 
     // ===== 共享弹窗 =====
+
+    if (showThemeDialog) {
+        ThemePickerDialog(
+            currentThemeId = themePalette,
+            darkTheme = themeMode == "dark",
+            onSelect = { viewModel.setThemePalette(it) },
+            onDismiss = { showThemeDialog = false }
+        )
+    }
 
     if (showAboutDialog) {
         AlertDialog(

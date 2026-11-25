@@ -14,6 +14,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lechenmusic.data.model.Song
@@ -129,19 +131,35 @@ fun PlaylistDetailScreen(
                     .padding(horizontal = 20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(currentPlaylist.name, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                // 歌单名与「共享歌单」标签：标题可占满剩余宽度并最多两行，
+                // 标签固定单行不换行，避免被挤压成逐字竖排。
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        currentPlaylist.name,
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
                     if (!isOwner) {
                         Spacer(modifier = Modifier.width(8.dp))
                         Surface(
-                            shape = RoundedCornerShape(4.dp),
-                            color = Color(0xFFFFA502).copy(alpha = 0.15f)
+                            shape = RoundedCornerShape(6.dp),
+                            color = Color(0xFFFFE7B8)
                         ) {
                             Text(
                                 "共享歌单",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFFFFA502),
+                                color = Color(0xFF6E3F00),
+                                maxLines = 1,
+                                softWrap = false,
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                             )
                         }

@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -130,6 +131,7 @@ class MainActivity : ComponentActivity() {
             }
             val videoViewModel: VideoViewModel = viewModel()
             val themeMode by viewModel.themeMode.collectAsState()
+            val themePalette by viewModel.themePalette.collectAsState()
             // 平板UI默认使用深色模式
             val configuration = LocalContext.current.resources.configuration
             val screenWidthDp = configuration.screenWidthDp
@@ -154,7 +156,7 @@ class MainActivity : ComponentActivity() {
                 onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
             }
 
-            LeChenMusicTheme(darkTheme = isDark) {
+            LeChenMusicTheme(darkTheme = isDark, themeId = themePalette) {
                 // 更新弹窗（启动时自动检查 + 设置页手动检查 都会触发）
                 val updateInfo by viewModel.updateInfo.collectAsState()
                 val updateStatus by viewModel.updateStatus.collectAsState()
@@ -589,13 +591,19 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
 
                 // 在线下载完成横幅（M6）：提示可直接播放
                 onlineCompletion?.let { task ->
+                    // 浅色主题下原先 primaryContainer + onSurfaceVariant 对比不足，
+                    // 改为 surfaceContainerHigh 容器并显式指定前景色，保证文字清晰可读。
+                    val barContainer = MaterialTheme.colorScheme.surfaceContainerHigh
+                    val barTitle = MaterialTheme.colorScheme.onSurface
+                    val barSubtitle = MaterialTheme.colorScheme.onSurfaceVariant
                     Card(
                         modifier = Modifier
                             .align(Alignment.TopCenter)
                             .statusBarsPadding()
                             .padding(horizontal = 16.dp, vertical = 8.dp)
                             .fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                        colors = CardDefaults.cardColors(containerColor = barContainer),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)),
                         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
                     ) {
                         Row(
@@ -605,19 +613,33 @@ fun LeChenMusicApp(viewModel: MainViewModel, videoViewModel: VideoViewModel) {
                             Icon(Icons.Default.CheckCircle, null, tint = MaterialTheme.colorScheme.primary)
                             Spacer(modifier = Modifier.width(8.dp))
                             Column(modifier = Modifier.weight(1f)) {
-                                Text("已入库，可直接播放", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                                Text("${task.songName} - ${task.artist}", fontSize = 12.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(
+                                    "已入库，可直接播放",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = barTitle
+                                )
+                                Text(
+                                    "${task.songName} - ${task.artist}",
+                                    fontSize = 12.sp,
+                                    color = barSubtitle,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
                             }
-                            TextButton(onClick = {
-                                viewModel.dismissOnlineCompletion()
-                                viewModel.playDownloadedTask(task) { ok ->
-                                    if (ok) navController.navigate(Screen.Player.route)
-                                }
-                            }) { Text("播放") }
+                            TextButton(
+                                onClick = {
+                                    viewModel.dismissOnlineCompletion()
+                                    viewModel.playDownloadedTask(task) { ok ->
+                                        if (ok) navController.navigate(Screen.Player.route)
+                                    }
+                                },
+                                colors = ButtonDefaults.textButtonColors(contentColor = barTitle)
+                            ) {
+                                Text("播放", fontWeight = FontWeight.SemiBold)
+                            }
                             IconButton(onClick = { viewModel.dismissOnlineCompletion() }) {
-                                Icon(Icons.Default.Close, "关闭")
+                                Icon(Icons.Default.Close, "关闭", tint = barTitle)
                             }
                         }
                     }

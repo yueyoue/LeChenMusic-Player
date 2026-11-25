@@ -25,8 +25,8 @@ android {
         applicationId = "com.lechenmusic"
         minSdk = 26
         targetSdk = 34
-        versionCode = 70
-        versionName = "1.7.5"
+        versionCode = 71
+        versionName = "1.8.0"
         vectorDrawables.useSupportLibrary = true
     }
 

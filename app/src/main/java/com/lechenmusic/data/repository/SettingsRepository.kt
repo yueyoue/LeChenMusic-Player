@@ -20,6 +20,7 @@ class SettingsRepository(private val context: Context) {
         val USERNAME = stringPreferencesKey("username")
         val PASSWORD = stringPreferencesKey("password")
         val THEME_MODE = stringPreferencesKey("theme_mode") // "dark" or "light"
+        val THEME_PALETTE = stringPreferencesKey("theme_palette") // 主题配色 id，见 ui/theme/AppThemes.kt
         val CACHE_SIZE = intPreferencesKey("cache_size_gb")
         val RECENT_PLAY_IDS = stringPreferencesKey("recent_play_ids")
         val CACHED_ALL_SONGS_JSON = stringPreferencesKey("cached_all_songs_json")
@@ -44,6 +45,7 @@ class SettingsRepository(private val context: Context) {
     val username: Flow<String> = context.dataStore.data.map { it[USERNAME] ?: "" }
     val password: Flow<String> = context.dataStore.data.map { it[PASSWORD] ?: "" }
     val themeMode: Flow<String> = context.dataStore.data.map { it[THEME_MODE] ?: "dark" }
+    val themePalette: Flow<String> = context.dataStore.data.map { it[THEME_PALETTE] ?: "aurora" }
     val cacheSize: Flow<Int> = context.dataStore.data.map { it[CACHE_SIZE] ?: 4 }
     val recentPlayIds: Flow<String> = context.dataStore.data.map { it[RECENT_PLAY_IDS] ?: "" }
     val preloadEnabled: Flow<Boolean> = context.dataStore.data.map { it[PRELOAD_ENABLED] ?: true }
@@ -78,6 +80,10 @@ class SettingsRepository(private val context: Context) {
 
     suspend fun setThemeMode(mode: String) {
         context.dataStore.edit { it[THEME_MODE] = mode }
+    }
+
+    suspend fun setThemePalette(themeId: String) {
+        context.dataStore.edit { it[THEME_PALETTE] = themeId }
     }
 
     suspend fun setCacheSize(sizeGb: Int) {

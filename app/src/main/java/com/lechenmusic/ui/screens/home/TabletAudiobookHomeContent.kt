@@ -30,6 +30,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.lechenmusic.ui.components.SlideTitle
 import com.lechenmusic.data.api.ApiClient
 import com.lechenmusic.data.model.Audiobook
 import com.lechenmusic.data.model.AudiobookWithProgress
@@ -440,8 +441,7 @@ private fun AudiobookHero(
                             model = item.coverUrl,
                             contentDescription = null,
                             modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop,
-                            alpha = 0.3f
+                            contentScale = ContentScale.Crop
                         )
                     } else if (item.imageUrl != null && item.imageUrl.isNotEmpty()) {
                         val fullUrl = if (item.imageUrl.startsWith("http")) item.imageUrl
@@ -450,48 +450,19 @@ private fun AudiobookHero(
                             model = fullUrl,
                             contentDescription = null,
                             modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop,
-                            alpha = 0.3f
+                            contentScale = ContentScale.Crop
                         )
                     }
 
-                    // 渐变遮罩
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.5f))))
-                    )
-
-                    // 内容
-                    Column(
+                    // 仅保留标题：底部 + 半透明底衬
+                    SlideTitle(
+                        text = item.title,
+                        fontSize = 18.sp,
                         modifier = Modifier
                             .align(Alignment.BottomStart)
-                            .padding(16.dp)
-                    ) {
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = Color.White.copy(alpha = 0.15f)
-                        ) {
-                            Text(
-                                "📖 有声书推荐",
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = Color.White
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            item.title,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text("精选有声书内容，沉浸式听书体验", fontSize = 12.sp, color = Color.White.copy(alpha = 0.8f))
-                    }
+                            .padding(12.dp)
+                            .fillMaxWidth(0.92f)
+                    )
                 }
             }
         }

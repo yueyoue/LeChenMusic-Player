@@ -38,6 +38,7 @@ import com.lechenmusic.data.model.InternetRadioStation
 import com.lechenmusic.data.model.Playlist
 import com.lechenmusic.data.model.Song
 import com.lechenmusic.data.model.SlideConfig
+import com.lechenmusic.ui.components.SlideTitle
 import com.lechenmusic.ui.responsive.ResponsiveConfig
 import kotlinx.coroutines.delay
 
@@ -427,8 +428,7 @@ private fun MusicHero(
                             model = ApiClient.getCoverArtUrl(serverUrl, username, password, item.coverArt),
                             contentDescription = null,
                             modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop,
-                            alpha = 0.3f
+                            contentScale = ContentScale.Crop
                         )
                     } else if (item.imageUrl != null && item.imageUrl.isNotEmpty()) {
                         val fullUrl = if (item.imageUrl.startsWith("http")) item.imageUrl
@@ -437,48 +437,19 @@ private fun MusicHero(
                             model = fullUrl,
                             contentDescription = null,
                             modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop,
-                            alpha = 0.3f
+                            contentScale = ContentScale.Crop
                         )
                     }
 
-                    // 渐变遮罩
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.5f))))
-                    )
-
-                    // 内容
-                    Column(
+                    // 仅保留标题：显示在幻灯底部，带底色避免与背景图重合
+                    SlideTitle(
+                        text = item.title,
+                        fontSize = 18.sp,
                         modifier = Modifier
                             .align(Alignment.BottomStart)
-                            .padding(16.dp)
-                    ) {
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = Color.White.copy(alpha = 0.15f)
-                        ) {
-                            Text(
-                                "✨ 精选推荐",
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = Color.White
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            item.title,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text("根据你的听歌口味，AI 智能推荐", fontSize = 12.sp, color = Color.White.copy(alpha = 0.8f))
-                    }
+                            .padding(12.dp)
+                            .fillMaxWidth(0.92f)
+                    )
                 }
             }
         }

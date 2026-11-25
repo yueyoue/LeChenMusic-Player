@@ -42,6 +42,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val themeMode: StateFlow<String> = settings.themeMode
         .stateIn(viewModelScope, SharingStarted.Eagerly, "dark")
 
+    /** 主题配色（见 ui/theme/AppThemes.kt），默认极光紫 */
+    val themePalette: StateFlow<String> = settings.themePalette
+        .stateIn(viewModelScope, SharingStarted.Eagerly, "aurora")
+
     // Login state
     private val _isLoggedIn = MutableStateFlow(false)
     val isLoggedIn: StateFlow<Boolean> = _isLoggedIn.asStateFlow()
@@ -633,6 +637,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun setThemeMode(mode: String) {
         viewModelScope.launch {
             settings.setThemeMode(mode)
+        }
+    }
+
+    /** 切换主题配色（极光紫 / 猫布奇诺 / 北境蓝灰 / 德古拉霓虹 / 东京夜色 / 复古暖阳 / 玫瑰松林） */
+    fun setThemePalette(themeId: String) {
+        viewModelScope.launch {
+            settings.setThemePalette(themeId)
         }
     }
 

@@ -10,40 +10,30 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-private val DarkColorScheme = darkColorScheme(
-    primary = DarkPrimary, onPrimary = Color.White, primaryContainer = DarkPrimaryDark,
-    background = DarkBackground, surface = DarkSurface, surfaceVariant = DarkSurfaceVariant,
-    onBackground = DarkOnBackground, onSurface = DarkOnSurface, onSurfaceVariant = DarkOnSurfaceVariant,
-    outline = DarkBorder, error = AccentRed
-)
-private val LightColorScheme = lightColorScheme(
-    primary = LightPrimary, onPrimary = Color.White, primaryContainer = LightPrimaryDark,
-    background = LightBackground, surface = LightSurface, surfaceVariant = LightSurfaceVariant,
-    onBackground = LightOnBackground, onSurface = LightOnSurface, onSurfaceVariant = LightOnSurfaceVariant,
-    outline = LightBorder, error = AccentRed
-)
-
 // 全局状态栏颜色控制（播放器页面可覆盖）
 val PlayerStatusBarColor = mutableStateOf<Color?>(null)
 
+/**
+ * 应用主题：支持多套配色（见 AppThemes.kt）。
+ * [themeId] 为设置页选择的配色 id，[darkTheme] 决定使用深色还是浅色变体。
+ */
 @Composable
-fun LeChenMusicTheme(darkTheme: Boolean = true, content: @Composable () -> Unit) {
-    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
+fun LeChenMusicTheme(
+    darkTheme: Boolean = true,
+    themeId: String = AppThemes.DEFAULT_ID,
+    content: @Composable () -> Unit
+) {
+    val colorScheme = AppThemes.colorScheme(themeId, darkTheme)
     val view = LocalView.current
     val playerColor = PlayerStatusBarColor.value
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            // 设置窗口背景色与 APP 背景色一致，避免系统栏区域出现异色
-            val bgColor = if (darkTheme) DarkBackground else LightBackground
-            window.setBackgroundDrawable(ColorDrawable(bgColor.toArgb()))
+            // 设置窗口背景色与当前主题背景色一致，避免系统栏区域出现异色
+            window.setBackgroundDrawable(ColorDrawable(colorScheme.background.toArgb()))
             // 如果播放器设置了自定义状态栏颜色，则使用它；否则用透明
-            if (playerColor != null) {
-                window.statusBarColor = playerColor.toArgb()
-            } else {
-                window.statusBarColor = Color.Transparent.toArgb()
-            }
-            window.navigationBarColor = if (playerColor != null) playerColor.toArgb() else Color.Transparent.toArgb()
+            window.statusBarColor = playerColor?.toArgb() ?: Color.Transparent.toArgb()
+            window.navigationBarColor = playerColor?.toArgb() ?: Color.Transparent.toArgb()
             WindowCompat.getInsetsController(window, view).apply {
                 isAppearanceLightStatusBars = if (playerColor != null) false else !darkTheme
                 isAppearanceLightNavigationBars = !darkTheme

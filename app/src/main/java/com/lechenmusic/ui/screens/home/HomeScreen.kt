@@ -40,6 +40,7 @@ import com.lechenmusic.ui.MainViewModel
 import com.lechenmusic.ui.components.*
 import com.lechenmusic.ui.responsive.ResponsiveConfig
 import com.lechenmusic.ui.screens.audiobook.getAudiobookCoverUrl
+import com.lechenmusic.ui.components.SlideTitle
 import com.lechenmusic.ui.screens.home.music.MusicHomeContent
 import com.lechenmusic.data.model.VideoInfo
 import com.lechenmusic.data.model.VideoPlayRecord
@@ -837,7 +838,7 @@ private fun MusicSlidesCarousel(
     onSlideClick: (String) -> Unit
 ) {
     if (slides.isEmpty()) {
-        // Fallback: show the original static hero
+        // 无幻灯时的占位：只保留标题（底部 + 半透明底衬）
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
@@ -854,37 +855,15 @@ private fun MusicSlidesCarousel(
                             listOf(Color(0xFF6C5CE7), Color(0xFFA78BFA), Color(0xFFD4BBFF))
                         )
                     )
-                    .padding(20.dp)
             ) {
-                Column {
-                    Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = Color.White.copy(alpha = 0.15f)
-                    ) {
-                        Text(
-                            "猜你喜欢",
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color.White
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("今日精选", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
-                    Text("为你推荐", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text("根据你的口味生成", fontSize = 12.sp, color = Color.White.copy(alpha = 0.8f))
-                }
-                Box(
+                SlideTitle(
+                    text = "今日精选",
+                    fontSize = 20.sp,
                     modifier = Modifier
-                        .align(Alignment.CenterEnd)
-                        .size(100.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(Color.White.copy(alpha = 0.1f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("\uD83C\uDFB5", fontSize = 42.sp)
-                }
+                        .align(Alignment.BottomStart)
+                        .padding(16.dp)
+                        .fillMaxWidth(0.92f)
+                )
             }
         }
         return
@@ -943,26 +922,19 @@ private fun MusicSlidesCarousel(
                             model = fullImageUrl,
                             contentDescription = null,
                             modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop,
-                            alpha = 0.3f
+                            contentScale = ContentScale.Crop
                         )
                     }
-                    // Text overlay
-                    Column(
-                        modifier = Modifier
-                            .align(Alignment.BottomStart)
-                            .padding(20.dp)
-                    ) {
-                        if (slide.title.isNotEmpty()) {
-                            Text(
-                                slide.title,
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = Color.White,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
+                    // 仅保留标题：底部 + 半透明底衬
+                    if (slide.title.isNotEmpty()) {
+                        SlideTitle(
+                            text = slide.title,
+                            fontSize = 20.sp,
+                            modifier = Modifier
+                                .align(Alignment.BottomStart)
+                                .padding(16.dp)
+                                .fillMaxWidth(0.92f)
+                        )
                     }
                 }
             }
@@ -1061,25 +1033,18 @@ private fun AudiobookSlidesCarousel(
                                 model = fullImageUrl,
                                 contentDescription = null,
                                 modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop,
-                                alpha = 0.3f
+                                contentScale = ContentScale.Crop
                             )
                         }
-                        Column(
-                            modifier = Modifier
-                                .align(Alignment.BottomStart)
-                                .padding(16.dp)
-                        ) {
-                            if (slide.title.isNotEmpty()) {
-                                Text(
-                                    slide.title,
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = Color.White,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
+                        if (slide.title.isNotEmpty()) {
+                            SlideTitle(
+                                text = slide.title,
+                                fontSize = 18.sp,
+                                modifier = Modifier
+                                    .align(Alignment.BottomStart)
+                                    .padding(16.dp)
+                                    .fillMaxWidth(0.92f)
+                            )
                         }
                     }
                 }
@@ -1135,7 +1100,7 @@ private fun AudiobookCarousel(
     // Pick up to 5 audiobooks for the carousel
     val carouselItems = audiobooks.take(5)
     if (carouselItems.isEmpty()) {
-        // Fallback: show placeholder
+        // 占位：只保留标题
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1152,45 +1117,15 @@ private fun AudiobookCarousel(
                             listOf(Color(0xFFE94560), Color(0xFFFF6B81), Color(0xFFFF8787))
                         )
                     )
-                    .padding(16.dp)
             ) {
-                Column {
-                    Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = Color.White.copy(alpha = 0.2f)
-                    ) {
-                        Text(
-                            "\uD83D\uDD25 热门推荐",
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color.White
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        "有声书",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = Color.White
-                    )
-                    Text(
-                        "精彩内容等你来听",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = Color.White
-                    )
-                }
-                Box(
+                SlideTitle(
+                    text = "有声书",
+                    fontSize = 18.sp,
                     modifier = Modifier
-                        .align(Alignment.CenterEnd)
-                        .size(80.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Color.White.copy(alpha = 0.1f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("\uD83D\uDCD6", fontSize = 36.sp)
-                }
+                        .align(Alignment.BottomStart)
+                        .padding(16.dp)
+                        .fillMaxWidth(0.92f)
+                )
             }
         }
         return
@@ -1245,64 +1180,19 @@ private fun AudiobookCarousel(
                             model = coverUrl,
                             contentDescription = null,
                             modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop,
-                            alpha = 0.3f
+                            contentScale = ContentScale.Crop
                         )
                     }
-                    // 渐变遮罩
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.5f))))
-                    )
-                    // 文本内容
-                    Column(
+
+                    // 仅保留标题：底部 + 半透明底衬
+                    SlideTitle(
+                        text = book.title,
+                        fontSize = 18.sp,
                         modifier = Modifier
                             .align(Alignment.BottomStart)
-                            .padding(16.dp)
-                    ) {
-                        Surface(
-                            shape = RoundedCornerShape(10.dp),
-                            color = Color.White.copy(alpha = 0.15f)
-                        ) {
-                            Text(
-                                "\uD83D\uDD25 热门推荐",
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = Color.White
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            book.title,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = Color.White,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        val info = buildString {
-                            if (book.narrator.isNotBlank()) append("${book.narrator}演播")
-                            else if (book.author.isNotBlank()) append(book.author)
-                            if (book.chapterCount > 0) append(" · ${book.chapterCount}章")
-                        }
-                        if (info.isNotEmpty()) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                com.lechenmusic.ui.components.SourceBadge(path = book.libraryPath)
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    info,
-                                    fontSize = 12.sp,
-                                    color = Color.White.copy(alpha = 0.8f),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.weight(1f)
-                                )
-                            }
-                        }
-                    }
+                            .padding(12.dp)
+                            .fillMaxWidth(0.92f)
+                    )
                 }
             }
         }
@@ -2073,52 +1963,37 @@ private fun TabletMusicHomeContent(
                     modifier = Modifier.fillMaxWidth().height(config.heroHeight),
                     horizontalArrangement = Arrangement.spacedBy(gap)
                 ) {
-                    // Featured Banner
+                    // Featured Banner：仅保留标题，整块可点击（去遮罩、去副文案）
                     Box(
                         modifier = Modifier
                             .weight(2f)
                             .fillMaxHeight()
                             .clip(RoundedCornerShape(20.dp))
                             .background(Brush.linearGradient(listOf(Color(0xFF6C5CE7), Color(0xFFA78BFA), Color(0xFFD4BBFF))))
+                            .clickable {
+                                val link = musicSlides.firstOrNull()?.link ?: ""
+                                when {
+                                    link.startsWith("playlist:") -> onPlaylistClick(link.removePrefix("playlist:"))
+                                    link.startsWith("album:") -> onAlbumClick(link.removePrefix("album:"))
+                                }
+                            }
                     ) {
                         if (musicSlides.isNotEmpty()) {
                             val slide = musicSlides.first()
                             if (slide.imageUrl.isNotEmpty()) {
                                 val fullUrl = if (slide.imageUrl.startsWith("http")) slide.imageUrl
                                     else "${serverUrl.trimEnd('/')}${slide.imageUrl}"
-                                AsyncImage(model = fullUrl, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop, alpha = 0.35f)
+                                AsyncImage(model = fullUrl, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                             }
                         }
-                        Column(modifier = Modifier.align(Alignment.BottomStart).padding(24.dp)) {
-                            Surface(shape = RoundedCornerShape(8.dp), color = Color.White.copy(alpha = 0.15f)) {
-                                Text("精选推荐", modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp), fontSize = config.captionFontSize, fontWeight = FontWeight.SemiBold, color = Color.White)
-                            }
-                            Spacer(modifier = Modifier.height(10.dp))
-                            Text(
-                                musicSlides.firstOrNull()?.title ?: "猜你喜欢",
-                                fontSize = (config.sectionTitleSize.value + 6).sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text("探索专为您量身打造的原创合集", fontSize = config.bodyFontSize, color = Color.White.copy(alpha = 0.8f))
-                            Spacer(modifier = Modifier.height(14.dp))
-                            Button(
-                                onClick = {
-                                    val link = musicSlides.firstOrNull()?.link ?: ""
-                                    when {
-                                        link.startsWith("playlist:") -> onPlaylistClick(link.removePrefix("playlist:"))
-                                        link.startsWith("album:") -> onAlbumClick(link.removePrefix("album:"))
-                                    }
-                                },
-                                shape = RoundedCornerShape(50),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color(0xFF6C5CE7))
-                            ) {
-                                Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("立即播放", fontWeight = FontWeight.SemiBold, fontSize = config.bodyFontSize)
-                            }
-                        }
+                        SlideTitle(
+                            text = musicSlides.firstOrNull()?.title ?: "猜你喜欢",
+                            fontSize = (config.sectionTitleSize.value + 6).sp,
+                            modifier = Modifier
+                                .align(Alignment.BottomStart)
+                                .padding(16.dp)
+                                .fillMaxWidth(0.9f)
+                        )
                     }
                     // Hot List Card
                     Surface(
