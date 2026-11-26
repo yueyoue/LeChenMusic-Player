@@ -19,6 +19,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.lechenmusic.ui.components.RefreshIconButton
 import com.lechenmusic.data.model.Album
 import com.lechenmusic.ui.MainViewModel
 import com.lechenmusic.ui.components.CoverImage
@@ -253,16 +254,16 @@ fun AlbumsScreen(
     }
 }
 
-/** 刷新按钮：加载中显示小转圈，否则显示刷新图标（手机/平板共用） */
+/** 刷新按钮：点击即旋转图标并弹提示，加载中显示小转圈（手机/平板共用） */
 @Composable
 private fun RefreshAction(isLoading: Boolean, onClick: () -> Unit) {
-    IconButton(onClick = onClick, enabled = !isLoading) {
-        if (isLoading) {
-            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-        } else {
-            Icon(Icons.Default.Refresh, "刷新专辑", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    }
+    RefreshIconButton(
+        contentDescription = "刷新专辑",
+        loading = isLoading,
+        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        toastMessage = "正在刷新专辑…",
+        onClick = onClick
+    )
 }
 
 @Composable

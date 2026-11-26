@@ -131,40 +131,16 @@ fun PlaylistDetailScreen(
                     .padding(horizontal = 20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // 歌单名与「共享歌单」标签：标题可占满剩余宽度并最多两行，
-                // 标签固定单行不换行，避免被挤压成逐字竖排。
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        currentPlaylist.name,
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false)
-                    )
-                    if (!isOwner) {
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = Color(0xFFFFE7B8)
-                        ) {
-                            Text(
-                                "共享歌单",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFF6E3F00),
-                                maxLines = 1,
-                                softWrap = false,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                            )
-                        }
-                    }
-                }
+                // 歌单名独占一行，最多两行省略；「共享歌单」并入下方元信息行
+                Text(
+                    currentPlaylist.name,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.fillMaxWidth()
+                )
                 if (!currentPlaylist.comment.isNullOrBlank()) {
                     Text(
                         currentPlaylist.comment!!,
@@ -178,7 +154,11 @@ fun PlaylistDetailScreen(
                     modifier = Modifier.padding(top = 4.dp)
                 ) {
                     Text(
-                        "${currentPlaylist.songCount} 首 · ${currentPlaylist.owner}",
+                        buildString {
+                            append("${currentPlaylist.songCount} 首")
+                            if (!isOwner) append(" · 共享歌单")
+                            append(" · ${currentPlaylist.owner}")
+                        },
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -215,27 +195,49 @@ fun PlaylistDetailScreen(
                 }
                 Spacer(modifier = Modifier.height(16.dp))
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Button(
                         onClick = {
                             val songs = currentPlaylist.songs
                             if (songs.isNotEmpty()) onSongClick(songs.first(), songs)
                         },
-                        shape = RoundedCornerShape(20.dp)
+                        shape = RoundedCornerShape(20.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 10.dp),
+                        modifier = Modifier.weight(1f)
                     ) {
-                        Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("播放全部")
+                        Text("播放全部", fontSize = 13.sp, maxLines = 1)
+                    }
+                    // 随机播放：打乱歌单顺序后从第一首开始播，后续按打乱后的队列继续
+                    OutlinedButton(
+                        onClick = {
+                            val songs = currentPlaylist.songs
+                            if (songs.isNotEmpty()) {
+                                val shuffled = songs.shuffled()
+                                onSongClick(shuffled.first(), shuffled)
+                            }
+                        },
+                        shape = RoundedCornerShape(20.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 10.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.Shuffle, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("随机播放", fontSize = 13.sp, maxLines = 1)
                     }
                     // Create playlist button
                     OutlinedButton(
                         onClick = { showCreateDialog = true },
-                        shape = RoundedCornerShape(20.dp)
+                        shape = RoundedCornerShape(20.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 10.dp),
+                        modifier = Modifier.weight(1f)
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("创建歌单")
+                        Text("创建歌单", fontSize = 13.sp, maxLines = 1)
                     }
                 }
             }

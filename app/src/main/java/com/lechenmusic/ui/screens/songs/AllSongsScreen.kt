@@ -16,6 +16,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.lechenmusic.ui.components.RefreshIconButton
 import com.lechenmusic.data.model.Song
 import com.lechenmusic.ui.MainViewModel
 import com.lechenmusic.ui.components.SongItemWithMenu
@@ -93,16 +94,12 @@ Text("乐库", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialT
                     Spacer(modifier = Modifier.width(4.dp))
 
                     // 手动刷新：强制与服务端全量校正（日常启动走增量同步，不需要点）
-                    IconButton(
-                        onClick = { viewModel.loadAllSongs(showToast = true, force = true) },
-                        enabled = !isLoading
-                    ) {
-                        if (isLoading) {
-                            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                        } else {
-                            Icon(Icons.Default.Refresh, "刷新乐库", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
+                    RefreshIconButton(
+                        contentDescription = "刷新乐库",
+                        loading = isLoading,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        toastMessage = "正在刷新乐库…"
+                    ) { viewModel.loadAllSongs(showToast = true, force = true) }
 
                     Spacer(modifier = Modifier.weight(1f))
 
@@ -150,16 +147,12 @@ Text("乐库", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialT
                 ) {
                     Text("歌曲", fontSize = 24.sp, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.weight(1f))
-                    IconButton(
-                        onClick = { viewModel.loadAllSongs(showToast = true, force = true) },
-                        enabled = !isLoading
-                    ) {
-                        if (isLoading) {
-                            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                        } else {
-                            Icon(Icons.Default.Refresh, "刷新乐库", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
+                    RefreshIconButton(
+                        contentDescription = "刷新乐库",
+                        loading = isLoading,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        toastMessage = "正在刷新乐库…"
+                    ) { viewModel.loadAllSongs(showToast = true, force = true) }
                 }
             }
         }
